@@ -46,8 +46,11 @@ metadata_fixer <- function(metadata_fp) {
 ## also need metadata 
 stat_meta <- metadata_fixer('merged_metadata1.tsv')
 
-unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A', 'Mock_3A', 'Mock_4A', 'Mock_5A', 'Mock_6A', 'Mock_7A', 'PCR Blank0',
-                      'PCR Blank1', 'Mock_7', 'Mock_6', 'Mock_5', 'Mock_4', 'PCR blank')
+unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A',
+                      'Mock_3A', 'Mock_4A', 'Mock_5A', 'Mock_6A',
+                      'Mock_7A', 'PCR Blank0',
+                      'PCR Blank1', 'Mock_7', 'Mock_6',
+                      'Mock_5', 'Mock_4', 'PCR blank')
 stat_meta %>% 
   filter(!(sampleid %in% unwanted_samples)) -> stat_meta
 
@@ -55,7 +58,7 @@ stat_meta %>%
 ## need my weighted and unweighted distance matrices 
 ## unweighted
 ## I had to unzip the qza file because it was telling me that it had duplicate names?
-uw_dist_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/tss3/tss_core_metrics3/unweighted_dist/data/'
+uw_dist_fp <- '../data/qiime/tss_core_metrics3/unweighted_dist/'
 uw_dist <- read_tsv(paste0(uw_dist_fp,
                            'distance-matrix.tsv'))
 names(uw_dist)[names(uw_dist) == '...1'] <- 'sampleid'

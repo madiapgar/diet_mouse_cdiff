@@ -1,0 +1,434 @@
+---
+title: "tss_picrust_round2"
+author: "Madi"
+date: "2023-06-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(cowplot)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+library(viridis)
+library(microshades)
+```
+
+**Main/Butyrate Functions**
+```{r}
+## allows you to filter your biom table for specified KOs and by the taxonomic level of interest
+## can feed this output into func_abun_sum 
+ko_filter <- function(kometa_contrib_big, ko_list, taxonomy_level) { 
+  kometa_contrib_big %>% 
+  select(sample, ko, taxon_function_abun, study, diet, day_post_inf, 
+         any_of(taxonomy_level)) %>% 
+    filter(ko %in% ko_list) -> filtered_biom
+  return(filtered_biom)
+}
+
+## overall taxon grouping and sum of that taxon's abundance for a particular KO 
+func_abun_sum <- function(filtered_biom, taxonomy_level) {
+  filtered_biom %>% 
+   group_by(sample, ko, study, diet, day_post_inf, .data[[taxonomy_level]]) %>% 
+   summarize(taxon_function_abun = sum(taxon_function_abun)) %>% 
+   ungroup() -> filtered_biom_sum
+  return(filtered_biom_sum)
+}
+
+##metadata file prep
+##assumes that it is a CSV file
+ko_metadata_prep <- function(metadata_fp) {
+  tmpMeta <- read_csv(metadata_fp, n_max = 2)
+  mycols <- colnames(tmpMeta)
+  metadata <- read_csv(metadata_fp, skip = 2, col_names = mycols)
+  names(metadata)[names(metadata) == '#SampleID'] <- 'sample'
+  metadata %>% 
+    select(sample, diet, study, day_post_inf) -> metadata
+  return(metadata)
+} 
+
+##taxonomy prep
+##assumes that the imput is a qza file from qiime2
+ko_tax_prep <- function(tax_fp){
+  taxonomy <- read_qza(file = tax_fp)$data %>% 
+    parse_taxonomy() %>% 
+    as_tibble(rownames = 'taxon') %>% 
+    rename_all(tolower)
+  return(taxonomy)
+}
+
+##meta contrib file prep and overall table construction
+##assumes that the input is a tsv file 
+ko_contrib_prep <- function(ko_contrib_fp, metadata, taxonomy){
+  kometa_contrib <- read_tsv(file = ko_contrib_fp)
+  names(kometa_contrib)[names(kometa_contrib) == 'function'] <- 'ko'
+  kometa_contrib %>% 
+    left_join(taxonomy, by = 'taxon') %>% 
+    left_join(metadata, by = 'sample') -> kometa_contrib_big
+  return(kometa_contrib_big)
+}
+
+##ggplot biom table prep equation 
+ko_sample_abun <- function(filtered_biom_sum, threshold){
+  THRESHOLD = threshold
+  filtered_biom_sum %>% 
+    group_by(sample, day_post_inf, ko, diet, study) %>% 
+    summarize(taxon_function_abun = sum(taxon_function_abun)) %>% 
+    mutate(class = 'Total') %>% 
+    filter(!is.na(day_post_inf)) %>%
+    spread(day_post_inf, taxon_function_abun, fill = 0) %>% 
+    gather(-sample, -ko, -diet, -study, -class,
+         key = day_post_inf, value = taxon_function_abun) %>% 
+    mutate(day_post_inf = as.numeric(day_post_inf)) %>% 
+    group_by(class) %>% 
+    mutate(other_col = mean(taxon_function_abun),
+         class = if_else(other_col < THRESHOLD, 'Other', class)) %>% 
+    arrange(other_col) -> filtered_sample_abun
+  return(filtered_sample_abun)
+}
+
+ko_sample_facet <- function(filtered_biom_sum, filtered_sample_abun, threshold){
+  THRESHOLD = threshold
+  filtered_biom_sum %>% 
+    filter(!is.na(day_post_inf)) %>%
+    spread(day_post_inf, taxon_function_abun, fill = 0) %>% 
+    gather(-sample, -ko, -diet, -study, -class,
+         key = day_post_inf, value = taxon_function_abun) %>% 
+    mutate(day_post_inf = as.numeric(day_post_inf)) %>% 
+    group_by(class) %>% 
+    mutate(other_col = mean(taxon_function_abun),
+         class = if_else(other_col < THRESHOLD, 'Other', class)) %>% 
+    arrange(other_col) -> filtered_sum_other
+  filtered_sum_other %>% 
+    rbind(filtered_sample_abun) -> filtered_sum_other
+  return(filtered_sum_other)
+}
+
+##actual ggplot construction for butyrate enzymes 
+butyrate <- function(filtered_sum_other, title){
+  diet_labs <- 
+    c('Chow', 'High Fat / High Fiber', 'High Fat / Low Fiber', 'Low Fat / High Fiber', 'Low Fat / Low Fiber')
+  names(diet_labs) <- c('Chow', 'HF/HF', 'HF/LF', 'LF/HF', 'LF/LF')
+  filtered_sum_other %>% 
+    filter(!is.na(diet)) %>% 
+    ggplot(aes(x = day_post_inf, y = taxon_function_abun)) +
+    scale_y_continuous(trans = 'log10') +
+    geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
+    geom_smooth(se = FALSE, size = 0.5) +
+    geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
+    geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
+    geom_jitter(width = 0.1, height = 0, 
+              alpha = 0.4) +
+    scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
+    facet_grid(class~diet, scales = 'free_x', labeller = labeller(diet = diet_labs)) +
+    theme_bw(base_size = 14) +
+    theme(legend.text = element_text(size = 8.5),
+        strip.text.y = element_text(angle = 0)) +
+    guides(color = guide_legend(override.aes = list(size = 0.9))) +
+    ggtitle(title) +
+    xlab('Days Relative to Infection') +
+    ylab('KO Counts') -> butyrate
+  return(butyrate)
+}
+
+```
+
+**Secondary Bile Acid Functions**
+these are the functions that differ from the butyrate plot prep
+```{r}
+bile_sum <- function(filtered_biom_sum){
+  filtered_biom_sum %>% 
+    filter(!is.na(day_post_inf)) %>% 
+    spread(day_post_inf, taxon_function_abun, fill = 1) %>% 
+    gather(-sample, -ko, -study, -diet, -genus, 
+          key = day_post_inf, value = taxon_function_abun) %>% 
+    mutate(day_post_inf = as.numeric(day_post_inf)) -> new_bile_sum
+  return(new_bile_sum)
+}
+
+bile_total <- function(filtered_biom_sum, new_bile_sum){
+  filtered_biom_sum %>% 
+    group_by(sample, day_post_inf, ko, diet, study) %>% 
+    summarize(taxon_function_abun = sum(taxon_function_abun)) %>% 
+    mutate(genus = 'Total') %>% 
+    filter(!is.na(day_post_inf)) %>% 
+    spread(day_post_inf, taxon_function_abun, fill = 0) %>% 
+    gather(-sample, -ko, -study, -diet, -genus, 
+          key = day_post_inf, value = taxon_function_abun) %>% 
+    mutate(day_post_inf = as.numeric(day_post_inf)) -> new_bile_total
+  new_bile_total %>% 
+    rbind(new_bile_sum) -> filtered_sum_other
+  return(filtered_sum_other)
+}
+
+bile_acid <- function(new_bile_sum, title){
+  bile_acid_labs <- c('baiH', 'baiI')
+  names(bile_acid_labs) <- c('K15873', 'K15874')
+  diet_labs <- 
+    c('Chow', 'High Fat / High Fiber', 'High Fat / Low Fiber', 'Low Fat / High Fiber', 'Low Fat / Low Fiber')
+  names(diet_labs) <- c('Chow', 'HF/HF', 'HF/LF', 'LF/HF', 'LF/LF')
+  new_bile_sum %>% 
+    filter(!is.na(diet)) %>% 
+    filter(!is.na(genus)) %>% 
+    ggplot(aes(x = day_post_inf, y = taxon_function_abun)) +
+      scale_y_continuous(trans = 'log10') +
+      geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
+      geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
+      geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
+      geom_jitter(width = 0.1, height = 0, alpha = 0.7, pch=21,
+                aes(fill = genus)) +
+      geom_smooth(se = FALSE, color = 'blue') +
+      scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
+      scale_fill_brewer(palette = 'Dark2') +
+      facet_grid(ko~diet, scales = 'free_x', 
+                 labeller = labeller(ko = bile_acid_labs, diet = diet_labs)) +
+      theme_bw(base_size = 14) +
+      theme(legend.text = element_text(size = 9.5), 
+            legend.position = 'bottom') +
+      guides(fill = guide_legend(override.aes = list(size = 2.5))) + 
+      ggtitle(title) +
+      xlab('Days Relative to Infection') +
+      ylab('KO Counts') +
+      labs(fill = 'Genus') -> bile_plot
+  return(bile_plot)
+}
+
+##attempting to make bile acid plot the same as my butyrate plots
+new_bile_acid <- function(new_bile_sum, title){
+  diet_labs <- 
+    c('Chow', 'High Fat / High Fiber', 'High Fat / Low Fiber', 'Low Fat / High Fiber', 'Low Fat / Low Fiber')
+  names(diet_labs) <- c('Chow', 'HF/HF', 'HF/LF', 'LF/HF', 'LF/LF')
+  new_bile_sum %>% 
+    filter(!is.na(diet)) %>% 
+    filter(!is.na(genus)) %>% 
+    ggplot(aes(x = day_post_inf, y = taxon_function_abun)) +
+      scale_y_continuous(trans = 'log10') +
+      geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
+      geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
+      geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
+      geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
+      geom_smooth(se = FALSE, color = 'blue') +
+      scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
+      facet_grid(genus~diet, scales = 'free_x', 
+                 labeller = labeller(diet = diet_labs)) +
+      theme_bw(base_size = 14) +
+      theme(legend.text = element_text(size = 8.5),
+        strip.text.y = element_text(angle = 0)) +
+      guides(fill = guide_legend(override.aes = list(size = 2.5))) + 
+      ggtitle(title) +
+      xlab('Days Relative to Infection') +
+      ylab('KO Counts') -> bile_plot
+  return(bile_plot)
+}
+```
+
+**Mini-pipelines for Butyrate and Secondary Bile Acid Plot Construction**
+```{r}
+##butyrate
+butyrate_plot <- function(meta_fp, taxonomy_fp, ko_meta_contrib_fp, 
+                          tax_level, thresh_level, kos, wanted_title){
+  ko_metadata <- ko_metadata_prep(meta_fp)
+  ko_taxonomy <- ko_tax_prep(taxonomy_fp)
+  ko_biom <- ko_contrib_prep(ko_meta_contrib_fp, ko_metadata, ko_taxonomy)
+  ko_filtered_biom <- ko_filter(ko_biom, kos, tax_level)
+  ko_filtered_biom_sum <- func_abun_sum(ko_filtered_biom, tax_level)
+  ko_filt_sample_abun <- ko_sample_abun(ko_filtered_biom_sum, thresh_level)
+  ko_filt_sum_other <- ko_sample_facet(ko_filtered_biom_sum, ko_filt_sample_abun,
+                                       thresh_level)
+  full_plot <- butyrate(ko_filt_sum_other, wanted_title)
+  return(full_plot)
+}
+
+##secondary bile acid
+secondary_bile_acid <- function(meta_fp, taxonomy_fp, ko_meta_contrib_fp, 
+                                tax_level, kos, wanted_title){
+  ko_metadata <- ko_metadata_prep(meta_fp)
+  ko_taxonomy <- ko_tax_prep(taxonomy_fp)
+  ko_biom <- ko_contrib_prep(ko_meta_contrib_fp, ko_metadata, ko_taxonomy)
+  ko_filtered_biom <- ko_filter(ko_biom, kos, tax_level)
+  ko_filtered_biom_sum <- func_abun_sum(ko_filtered_biom, tax_level)
+  ko_bile_sum <- bile_sum(ko_filtered_biom_sum)
+  bile_acid_plot <- bile_acid(ko_bile_sum, wanted_title)
+  return(bile_acid_plot)
+}
+
+##another secondary bile acid function
+other_secondary_bile_acid <- function(meta_fp, taxonomy_fp, ko_meta_contrib_fp, 
+                                tax_level, kos, wanted_title){
+  ko_metadata <- ko_metadata_prep(meta_fp)
+  ko_taxonomy <- ko_tax_prep(taxonomy_fp)
+  ko_biom <- ko_contrib_prep(ko_meta_contrib_fp, ko_metadata, ko_taxonomy)
+  ko_filtered_biom <- ko_filter(ko_biom, kos, tax_level)
+  ko_filtered_biom_sum <- func_abun_sum(ko_filtered_biom, tax_level)
+  ko_bile_sum <- bile_sum(ko_filtered_biom_sum)
+  ko_bile_total <- bile_total(ko_filtered_biom_sum, ko_bile_sum)
+  bile_acid_plot <- new_bile_acid(ko_bile_total, wanted_title)
+  return(bile_acid_plot)
+}
+```
+
+**Prep for attempt at using new "pipeline" for Butyrate Kinase Plot**
+```{r}
+buk_meta_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/updated/updated_metadata.csv'
+buk_taxonomy_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/tax_info/taxonomy.qza'
+buk_ko_contrib_fp <- 
+  '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs/untrustable_meta_contrib.tsv'
+buk_tax_level <- 'class'
+buk_thresh_level <- 200
+buk_ko <- 'K00929'
+buk_title <- 'Total Sum Scaled Butyrate Kinase Potential Over Time'
+```
+
+**Butyrate Kinase plot construction via pipeline**
+```{r, fig.height=5, fig.width=10, warning=FALSE}
+total_butyrate_kinase <- butyrate_plot(buk_meta_fp, 
+                                       buk_taxonomy_fp,
+                                       buk_ko_contrib_fp, 
+                                       buk_tax_level, 
+                                       buk_thresh_level, 
+                                       buk_ko, 
+                                       buk_title)
+total_butyrate_kinase
+```
+
+**Prep for Butryl-CoA Transferase**
+```{r}
+but_meta_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/updated/updated_metadata.csv'
+but_taxonomy_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/tax_info/taxonomy.qza'
+but_ko_contrib_fp <- 
+  '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs/untrustable_meta_contrib.tsv'
+but_tax_level <- 'class'
+but_thresh_level <- 50
+but_ko <- 'K01034'
+but_title <- 'Total Sum Scaled Butyryl-CoA Transferase Potential Over Time'
+```
+
+**Butryl-CoA Transferase plot construction via pipeline**
+```{r, fig.height=5, fig.width=10, warning=FALSE}
+total_butyrylcoa_transferase <- butyrate_plot(but_meta_fp, but_taxonomy_fp, 
+                                 but_ko_contrib_fp, but_tax_level, 
+                                 but_thresh_level, but_ko,
+                                 but_title)
+total_butyrylcoa_transferase
+```
+
+```{r, fig.height=11, fig.width=23, warning=FALSE}
+total_all_butyrate <- plot_grid(total_butyrate_kinase, total_butyrylcoa_transferase,
+                                ncol = 2, 
+                                labels = c('A', 'B'),
+                                label_size = 22)
+total_all_butyrate
+```
+
+**Prep for NEW baiH secondary bile acid plot**
+```{r}
+bile_meta_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/updated/updated_metadata.csv'
+bile_taxonomy_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/tax_info/taxonomy.qza'
+bile_contrib_fp <- 
+  '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs/untrustable_meta_contrib.tsv'
+bile_tax_level <- 'genus'
+baiH_ko <- c('K15873')
+baiH_title <- 'Total Sum Scaled baiH Potential Over Time'
+```
+
+**NEW baiH Secondary Bile Acid Plot**
+```{r, fig.height=6, fig.width=10, warning=FALSE}
+total_baiH <- other_secondary_bile_acid(bile_meta_fp, bile_taxonomy_fp,
+                                       bile_contrib_fp, bile_tax_level, 
+                                       baiH_ko, baiH_title)
+                                      
+total_baiH
+```
+
+**NEW baiI plot**
+```{r, fig.height=6, fig.width=10, warning=FALSE}
+bile_meta_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/updated/updated_metadata.csv'
+bile_taxonomy_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/tax_info/taxonomy.qza'
+bile_contrib_fp <- 
+  '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs/untrustable_meta_contrib.tsv'
+bile_tax_level <- 'genus'
+baiI_ko <- c('K15874')
+baiI_title <- 'Total Sum Scaled baiI Potential Over Time'
+baiI_y_axis <- 'axis.text.y = element_blank()'
+
+total_baiI <- other_secondary_bile_acid(bile_meta_fp, bile_taxonomy_fp,
+                                       bile_contrib_fp, bile_tax_level, 
+                                       baiI_ko, baiI_title)
+                                      
+total_baiI
+```
+
+**NEW bile acid plots together**
+```{r, fig.height=5, fig.width=10, warning=FALSE}
+new_bile_acid <- plot_grid(total_baiH, total_baiI,
+                                ncol = 2, 
+                                labels = c('A', 'B'),
+                                label_size = 22)
+new_bile_acid
+```
+
+**OLD Secondary Bile Acid Plot**
+```{r, fig.height=6, fig.width=10, warning=FALSE}
+bile_meta_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/updated/updated_metadata.csv'
+bile_taxonomy_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/tax_info/taxonomy.qza'
+bile_contrib_fp <- 
+  '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs/untrustable_meta_contrib.tsv'
+bile_tax_level <- 'genus'
+bile_kos <- c('K15873', 'K15874')
+bile_title <- 'Total Sum Scaled Secondary Bile Acid Potential Over Time'
+
+total_bile_acid <- secondary_bile_acid(bile_meta_fp, bile_taxonomy_fp,
+                                       bile_contrib_fp, bile_tax_level, 
+                                       bile_kos, bile_title)
+                                      
+total_bile_acid
+
+```
+
+**All Total Sum Scaled plots together**
+```{r, fig.height=15, fig.width=23, warning=FALSE}
+total_sum_scaled <- plot_grid(total_butyrate_kinase, total_butyrylcoa_transferase, 
+                              total_baiH, total_baiI,
+                              nrow = 2,
+                              labels = c('A', 'B', 'C', 'D'),
+                              label_size = 22)
+
+total_sum_scaled
+```
+
+**Saving my outputs as a pdf file**
+```{r}
+ggsave("tss_buk2.pdf", 
+       plot = total_butyrate_kinase,
+       width = 15, 
+       height = 10,
+       path = '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs')
+
+ggsave("tss_butcoa2.pdf",
+       plot = total_butyrylcoa_transferase, 
+       width = 15, 
+       height = 10, 
+       path = '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs')
+
+ggsave("tss_but_all2.pdf",
+       plot = total_all_butyrate, 
+       width = 30, 
+       height = 15, 
+       path = '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs')
+
+ggsave("tss_bile2.pdf",
+       plot = total_bile_acid, 
+       width = 10, 
+       height = 6, 
+       path = '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs')
+
+ggsave("tss_all_plots1.pdf",
+       plot = total_sum_scaled, 
+       width = 23, 
+       height = 15, 
+       path = '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs')
+```

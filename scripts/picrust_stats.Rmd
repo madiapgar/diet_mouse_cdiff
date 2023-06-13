@@ -1,0 +1,208 @@
+---
+title: "tss3_picrust_stats"
+author: "Madi"
+date: "2023-06-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ape)
+library(ggpubr)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+library(broom)
+library(AICcmodavg)
+library(rstatix)
+```
+
+**Functions**
+```{r}
+## assumes that the file is a CSV!! 
+metadata_fixer <- function(metadata_fp, wanted_groups) {
+  tmpMeta <- read_csv(metadata_fp, n_max = 2)
+  mycols <- colnames(tmpMeta)
+  metadata <- read_csv(metadata_fp, skip = 2, col_names = mycols)
+  names(metadata)[names(metadata) == '#SampleID'] <- 'sample'
+  metadata %>% 
+    select(all_of(wanted_groups)) %>% 
+    mutate(day_post_inf = if_else(day_post_inf == 2, 3, day_post_inf)) -> metadata
+  return(metadata)
+}
+
+taxonomy_prep <- function(taxonomy_fp){
+  read_qza(taxonomy_fp)$data %>% 
+  parse_taxonomy() %>% 
+  as_tibble(rownames = 'taxon') %>% 
+  rename_all(tolower) -> taxonomy
+  return(taxonomy)
+}
+```
+
+**Doing stats on my total sum scaled ko meta contrib outputs, so these will go on my butyrate/bile acid plots**
+want to make comparisons between diets and/or taxonomic classes for each. 
+
+**Reading in my needed files**
+you need your metadata file, your taconomic information, and your predicted ko metagenome information
+```{r}
+## metadata file and fixing 
+total_metadata_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/updated/updated_metadata.csv'
+total_groups <- c('sample', 'diet', 'study', 'day_post_inf')
+total_metadata <- metadata_fixer(total_metadata_fp, total_groups)
+
+## taxonomic information and prep
+total_taxonomy_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/tax_info/taxonomy.qza'
+total_tax <- taxonomy_prep(total_taxonomy_fp)
+
+## ko meta contrib information and prep 
+ko_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs/picrust2_out_pipeline_tss3/tss3_meta_contrib.tsv'
+total_ko <- read_tsv(file = ko_fp)
+
+## putting all of my tables together
+total_ko %>% 
+  left_join(total_metadata, by = 'sample') -> total_biom
+```
+
+**Rearranging my table from long to wide to long format again**
+I'm still really confused as to why I'm doing this again and I'm not sure if I did it correctly. 
+```{r}
+but_kos <- c('K00929','K01034')
+
+total_biom %>% 
+  filter(ko %in% but_kos) %>% 
+  group_by(ko, sample, diet, day_post_inf) %>% 
+  summarise(taxon_function_abun = sum(taxon_function_abun)) %>% 
+  filter(!is.na(day_post_inf)) %>% 
+  spread(day_post_inf, taxon_function_abun, fill = 0) %>% 
+  gather(-ko, -sample, -diet, key = day_post_inf, value = taxon_function_abun) -> but_long
+
+## adding additional rows so hopefully my linear model works 
+but_long %>% 
+   mutate(high_fat = case_when(
+      diet == 'HF/HF' ~ 1,
+      diet == 'HF/LF' ~ 1,
+      .default = 0
+    ), 
+    high_fiber = case_when(
+      diet == 'HF/HF' ~ 1,
+      diet == 'LF/HF' ~ 1,
+      diet == 'Chow' ~ 1,
+      .default = 0
+    ), 
+    purified_diet = case_when(
+      diet == 'HF/HF' ~ 1,
+      diet == 'HF/LF' ~ 1,
+      diet == 'LF/HF' ~ 1,
+      diet == 'LF/LF' ~ 1,
+      .default = 0
+    ),
+    day_post_inf_filt = case_when(
+      day_post_inf == '-8' ~ 1,
+      day_post_inf == '-3' ~ 1,
+      day_post_inf == '0' ~ 1, 
+      day_post_inf == '3' ~ 1,
+      .default = 0
+    )) %>% 
+    mutate(day_post_inf_filt = as.factor(day_post_inf_filt)) -> but_long
+```
+
+**Running a non-parametric ANOVA by days post infection and diet**
+I think I did this right? I'm not sure..I think this is telling me if there is a significant difference between KO counts of different diets on the given time points? 
+
+I'm wondering if we should be doing linear models for these instead of kruskal-wallis and Dunn's post hoc test? Do we also need to account for the sequencing depth since we didn't rarefy the data? 
+```{r}
+## kruskal-wallis test 
+but_long %>% 
+  group_by(ko, day_post_inf) %>% 
+  do(tidy(kruskal.test(taxon_function_abun ~ diet, data = .))) -> buty_kruskal
+
+buty_kruskal
+
+##write_tsv(buty_kruskal, '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs/tss_kruskal.tsv')
+```
+
+```{r}
+## dunn's post-hoc test
+but_long %>% 
+  group_by(ko, day_post_inf) %>% 
+  dunn_test(taxon_function_abun ~ diet,
+            p.adjust.method = 'bonferroni') -> buty_dunn
+
+buty_dunn
+
+##write_tsv(buty_dunn, '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs/tss_dunn.tsv')
+```
+
+```{r}
+## trying a linear model instead of kruskal-wallis and dunn's post hoc test 
+## I think I need to create my new columns like I did with the core metrics results 
+but_long %>% 
+  do(tidy(lm(taxon_function_abun ~ high_fat + high_fiber + purified_diet + day_post_inf_filt, 
+             data = .))) -> buty_linear
+
+buty_linear
+
+# write_tsv(buty_linear, '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs/picrust2_out_pipeline_tss3/stats/buty_lm.tsv')
+```
+
+
+
+
+**Rearranging my table from long to wide to long format again - for bile acids**
+```{r}
+bile_kos <- c('K15873', 'K15874')
+
+total_biom %>% 
+  filter(ko %in% bile_kos) %>% 
+  group_by(ko, sample, diet, day_post_inf) %>% 
+  summarise(taxon_function_abun = sum(taxon_function_abun)) %>% 
+  filter(!is.na(day_post_inf)) %>% 
+  spread(day_post_inf, taxon_function_abun, fill = 0) %>% 
+  gather(-ko, -sample, -diet, key = day_post_inf, value = taxon_function_abun) -> bile_long
+```
+
+**For bile acid kos**
+```{r}
+## kruskal-wallis test 
+bile_long %>% 
+  group_by(ko, day_post_inf) %>% 
+  do(tidy(kruskal.test(taxon_function_abun ~ diet, data = .))) -> bile_kruskal
+
+bile_kruskal
+
+##write_tsv(bile_kruskal, 
+        ##  '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs/tss_kruskal_bile.tsv')
+```
+
+I had to split my Dunn's test between secondary bile acid enzymes because I have so few baiI samples that it's causing major issues when I try to run the stats (due to day_post_inf and baiI not being present in some of the diets and on certain days). So right now my Dunn's test is only with the baiH enzyme. 
+```{r}
+## dunn's post-hoc test
+baiH <- 'K15873'
+baiI <- 'K15874'
+
+## baiH
+bile_long %>% 
+  filter(ko %in% baiH) %>% 
+  group_by(ko, day_post_inf) %>% 
+  dunn_test(taxon_function_abun ~ diet,
+            p.adjust.method = 'bonferroni') -> baiH_dunn
+
+baiH_dunn
+
+## baiI
+## I'm just going to temporarily give up on this one because it's having issues. 
+# bile_long %>% 
+#   filter(ko %in% baiI) %>% 
+#   group_by(ko, day_post_inf) %>% 
+#   dunn_test(taxon_function_abun ~ diet,
+#             p.adjust.method = 'bonferroni') -> baiI_dunn
+
+
+## write_tsv(baiH_dunn, '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs/stats/tss_dunn_baiH.tsv')
+```
+
+

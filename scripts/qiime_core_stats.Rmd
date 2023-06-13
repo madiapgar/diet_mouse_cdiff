@@ -1,0 +1,455 @@
+---
+title: "tss_core_stats"
+author: "Madi"
+date: "2023-05-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(qiime2R)
+library(tidyverse)
+library(cowplot)
+library(magrittr)
+library(vegan)
+library(viridis)
+library(microshades)
+library(phyloseq)
+library(ggh4x)
+library(broom)
+library(rstatix)
+library(dunn.test)
+```
+
+**Basic Functions**
+```{r}
+metadata_fixer <- function(metadata_fp) {
+  tmpMeta <- read_tsv(metadata_fp, n_max = 2)
+  mycols <- colnames(tmpMeta)
+  metadata <- read_tsv(metadata_fp, skip = 2, col_names = mycols)
+  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
+  metadata %>% 
+    filter(!is.na(diet)) %>% 
+    mutate(day_post_inf = if_else(day_post_inf == 2, 3, day_post_inf)) %>% 
+    mutate(diet = as.factor(diet)) -> metadata
+  return(metadata)
+}
+```
+
+
+**Stats on my total sum scaled core metrics**
+**prepping all needed files to run the unweighted stats**
+```{r}
+## also need metadata 
+stat_meta <- metadata_fixer('merged_metadata1.tsv')
+
+unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A', 'Mock_3A', 'Mock_4A', 'Mock_5A', 'Mock_6A', 'Mock_7A', 'PCR Blank0',
+                      'PCR Blank1', 'Mock_7', 'Mock_6', 'Mock_5', 'Mock_4', 'PCR blank')
+stat_meta %>% 
+  filter(!(sampleid %in% unwanted_samples)) -> stat_meta
+
+
+## need my weighted and unweighted distance matrices 
+## unweighted
+## I had to unzip the qza file because it was telling me that it had duplicate names?
+uw_dist_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/tss3/tss_core_metrics3/unweighted_dist/data/'
+uw_dist <- read_tsv(paste0(uw_dist_fp,
+                           'distance-matrix.tsv'))
+names(uw_dist)[names(uw_dist) == '...1'] <- 'sampleid'
+
+## filtering the sample ids out that have character names instead of numeric names 
+## I thought this was causing the error but its not so rip
+## taking distance matrix from wide to long to wide again format
+uw_dist %>% 
+  gather(-sampleid, key = sample_col, value = dist) %>% 
+  filter(sampleid %in% stat_meta$sampleid) %>% 
+  filter(sample_col %in% stat_meta$sampleid) %>% 
+  spread(sample_col, dist) -> uw_long
+
+uw_long %>% 
+  select(-sampleid) -> uw_dist
+
+stat_meta %>% 
+  arrange(sampleid) -> stat_meta
+
+## making sure the number of rows is the same for the distance matrix and the metadata file 
+stat_meta %>% 
+  filter(sampleid %in% uw_long$sampleid) -> filt_stat_meta
+
+uw_dist <- as.matrix(uw_dist)
+row.names(uw_dist) <- colnames(uw_dist)
+
+# sort based on alphabetical order of metadata sampleid
+filt_stat_meta <- filt_stat_meta[order(filt_stat_meta$sampleid),]
+
+## cannot be coerced to as.numeric for some reason 'due to double characters'
+##coerced it to a distance matrix format hopefully this works
+uw_dist <- as.dist(uw_dist)
+```
+
+**fixing my if_else statements so the stats aren't all messed up**
+need to add a separate column for study (two studies were in the same room, rest were not). can just run it with + study as added to my adonis or can create a binary column - will probably create a binary column since the stats look weird again. also added a binary column to filter out day -15 since if I just filtered it out of the metadata, the samples don't match for the distance matrix and the metadata which means the adonis doesn't work. may try to filter out day -15 when I read in the metadata file so that I won't have that issue. 
+```{r}
+## creating new columns in the metadata for diet since I want to compare separate diets by fat or fiber comp.
+## purified diets: (0 for chow, 1 for everything else)
+## high fat diets: HF/HF and HF/LF (1 for those, 0 for e/t else)
+## high fiber diets: HF/HF, LF/HF (1 for these, 0 for e/t else)
+
+
+## need to actually use "case_when" statements inside of mutate 
+## creating a function for this to use within mutate 
+## I don't think this is right so I'm going to try to do it individually first 
+
+
+## attempting the individual steps 
+## this works, but the stats don't look how I'd expect them to 
+filt_stat_meta %>% 
+  select(sampleid, diet, day_post_inf, mouse_id, study) %>% 
+  mutate(high_fat = case_when(
+      diet == 'HF/HF' ~ 1,
+      diet == 'HF/LF' ~ 1,
+      .default = 0
+    ), 
+    high_fiber = case_when(
+      diet == 'HF/HF' ~ 1,
+      diet == 'LF/HF' ~ 1,
+      diet == 'Chow' ~ 1,
+      .default = 0
+    ), 
+    purified_diet = case_when(
+      diet == 'Chow' ~ 0,
+      .default = 1
+    ), 
+    high_fat = case_when(
+      day_post_inf == -15
+    )
+    day_post_inf_filt = case_when(
+      day_post_inf == '-8' ~ 1,
+      day_post_inf == '-3' ~ 1,
+      day_post_inf == '0' ~ 1, 
+      day_post_inf == '3' ~ 1,
+      .default = 0
+    )
+  ) -> filt_stat_meta
+
+# write_tsv(filt_stat_meta, '~/gut_microbiome_metabolomics/total_sum_scaled/tss_stat_metadata.tsv')
+  
+```
+
+
+**unweighted UniFrac Adonis test**
+for the unweighted unifrac. takes into account the diet and the days post infection (or relative to infection). I'm not sure what this is telling me yet. Now it's giving me the exact same p-value for everything which isn't what we wanted. I tried by = "terms" in the adonis test but that didn't help either. I'm wondering if we should do something like a kruskal-wallis followed by a dunn test instead of an adonis? 
+```{r}
+# filt_stat_meta %>% 
+#   # filter(day_post_inf != -15) %>% 
+#   mutate(day_post_inf_fact = as.factor(day_post_inf_filt)) -> filt_stat_meta
+
+uw_adonis <- adonis2(uw_dist ~ purified_diet + high_fat + high_fiber + day_post_inf_filt + study,
+                     data = filt_stat_meta,
+                     permutations = 999, 
+                     parallel = 4)
+
+# strata = filt_stat_meta$mouse_id
+
+uw_adonis <- tidy(uw_adonis)
+
+uw_adonis
+```
+
+**prepping weighted UniFrac distance matrix and metadata file**
+```{r}
+## also need metadata 
+stat_meta <- metadata_fixer('merged_metadata1.tsv')
+
+unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A', 'Mock_3A', 'Mock_4A', 'Mock_5A', 'Mock_6A', 'Mock_7A', 'PCR Blank0',
+                      'PCR Blank1', 'Mock_7', 'Mock_6', 'Mock_5', 'Mock_4', 'PCR blank')
+stat_meta %>% 
+  filter(!(sampleid %in% unwanted_samples)) -> stat_meta
+
+
+## I had to unzip the qza file because it was telling me that it had duplicate names?
+## weighted 
+w_dist_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/tss3/tss_core_metrics3/weighted_dist/data/'
+w_dist <- read_tsv(paste0(w_dist_fp,
+                          'distance-matrix.tsv'))
+names(w_dist)[names(w_dist) == '...1'] <- 'sampleid'
+
+## filtering the sample ids out that have character names instead of numeric names 
+## I thought this was causing the error but its not so rip
+## taking distance matrix from wide to long to wide again format
+w_dist %>% 
+  gather(-sampleid, key = sample_col, value = dist) %>% 
+  filter(!(sampleid %in% unwanted_samples)) %>% 
+  filter(!(sample_col %in% unwanted_samples)) %>% 
+  spread(sample_col, dist) -> w_long
+
+## making sure the number of rows is the same for the distance matrix and the metadata file 
+w_long %>% 
+  select(-sampleid) -> w_dist
+
+stat_meta %>% 
+  arrange(sampleid) -> stat_meta
+
+## making sure the number of rows is the same for the distance matrix and the metadata file 
+stat_meta %>% 
+  filter(sampleid %in% w_long$sampleid) -> filt_stat_meta
+
+w_dist <- as.matrix(w_dist)
+row.names(w_dist) <- colnames(w_dist)
+
+# sort based on alphabetical order of metadata sampleid
+filt_stat_meta <- filt_stat_meta[order(filt_stat_meta$sampleid),]
+
+## cannot be coerced to as.numeric for some reason 'due to double characters'
+##coerced it to a distance matrix format hopefully this works
+
+w_dist <- as.dist(w_dist)
+
+```
+
+
+**fixing my if_else statements so the stats aren't all messed up**
+```{r}
+## creating new columns in the metadata for diet since I want to compare separate diets by fat or fiber comp.
+## purified diets: (0 for chow, 1 for everything else)
+## high fat diets: HF/HF and HF/LF (1 for those, 0 for e/t else)
+## high fiber diets: HF/HF, LF/HF (1 for these, 0 for e/t else)
+
+
+## need to actually use "case_when" statements inside of mutate 
+## creating a function for this to use within mutate 
+## I don't think this is right so I'm going to try to do it individually first 
+
+
+## attempting the individual steps 
+## this works, but the stats don't look how I'd expect them to 
+filt_stat_meta %>% 
+  select(sampleid, diet, day_post_inf, mouse_id, study) %>% 
+  mutate(high_fat = case_when(
+      diet == 'HF/HF' ~ 1,
+      diet == 'HF/LF' ~ 1,
+      .default = 0
+    ), 
+    high_fiber = case_when(
+      diet == 'HF/HF' ~ 1,
+      diet == 'LF/HF' ~ 1,
+      diet == 'Chow' ~ 1,
+      .default = 0
+    ), 
+    purified_diet = case_when(
+      diet == 'HF/HF' ~ 1,
+      diet == 'HF/LF' ~ 1,
+      diet == 'LF/HF' ~ 1,
+      diet == 'LF/LF' ~ 1,
+      .default = 0
+    ),
+    day_post_inf_filt = case_when(
+      day_post_inf == '-8' ~ 1,
+      day_post_inf == '-3' ~ 1,
+      day_post_inf == '0' ~ 1, 
+      day_post_inf == '3' ~ 1,
+      .default = 0
+    )
+  ) -> filt_stat_meta
+  
+```
+
+
+**weighted UniFrac Adonis test**
+for the weighted unifrac. takes into account the diet and the days post infection (or relative to infection). I'm not sure what this is telling me yet. The data looks much better without the stratification (I'm not sure what that means but I'm excited about it)!
+```{r}
+w_adonis <- adonis2(w_dist ~ high_fat + high_fiber + purified_diet + day_post_inf_filt + study,
+                     data = filt_stat_meta,
+                     permutations = 999, 
+                     parallel = 4)
+
+w_adonis <- tidy(w_adonis)
+
+w_adonis
+```
+
+**non-parametric ANOVAs for my alpha diversity**
+need to run a base R kruskal-wallis test followed by a Dunn's post hoc test for both my faith's pd and my shannon entropy
+
+**reading in my needed files for faith's pd**
+```{r}
+## faith's pd 
+faith_pd_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/tss3/tss_core_metrics3/faith_pd/data/alpha-diversity.tsv'
+# tmp_faith <- read_tsv(faith_pd_fp, 
+#                       n_max = 2)
+# faith_cols <- colnames(tmp_faith)
+# faith_pd <- read_tsv(faith_pd_fp, skip = 2, col_names = faith_cols)
+faith_pd <- read_tsv(faith_pd_fp)
+names(faith_pd)[names(faith_pd) == '#SampleID'] <- 'sampleid'
+
+unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A', 'Mock_3A', 'Mock_4A', 'Mock_5A', 'Mock_6A', 'Mock_7A', 'PCR Blank0',
+                      'PCR Blank1', 'Mock_7', 'Mock_6', 'Mock_5', 'Mock_4', 'PCR blank')
+
+faith_pd %>% 
+  filter(!(sampleid %in% unwanted_samples)) -> faith_pd
+
+
+## metadata file 
+stat_meta <- metadata_fixer('merged_metadata1.tsv')
+
+stat_meta %>% 
+  filter(!(sampleid %in% unwanted_samples)) -> stat_meta
+
+## reading in sequencing depth to join with my metadata file 
+seq_depth_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/updated/tss_seq_depth.tsv'
+seq_depth <- read_tsv(seq_depth_fp)
+
+## faith biom table construction 
+stat_meta %>% 
+  filter(sampleid %in% faith_pd$sampleid) %>% 
+  left_join(faith_pd, by = 'sampleid') %>% 
+  left_join(seq_depth, by = 'sampleid') %>% 
+  select(sampleid, diet, study, day_post_inf, mouse_id, faith_pd, seq_depth) %>% 
+  mutate(day_post_inf_fact = as.factor(day_post_inf)) %>% 
+  filter(!is.na(diet)) -> faith_biom
+
+## adding same extra columns as my adonis testing 
+faith_biom %>% 
+   mutate(high_fat = case_when(
+      diet == 'HF/HF' ~ 1,
+      diet == 'HF/LF' ~ 1,
+      .default = 0
+    ), 
+    high_fiber = case_when(
+      diet == 'HF/HF' ~ 1,
+      diet == 'LF/HF' ~ 1,
+      diet == 'Chow' ~ 1,
+      .default = 0
+    ), 
+    purified_diet = case_when(
+      diet == 'HF/HF' ~ 1,
+      diet == 'HF/LF' ~ 1,
+      diet == 'LF/HF' ~ 1,
+      diet == 'LF/LF' ~ 1,
+      .default = 0
+    ),
+    day_post_inf_filt = case_when(
+      day_post_inf == '-8' ~ 1,
+      day_post_inf == '-3' ~ 1,
+      day_post_inf == '0' ~ 1, 
+      day_post_inf == '3' ~ 1,
+      .default = 0
+    )) %>% 
+    mutate(day_post_inf_filt = as.factor(day_post_inf_filt)) -> faith_biom
+```
+
+**faith's pd linear modeling**
+this one is with all the diets sectioned out. 
+```{r}
+## instead of the kruskal-walllis and dunn's post hoc test, we should do this instead 
+## need to have my seq_depth file combined with my metadata along with my re-run core metrics 
+## should do it with my sectioned out diets 
+faith_biom %>%
+  do(tidy(lm(faith_pd ~ high_fat + high_fiber + purified_diet + (day_post_inf_fact * seq_depth),
+             data = .))) -> sectioned_faith_lm
+
+sectioned_faith_lm
+
+## need to do this for my shannon entropy as well 
+```
+
+**faith's pd linear modeling**
+this one was done with just diet in general instead of having it sectioned out. 
+```{r}
+## and just with diet in general 
+faith_biom %>%
+  do(tidy(lm(faith_pd ~ diet + (day_post_inf_fact * seq_depth),
+             data = .))) -> faith_lm
+
+faith_lm
+```
+
+
+**reading in my needed files for shannon entropy**
+```{r}
+## shannon entropy
+shannon <- read_tsv(
+  '~/gut_microbiome_metabolomics/total_sum_scaled/tss3/tss_core_metrics3/shannon_entropy/data/alpha-diversity.tsv')
+
+names(shannon)[names(shannon) == '...1'] <- 'sampleid'
+
+unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A', 'Mock_3A', 'Mock_4A', 'Mock_5A', 'Mock_6A', 'Mock_7A', 'PCR Blank0',
+                      'PCR Blank1', 'Mock_7', 'Mock_6', 'Mock_5', 'Mock_4', 'PCR blank')
+
+shannon %>% 
+  filter(!(sampleid %in% unwanted_samples)) -> shannon
+
+
+## metadata file 
+stat_meta <- metadata_fixer('merged_metadata1.tsv')
+
+stat_meta %>% 
+  filter(!(sampleid %in% unwanted_samples)) -> stat_meta
+
+## reading in sequencing depth file
+seq_depth_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/updated/tss_seq_depth.tsv'
+seq_depth <- read_tsv(seq_depth_fp)
+
+## shannon biom table construction 
+## have to start by filtering out sampleids that my shannon doesn't have but that my metadata does 
+stat_meta %>% 
+  filter(sampleid %in% shannon$sampleid) %>% 
+  left_join(shannon, by = 'sampleid') %>% 
+  left_join(seq_depth, by = 'sampleid') %>% 
+  select(sampleid, diet, study, day_post_inf, mouse_id, shannon_entropy, seq_depth) %>% 
+  mutate(day_post_inf_fact = as.factor(day_post_inf)) -> shannon_biom
+
+## adding same extra columns as my adonis testing 
+shannon_biom %>% 
+   mutate(high_fat = case_when(
+      diet == 'HF/HF' ~ 1,
+      diet == 'HF/LF' ~ 1,
+      .default = 0
+    ), 
+    high_fiber = case_when(
+      diet == 'HF/HF' ~ 1,
+      diet == 'LF/HF' ~ 1,
+      diet == 'Chow' ~ 1,
+      .default = 0
+    ), 
+    purified_diet = case_when(
+      diet == 'HF/HF' ~ 1,
+      diet == 'HF/LF' ~ 1,
+      diet == 'LF/HF' ~ 1,
+      diet == 'LF/LF' ~ 1,
+      .default = 0
+    ),
+    day_post_inf_filt = case_when(
+      day_post_inf == '-8' ~ 1,
+      day_post_inf == '-3' ~ 1,
+      day_post_inf == '0' ~ 1, 
+      day_post_inf == '3' ~ 1,
+      .default = 0
+    )) %>% 
+    mutate(day_post_inf_filt = as.factor(day_post_inf_filt)) -> shannon_biom
+```
+
+**shannon entropy sectioned linear model**
+```{r}
+shannon_biom %>%
+  do(tidy(lm(shannon_entropy ~ high_fat + high_fiber + purified_diet + (day_post_inf_fact * seq_depth),
+             data = .))) -> sectioned_shannon_lm
+
+sectioned_shannon_lm
+```
+
+**shannon entropy general linear model**
+```{r}
+## and just with diet in general 
+shannon_biom %>%
+  do(tidy(lm(shannon_entropy ~ diet + (day_post_inf_fact * seq_depth),
+             data = .))) -> shannon_lm
+
+shannon_lm
+```
+
+
+

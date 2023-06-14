@@ -197,11 +197,29 @@ microshades_tax_barplot <- function(meta_fp,
 }
 ```
 
+**File paths for all needed files**
+Doing this so that I don't have to worry about re-entering entire file paths all the time, they'll just be at the beginning
+```{r}
+metadata_FP <- '../data/misc/merged_metadata1.tsv'
+seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
+unweighted_fp <- '../data/qiime/core_outputs/unweighted_unifrac_pcoa_results.qza'
+weighted_fp <- '../data/qiime/core_outputs/weighted_unifrac_pcoa_results.qza'
+faith_pd_fp <- '../data/qiime/core_outputs/faith_pd.tsv'
+shannon_fp <- '../data/qiime/core_outputs/shannon_entropy.tsv'
+tax_fp <- '../data/qiime/taxonomy.qza'
+sample_asv_fp <- '../data/misc/tss_sample_asv.tsv'
+
+
+unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A',
+                      'Mock_3A', 'Mock_4A', 'Mock_5A', 'Mock_6A',
+                      'Mock_7A', 'PCR Blank0',
+                      'PCR Blank1', 'Mock_7', 'Mock_6',
+                      'Mock_5', 'Mock_4', 'PCR blank')
+```
+
 
 **Reading in metadata file**
 ```{r}
-metadata_FP <- 'merged_metadata1.tsv'
-
 metadata <- metadata_fixer(metadata_FP)
 names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
 
@@ -216,13 +234,12 @@ metadata %>%
 **Reading in taxonomy file**
 ```{r}
 ## actual taxonomic file 
-tss_tax <- read_qza('~/gut_microbiome_metabolomics/total_sum_scaled/tss3/taxonomy.qza')$data %>% 
+tss_tax <- read_qza(tax_fp)$data %>% 
                     parse_taxonomy() %>% 
                     rownames_to_column('asv')
 
 ## reading in file that has the asvs matched with sample ids so I can link the taxonomic info to 
 ## my core diversity outputs 
-sample_asv_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/updated/tss_sample_asv.tsv'
 sample_asv <- read_tsv(sample_asv_fp)
 
 ## joining the two tables together 
@@ -235,15 +252,14 @@ tss_tax %>%
 ```{r}
 ## unweighted files 
 tss_unweighted <- 
-  read_qza('~/gut_microbiome_metabolomics/total_sum_scaled/tss3/tss_core_metrics3/unweighted_unifrac_pcoa_results.qza')$data
+  read_qza(unweighted_fp)$data
 ##used for stats 
 tss_unweighted_var <- tss_unweighted$ProportionExplained
 ##used for pcoa plot
 tss_unweighted <- tss_unweighted$Vectors
 names(tss_unweighted)[names(tss_unweighted) == 'SampleID'] <- 'sampleid'
 
-faith_pd_fp <- 
-  '~/gut_microbiome_metabolomics/total_sum_scaled/tss3/tss_core_metrics3/99697762-4585-43b8-bf9d-92774722b04f/data/alpha-diversity.tsv'
+## reading in faith's pd 
 uni_faith_pd <- read_tsv(faith_pd_fp)
 names(uni_faith_pd)[names(uni_faith_pd) == '#SampleID'] <- 'sampleid'
 
@@ -253,7 +269,7 @@ tss_unweighted %>%
 
 ## weighted files
 tss_weighted <- 
-  read_qza('~/gut_microbiome_metabolomics/total_sum_scaled/tss3/tss_core_metrics3/weighted_unifrac_pcoa_results.qza')$data
+  read_qza(weighted_fp)$data
 ##used for stats 
 tss_weighted_var <- tss_weighted$ProportionExplained
 ##used for pcoa plot

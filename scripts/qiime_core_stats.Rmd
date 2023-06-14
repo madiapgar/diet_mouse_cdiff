@@ -127,28 +127,30 @@ unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A',
                       'Mock_7A', 'PCR Blank0',
                       'PCR Blank1', 'Mock_7', 'Mock_6',
                       'Mock_5', 'Mock_4', 'PCR blank')
+# stats_fp <- './stats/'
 ```
 
 
 **Stats on my total sum scaled core metrics**
-**prepping all needed files to run the unweighted stats**
-
+**weighted UniFrac Adonis test**
 ```{r}
 ## testing 
 dist_files <- dist_matrix_prep(stat_meta,
-                               uw_dist_fp,
+                               w_dist_fp,
                                unwanted_samples)
 
-uw_dist <- dist_files$DistanceMatrix
+w_dist <- dist_files$DistanceMatrix
 stat_meta <- dist_files$Metadata
 
 ## testing
 filt_stat_meta <- meta_diet_fixer(stat_meta,
                                   seq_depth_FP)
 ## testing 
-uw_adonis <- adonis_test(uw_dist,
+w_adonis <- adonis_test(w_dist,
                          filt_stat_meta)
-uw_adonis
+w_adonis
+
+# write_tsv(w_adonis, '../stats/w_adonis_results.tsv')
 ```
 
 
@@ -165,63 +167,12 @@ uw_adonis <- adonis2(as.dist(uw_dist) ~ purified_diet * seq_depth + high_fat + h
 uw_adonis <- tidy(uw_adonis)
 
 uw_adonis
+
+# write_tsv(uw_adonis, '../stats/uw_adonis_results.tsv')
 ```
 
 
-**prepping weighted UniFrac distance matrix and metadata file**
-```{r}
-
-## I had to unzip the qza file because it was telling me that it had duplicate names?
-## weighted 
-w_dist <- read_tsv(w_dist_fp)
-names(w_dist)[names(w_dist) == '...1'] <- 'sampleid'
-
-## filtering the sample ids out that have character names instead of numeric names 
-## I thought this was causing the error but its not so rip
-## taking distance matrix from wide to long to wide again format
-w_dist %>% 
-  gather(-sampleid, key = sample_col, value = dist) %>% 
-  filter(!(sampleid %in% unwanted_samples)) %>% 
-  filter(!(sample_col %in% unwanted_samples)) %>% 
-  spread(sample_col, dist) -> w_long
-
-## making sure the number of rows is the same for the distance matrix and the metadata file 
-w_long %>% 
-  select(-sampleid) -> w_dist
-
-stat_meta %>% 
-  arrange(sampleid) -> stat_meta
-
-## making sure the number of rows is the same for the distance matrix and the metadata file 
-stat_meta %>% 
-  filter(sampleid %in% w_long$sampleid) -> filt_stat_meta
-
-w_dist <- as.matrix(w_dist)
-row.names(w_dist) <- colnames(w_dist)
-
-# sort based on alphabetical order of metadata sampleid
-filt_stat_meta <- filt_stat_meta[order(filt_stat_meta$sampleid),]
-
-```
-
-
-**weighted UniFrac Adonis test**
-for the weighted unifrac. takes into account the diet and the days post infection (or relative to infection). I'm not sure what this is telling me yet. The data looks much better without the stratification (I'm not sure what that means but I'm excited about it)!
-```{r}
-w_adonis <- adonis2(as.dist(w_dist) ~ purified_diet * seq_depth + high_fat + high_fiber +
-                     day_post_inf + study,
-                     data = filt_stat_meta,
-                     permutations = 999, 
-                     parallel = 4)
-
-w_adonis <- tidy(w_adonis)
-
-w_adonis
-```
-
-**non-parametric ANOVAs for my alpha diversity**
-need to run a base R kruskal-wallis test followed by a Dunn's post hoc test for both my faith's pd and my shannon entropy
-
+**Faith's Phylogenic Diversity**
 **reading in my needed files for faith's pd**
 ```{r}
 ## faith's pd 
@@ -246,15 +197,14 @@ stat_meta %>%
   filter(!(sampleid %in% unwanted_samples)) -> stat_meta
 
 ## reading in sequencing depth to join with my metadata file 
-seq_depth <- read_tsv(seq_depth_fp)
+## using new function to fix the metadata columns as well 
+faith_stat_meta <- meta_diet_fixer(stat_meta,
+                                   seq_depth_FP)
 
 ## faith biom table construction 
-stat_meta %>% 
+faith_stat_meta %>% 
   filter(sampleid %in% faith_pd$sampleid) %>% 
   left_join(faith_pd, by = 'sampleid') %>% 
-  left_join(seq_depth, by = 'sampleid') %>% 
-  select(sampleid, diet, study, day_post_inf, mouse_id, faith_pd, seq_depth) %>% 
-  mutate(day_post_inf_fact = as.factor(day_post_inf)) %>% 
   filter(!is.na(diet)) -> faith_biom
 
 ```
@@ -266,12 +216,13 @@ this one is with all the diets sectioned out.
 ## need to have my seq_depth file combined with my metadata along with my re-run core metrics 
 ## should do it with my sectioned out diets 
 faith_biom %>%
-  do(tidy(lm(faith_pd ~ high_fat + high_fiber + purified_diet + (day_post_inf_fact * seq_depth),
+  do(tidy(lm(faith_pd ~ (purified_diet * seq_depth) + high_fat + high_fiber + 
+               day_post_inf + study,
              data = .))) -> sectioned_faith_lm
 
 sectioned_faith_lm
 
-## need to do this for my shannon entropy as well 
+# write_tsv(sectioned_faith_lm, '../stats/faith_diet_results.tsv')
 ```
 
 **faith's pd linear modeling**
@@ -279,13 +230,15 @@ this one was done with just diet in general instead of having it sectioned out.
 ```{r}
 ## and just with diet in general 
 faith_biom %>%
-  do(tidy(lm(faith_pd ~ diet + (day_post_inf_fact * seq_depth),
+  do(tidy(lm(faith_pd ~ diet + (day_post_inf * seq_depth),
              data = .))) -> faith_lm
 
 faith_lm
+
+# write_tsv(faith_lm, '../stats/faith_total_results.tsv')
 ```
 
-
+**Shannon Entropy**
 **reading in my needed files for shannon entropy**
 ```{r}
 ## shannon entropy
@@ -304,17 +257,15 @@ stat_meta <- metadata_fixer(metadata_FP)
 stat_meta %>% 
   filter(!(sampleid %in% unwanted_samples)) -> stat_meta
 
-## reading in sequencing depth file
-seq_depth <- read_tsv(seq_depth_fp)
+shannon_stat_meta <- meta_diet_fixer(stat_meta,
+                                     seq_depth_FP)
 
 ## shannon biom table construction 
 ## have to start by filtering out sampleids that my shannon doesn't have but that my metadata does 
-stat_meta %>% 
+shannon_stat_meta %>% 
   filter(sampleid %in% shannon$sampleid) %>% 
   left_join(shannon, by = 'sampleid') %>% 
-  left_join(seq_depth, by = 'sampleid') %>% 
-  select(sampleid, diet, study, day_post_inf, mouse_id, shannon_entropy, seq_depth) %>% 
-  mutate(day_post_inf_fact = as.factor(day_post_inf)) -> shannon_biom
+  filter(!is.na(diet)) -> shannon_biom
 
 
 ```
@@ -322,20 +273,25 @@ stat_meta %>%
 **shannon entropy sectioned linear model**
 ```{r}
 shannon_biom %>%
-  do(tidy(lm(shannon_entropy ~ high_fat + high_fiber + purified_diet + (day_post_inf_fact * seq_depth),
+  do(tidy(lm(shannon_entropy ~ (purified_diet * seq_depth) + high_fat + high_fiber + 
+               day_post_inf + study,
              data = .))) -> sectioned_shannon_lm
 
 sectioned_shannon_lm
+
+# write_tsv(sectioned_shannon_lm, '../stats/shannon_diet_results.tsv')
 ```
 
 **shannon entropy general linear model**
 ```{r}
 ## and just with diet in general 
 shannon_biom %>%
-  do(tidy(lm(shannon_entropy ~ diet + (day_post_inf_fact * seq_depth),
+  do(tidy(lm(shannon_entropy ~ diet + (day_post_inf * seq_depth),
              data = .))) -> shannon_lm
 
 shannon_lm
+
+# write_tsv(shannon_lm, '../stats/shannon_total_results.tsv')
 ```
 
 

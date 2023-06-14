@@ -41,6 +41,7 @@ metadata_fixer <- function(metadata_fp) {
 
 ## next function
 ## for distance matrix processing
+## for beta diversity statistical analysis 
 dist_matrix_prep <- function(metadata_file,
                              dist_matrix_fp,
                              sample_filter){ 
@@ -127,7 +128,6 @@ unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A',
                       'Mock_7A', 'PCR Blank0',
                       'PCR Blank1', 'Mock_7', 'Mock_6',
                       'Mock_5', 'Mock_4', 'PCR blank')
-# stats_fp <- './stats/'
 ```
 
 
@@ -216,11 +216,16 @@ this one is with all the diets sectioned out.
 ## need to have my seq_depth file combined with my metadata along with my re-run core metrics 
 ## should do it with my sectioned out diets 
 faith_biom %>%
-  do(tidy(lm(faith_pd ~ (purified_diet * seq_depth) + high_fat + high_fiber + 
-               day_post_inf + study,
+  group_by(day_post_inf) %>% 
+  do(tidy(lm(faith_pd ~ (purified_diet * seq_depth) + high_fat + high_fiber + study,
              data = .))) -> sectioned_faith_lm
 
-sectioned_faith_lm
+sectioned_faith_lm %>% 
+  filter(day_post_inf != -15) -> sectioned_faith_lm
+
+sectioned_faith_lm %>% 
+  filter(p.value <= 0.05)
+
 
 # write_tsv(sectioned_faith_lm, '../stats/faith_diet_results.tsv')
 ```
@@ -230,10 +235,13 @@ this one was done with just diet in general instead of having it sectioned out.
 ```{r}
 ## and just with diet in general 
 faith_biom %>%
-  do(tidy(lm(faith_pd ~ diet + (day_post_inf * seq_depth),
+  group_by(day_post_inf) %>% 
+  do(tidy(lm(faith_pd ~ diet  * seq_depth,
              data = .))) -> faith_lm
 
-faith_lm
+faith_lm %>% 
+  filter(day_post_inf != -15,
+         p.value <= 0.05)
 
 # write_tsv(faith_lm, '../stats/faith_total_results.tsv')
 ```
@@ -294,5 +302,11 @@ shannon_lm
 # write_tsv(shannon_lm, '../stats/shannon_total_results.tsv')
 ```
 
+```{r}
+## reading in core output biom table 
+biom_fp <- '../data/qiime/core_outputs/rarefied_table.qza'
+
+core_biom <- read_qza(biom_fp)$data
+```
 
 

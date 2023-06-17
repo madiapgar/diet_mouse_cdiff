@@ -271,7 +271,7 @@ uu_homog %>%
                nrow = 1) +
     theme_bw(base_size = 14) +
     xlab('Days Relative to Infection') +
-    ylab('Weighted UniFrac Distance\n(Pairwise Distances within Day)') +
+    ylab('Unweighted UniFrac Distance\n(Pairwise Distances within Day)') +
     ggtitle("Microbiome Homogeneity Over Time") -> uu_homog_plot
 
 uu_homog_plot

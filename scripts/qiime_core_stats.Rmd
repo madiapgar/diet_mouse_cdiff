@@ -24,7 +24,7 @@ library(rstatix)
 library(dunn.test)
 ```
 
-**Basic Functions**
+**General Functions**
 ```{r}
 ## initial metadata fixer 
 metadata_fixer <- function(metadata_fp) {
@@ -39,7 +39,133 @@ metadata_fixer <- function(metadata_fp) {
   return(metadata)
 }
 
-## next function
+## for editing my metadata file post metadata fixer 
+meta_diet_fixer <- function(metadata_file,
+                            seq_depth_fp){
+  seq_depths <- read_tsv(seq_depth_fp)
+  metadata_file %>% 
+    select(sampleid, diet, day_post_inf, mouse_id, study) %>% 
+    mutate(diet_true = diet,
+    diet_true = if_else(day_post_inf == -15, "Chow", diet_true),
+    high_fat = case_when(
+      diet_true == 'HF/HF' ~ 1,
+      diet_true == 'HF/LF' ~ 1,
+      .default = 0
+      ), 
+      high_fiber = case_when(
+      diet_true == 'HF/HF' ~ 1,
+      diet_true == 'LF/HF' ~ 1,
+      diet_true == 'Chow' ~ 1,
+      .default = 0
+      ), 
+      purified_diet = case_when(
+      diet_true == 'Chow' ~ 0,
+      .default = 1
+      )
+    ) %>% 
+    left_join(seq_depths) -> metadata
+  return(metadata)
+}
+```
+
+**Alpha Diversity Functions**
+```{r}
+## alpha diversity file prep 
+alpha_div_prep <- function(file_path1,
+                           file_path2,
+                           sample_filter,
+                           metadata_fp,
+                           seq_depth_fp){
+  ## faith's pd 
+  alpha_faith <- read_tsv(file_path1)
+  names(alpha_faith)[names(alpha_faith) == '#SampleID'] <- 'sampleid'
+  alpha_faith %>% 
+    filter(!(sampleid %in% sample_filter)) -> faith_pd
+  ## metadata file for both
+  stat_meta <- metadata_fixer(metadata_fp)
+  stat_meta %>% 
+    filter(!(sampleid %in% sample_filter)) -> stat_meta
+  ## joining faith's pd and metadata file together into one table
+  faith_stat_meta <- meta_diet_fixer(stat_meta,
+                                     seq_depth_fp)
+  faith_stat_meta %>% 
+    filter(sampleid %in% faith_pd$sampleid) %>% 
+    left_join(faith_pd, by = 'sampleid') %>% 
+    filter(!is.na(diet)) -> faith_biom
+  ## shannon entropy
+  alpha_shannon <- read_tsv(file_path2)
+  names(alpha_shannon)[names(alpha_shannon) == '...1'] <- 'sampleid'
+  alpha_shannon %>% 
+    filter(!(sampleid %in% sample_filter)) -> shannon
+  ## joining shannon and metadata file together into one table 
+  shannon_stat_meta <- meta_diet_fixer(stat_meta,
+                                       seq_depth_fp)
+  shannon_stat_meta %>% 
+    filter(sampleid %in% shannon$sampleid) %>% 
+    left_join(shannon, by = 'sampleid') %>% 
+    filter(!is.na(diet)) -> shannon_biom
+  ## creating a list for outputs 
+  my_list <- list(FaithPD = faith_biom,
+                  Shannon = shannon_biom, 
+                  Metadata = stat_meta)
+  return(my_list)
+}
+
+
+## stats calculations
+## faith's pd 
+faith_div_stats <- function(biom_table){
+  ## alpha_cat is what the alpha div column is called (faith_pd or shannon_entropy)
+  ## sectioned out by diet 
+  biom_table %>% 
+    group_by(day_post_inf) %>% 
+    do(tidy(lm(faith_pd ~ (purified_diet * seq_depth) + high_fat + high_fiber + study,
+               data = .))) -> sectioned_lm
+  sectioned_lm %>% 
+    filter(day_post_inf != -15) %>% 
+    filter(p.value <= 0.05) -> sectioned_lm
+  ## not sectioned out by diet 
+  biom_table %>%
+    group_by(day_post_inf) %>% 
+    do(tidy(lm(faith_pd ~ diet * seq_depth,
+               data = .))) -> not_sectioned_lm
+  not_sectioned_lm %>% 
+    filter(day_post_inf != -15) %>% 
+    filter(p.value <= 0.05) -> not_sectioned_lm
+  ## creating a list 
+  my_list <- list(DietSpecific = sectioned_lm,
+                  OverallDiet = not_sectioned_lm)
+  return(my_list)
+}
+
+## shannon entropy 
+shannon_div_stats <- function(biom_table){
+  ## alpha_cat is what the alpha div column is called (faith_pd or shannon_entropy)
+  ## sectioned out by diet 
+  biom_table %>% 
+    group_by(day_post_inf) %>% 
+    do(tidy(lm(shannon_entropy ~ (purified_diet * seq_depth) + high_fat + high_fiber + study,
+               data = .))) -> sectioned_lm
+  sectioned_lm %>% 
+    filter(day_post_inf != -15) %>% 
+    filter(p.value <= 0.05) -> sectioned_lm
+  ## not sectioned out by diet 
+  biom_table %>%
+    group_by(day_post_inf) %>% 
+    do(tidy(lm(shannon_entropy ~ diet * seq_depth,
+               data = .))) -> not_sectioned_lm
+  not_sectioned_lm %>% 
+    filter(day_post_inf != -15) %>% 
+    filter(p.value <= 0.05) -> not_sectioned_lm
+  ## creating a list 
+  my_list <- list(DietSpecific = sectioned_lm,
+                  OverallDiet = not_sectioned_lm)
+  return(my_list)
+}
+```
+
+**Beta Diversity Functions**
+```{r}
 ## for distance matrix processing
 ## for beta diversity statistical analysis 
 dist_matrix_prep <- function(metadata_file,
@@ -72,33 +198,6 @@ dist_matrix_prep <- function(metadata_file,
 }
 
 
-## for editing my metadata file post metadata fixer 
-meta_diet_fixer <- function(metadata_file,
-                            seq_depth_fp){
-  seq_depths <- read_tsv(seq_depth_fp)
-  metadata_file %>% 
-    select(sampleid, diet, day_post_inf, mouse_id, study) %>% 
-    mutate(diet_true = diet,
-    diet_true = if_else(day_post_inf == -15, "Chow", diet_true),
-    high_fat = case_when(
-      diet_true == 'HF/HF' ~ 1,
-      diet_true == 'HF/LF' ~ 1,
-      .default = 0
-      ), 
-      high_fiber = case_when(
-      diet_true == 'HF/HF' ~ 1,
-      diet_true == 'LF/HF' ~ 1,
-      diet_true == 'Chow' ~ 1,
-      .default = 0
-      ), 
-      purified_diet = case_when(
-      diet_true == 'Chow' ~ 0,
-      .default = 1
-      )
-    ) %>% 
-    left_join(seq_depths) -> metadata
-  return(metadata)
-}
 
 ## beta diversity adonis2 testing function
 adonis_test <- function(dist_matrix,
@@ -132,181 +231,74 @@ unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A',
 
 
 **Stats on my total sum scaled core metrics**
-**weighted UniFrac Adonis test**
+
+**Alpha Diversity Statistical Analysis**
 ```{r}
-## testing 
-dist_files <- dist_matrix_prep(stat_meta,
-                               w_dist_fp,
-                               unwanted_samples)
+## alpha diversity analysis  
+alpha_files <- alpha_div_prep(faith_pd_fp,
+                              shannon_fp,
+                              unwanted_samples,
+                              metadata_FP,
+                              seq_depth_FP)
 
-w_dist <- dist_files$DistanceMatrix
-stat_meta <- dist_files$Metadata
+faith <- alpha_files$FaithPD
+shannon <- alpha_files$Shannon
+metadata <- alpha_files$Metadata
 
-## testing
-filt_stat_meta <- meta_diet_fixer(stat_meta,
-                                  seq_depth_FP)
-## testing 
-w_adonis <- adonis_test(w_dist,
-                         filt_stat_meta)
-w_adonis
+## faith's pd stats
+faith_stats <- faith_div_stats(faith)
+sectioned_faith_lm <- faith_stats$DietSpecific
+faith_lm <- faith_stats$OverallDiet
 
-# write_tsv(w_adonis, '../stats/w_adonis_results.tsv')
+## shannon entropy stats
+shannon_stats <- shannon_div_stats(shannon)
+sectioned_shannon_lm <- shannon_stats$DietSpecific
+shannon_lm <- shannon_stats$OverallDiet
+
+## example of how to write stats results out as a .tsv for better visualization 
+# write_tsv(faith_lm, '../stats/faith_total_results.tsv')
 ```
 
 
-**unweighted UniFrac Adonis test**
-for the unweighted unifrac. takes into account the diet and the days post infection (or relative to infection). I'm not sure what this is telling me yet. Now it's giving me the exact same p-value for everything which isn't what we wanted. I tried by = "terms" in the adonis test but that didn't help either. I'm wondering if we should do something like a kruskal-wallis followed by a dunn test instead of an adonis? 
+**Beta Diversity Statistical Analysis**
 ```{r}
+## weighted unifrac 
+stat_meta <- metadata_fixer(metadata_FP)
+w_dist_files <- dist_matrix_prep(stat_meta,
+                               w_dist_fp,
+                               unwanted_samples)
 
-uw_adonis <- adonis2(as.dist(uw_dist) ~ purified_diet * seq_depth + high_fat + high_fiber +
-                       day_post_inf + study,
-                     data = filt_stat_meta,
-                     permutations = 999, 
-                     parallel = 4)
+w_dist <- w_dist_files$DistanceMatrix
+stat_meta <- w_dist_files$Metadata
 
-uw_adonis <- tidy(uw_adonis)
 
-uw_adonis
+filt_stat_meta <- meta_diet_fixer(stat_meta,
+                                  seq_depth_FP)
+ 
+w_adonis <- adonis_test(w_dist,
+                         filt_stat_meta)
 
+
+## unweighted unifrac
+uw_dist_files <- dist_matrix_prep(stat_meta,
+                               uw_dist_fp,
+                               unwanted_samples)
+
+uw_dist <- uw_dist_files$DistanceMatrix
+stat_meta <- uw_dist_files$Metadata
+
+
+filt_stat_meta <- meta_diet_fixer(stat_meta,
+                                  seq_depth_FP)
+ 
+uw_adonis <- adonis_test(uw_dist,
+                         filt_stat_meta)
+
+## example of how to write results out as a .tsv 
+# write_tsv(w_adonis, '../stats/w_adonis_results.tsv')
 # write_tsv(uw_adonis, '../stats/uw_adonis_results.tsv')
 ```
 
 
-**Faith's Phylogenic Diversity**
-**reading in my needed files for faith's pd**
-```{r}
-## faith's pd 
-# tmp_faith <- read_tsv(faith_pd_fp, 
-#                       n_max = 2)
-# faith_cols <- colnames(tmp_faith)
-# faith_pd <- read_tsv(faith_pd_fp, skip = 2, col_names = faith_cols)
-faith_pd <- read_tsv(faith_pd_fp)
-names(faith_pd)[names(faith_pd) == '#SampleID'] <- 'sampleid'
-
-unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A', 'Mock_3A', 'Mock_4A', 'Mock_5A', 'Mock_6A', 'Mock_7A', 'PCR Blank0',
-                      'PCR Blank1', 'Mock_7', 'Mock_6', 'Mock_5', 'Mock_4', 'PCR blank')
-
-faith_pd %>% 
-  filter(!(sampleid %in% unwanted_samples)) -> faith_pd
-
-
-## metadata file 
-stat_meta <- metadata_fixer(metadata_FP)
-
-stat_meta %>% 
-  filter(!(sampleid %in% unwanted_samples)) -> stat_meta
-
-## reading in sequencing depth to join with my metadata file 
-## using new function to fix the metadata columns as well 
-faith_stat_meta <- meta_diet_fixer(stat_meta,
-                                   seq_depth_FP)
-
-## faith biom table construction 
-faith_stat_meta %>% 
-  filter(sampleid %in% faith_pd$sampleid) %>% 
-  left_join(faith_pd, by = 'sampleid') %>% 
-  filter(!is.na(diet)) -> faith_biom
-
-```
-
-**faith's pd linear modeling**
-this one is with all the diets sectioned out. 
-```{r}
-## instead of the kruskal-walllis and dunn's post hoc test, we should do this instead 
-## need to have my seq_depth file combined with my metadata along with my re-run core metrics 
-## should do it with my sectioned out diets 
-faith_biom %>%
-  group_by(day_post_inf) %>% 
-  do(tidy(lm(faith_pd ~ (purified_diet * seq_depth) + high_fat + high_fiber + study,
-             data = .))) -> sectioned_faith_lm
-
-sectioned_faith_lm %>% 
-  filter(day_post_inf != -15) -> sectioned_faith_lm
-
-sectioned_faith_lm %>% 
-  filter(p.value <= 0.05)
-
-
-# write_tsv(sectioned_faith_lm, '../stats/faith_diet_results.tsv')
-```
-
-**faith's pd linear modeling**
-this one was done with just diet in general instead of having it sectioned out. 
-```{r}
-## and just with diet in general 
-faith_biom %>%
-  group_by(day_post_inf) %>% 
-  do(tidy(lm(faith_pd ~ diet  * seq_depth,
-             data = .))) -> faith_lm
-
-faith_lm %>% 
-  filter(day_post_inf != -15,
-         p.value <= 0.05)
-
-# write_tsv(faith_lm, '../stats/faith_total_results.tsv')
-```
-
-**Shannon Entropy**
-**reading in my needed files for shannon entropy**
-```{r}
-## shannon entropy
-shannon <- read_tsv(shannon_fp)
-names(shannon)[names(shannon) == '...1'] <- 'sampleid'
-
-unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A', 'Mock_3A', 'Mock_4A', 'Mock_5A', 'Mock_6A', 'Mock_7A', 'PCR Blank0','PCR Blank1', 'Mock_7', 'Mock_6', 'Mock_5', 'Mock_4', 'PCR blank')
-
-shannon %>% 
-  filter(!(sampleid %in% unwanted_samples)) -> shannon
-
-
-## metadata file 
-stat_meta <- metadata_fixer(metadata_FP)
-
-stat_meta %>% 
-  filter(!(sampleid %in% unwanted_samples)) -> stat_meta
-
-shannon_stat_meta <- meta_diet_fixer(stat_meta,
-                                     seq_depth_FP)
-
-## shannon biom table construction 
-## have to start by filtering out sampleids that my shannon doesn't have but that my metadata does 
-shannon_stat_meta %>% 
-  filter(sampleid %in% shannon$sampleid) %>% 
-  left_join(shannon, by = 'sampleid') %>% 
-  filter(!is.na(diet)) -> shannon_biom
-
-
-```
-
-**shannon entropy sectioned linear model**
-```{r}
-shannon_biom %>%
-  do(tidy(lm(shannon_entropy ~ (purified_diet * seq_depth) + high_fat + high_fiber + 
-               day_post_inf + study,
-             data = .))) -> sectioned_shannon_lm
-
-sectioned_shannon_lm
-
-# write_tsv(sectioned_shannon_lm, '../stats/shannon_diet_results.tsv')
-```
-
-**shannon entropy general linear model**
-```{r}
-## and just with diet in general 
-shannon_biom %>%
-  do(tidy(lm(shannon_entropy ~ diet + (day_post_inf * seq_depth),
-             data = .))) -> shannon_lm
-
-shannon_lm
-
-# write_tsv(shannon_lm, '../stats/shannon_total_results.tsv')
-```
-
-```{r}
-## reading in core output biom table 
-biom_fp <- '../data/qiime/core_outputs/rarefied_table.qza'
-
-core_biom <- read_qza(biom_fp)$data
-```
 
 

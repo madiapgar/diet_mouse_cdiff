@@ -8,3 +8,8 @@
 
 # Session Data files
 .RData
+
+# Rendering Documents
+./scripts/resilience_homog_files/
+
+

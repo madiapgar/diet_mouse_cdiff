@@ -22,7 +22,11 @@ library(ggh4x)
 library(broom)
 ```
 
-**Basic Functions**
+HISTOPATHOLOGY: 
+gather(colon, cecum, key = tissue, value = score) (need these in the same column so I can graph them)
+
+
+**Basic File-Prep Functions**
 ```{r}
 metadata_fixer <- function(metadata_fp) {
   tmpMeta <- read_tsv(metadata_fp, n_max = 2)
@@ -32,7 +36,8 @@ metadata_fixer <- function(metadata_fp) {
   metadata %>% 
     filter(!is.na(diet)) %>% 
     mutate(day_post_inf = if_else(day_post_inf == 2, 3, day_post_inf)) %>% 
-    mutate(diet = as.factor(diet)) -> metadata
+    mutate(diet = as.factor(diet)) %>% 
+    select(sampleid, day_post_inf, study, diet, mouse_id) -> metadata
   return(metadata)
 }
 
@@ -52,9 +57,144 @@ pcoa_ax_lab <- function(unifrac_var, col_name){
   uni_lab <- paste0(col_name, ' - ', uni_lab, '%')
   return(uni_lab)
 }
+
+## unweighted/weighted unifrac pcoa result, faith's pd, and shannon entropy file prep 
+## going to attempt to return multiple outputs so I can just have one function for file prep
+biom_table_prep <- function(unweighted_fp,
+                            weighted_fp,
+                            faith_fp,
+                            shannon_fp,
+                            metadata_file){
+  ## unweighted pcoa
+  unweighted <- read_qza(unweighted_fp)$data
+  unweighted_var <- unweighted$ProportionExplained
+  unweighted_pcoa <- unweighted$Vectors ##used for pcoa plot
+  names(unweighted_pcoa)[names(unweighted_pcoa) == 'SampleID'] <- 'sampleid'
+  ## weighted pcoa
+  weighted <- read_qza(weighted_fp)$data
+  weighted_var <- weighted$ProportionExplained
+  weighted_pcoa <- weighted$Vectors
+  names(weighted_pcoa)[names(weighted_pcoa) == 'SampleID'] <- 'sampleid'
+  ## faith's 
+  faith <- read_tsv(faith_fp)
+  names(faith)[names(faith) == '#SampleID'] <- 'sampleid'
+  ## shannon 
+  shannon <- read_tsv(shannon_fp)
+  names(shannon)[names(shannon) == '...1'] <- 'sampleid'
+  ## unweighted biom 
+  unweighted_pcoa %>% 
+    left_join(metadata_file, by = 'sampleid') %>% 
+    left_join(faith, by = 'sampleid') %>% 
+    left_join(shannon, by = 'sampleid') -> unweighted_biom
+  ## weighted biom
+  weighted_pcoa %>% 
+    left_join(metadata_file, by = 'sampleid') %>% 
+    left_join(faith, by = 'sampleid') %>% 
+    left_join(shannon, by = 'sampleid') -> weighted_biom
+  ## creating a list to return multiple outputs 
+  my_list <- list(UnweightedVar = unweighted_var, 
+                  WeightedVar = weighted_var,
+                  UnweightedBiom = unweighted_biom,
+                  WeightedBiom = weighted_biom)
+  return(my_list)
+}
+
 ```
 
-**Microshades Functions**
+**Alpha Diversity Plots Functions**
+```{r}
+## faith's pd plot 
+## assumes that the files is a .tsv
+faith_pd_plot <- function(faith_fp,
+                          metadata_file,
+                          labels,
+                          names_labels,
+                          title){
+  faith <- read_tsv(faith_fp)
+  names(faith)[names(faith) == '#SampleID'] <- 'sampleid'
+  metadata_file %>% 
+    left_join(faith, by = 'sampleid') -> faith_pd
+  ## what you want the grid labels to be (list)
+  labs <- (labels) 
+  ## what grid labels currently are (list)
+  names(labs) <- (names_labels) 
+  faith_pd %>%
+    filter(!is.na(diet)) %>% 
+    ggplot(aes(x = day_post_inf, y = faith_pd)) +
+    geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
+    geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
+    scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
+    geom_smooth(se = FALSE) +
+    theme_bw(base_size = 16) +
+    facet_grid(~diet, labeller = labeller(diet = labs) ) +
+    ggtitle(title) +
+    xlab('Days Relative to Infection') +
+    ylab("Faith's PD") -> faith_plot
+  return(faith_plot)
+}
+
+## shannon entropy plot
+## assumes that the file is a .tsv
+shannon_plot <- function(shannon_fp,
+                          metadata_file,
+                          labels,
+                          names_labels,
+                          title){
+  shannon <- read_tsv(shannon_fp)
+  names(shannon)[names(shannon) == '...1'] <- 'sampleid'
+  metadata_file %>% 
+    left_join(shannon, by = 'sampleid') -> shannon_entropy
+  ## what you want the grid labels to be (list)
+  labs <- (labels) 
+  ## what grid labels currently are (list)
+  names(labs) <- (names_labels) 
+  shannon_entropy %>%
+    filter(!is.na(diet)) %>% 
+    ggplot(aes(x = day_post_inf, y = shannon_entropy)) +
+    geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
+    geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
+    scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
+    geom_smooth(se = FALSE) +
+    theme_bw(base_size = 16) +
+    facet_grid(~diet, labeller = labeller(diet = labs) ) +
+    ggtitle(title) +
+    xlab('Days Relative to Infection') +
+    ylab("Shannon Entropy") -> shannon_plot
+  return(shannon_plot)
+}
+```
+
+**Beta Diversity Plot Function**
+```{r}
+## pcoa plot function
+## xlab and ylab are outputs from pcoa_ax_lab function
+pcoa_plot <- function(biom_file,
+                      labels,
+                      names_labels,
+                      xlab,
+                      ylab,
+                      title){
+  ## what you want the grid labels to be (list)
+  labs <- (labels) 
+  ## what grid labels currently are (list)
+  names(labs) <- (names_labels) 
+  biom_file %>% 
+    filter(!is.na(diet)) %>% 
+    ggplot(aes(x = PC1, y = PC2)) +
+    geom_point(aes(fill = faith_pd), pch = 21, alpha = 0.7) +
+    theme_bw(base_size = 14) +
+    scale_fill_distiller(palette = 'Spectral', name = "Faith's PD") +
+    facet_grid(day_post_inf~diet, 
+               labeller = labeller(diet = labs)) +
+    theme(legend.text = element_text(size = 8.5),
+          strip.text.y = element_text(angle = 0)) +
+    ggtitle(title) +
+    labs(x = xlab, y = ylab) -> pcoa
+  return(pcoa)
+}
+```
+
+**Microshades Taxa Barplot Functions**
 ```{r}
 ## phyloseq input file prep (bc phyloseq is really nit-picky)
 ## metadata prep 
@@ -202,227 +342,145 @@ Doing this so that I don't have to worry about re-entering entire file paths all
 ```{r}
 metadata_FP <- '../data/misc/merged_metadata1.tsv'
 seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
-unweighted_fp <- '../data/qiime/core_outputs/unweighted_unifrac_pcoa_results.qza'
-weighted_fp <- '../data/qiime/core_outputs/weighted_unifrac_pcoa_results.qza'
-faith_pd_fp <- '../data/qiime/core_outputs/faith_pd.tsv'
-shannon_fp <- '../data/qiime/core_outputs/shannon_entropy.tsv'
-tax_fp <- '../data/qiime/taxonomy.qza'
-sample_asv_fp <- '../data/misc/tss_sample_asv.tsv'
-
+unweighted_FP <- '../data/qiime/core_outputs/unweighted_unifrac_pcoa_results.qza'
+weighted_FP <- '../data/qiime/core_outputs/weighted_unifrac_pcoa_results.qza'
+faith_pd_FP <- '../data/qiime/core_outputs/faith_pd.tsv'
+shannon_FP <- '../data/qiime/core_outputs/shannon_entropy.tsv'
+tax_FP <- '../data/qiime/taxonomy.qza'
+sample_asv_FP <- '../data/misc/tss_sample_asv.tsv'
+otu_table_FP <- '../data/qiime/taxonomy_filtered.qza'
+tss_tax_rank <- "Phylum"
+tss_tax_subgroup <- "Family"
+tss_title <- 'Total Sum Scaled Taxa Barplot'
+tss_y <- 'Relative Abundance'
 
 unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A',
                       'Mock_3A', 'Mock_4A', 'Mock_5A', 'Mock_6A',
                       'Mock_7A', 'PCR Blank0',
                       'PCR Blank1', 'Mock_7', 'Mock_6',
                       'Mock_5', 'Mock_4', 'PCR blank')
+diet_labs <- 
+    c('Chow', 
+      'High Fat / High Fiber', 
+      'High Fat / Low Fiber', 
+      'Low Fat / High Fiber', 
+      'Low Fat / Low Fiber')
+
+diet_names_labels <- c('Chow', 
+                       'HF/HF', 
+                       'HF/LF', 
+                       'LF/HF', 
+                       'LF/LF')
 ```
 
-
-**Reading in metadata file**
+**Core Metrics File-Prep (for plots)**
 ```{r}
+## metadata file prep
 metadata <- metadata_fixer(metadata_FP)
-names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
 
-metadata %>% 
-  select(sampleid, diet, study, day_post_inf) %>% 
-  mutate(diet = as.factor(diet)) %>% 
-  mutate(day_post_inf = if_else(day_post_inf == 2, 3, day_post_inf)) -> meta_red
+## preparing core beta diversity files for ggplot
+core_files <- biom_table_prep(unweighted_FP,
+                              weighted_FP,
+                              faith_pd_FP,
+                              shannon_FP,
+                              metadata)
+## extracting core beta diversity files from named list 
+uw_var <- core_files$UnweightedVar
+w_var <- core_files$WeightedVar
+unweighted_biom <- core_files$UnweightedBiom
+weighted_biom <- core_files$WeightedBiom
 
 ```
 
 
+**Unweighted PcoA plot**
+```{r, fig.height=5, fig.width=12, warning=FALSE}
+uw_uni_xlab <- pcoa_ax_lab(uw_var, 'PC1')
+uw_uni_ylab <- pcoa_ax_lab(uw_var, 'PC2')
+
+uw_title <- 'Total Sum Scaled Unweighted UniFrac'
+
+unweighted_pcoa <- pcoa_plot(unweighted_biom,
+                             diet_labs,
+                             diet_names_labels,
+                             uw_uni_xlab,
+                             uw_uni_ylab,
+                             uw_title)
+
+unweighted_pcoa
+```
+
+**Weighted PcoA plot**
+```{r, fig.height=5, fig.width=12, warning=FALSE}
+w_uni_xlab <- pcoa_ax_lab(w_var, 'PC1')
+w_uni_ylab <- pcoa_ax_lab(w_var, 'PC2')
+
+w_title <- 'Total Sum Scaled Weighted UniFrac'
+
+weighted_pcoa <- pcoa_plot(weighted_biom,
+                             diet_labs,
+                             diet_names_labels,
+                             w_uni_xlab,
+                             w_uni_ylab,
+                             w_title)
+
+weighted_pcoa
+```
+
+**Faith's PD plot**
+```{r, warning=FALSE, fig.height=5, fig.width=10}
+faith_title <- "Total Sum Scaled Faith's Phylogenic Diversity"
+
+faith_plot <- faith_pd_plot(faith_pd_FP,
+                            metadata,
+                            diet_labs,
+                            diet_names_labels,
+                            faith_title)
+faith_plot
+```
+
+**Shannon Entropy plot**
+```{r, warning=FALSE, fig.height=5, fig.width=10}
+shannon_title <- "Total Sum Scaled Shannon Entropy"
+
+shannon_entropy_plot <- shannon_plot(shannon_FP,
+                                     metadata,
+                                     diet_labs,
+                                     diet_names_labels,
+                                     shannon_title)
+shannon_entropy_plot
+```
 **Reading in taxonomy file**
 ```{r}
 ## actual taxonomic file 
-tss_tax <- read_qza(tax_fp)$data %>% 
+tss_tax <- read_qza(tax_FP)$data %>% 
                     parse_taxonomy() %>% 
                     rownames_to_column('asv')
 
 ## reading in file that has the asvs matched with sample ids so I can link the taxonomic info to 
 ## my core diversity outputs 
-sample_asv <- read_tsv(sample_asv_fp)
+sample_asv <- read_tsv(sample_asv_FP)
 
 ## joining the two tables together 
 tss_tax %>% 
   left_join(sample_asv, by = 'asv') -> big_tax
 ```
 
-
-**Reading in weighted and unweighted unifrac files**
-```{r}
-## unweighted files 
-tss_unweighted <- 
-  read_qza(unweighted_fp)$data
-##used for stats 
-tss_unweighted_var <- tss_unweighted$ProportionExplained
-##used for pcoa plot
-tss_unweighted <- tss_unweighted$Vectors
-names(tss_unweighted)[names(tss_unweighted) == 'SampleID'] <- 'sampleid'
-
-## reading in faith's pd 
-uni_faith_pd <- read_tsv(faith_pd_fp)
-names(uni_faith_pd)[names(uni_faith_pd) == '#SampleID'] <- 'sampleid'
-
-tss_unweighted %>% 
-  left_join(meta_red, by = 'sampleid') %>% 
-  left_join(uni_faith_pd, by = 'sampleid') -> tss_unweighted
-
-## weighted files
-tss_weighted <- 
-  read_qza(weighted_fp)$data
-##used for stats 
-tss_weighted_var <- tss_weighted$ProportionExplained
-##used for pcoa plot
-tss_weighted <- tss_weighted$Vectors
-names(tss_weighted)[names(tss_weighted) == 'SampleID'] <- 'sampleid'
-
-tss_weighted %>% 
-  left_join(meta_red, by = 'sampleid') %>% 
-  left_join(uni_faith_pd, by = 'sampleid') -> tss_weighted
-```
-
-**Unweighted PcoA plot**
-```{r, fig.height=3, fig.width=6, warning=FALSE}
-uw_uni_xlab <- pcoa_ax_lab(tss_unweighted_var, 'PC1')
-uw_uni_ylab <- pcoa_ax_lab(tss_unweighted_var, 'PC2')
-
-diet_labs <- 
-    c('Chow', 
-      'High Fat / High Fiber', 
-      'High Fat / Low Fiber', 
-      'Low Fat / High Fiber', 
-      'Low Fat / Low Fiber')
-
-names(diet_labs) <- c('Chow', 'HF/HF', 'HF/LF', 'LF/HF', 'LF/LF')
-
-tss_unweighted %>% 
-  filter(!is.na(diet)) %>% 
-  ggplot(aes(x = PC1, y = PC2)) +
-  geom_point(aes(fill = faith_pd), pch = 21, alpha = 0.7) +
-  theme_bw(base_size = 14) +
-  scale_fill_distiller(palette = 'Spectral', name = "Faith's PD") +
-  facet_grid(day_post_inf~diet, 
-             labeller = labeller(diet = diet_labs)) +
-  theme(legend.text = element_text(size = 8.5),
-        strip.text.y = element_text(angle = 0)) +
-  ggtitle('Total Sum Scaled Unweighted UniFrac') +
-  labs(x = uw_uni_xlab, y = uw_uni_ylab) -> tss_unweighted_unifrac
-
-tss_unweighted_unifrac
-  
-```
-
-**Weighted PcoA plot**
-```{r, fig.height=3, fig.width=6, warning=FALSE}
-w_uni_xlab <- pcoa_ax_lab(tss_weighted_var, 'PC1')
-w_uni_ylab <- pcoa_ax_lab(tss_weighted_var, 'PC2')
-
-diet_labs <- 
-    c('Chow', 
-      'High Fat / High Fiber', 
-      'High Fat / Low Fiber', 
-      'Low Fat / High Fiber', 
-      'Low Fat / Low Fiber')
-
-names(diet_labs) <- c('Chow', 'HF/HF', 'HF/LF', 'LF/HF', 'LF/LF')
-
-tss_weighted %>%
-  filter(!is.na(diet)) %>% 
-  ggplot(aes(x = PC1, y = PC2)) +
-  geom_point(aes(fill = faith_pd), pch = 21, alpha = 0.7) +
-  theme_bw(base_size = 14) +
-  scale_fill_distiller(palette = 'Spectral', name = "Faith's PD") +
-  facet_grid(day_post_inf~diet, 
-             labeller = labeller(diet = diet_labs)) +
-  theme(legend.text = element_text(size = 8.5),
-        strip.text.y = element_text(angle = 0)) +
-  ggtitle('Total Sum Scaled Weighted UniFrac') +
-  labs(x = w_uni_xlab, y = w_uni_ylab) -> tss_weighted_unifrac
-
-tss_weighted_unifrac
-```
-
-
-**Faith's Phylogenetic Diversity files**
-so, there are about 10 samples that don't have metadata counterparts and both R and qiime2 are getting really mad about it and I don't know how to fix it. I can still run faith's PD in qiime2 to get an output but I haven't been able to do anything else. I'm slightly frustrated by this but it's fine (it's not fine)
-
-**attempting to find the 10 missing samples in my metadata file**
-I don't need this code anymore since I thought the missing samples meant something but they in fact do not (rip). 
-```{r}
-# faith_missing_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/tss_core_metrics2/faith_pd.tsv'
-# tmp_faith <- read_tsv(faith_missing_fp, 
-#                       n_max = 2)
-# faith_cols <- colnames(tmp_faith)
-# faith_missing <- read_tsv(faith_missing_fp, skip = 2, col_names = faith_cols)
-# names(faith_missing)[names(faith_missing) == 'Sample ID'] <- 'sampleid'
-# faith_sample <- faith_missing$sampleid
-# 
-# metadata %>% 
-#   filter(!(sampleid %in% faith_sample)) -> missing_samples
-# 
-# missing_samples <- missing_samples$sampleid
-# 
-# metadata %>% 
-#   filter(!(sampleid %in% missing_samples)) -> faith_meta
-
-```
-
-**Faith's PD plot (without taxonomic info)**
-(finally!)
-```{r, fig.height=5, fig.width=8, warning=FALSE}
-## reading in faith's pd file
-faith_pd_fp <- 
-  '~/gut_microbiome_metabolomics/total_sum_scaled/tss3/tss_core_metrics3/faith_pd/data/alpha-diversity.tsv'
-uni_faith_pd <- read_tsv(faith_pd_fp)
-names(uni_faith_pd)[names(uni_faith_pd) == '#SampleID'] <- 'sampleid'
-
-## joining it with the metadata file for plotting 
-meta_red %>% 
-  left_join(uni_faith_pd, by = 'sampleid') -> faith_pd
-
-diet_labs <- 
-    c('Chow', 
-      'High Fat / High Fiber', 
-      'High Fat / Low Fiber', 
-      'Low Fat / High Fiber', 
-      'Low Fat / Low Fiber')
-names(diet_labs) <- c('Chow', 
-                      'HF/HF', 
-                      'HF/LF', 
-                      'LF/HF', 
-                      'LF/LF')
-
-faith_pd %>%
-  filter(!is.na(diet)) %>% 
-  ggplot(aes(x = day_post_inf, y = faith_pd)) +
-  geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
-  geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
-  scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
-  geom_smooth(se = FALSE) +
-  theme_bw(base_size = 16) +
-  facet_grid(~diet, labeller = labeller(diet = diet_labs) ) +
-  ggtitle("Total Sum Scaled Faith's Phylogenic Diversity") +
-  xlab('Days Relative to Infection') +
-  ylab("Faith's PD") -> total_faith_pd
-
-total_faith_pd
-```
-
 **Faith's PD plot (with taxonomic info)**
 I need to work on this nightmare (consult Elena's code for linking the taxonomic information to the alpha diversity)
-```{r, warning=FALSE, fig.height=5, fig.width=10}
-faith_pd %>% 
-  select(sampleid, diet, study, day_post_inf, faith_pd) -> faith_red
+```{r, warning=FALSE, fig.height=7, fig.width=15}
+faith_tax <- read_tsv(faith_pd_FP)
+names(faith_tax)[names(faith_tax) == '#SampleID'] <- 'sampleid'
 
-## joining my faith pd values and metadata with taxonomic information for plot
-faith_red %>% 
-  left_join(big_tax, by = 'sampleid') -> faith_tax
-
-## filtering out all low abundance classes of bacteria to focus on the big three
-## trying to keep it consistent with by picrust output plots
-wanted_class <- c('Bacilli', 'Bacteroidia', 'Clostridia')
 faith_tax %>% 
-  filter(Class %in% wanted_class) -> faith_class_filt
+  left_join(metadata) %>% 
+  left_join(big_tax, by = 'sampleid') -> faith_tax 
+
+wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
+                   'Staphylococcaceae', 'Tannerellaceae', 'Muribaculaceae', 'Bacteriodaceae', 
+                   'Marinifilaceae')
+faith_tax %>% 
+  filter(Family %in% wanted_family) -> faith_tax_filt
 
 diet_labs <- 
     c('Chow', 
@@ -436,39 +494,38 @@ names(diet_labs) <- c('Chow',
                       'LF/HF', 
                       'LF/LF')
 
-faith_class_filt %>%
+faith_tax_filt %>%
   filter(!is.na(diet)) %>% 
-  ##filter(!is.na(Class)) %>% 
-  ggplot(aes(x = Class, y = faith_pd)) +
-  ##geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
-  geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
-  scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
+  ggplot(aes(x = Family, y = faith_pd)) +
+  geom_jitter(aes(color = Family), width = 0.1, height = 0, alpha = 0.3) +
+  scale_color_brewer(palette = 'Dark2') +
   theme_bw(base_size = 16) +
-  facet_grid(~diet, labeller = labeller(diet = diet_labs) ) +
-  ggtitle("Total Sum Scaled Faith's Phylogenic Diversity") +
-  xlab('Class') +
-  ylab("Faith's PD") -> tax_faith_pd
-
-tax_faith_pd
+  facet_grid(day_post_inf~diet, labeller = labeller(diet = diet_labs)) +
+  theme(strip.text.y = element_text(angle = 0),
+        axis.text.x = element_blank()) +
+  ggtitle("Total Sum Scaled Faith's Phylogenic Diversity by Microbe Family") +
+  ylab("Faith's PD") +
+  labs(x = NULL)
 
 ```
-
-
-
-
+Option number two for linking taxonomic information to alpha diversity metrics (for now). 
+```{r, warning=FALSE, fig.height=5, fig.width=20}
+faith_tax_filt %>%
+  filter(!is.na(diet)) %>% 
+  ggplot(aes(x = diet, y = Family)) +
+  geom_tile(aes(fill = faith_pd), alpha = 0.5) +
+  scale_fill_viridis(option = "H") +
+  theme_bw(base_size = 16) +
+  facet_grid(~day_post_inf) +
+  theme(strip.text.y = element_text(angle = 0)) +
+  ggtitle("Total Sum Scaled Faith's Phylogenic Diversity by Microbe Family") +
+  xlab("Diet")
+```
 
 
 **Microshades Taxa Barplot**
-break up microshades function so that you get graphical outputs that you can edit rather than the whole barplot!
+Break up microshades function so that you get graphical outputs that you can edit rather than the whole barplot! This currently doesn't work because something in the microshades package is out of date and needs to be fixed by the authors. 
 ```{r, fig.width=25,fig.height=10}
-## inputs
-tss_metadata_fp <- 'merged_metadata1.tsv'
-tss_otu_table_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/tss3/taxonomy_filtered.qza'
-tss_tax_table_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/tss3/taxonomy.qza'
-tss_tax_rank <- "Phylum"
-tss_tax_subgroup <- "Family"
-tss_title <- 'Total Sum Scaled Taxa Barplot'
-tss_y <- 'Relative Abundance'
 tss_diet_labs <- 
     c('Chow', 
       'High Fat / High Fiber', 
@@ -482,9 +539,9 @@ names(tss_diet_labs) <- c('Chow',
                           'LF/LF')
 
 ## barplot function
-tss_barplot <- microshades_tax_barplot(tss_metadata_fp, 
-                        tss_otu_table_fp, 
-                        tss_tax_table_fp,
+tss_barplot <- microshades_tax_barplot(metadata_FP, 
+                        otu_table_FP, 
+                        tax_FP,
                         tss_tax_rank, 
                         tss_tax_subgroup,
                         tss_title, 
@@ -495,133 +552,6 @@ tss_barplot
 ```
 
 
-**Example for how to read in my alpha diversity files (because it's been a struggle)**
-**Shannon Entropy plot (without taxonomic info)**
-```{r, fig.height=5, fig.width=8, warning=FALSE}
-# another way to read in the data, I won't be using this one for my shannon plot though, it's just here for your reference 
-# shannon <- read_qza('~/gut_microbiome_metabolomics/total_sum_scaled/tss_core_metrics2/shannon_vector2.qza')$data
-
-## I'm going to use this one for graphical outputs 
-shannon_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/tss3/tss_core_metrics3/shannon_entropy/data/alpha-diversity.tsv'
-actual_shannon <- read_tsv(shannon_fp)
-
-names(actual_shannon)[names(actual_shannon) == '...1'] <- 'sampleid'
-
-## generating a biom table with the shannon entropy values and metadata
-actual_shannon %>% 
-  left_join(meta_red, by = 'sampleid') -> shannon_biom
-
-## shannon entropy plot 
-diet_labs <- 
-    c('Chow', 
-      'High Fat / High Fiber', 
-      'High Fat / Low Fiber', 
-      'Low Fat / High Fiber', 
-      'Low Fat / Low Fiber')
-names(diet_labs) <- c('Chow', 
-                      'HF/HF', 
-                      'HF/LF', 
-                      'LF/HF', 
-                      'LF/LF')
-
-shannon_biom %>% 
-  filter(!is.na(diet)) %>% 
-  ggplot(aes(x = day_post_inf, y = shannon_entropy)) +
-  geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
-  geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
-  scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
-  geom_smooth(se = FALSE) +
-  theme_bw(base_size = 16) +
-  facet_grid(~diet, labeller = labeller(diet = diet_labs) ) +
-  ggtitle("Total Sum Scaled Shannon Entropy") +
-  xlab('Days Relative to Infection') +
-  ylab("Shannon Entropy") -> shannon_entropy
-
-shannon_entropy
-
-```
-
-**Shannon entropy plot (with taxonomic info)**
-I also need to work on this plot, it's in the same place as the faith's pd taxonomic plot. 
-```{r, warning=FALSE, fig.height=5, fig.width=8}
-## joining shannon biom table with taxonomic information 
-shannon_biom %>% 
-  left_join(big_tax, by = 'sampleid') -> shannon_tax
-
-## filtering out all low abundance classes of bacteria to focus on the big three
-## trying to keep it consistent with by picrust output plots
-wanted_class <- c('Bacilli', 'Bacteroidia', 'Clostridia')
-shannon_tax %>% 
-  filter(Class %in% wanted_class) -> shannon_class_filt
-
-diet_labs <- 
-    c('Chow', 
-      'High Fat / High Fiber', 
-      'High Fat / Low Fiber', 
-      'Low Fat / High Fiber', 
-      'Low Fat / Low Fiber')
-names(diet_labs) <- c('Chow', 
-                      'HF/HF', 
-                      'HF/LF', 
-                      'LF/HF', 
-                      'LF/LF')
-
-shannon_class_filt %>%
-  filter(!is.na(diet)) %>% 
-  ##filter(!is.na(Class)) %>% 
-  ggplot(aes(x = day_post_inf, y = shannon_entropy)) +
-  geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
-  geom_jitter(aes(fill = Class), width = 0.1, height = 0, alpha = 0.4, pch = 21) +
-  geom_smooth(se = FALSE) +
-  scale_fill_brewer(palette = 'Dark2') +
-  scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
-  theme_bw(base_size = 16) +
-  facet_grid(~diet, labeller = labeller(diet = diet_labs) ) +
-  ggtitle("Total Sum Scaled Shannon Entropy") +
-  xlab('Days Relative to Infection') +
-  ylab("Shannon Entropy") -> tax_shannon_plot
-
-tax_shannon_plot
-```
-
-
-**Saving my outputs**
-```{r}
-## unweighted unifrac
-ggsave("tss_unweighted_unifrac.pdf", 
-       plot = tss_unweighted_unifrac,
-       width = 11, 
-       height = 5,
-       path = '~/gut_microbiome_metabolomics/total_sum_scaled/tss3/plots')
-
-## weighted unifrac
-ggsave("tss_weighted_unifrac.pdf", 
-       plot = tss_weighted_unifrac,
-       width = 11, 
-       height = 5,
-       path = '~/gut_microbiome_metabolomics/total_sum_scaled/tss3/plots')
-
-## faith's pd 
-ggsave("tss_faith_pd.pdf", 
-       plot = total_faith_pd,
-       width = 11, 
-       height = 6,
-       path = '~/gut_microbiome_metabolomics/total_sum_scaled/tss3/plots')
-
-## shannon
-ggsave("tss_shannon.pdf", 
-       plot = shannon_entropy,
-       width = 11, 
-       height = 6,
-       path = '~/gut_microbiome_metabolomics/total_sum_scaled/tss3/plots')
-
-## taxa barplot 
-ggsave("tss_tax_barplot.pdf", 
-       plot = tss_barplot,
-       width = 25, 
-       height = 15,
-       path = '~/gut_microbiome_metabolomics/total_sum_scaled/tss3/plots')
-```
 
 
 

@@ -22,10 +22,6 @@ library(ggh4x)
 library(broom)
 ```
 
-HISTOPATHOLOGY: 
-gather(colon, cecum, key = tissue, value = score) (need these in the same column so I can graph them)
-
-
 **Basic File-Prep Functions**
 ```{r}
 metadata_fixer <- function(metadata_fp) {
@@ -450,78 +446,6 @@ shannon_entropy_plot <- shannon_plot(shannon_FP,
                                      shannon_title)
 shannon_entropy_plot
 ```
-**Reading in taxonomy file**
-```{r}
-## actual taxonomic file 
-tss_tax <- read_qza(tax_FP)$data %>% 
-                    parse_taxonomy() %>% 
-                    rownames_to_column('asv')
-
-## reading in file that has the asvs matched with sample ids so I can link the taxonomic info to 
-## my core diversity outputs 
-sample_asv <- read_tsv(sample_asv_FP)
-
-## joining the two tables together 
-tss_tax %>% 
-  left_join(sample_asv, by = 'asv') -> big_tax
-```
-
-**Faith's PD plot (with taxonomic info)**
-I need to work on this nightmare (consult Elena's code for linking the taxonomic information to the alpha diversity)
-```{r, warning=FALSE, fig.height=7, fig.width=15}
-faith_tax <- read_tsv(faith_pd_FP)
-names(faith_tax)[names(faith_tax) == '#SampleID'] <- 'sampleid'
-
-faith_tax %>% 
-  left_join(metadata) %>% 
-  left_join(big_tax, by = 'sampleid') -> faith_tax 
-
-wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
-                   'Staphylococcaceae', 'Tannerellaceae', 'Muribaculaceae', 'Bacteriodaceae', 
-                   'Marinifilaceae')
-faith_tax %>% 
-  filter(Family %in% wanted_family) -> faith_tax_filt
-
-diet_labs <- 
-    c('Chow', 
-      'High Fat / High Fiber', 
-      'High Fat / Low Fiber', 
-      'Low Fat / High Fiber', 
-      'Low Fat / Low Fiber')
-names(diet_labs) <- c('Chow', 
-                      'HF/HF', 
-                      'HF/LF', 
-                      'LF/HF', 
-                      'LF/LF')
-
-faith_tax_filt %>%
-  filter(!is.na(diet)) %>% 
-  ggplot(aes(x = Family, y = faith_pd)) +
-  geom_jitter(aes(color = Family), width = 0.1, height = 0, alpha = 0.3) +
-  scale_color_brewer(palette = 'Dark2') +
-  theme_bw(base_size = 16) +
-  facet_grid(day_post_inf~diet, labeller = labeller(diet = diet_labs)) +
-  theme(strip.text.y = element_text(angle = 0),
-        axis.text.x = element_blank()) +
-  ggtitle("Total Sum Scaled Faith's Phylogenic Diversity by Microbe Family") +
-  ylab("Faith's PD") +
-  labs(x = NULL)
-
-```
-Option number two for linking taxonomic information to alpha diversity metrics (for now). 
-```{r, warning=FALSE, fig.height=5, fig.width=20}
-faith_tax_filt %>%
-  filter(!is.na(diet)) %>% 
-  ggplot(aes(x = diet, y = Family)) +
-  geom_tile(aes(fill = faith_pd), alpha = 0.5) +
-  scale_fill_viridis(option = "H") +
-  theme_bw(base_size = 16) +
-  facet_grid(~day_post_inf) +
-  theme(strip.text.y = element_text(angle = 0)) +
-  ggtitle("Total Sum Scaled Faith's Phylogenic Diversity by Microbe Family") +
-  xlab("Diet")
-```
-
 
 **Microshades Taxa Barplot**
 Break up microshades function so that you get graphical outputs that you can edit rather than the whole barplot! This currently doesn't work because something in the microshades package is out of date and needs to be fixed by the authors. 
@@ -552,6 +476,111 @@ tss_barplot
 ```
 
 
+**Preparation for the Microbe Family Relative Abundance plots**
+Here I'm joining the taxonomic information with the relative abundances of each asv and the metadata file so I can create the plot below. 
+```{r}
+## actual taxonomic file 
+tss_tax <- read_qza(tax_FP)$data %>% 
+                    parse_taxonomy() %>% 
+                    rownames_to_column('asv')
+
+## reading in file that has the asvs matched with sample ids so I can link the taxonomic info to 
+## my core diversity outputs 
+# sample_asv <- read_tsv(sample_asv_FP)
+
+
+## reading in otu table for relative abundance data 
+tss_otu <- read_qza(otu_table_FP)$data
+
+tss_otu %>% 
+  as.tibble(rownames = 'asv') %>% 
+  gather(-asv, key = sampleid, value = abun) %>% 
+  filter(abun != 0) -> tss_otu
+
+tss_otu %>% 
+  left_join(metadata, by = 'sampleid') -> abun_table
+
+abun_table %>% 
+  left_join(tss_tax, by = 'asv') -> abun_table
+```
+
+**Microbe Family Relative Abundance Plot**
+Here I plotted the relative abundances (I think) of the listed microbe families of interest below against diet and days post infection to see their change over time and if it follows expected trends. This is option #1 for visualizing this information. 
+```{r, warning=FALSE, fig.height=10, fig.width=15}
+wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
+                   'Staphylococcaceae', 'Tannerellaceae', 'Muribaculaceae', 'Bacteriodaceae', 
+                   'Marinifilaceae')
+abun_table %>% 
+  filter(Family %in% wanted_family) %>% 
+  mutate(mouse_fact = as.factor(mouse_id)) -> abun_filt
+
+diet_labs <- 
+    c('Chow', 
+      'High Fat / High Fiber', 
+      'High Fat / Low Fiber', 
+      'Low Fat / High Fiber', 
+      'Low Fat / Low Fiber')
+names(diet_labs) <- c('Chow', 
+                      'HF/HF', 
+                      'HF/LF', 
+                      'LF/HF', 
+                      'LF/LF')
+
+abun_filt %>%
+  filter(!is.na(diet)) %>% 
+  group_by(Family) %>% 
+  ggplot(aes(x = day_post_inf, y = abun)) +
+  scale_y_continuous(trans = 'log10') +
+  scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
+  geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
+  geom_smooth(method = 'loess', se = FALSE) +
+  geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
+  theme_bw(base_size = 16) +
+  facet_grid(Family~diet, labeller = labeller(diet = diet_labs)) +
+  theme(strip.text.y = element_text(angle = 0)) +
+  ggtitle("Microbe Family Relative Abundance") +
+  ylab("Relative Abundance") +
+  xlab("Days Relative to Infection") -> family_abun1
+
+family_abun1
+```
+
+
+Option #2 for tracking the relative abundances of microbe families of interest over the course of time. I attempted to create a heat map that allows the relative abundances of microbe families to be easily trackable over time. The line graph I created above probably looks a bit better but I like the heat map concept. 
+```{r, warning=FALSE, fig.height=10, fig.width=25}
+abun_filt %>%
+  filter(!is.na(diet)) %>% 
+  ggplot(aes(x = mouse_fact, y = Family)) +
+  geom_tile(aes(fill = abun), alpha = 0.5) +
+  scale_fill_viridis(option = "H", name = 'Relative\nAbundance') +
+  theme_bw(base_size = 16) +
+  facet_grid(day_post_inf~diet, scales = 'free',
+             labeller = labeller(diet = diet_labs)) +
+  theme(strip.text.y = element_text(angle = 0),
+        axis.text.x = element_blank()) + 
+  xlab("Mouse ID") -> family_abun2
+
+family_abun2
+```
+
+
+**Saving my plot outputs**
+These go to the plots directory. 
+```{r}
+## microbe family relative abundance plots
+## option #1
+ggsave("family_abun1.pdf",
+       plot = family_abun1, 
+       width = 15, 
+       height = 10, 
+       path = '../plots')
+## option #2
+ggsave("family_abun2.pdf",
+       plot = family_abun2, 
+       width = 25, 
+       height = 10, 
+       path = '../plots')
+```
 
 
 

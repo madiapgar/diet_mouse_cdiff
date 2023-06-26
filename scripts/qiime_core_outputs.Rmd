@@ -512,7 +512,8 @@ wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 
                    'Marinifilaceae')
 abun_table %>% 
   filter(Family %in% wanted_family) %>% 
-  mutate(mouse_fact = as.factor(mouse_id)) -> abun_filt
+  mutate(mouse_fact = as.factor(mouse_id)) %>% 
+  mutate(day_fact = as.factor(day_post_inf)) -> abun_filt
 
 diet_labs <- 
     c('Chow', 
@@ -550,15 +551,16 @@ Option #2 for tracking the relative abundances of microbe families of interest o
 ```{r, warning=FALSE, fig.height=10, fig.width=25}
 abun_filt %>%
   filter(!is.na(diet)) %>% 
-  ggplot(aes(x = mouse_fact, y = Family)) +
+  ggplot(aes(x = mouse_fact, y = day_fact)) +
   geom_tile(aes(fill = abun), alpha = 0.5) +
   scale_fill_viridis(option = "H", name = 'Relative\nAbundance') +
   theme_bw(base_size = 16) +
-  facet_grid(day_post_inf~diet, scales = 'free',
+  facet_grid(Family~diet, scales = 'free',
              labeller = labeller(diet = diet_labs)) +
   theme(strip.text.y = element_text(angle = 0),
         axis.text.x = element_blank()) + 
-  xlab("Mouse ID") -> family_abun2
+  xlab("Mouse ID") +
+  ylab("Days Relative to Infection") -> family_abun2
 
 family_abun2
 ```

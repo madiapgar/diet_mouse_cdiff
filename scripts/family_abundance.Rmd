@@ -87,29 +87,31 @@ tss_otu %>%
   left_join(tss_tax, by = 'asv') -> abun_table
 
 abun_table %>% 
+  group_by(sampleid, day_post_inf, diet, mouse_id, Family) %>% 
+  summarise(rel_abund = sum(rel_abun)) %>% 
   filter(Family %in% wanted_family) %>% 
-  mutate(mouse_fact = as.factor(mouse_id)) %>% 
-  mutate(day_fact = as.factor(day_post_inf)) -> abun_filt
+  mutate(mouse_fact = as.factor(mouse_id),
+         day_fact = as.factor(day_post_inf)) -> abun_filt
 ```
 
 **Microbe Family Abundance Plot**
 Here I plotted the relative abundances (I think) of the listed microbe families of interest below against diet and days post infection to see their change over time and if it follows expected trends. This is option #1 for visualizing this information. 
-```{r, warning=FALSE, fig.width=12, fig.height=7}
+```{r, warning=FALSE, fig.width=15, fig.height=10}
 abun_filt %>%
   filter(!is.na(diet)) %>% 
-  ggplot(aes(x = day_post_inf, y = p_abun)) +
-  scale_y_continuous(trans = 'log10') +
-  scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
-  geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
-  # geom_line(aes(group = mouse_id), alpha = 0.3) +
-  # geom_smooth(se = FALSE) +
-  geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
-  theme_bw(base_size = 16) +
-  facet_grid(Family~diet, labeller = labeller(diet = diet_labs)) +
-  theme(strip.text.y = element_text(angle = 0)) +
-  ggtitle("Microbe Family Relative Abundance") +
-  ylab("Relative Abundance") +
-  xlab("Days Relative to Infection") -> family_abun1
+  ggplot(aes(x = day_post_inf, y = rel_abund)) +
+    scale_y_continuous(trans = 'log10') +
+    scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
+    geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
+    geom_line(aes(group = mouse_id), alpha = 0.3) +
+    geom_smooth(se = FALSE) +
+    geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
+    theme_bw(base_size = 16) +
+    facet_grid(Family~diet, labeller = labeller(diet = diet_labs)) +
+    theme(strip.text.y = element_text(angle = 0)) +
+    ggtitle("Microbe Family Relative Abundance") +
+    ylab("Relative Abundance") +
+    xlab("Days Relative to Infection") -> family_abun1
 
 family_abun1
 ```
@@ -119,7 +121,7 @@ Option #2 for tracking the relative abundances of microbe families of interest o
 abun_filt %>%
   filter(!is.na(diet)) %>% 
   ggplot(aes(x = mouse_fact, y = day_fact)) +
-  geom_tile(aes(fill = abun), alpha = 0.5) +
+  geom_tile(aes(fill = rel_abund), alpha = 0.5) +
   scale_fill_viridis(option = "H", name = 'Relative\nAbundance') +
   theme_bw(base_size = 16) +
   facet_grid(Family~diet, scales = 'free',

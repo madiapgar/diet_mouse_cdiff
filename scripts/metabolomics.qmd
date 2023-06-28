@@ -97,7 +97,8 @@ meta_filt %>%
          'Pentanoic Acid (ug/g)', key = metabolite, value = concentration) %>% 
   filter(!is.na(mouse_id)) %>% 
   filter(concentration != 'ND') %>% 
-  filter(!is.na(concentration)) -> big_metab
+  filter(!is.na(concentration)) %>% 
+  mutate(conc_num = as.numeric(concentration)) -> big_metab
 ```
 
 **Ggplot Construction for Metabolites**
@@ -106,12 +107,12 @@ Very rough draft of the plot for the metabolite data - I know that I will probab
 
 ```{r, fig.width=25, fig.height=8}
 big_metab %>% 
-  ggplot(aes(x = diet, y = concentration)) +
+  ggplot(aes(x = diet, y = conc_num)) +
   geom_boxplot(aes(group = diet)) +
+  scale_y_continuous(trans = 'log10') +
   geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
   facet_wrap(~metabolite, 
-             nrow = 1,
-             scales = 'free_y') +
+             nrow = 1) +
   theme_bw(base_size = 14) +
   xlab('Diet') +
   ylab('Concentration') +
@@ -127,7 +128,7 @@ Grouped the stats per metabolite detected by the core and compared against conce
 ```{r}
 big_metab %>%
   group_by(metabolite) %>% 
-  do(tidy(lm(concentration ~ purified_diet + high_fat + high_fiber,
+  do(tidy(lm(conc_num ~ purified_diet + high_fat + high_fiber,
              data = .))) -> metab_results
 
 metab_results
@@ -136,12 +137,12 @@ metab_results
 **Saving my Outputs**
 
 ```{r}
-# ggsave("metabolomics.pdf", 
-#        plot = metab_plot,
-#        width = 25, 
-#        height = 8,
-#        path = '../plots')
-# 
-# write_tsv(metab_results,
-#           '../stats/metabolomics.tsv')
+ggsave("metabolomics.pdf",
+       plot = metab_plot,
+       width = 25,
+       height = 8,
+       path = '../plots')
+
+write_tsv(metab_results,
+          '../stats/metabolomics.tsv')
 ```

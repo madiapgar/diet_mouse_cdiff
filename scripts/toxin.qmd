@@ -1,5 +1,5 @@
 ---
-title: "metabolomics"
+title: "toxin"
 format: html
 editor: visual
 ---
@@ -11,8 +11,6 @@ library(magrittr)
 library(qiime2R)
 library(tidyverse)
 ```
-
-**Basic Functions**
 
 ```{r}
 ## general function to prep the metadata file for further data analyses 
@@ -61,78 +59,89 @@ meta_diet_fixer <- function(metadata_file,
 
 ```{r}
 metadata_FP <- '../data/misc/merged_metadata1.tsv'
-metab_FP <- '../data/misc/metabolomics.csv'
+toxin_FP <- '../data/misc/toxin_final_data.tsv'
 seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
 ```
 
-**Prepping Metadata and Metabolomics Files**
+**File Processing**
+
+Do I need to filter for mice that are from day_post_inf 3 like I did for the histopathology since I will be comparing it to the histopathology results??
 
 ```{r}
-## metabolomics file prep 
-metab <- read_csv(metab_FP)
-wanted_ids <- metab$mouse_id
+## toxin data 
+toxin <- read_tsv(toxin_FP)
+wanted_ids <- toxin$mouse_id
 
-## metadta file prep 
+## metadata 
 metadata <- metadata_fixer(metadata_FP)
 metadata <- meta_diet_fixer(metadata,
                             seq_depth_FP)
+
 metadata %>% 
   group_by(mouse_id) %>% 
   filter(mouse_id %in% wanted_ids) -> meta_filt
 
-meta_filt %>% 
-  left_join(metab, by = 'mouse_id') %>% 
-  gather('Acetic Acid (ug/g)', 'Propanoic Acid (ug/g)', '2-methyl-propanoic acid (ug/g)',
-         'n-Butanoic Acid (ug/g)', 'Isopentanoic Acid (ug/g)', '2-methyl-Butanoic Acid (ug/g)',
-         'Pentanoic Acid (ug/g)', key = metabolite, value = concentration) %>% 
-  filter(!is.na(mouse_id)) %>% 
-  filter(concentration != 'ND') %>% 
-  filter(!is.na(concentration)) %>% 
-  mutate(conc_num = as.numeric(concentration)) -> big_metab
+metadata %>% 
+  left_join(toxin, by = 'mouse_id') %>% 
+  filter(day_post_inf == 3) %>% 
+  gather('Total TcA Neat', 'Total TcB Neat', 
+         key = neat_toxin, value = neat_conc) %>% 
+  gather('Total TcA 1:10', 'Total TcB 1:10',
+         key = dil_toxin, value = dil_conc) %>% 
+  filter(neat_conc != 'BDL',
+         !is.na(neat_conc)) %>% 
+  filter(dil_conc != 'BDL',
+         !is.na(dil_conc)) %>% 
+  mutate(neat_conc = as.numeric(neat_conc),
+         dil_conc = as.numeric(dil_conc)) -> big_toxin
+
+
 ```
 
-**Ggplot Construction for Metabolites**
+**Toxin Plot Construction**
 
-Very rough draft of the plot for the metabolite data - I know that I will probably need to edit this.
+TcA and TcB concentrations by diet without any kind of dilution factor.
 
-```{r, fig.width=25, fig.height=8}
-big_metab %>% 
-  ggplot(aes(x = diet, y = conc_num)) +
+```{r}
+big_toxin %>% 
+  ggplot(aes(x = diet, y = neat_conc)) +
   geom_boxplot(aes(group = diet)) +
-  scale_y_continuous(trans = 'log10') +
-  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-  facet_wrap(~metabolite, 
-             nrow = 1) +
+  geom_jitter(alpha = 0.4, width = 0.1, height = 0)+
+  facet_wrap(~neat_toxin) +
   theme_bw(base_size = 14) +
   xlab('Diet') +
-  ylab('Concentration') +
-  ggtitle('Metabolite Concentration by Mouse Diet') -> metab_plot
+  ylab('Concentration') -> neat_plot
 
-metab_plot
+neat_plot
 ```
 
-**Linear Modeling**
-
-Grouped the stats per metabolite detected by the core and compared against concentration of said metabolite per diet. I also am not sure if this is the best way to run the stats but it's a start.
+TcA and TcB concentrations by diet with a 1:10 dilution factor.
 
 ```{r}
-big_metab %>%
-  group_by(metabolite) %>% 
-  do(tidy(lm(conc_num ~ purified_diet + high_fat + high_fiber,
-             data = .))) -> metab_results
+big_toxin %>% 
+  ggplot(aes(x = diet, y = dil_conc)) +
+  geom_boxplot(aes(group = diet)) +
+  geom_jitter(alpha = 0.4, width = 0.1, height = 0)+
+  facet_wrap(~dil_toxin) +
+  theme_bw(base_size = 14) +
+  xlab('Diet') +
+  ylab('Concentration') -> dil_plot
 
-metab_results
+dil_plot
 ```
 
-**Saving my Outputs**
+**Saving Plot Outputs**
 
 ```{r}
-ggsave("metabolomics.pdf",
-       plot = metab_plot,
-       width = 25,
-       height = 8,
+ggsave("neat_toxin.pdf",
+       plot = neat_plot,
+       width = 6,
+       height = 4,
        path = '../plots')
 
-write_tsv(metab_results,
-          '../stats/metabolomics.tsv')
+ggsave("dil_toxin.pdf",
+       plot = dil_plot,
+       width = 6,
+       height = 4,
+       path = '../plots')
 ```

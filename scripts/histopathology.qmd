@@ -92,6 +92,7 @@ wanted_ids <- histo$mouse_id
 meta_filt %>% 
   filter(mouse_id %in% wanted_ids) %>% 
   left_join(histo, by = 'mouse_id') %>% 
+  filter(day_post_inf == 3) %>% 
   gather(cecum, colon, key = tissue, value = score) -> histo_meta
 
 ```

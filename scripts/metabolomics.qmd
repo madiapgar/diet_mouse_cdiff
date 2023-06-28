@@ -1,0 +1,147 @@
+---
+title: "metabolomics"
+format: html
+editor: visual
+---
+
+```{r, include=FALSE}
+library(broom)
+library(cowplot)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+```
+
+**Basic Functions**
+
+```{r}
+## lists to redo the diet names on the facet labels of the ggplot created below 
+diet_labs <- 
+    c('Chow', 
+      'High Fat / High Fiber', 
+      'High Fat / Low Fiber', 
+      'Low Fat / High Fiber', 
+      'Low Fat / Low Fiber')
+
+names(diet_labs) <- c('Chow', 'HF/HF', 'HF/LF', 'LF/HF', 'LF/LF')
+
+## general function to prep the metadata file for further data analyses 
+metadata_fixer <- function(metadata_fp) {
+  tmpMeta <- read_tsv(metadata_fp, n_max = 2)
+  mycols <- colnames(tmpMeta)
+  metadata <- read_tsv(metadata_fp, skip = 2, col_names = mycols)
+  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
+  metadata %>% 
+    filter(!is.na(diet)) %>% 
+    mutate(day_post_inf = if_else(day_post_inf == 2, 3, day_post_inf)) %>% 
+    mutate(diet = as.factor(diet)) -> metadata
+  return(metadata)
+}
+
+## for editing my metadata file post metadata fixer 
+meta_diet_fixer <- function(metadata_file,
+                            seq_depth_fp){
+  seq_depths <- read_tsv(seq_depth_fp)
+  metadata_file %>% 
+    select(sampleid, diet, day_post_inf, mouse_id, study) %>% 
+    mutate(diet_true = diet,
+    diet_true = if_else(day_post_inf == -15, "Chow", diet_true),
+    high_fat = case_when(
+      diet_true == 'HF/HF' ~ 1,
+      diet_true == 'HF/LF' ~ 1,
+      .default = 0
+      ), 
+      high_fiber = case_when(
+      diet_true == 'HF/HF' ~ 1,
+      diet_true == 'LF/HF' ~ 1,
+      diet_true == 'Chow' ~ 1,
+      .default = 0
+      ), 
+      purified_diet = case_when(
+      diet_true == 'Chow' ~ 0,
+      .default = 1
+      )
+    ) %>% 
+    left_join(seq_depths) -> metadata
+  return(metadata)
+}
+```
+
+**File Paths**
+
+```{r}
+metadata_FP <- '../data/misc/merged_metadata1.tsv'
+metab_FP <- '../data/misc/metabolomics.csv'
+seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
+```
+
+**Prepping Metadata and Metabolomics Files**
+
+```{r}
+## metabolomics file prep 
+metab <- read_csv(metab_FP)
+wanted_ids <- metab$mouse_id
+
+## metadta file prep 
+metadata <- metadata_fixer(metadata_FP)
+metadata <- meta_diet_fixer(metadata,
+                            seq_depth_FP)
+metadata %>% 
+  group_by(mouse_id) %>% 
+  filter(mouse_id %in% wanted_ids) -> meta_filt
+
+meta_filt %>% 
+  left_join(metab, by = 'mouse_id') %>% 
+  gather('Acetic Acid (ug/g)', 'Propanoic Acid (ug/g)', '2-methyl-propanoic acid (ug/g)',
+         'n-Butanoic Acid (ug/g)', 'Isopentanoic Acid (ug/g)', '2-methyl-Butanoic Acid (ug/g)',
+         'Pentanoic Acid (ug/g)', key = metabolite, value = concentration) %>% 
+  filter(!is.na(mouse_id)) %>% 
+  filter(concentration != 'ND') %>% 
+  filter(!is.na(concentration)) -> big_metab
+```
+
+**Ggplot Construction for Metabolites**
+
+Very rough draft of the plot for the metabolite data - I know that I will probably need to edit this.
+
+```{r, fig.width=25, fig.height=8}
+big_metab %>% 
+  ggplot(aes(x = diet, y = concentration)) +
+  geom_boxplot(aes(group = diet)) +
+  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
+  facet_wrap(~metabolite, 
+             nrow = 1,
+             scales = 'free_y') +
+  theme_bw(base_size = 14) +
+  xlab('Diet') +
+  ylab('Concentration') +
+  ggtitle('Metabolite Concentration by Mouse Diet') -> metab_plot
+
+metab_plot
+```
+
+**Linear Modeling**
+
+Grouped the stats per metabolite detected by the core and compared against concentration of said metabolite per diet. I also am not sure if this is the best way to run the stats but it's a start.
+
+```{r}
+big_metab %>%
+  group_by(metabolite) %>% 
+  do(tidy(lm(concentration ~ purified_diet + high_fat + high_fiber,
+             data = .))) -> metab_results
+
+metab_results
+```
+
+**Saving my Outputs**
+
+```{r}
+# ggsave("metabolomics.pdf", 
+#        plot = metab_plot,
+#        width = 25, 
+#        height = 8,
+#        path = '../plots')
+# 
+# write_tsv(metab_results,
+#           '../stats/metabolomics.tsv')
+```

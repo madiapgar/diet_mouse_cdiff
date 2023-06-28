@@ -60,7 +60,7 @@ names(diet_labs) <- c('Chow',
                       'LF/HF', 
                       'LF/LF')
 wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
-                   'Staphylococcaceae', 'Tannerellaceae', 'Muribaculaceae', 'Bacteriodaceae', 
+                   'Staphylococcaceae', 'Tannerellaceae', 'Muribaculaceae', 'Bacteroidaceae', 
                    'Marinifilaceae')
 ```
 

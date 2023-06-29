@@ -1,0 +1,146 @@
+---
+title: "histology"
+format: html
+editor: visual
+---
+
+```{r, include=FALSE}
+library(broom)
+library(cowplot)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+```
+
+**Basic Functions**
+
+```{r}
+## lists to redo the diet names on the facet labels of the ggplot created below 
+diet_labs <- 
+    c('Chow', 
+      'High Fat / High Fiber', 
+      'High Fat / Low Fiber', 
+      'Low Fat / High Fiber', 
+      'Low Fat / Low Fiber')
+
+names(diet_labs) <- c('Chow', 'HF/HF', 'HF/LF', 'LF/HF', 'LF/LF')
+
+## general function to prep the metadata file for further data analyses 
+metadata_fixer <- function(metadata_fp) {
+  tmpMeta <- read_tsv(metadata_fp, n_max = 2)
+  mycols <- colnames(tmpMeta)
+  metadata <- read_tsv(metadata_fp, skip = 2, col_names = mycols)
+  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
+  metadata %>% 
+    filter(!is.na(diet)) %>% 
+    mutate(day_post_inf = if_else(day_post_inf == 2, 3, day_post_inf)) %>% 
+    mutate(diet = as.factor(diet)) -> metadata
+  return(metadata)
+}
+
+## for editing my metadata file post metadata fixer 
+meta_diet_fixer <- function(metadata_file,
+                            seq_depth_fp){
+  seq_depths <- read_tsv(seq_depth_fp)
+  metadata_file %>% 
+    select(sampleid, diet, day_post_inf, mouse_id, study) %>% 
+    mutate(diet_true = diet,
+    diet_true = if_else(day_post_inf == -15, "Chow", diet_true),
+    high_fat = case_when(
+      diet_true == 'HF/HF' ~ 1,
+      diet_true == 'HF/LF' ~ 1,
+      .default = 0
+      ), 
+      high_fiber = case_when(
+      diet_true == 'HF/HF' ~ 1,
+      diet_true == 'LF/HF' ~ 1,
+      diet_true == 'Chow' ~ 1,
+      .default = 0
+      ), 
+      purified_diet = case_when(
+      diet_true == 'Chow' ~ 0,
+      .default = 1
+      )
+    ) %>% 
+    left_join(seq_depths) -> metadata
+  return(metadata)
+}
+```
+
+**File Paths**
+
+```{r}
+metadata_FP <- '../data/misc/merged_metadata1.tsv'
+seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
+histo_FP <- '../data/misc/histo_data.csv'
+```
+
+**Reading in Metadata and Histopathology Files**
+
+```{r}
+metadata <- metadata_fixer(metadata_FP)
+
+meta_filt <- meta_diet_fixer(metadata,
+                            seq_depth_FP)
+
+histo <- read_csv(histo_FP) %>% 
+  filter(!is.na(mouse_id))
+
+wanted_ids <- histo$mouse_id
+
+## joining them all together for ggplot rendering 
+meta_filt %>% 
+  filter(mouse_id %in% wanted_ids) %>% 
+  left_join(histo, by = 'mouse_id') %>% 
+  filter(day_post_inf == 3) %>% 
+  gather(cecum, colon, key = tissue, value = score) -> histo_meta
+
+```
+
+**Histopathology Plot**
+
+```{r, warning=FALSE, fig.height=4, fig.width=6}
+tissue_labs <- c('Cecum',
+                 'Colon')
+names(tissue_labs) <- c('cecum',
+                        'colon')
+
+histo_meta %>% 
+  group_by(sampleid) %>% 
+  ggplot(aes(x = diet, y = score)) +
+  geom_boxplot(aes(group = diet), outlier.shape = NA) +
+  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
+  # geom_smooth(se = FALSE, method = 'loess') +
+  facet_wrap(~tissue, labeller = labeller(tissue = tissue_labs),
+             scales = "free_y") +
+  theme_bw(base_size = 14) +
+  xlab('Diet') +
+  ylab('Histopathology Score') +
+  ggtitle("Histopathology Score by Diet") -> histo_plot
+
+histo_plot
+```
+
+**Histopathology Linear Modeling**
+
+```{r}
+histo_meta %>% 
+  group_by(tissue) %>% 
+  do(tidy(lm(score ~ purified_diet + high_fat + high_fiber,
+             data = .))) -> histo_results
+
+histo_results
+```
+
+**Saving Plot and Stats**
+
+```{r}
+ggsave("histopathology.pdf", 
+       plot = histo_plot,
+       width = 6, 
+       height = 4,
+       path = '../plots')
+
+write_tsv(histo_results,
+          '../stats/histopathology.tsv')
+```

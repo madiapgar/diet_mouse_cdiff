@@ -8,16 +8,20 @@ library(cowplot)
 library(magrittr)
 library(vegan)
 library(viridis)
-library(microshades)
-library(phyloseq)
 library(ggh4x)
 library(broom)
 library(rstatix)
 library(dunn.test)
 
+# change to scripts directory if not there already
+curr_dir <- getwd()
+curr_dir <- str_split(curr_dir, '\\/')
+if (curr_dir[length(curr_dir)] != 'scripts'){
+  setwd('./scripts')
+}
+
 ## input file paths
-metadata_FP <- '../data/misc/merged_metadata1.tsv'
-seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
+metadata_FP <- '../data/misc/processed_metadata.tsv'
 uw_dist_fp <- '../data/qiime/core_outputs/uw_dist_matrix.tsv'
 w_dist_fp <- '../data/qiime/core_outputs/w_dist_matrix.tsv'
 unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A',
@@ -26,51 +30,8 @@ unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A',
                       'PCR Blank1', 'Mock_7', 'Mock_6',
                       'Mock_5', 'Mock_4', 'PCR blank')
 
-## functions in order of useage 
+## functions in order of usage 
 ##1 
-## initial metadata fixer 
-metadata_fixer <- function(metadata_fp) {
-  tmpMeta <- read_tsv(metadata_fp, n_max = 2)
-  mycols <- colnames(tmpMeta)
-  metadata <- read_tsv(metadata_fp, skip = 2, col_names = mycols)
-  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
-  metadata %>% 
-    filter(!is.na(diet)) %>% 
-    mutate(day_post_inf = if_else(day_post_inf == 2, 3, day_post_inf)) %>% 
-    mutate(diet = as.factor(diet)) -> metadata
-  return(metadata)
-}
-
-## 2 
-## for editing my metadata file post metadata fixer 
-meta_diet_fixer <- function(metadata_file,
-                            seq_depth_fp){
-  seq_depths <- read_tsv(seq_depth_fp)
-  metadata_file %>% 
-    select(sampleid, diet, day_post_inf, mouse_id, study) %>% 
-    mutate(diet_true = diet,
-           diet_true = if_else(day_post_inf == -15, "Chow", diet_true),
-           high_fat = case_when(
-             diet_true == 'HF/HF' ~ 1,
-             diet_true == 'HF/LF' ~ 1,
-             .default = 0
-           ), 
-           high_fiber = case_when(
-             diet_true == 'HF/HF' ~ 1,
-             diet_true == 'LF/HF' ~ 1,
-             diet_true == 'Chow' ~ 1,
-             .default = 0
-           ), 
-           purified_diet = case_when(
-             diet_true == 'Chow' ~ 0,
-             .default = 1
-           )
-    ) %>% 
-    left_join(seq_depths) -> metadata
-  return(metadata)
-}
-
-## 3 
 ## for distance matrix processing
 ## for beta diversity statistical analysis 
 dist_matrix_prep <- function(metadata_file,
@@ -117,37 +78,31 @@ adonis_test <- function(dist_matrix,
 }
 
 ## actually using the functions
+## reading in metadata file 
+meta <- read_tsv(metadata_FP)
+
 ## weighted unifrac 
-stat_meta <- metadata_fixer(metadata_FP)
-w_dist_files <- dist_matrix_prep(stat_meta,
+w_dist_files <- dist_matrix_prep(meta,
                                  w_dist_fp,
                                  unwanted_samples)
 
 w_dist <- w_dist_files$DistanceMatrix
 stat_meta <- w_dist_files$Metadata
 
-
-filt_stat_meta <- meta_diet_fixer(stat_meta,
-                                  seq_depth_FP)
-
 w_adonis <- adonis_test(w_dist,
-                        filt_stat_meta)
+                        stat_meta)
 
 
 ## unweighted unifrac
-uw_dist_files <- dist_matrix_prep(stat_meta,
+uw_dist_files <- dist_matrix_prep(meta,
                                   uw_dist_fp,
                                   unwanted_samples)
 
 uw_dist <- uw_dist_files$DistanceMatrix
 stat_meta <- uw_dist_files$Metadata
 
-
-filt_stat_meta <- meta_diet_fixer(stat_meta,
-                                  seq_depth_FP)
-
 uw_adonis <- adonis_test(uw_dist,
-                         filt_stat_meta)
+                         stat_meta)
 
 ## writing results out as a .tsv file 
 write_tsv(w_adonis, '../../stats/w_adonis_results.tsv')

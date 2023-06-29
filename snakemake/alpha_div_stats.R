@@ -7,17 +7,20 @@ library(tidyverse)
 library(cowplot)
 library(magrittr)
 library(vegan)
-library(viridis)
-library(microshades)
-library(phyloseq)
 library(ggh4x)
 library(broom)
 library(rstatix)
 library(dunn.test)
 
+# change to scripts directory if not there already
+curr_dir <- getwd()
+curr_dir <- str_split(curr_dir, '\\/')
+if (curr_dir[length(curr_dir)] != 'scripts'){
+  setwd('./scripts')
+}
+
 ## input file paths
-metadata_FP <- '../../data/misc/merged_metadata1.tsv'
-seq_depth_FP <- '../../data/misc/tss_seq_depth.tsv'
+metadata_FP <- '../../data/misc/processed_metadata.tsv'
 faith_pd_fp <- '../../data/qiime/core_outputs/faith_pd.tsv'
 shannon_fp <- '../../data/qiime/core_outputs/shannon_entropy.tsv'
 unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A',
@@ -27,68 +30,23 @@ unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A',
                       'Mock_5', 'Mock_4', 'PCR blank')
 
 ## functions in order that they're used
-## 1 
-metadata_fixer <- function(metadata_fp) {
-  tmpMeta <- read_tsv(metadata_fp, n_max = 2)
-  mycols <- colnames(tmpMeta)
-  metadata <- read_tsv(metadata_fp, skip = 2, col_names = mycols)
-  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
-  metadata %>% 
-    filter(!is.na(diet)) %>% 
-    mutate(day_post_inf = if_else(day_post_inf == 2, 3, day_post_inf)) %>% 
-    mutate(diet = as.factor(diet)) -> metadata
-  return(metadata)
-}
-
-## 2 
-## for editing my metadata file post metadata fixer 
-meta_diet_fixer <- function(metadata_file,
-                            seq_depth_fp){
-  seq_depths <- read_tsv(seq_depth_fp)
-  metadata_file %>% 
-    select(sampleid, diet, day_post_inf, mouse_id, study) %>% 
-    mutate(diet_true = diet,
-           diet_true = if_else(day_post_inf == -15, "Chow", diet_true),
-           high_fat = case_when(
-             diet_true == 'HF/HF' ~ 1,
-             diet_true == 'HF/LF' ~ 1,
-             .default = 0
-           ), 
-           high_fiber = case_when(
-             diet_true == 'HF/HF' ~ 1,
-             diet_true == 'LF/HF' ~ 1,
-             diet_true == 'Chow' ~ 1,
-             .default = 0
-           ), 
-           purified_diet = case_when(
-             diet_true == 'Chow' ~ 0,
-             .default = 1
-           )
-    ) %>% 
-    left_join(seq_depths) -> metadata
-  return(metadata)
-}
-
-## 3 
+## 1
 ## alpha diversity file prep 
 alpha_div_prep <- function(file_path1,
                            file_path2,
                            sample_filter,
-                           metadata_fp,
-                           seq_depth_fp){
+                           metadata_fp){
   ## faith's pd 
   alpha_faith <- read_tsv(file_path1)
   names(alpha_faith)[names(alpha_faith) == '#SampleID'] <- 'sampleid'
   alpha_faith %>% 
     filter(!(sampleid %in% sample_filter)) -> faith_pd
   ## metadata file for both
-  stat_meta <- metadata_fixer(metadata_fp)
+  stat_meta <- read_tsv(metadata_fp)
   stat_meta %>% 
     filter(!(sampleid %in% sample_filter)) -> stat_meta
   ## joining faith's pd and metadata file together into one table
-  faith_stat_meta <- meta_diet_fixer(stat_meta,
-                                     seq_depth_fp)
-  faith_stat_meta %>% 
+  stat_meta %>% 
     filter(sampleid %in% faith_pd$sampleid) %>% 
     left_join(faith_pd, by = 'sampleid') %>% 
     filter(!is.na(diet)) -> faith_biom
@@ -98,9 +56,7 @@ alpha_div_prep <- function(file_path1,
   alpha_shannon %>% 
     filter(!(sampleid %in% sample_filter)) -> shannon
   ## joining shannon and metadata file together into one table 
-  shannon_stat_meta <- meta_diet_fixer(stat_meta,
-                                       seq_depth_fp)
-  shannon_stat_meta %>% 
+  stat_meta %>% 
     filter(sampleid %in% shannon$sampleid) %>% 
     left_join(shannon, by = 'sampleid') %>% 
     filter(!is.na(diet)) -> shannon_biom
@@ -111,7 +67,7 @@ alpha_div_prep <- function(file_path1,
   return(my_list)
 }
 
-## 4 
+## 2
 ## stats calculations
 ## faith's pd 
 faith_div_stats <- function(biom_table){
@@ -138,7 +94,7 @@ faith_div_stats <- function(biom_table){
   return(my_list)
 }
 
-## 5 
+## 3
 ## shannon entropy 
 shannon_div_stats <- function(biom_table){
   ## alpha_cat is what the alpha div column is called (faith_pd or shannon_entropy)
@@ -169,8 +125,7 @@ shannon_div_stats <- function(biom_table){
 alpha_files <- alpha_div_prep(faith_pd_fp,
                               shannon_fp,
                               unwanted_samples,
-                              metadata_FP,
-                              seq_depth_FP)
+                              metadata_FP)
 
 faith <- alpha_files$FaithPD
 shannon <- alpha_files$Shannon

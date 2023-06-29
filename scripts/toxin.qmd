@@ -107,7 +107,10 @@ metadata %>%
 ## attempting to remove duplicated points due to repeating mouse_ids 
 ## from my subsequent plots 
 big_toxin %>% 
+  select(-Extra_Sample) %>% 
   distinct(mouse_id, dil_conc, .keep_all = TRUE) -> dil_toxin
+
+dil_toxin[is.na(dil_toxin)] <- 0
 
 big_toxin %>% 
   distinct(mouse_id, neat_conc, .keep_all = TRUE) -> neat_toxin 

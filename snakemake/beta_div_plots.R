@@ -12,9 +12,15 @@ library(viridis)
 library(ggh4x)
 library(broom)
 
+# change to scripts directory if not there already
+curr_dir <- getwd()
+curr_dir <- str_split(curr_dir, '\\/')
+if (curr_dir[length(curr_dir)] != 'scripts'){
+  setwd('./scripts')
+}
+
 ## input file paths
-metadata_FP <- '../../data/misc/merged_metadata1.tsv'
-seq_depth_FP <- '../../data/misc/tss_seq_depth.tsv'
+metadata_FP <- '../../data/misc/processed_metadata.tsv'
 unweighted_FP <- '../../data/qiime/core_outputs/unweighted_unifrac_pcoa_results.qza'
 weighted_FP <- '../../data/qiime/core_outputs/weighted_unifrac_pcoa_results.qza'
 
@@ -31,22 +37,8 @@ diet_names_labels <- c('Chow',
                        'LF/HF', 
                        'LF/LF')
 
-## functions in order of useage
+## functions in order of usage
 ## 1 
-metadata_fixer <- function(metadata_fp) {
-  tmpMeta <- read_tsv(metadata_fp, n_max = 2)
-  mycols <- colnames(tmpMeta)
-  metadata <- read_tsv(metadata_fp, skip = 2, col_names = mycols)
-  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
-  metadata %>% 
-    filter(!is.na(diet)) %>% 
-    mutate(day_post_inf = if_else(day_post_inf == 2, 3, day_post_inf)) %>% 
-    mutate(diet = as.factor(diet)) %>% 
-    select(sampleid, day_post_inf, study, diet, mouse_id) -> metadata
-  return(metadata)
-}
-
-## 2 
 ## unweighted/weighted unifrac pcoa result, faith's pd, and shannon entropy file prep 
 ## going to attempt to return multiple outputs so I can just have one function for file prep
 biom_table_prep <- function(unweighted_fp,
@@ -88,7 +80,7 @@ biom_table_prep <- function(unweighted_fp,
   return(my_list)
 }
 
-## 3 
+## 2
 ## this function will pull out the percent variations from a specified column so you can add it to your pcoa plots 
 pcoa_ax_lab <- function(unifrac_var, col_name){
   uni_lab <- as.character(round(unifrac_var[col_name] * 100, 2))
@@ -96,7 +88,7 @@ pcoa_ax_lab <- function(unifrac_var, col_name){
   return(uni_lab)
 }
 
-## 4 
+## 3
 ## pcoa plot function
 ## xlab and ylab are outputs from pcoa_ax_lab function
 pcoa_plot <- function(biom_file,
@@ -126,7 +118,7 @@ pcoa_plot <- function(biom_file,
 
 ## core metrics file prep
 ## metadata file prep
-metadata <- metadata_fixer(metadata_FP)
+metadata <- read_tsv(metadata_FP)
 
 ## preparing core beta diversity files for ggplot
 core_files <- biom_table_prep(unweighted_FP,

@@ -18,6 +18,15 @@ library(viridis)
 library(microshades)
 ```
 
+```{r}
+# change to scripts directory if not there already
+curr_dir <- getwd()
+curr_dir <- str_split(curr_dir, '\\/')
+if (curr_dir[length(curr_dir)] != 'scripts'){
+  setwd('./scripts')
+}
+```
+
 **Main/Butyrate Functions**
 ```{r}
 ## allows you to filter your biom table for specified KOs and by the taxonomic level of interest
@@ -39,6 +48,7 @@ func_abun_sum <- function(filtered_biom, taxonomy_level) {
   return(filtered_biom_sum)
 }
 
+**may be able to change this/take it out since I have the processed metadata file**
 ##metadata file prep
 ##assumes that it is a CSV file
 ko_metadata_prep <- function(metadata_fp) {
@@ -271,19 +281,42 @@ other_secondary_bile_acid <- function(meta_fp, taxonomy_fp, ko_meta_contrib_fp,
 }
 ```
 
-**Prep for attempt at using new "pipeline" for Butyrate Kinase Plot**
+**Input File Paths**
 ```{r}
-buk_meta_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/updated/updated_metadata.csv'
-buk_taxonomy_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/tax_info/taxonomy.qza'
-buk_ko_contrib_fp <- 
-  '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs/untrustable_meta_contrib.tsv'
+metadata_FP <- '../data/misc/processed_metadata.tsv'
+tax_FP <- '../data/qiime/taxonomy.qza'
+ko_contrib_FP <- '../data/picrust/tss3_meta_contrib.tsv'
+
+## butyrate kinase specs
 buk_tax_level <- 'class'
 buk_thresh_level <- 200
 buk_ko <- 'K00929'
 buk_title <- 'Total Sum Scaled Butyrate Kinase Potential Over Time'
+
+## butyryl coa transferase specs
+but_tax_level <- 'class'
+but_thresh_level <- 50
+but_ko <- 'K01034'
+but_title <- 'Total Sum Scaled Butyryl-CoA Transferase Potential Over Time'
+
+## baiH specs
+bile_tax_level <- 'genus'
+baiH_ko <- c('K15873')
+baiH_title <- 'Total Sum Scaled baiH Potential Over Time'
+
+## baiI specs
+bile_tax_level <- 'genus'
+baiI_ko <- c('K15874')
+baiI_title <- 'Total Sum Scaled baiI Potential Over Time'
+baiI_y_axis <- 'axis.text.y = element_blank()'
+
+## old bile acid plot specs
+bile_tax_level <- 'genus'
+bile_kos <- c('K15873', 'K15874')
+bile_title <- 'Total Sum Scaled Secondary Bile Acid Potential Over Time'
 ```
 
-**Butyrate Kinase plot construction via pipeline**
+**Butyrate Kinase plot construction**
 ```{r, fig.height=5, fig.width=10, warning=FALSE}
 total_butyrate_kinase <- butyrate_plot(buk_meta_fp, 
                                        buk_taxonomy_fp,
@@ -295,19 +328,7 @@ total_butyrate_kinase <- butyrate_plot(buk_meta_fp,
 total_butyrate_kinase
 ```
 
-**Prep for Butryl-CoA Transferase**
-```{r}
-but_meta_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/updated/updated_metadata.csv'
-but_taxonomy_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/tax_info/taxonomy.qza'
-but_ko_contrib_fp <- 
-  '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs/untrustable_meta_contrib.tsv'
-but_tax_level <- 'class'
-but_thresh_level <- 50
-but_ko <- 'K01034'
-but_title <- 'Total Sum Scaled Butyryl-CoA Transferase Potential Over Time'
-```
-
-**Butryl-CoA Transferase plot construction via pipeline**
+**Butryl-CoA Transferase plot construction**
 ```{r, fig.height=5, fig.width=10, warning=FALSE}
 total_butyrylcoa_transferase <- butyrate_plot(but_meta_fp, but_taxonomy_fp, 
                                  but_ko_contrib_fp, but_tax_level, 
@@ -316,23 +337,13 @@ total_butyrylcoa_transferase <- butyrate_plot(but_meta_fp, but_taxonomy_fp,
 total_butyrylcoa_transferase
 ```
 
+**All Butyrate Plots Together**
 ```{r, fig.height=11, fig.width=23, warning=FALSE}
 total_all_butyrate <- plot_grid(total_butyrate_kinase, total_butyrylcoa_transferase,
                                 ncol = 2, 
                                 labels = c('A', 'B'),
                                 label_size = 22)
 total_all_butyrate
-```
-
-**Prep for NEW baiH secondary bile acid plot**
-```{r}
-bile_meta_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/updated/updated_metadata.csv'
-bile_taxonomy_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/tax_info/taxonomy.qza'
-bile_contrib_fp <- 
-  '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs/untrustable_meta_contrib.tsv'
-bile_tax_level <- 'genus'
-baiH_ko <- c('K15873')
-baiH_title <- 'Total Sum Scaled baiH Potential Over Time'
 ```
 
 **NEW baiH Secondary Bile Acid Plot**
@@ -346,15 +357,6 @@ total_baiH
 
 **NEW baiI plot**
 ```{r, fig.height=6, fig.width=10, warning=FALSE}
-bile_meta_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/updated/updated_metadata.csv'
-bile_taxonomy_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/tax_info/taxonomy.qza'
-bile_contrib_fp <- 
-  '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs/untrustable_meta_contrib.tsv'
-bile_tax_level <- 'genus'
-baiI_ko <- c('K15874')
-baiI_title <- 'Total Sum Scaled baiI Potential Over Time'
-baiI_y_axis <- 'axis.text.y = element_blank()'
-
 total_baiI <- other_secondary_bile_acid(bile_meta_fp, bile_taxonomy_fp,
                                        bile_contrib_fp, bile_tax_level, 
                                        baiI_ko, baiI_title)
@@ -373,14 +375,6 @@ new_bile_acid
 
 **OLD Secondary Bile Acid Plot**
 ```{r, fig.height=6, fig.width=10, warning=FALSE}
-bile_meta_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/updated/updated_metadata.csv'
-bile_taxonomy_fp <- '~/gut_microbiome_metabolomics/total_sum_scaled/tax_info/taxonomy.qza'
-bile_contrib_fp <- 
-  '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs/untrustable_meta_contrib.tsv'
-bile_tax_level <- 'genus'
-bile_kos <- c('K15873', 'K15874')
-bile_title <- 'Total Sum Scaled Secondary Bile Acid Potential Over Time'
-
 total_bile_acid <- secondary_bile_acid(bile_meta_fp, bile_taxonomy_fp,
                                        bile_contrib_fp, bile_tax_level, 
                                        bile_kos, bile_title)
@@ -406,29 +400,29 @@ ggsave("tss_buk2.pdf",
        plot = total_butyrate_kinase,
        width = 15, 
        height = 10,
-       path = '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs')
+       path = '../plots/')
 
 ggsave("tss_butcoa2.pdf",
        plot = total_butyrylcoa_transferase, 
        width = 15, 
        height = 10, 
-       path = '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs')
+       path = '../plots/')
 
 ggsave("tss_but_all2.pdf",
        plot = total_all_butyrate, 
        width = 30, 
        height = 15, 
-       path = '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs')
+       path = '../plots/')
 
 ggsave("tss_bile2.pdf",
        plot = total_bile_acid, 
        width = 10, 
        height = 6, 
-       path = '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs')
+       path = '../plots/')
 
 ggsave("tss_all_plots1.pdf",
        plot = total_sum_scaled, 
        width = 23, 
        height = 15, 
-       path = '~/gut_microbiome_metabolomics/total_sum_scaled/butyrate_bile_pred_outputs')
+       path = '../plots/')
 ```

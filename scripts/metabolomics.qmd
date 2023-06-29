@@ -10,6 +10,7 @@ library(cowplot)
 library(magrittr)
 library(qiime2R)
 library(tidyverse)
+library(naniar)
 ```
 
 ```{r}
@@ -95,9 +96,18 @@ meta_filt %>%
          'n-Butanoic Acid (ug/g)', 'Isopentanoic Acid (ug/g)', '2-methyl-Butanoic Acid (ug/g)',
          'Pentanoic Acid (ug/g)', key = metabolite, value = concentration) %>% 
   filter(!is.na(mouse_id)) %>% 
-  filter(concentration != 'ND') %>% 
-  filter(!is.na(concentration)) %>% 
-  mutate(conc_num = as.numeric(concentration)) -> big_metab
+  replace_with_na(replace = list(concentration = 'ND')) %>% 
+  select(-'Notes', -'Sample Group', -'SCFA Data File',
+         -'Acq. Date-Time', -'Tube_Label', -'Sample_Type',
+         -'Collection Date', -'Dil.') %>% 
+  mutate(concentration = as.numeric(concentration)) %>% 
+  distinct(mouse_id, concentration, .keep_all = TRUE) -> big_metab
+  
+## converts all NAs to 0s 
+big_metab[is.na(big_metab)] <- 0
+  
+  
+
 ```
 
 **Ggplot Construction for Metabolites**
@@ -106,7 +116,7 @@ Very rough draft of the plot for the metabolite data - I know that I will probab
 
 ```{r, fig.width=25, fig.height=8}
 big_metab %>% 
-  ggplot(aes(x = diet, y = conc_num)) +
+  ggplot(aes(x = diet, y = concentration)) +
   geom_boxplot(aes(group = diet)) +
   scale_y_continuous(trans = 'log10') +
   geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
@@ -127,7 +137,7 @@ Grouped the stats per metabolite detected by the core and compared against conce
 ```{r}
 big_metab %>%
   group_by(metabolite) %>% 
-  do(tidy(lm(conc_num ~ purified_diet + high_fat + high_fiber,
+  do(tidy(lm(concentration ~ diet,
              data = .))) -> metab_results
 
 metab_results

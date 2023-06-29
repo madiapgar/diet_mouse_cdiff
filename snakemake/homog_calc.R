@@ -9,11 +9,18 @@ library(magrittr)
 library(qiime2R)
 library(tidyverse)
 
+# change to scripts directory if not there already
+curr_dir <- getwd()
+curr_dir <- str_split(curr_dir, '\\/')
+if (curr_dir[length(curr_dir)] != 'scripts'){
+  setwd('./scripts')
+}
+
 ## input file paths
-metadata_FP <- '../../data/misc/merged_metadata1.tsv'
-seq_depth_FP <- '../../data/misc/tss_seq_depth.tsv'
+metadata_FP <- '../../data/misc/processed_metadata.tsv'
 uu_dist_fp <- '../../data/qiime/core_outputs/uw_dist_matrix.tsv'
 wu_dist_fp <- '../../data/qiime/core_outputs/w_dist_matrix.tsv'
+
 ## lists to redo the diet names on the facet labels of the ggplot created below 
 diet_labs <- 
   c('Chow', 
@@ -24,51 +31,8 @@ diet_labs <-
 
 names(diet_labs) <- c('Chow', 'HF/HF', 'HF/LF', 'LF/HF', 'LF/LF')
 
-## functions in order of useage
+## functions in order of usage
 ## 1 
-## general function to prep the metadata file for further data analyses 
-metadata_fixer <- function(metadata_fp) {
-  tmpMeta <- read_tsv(metadata_fp, n_max = 2)
-  mycols <- colnames(tmpMeta)
-  metadata <- read_tsv(metadata_fp, skip = 2, col_names = mycols)
-  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
-  metadata %>% 
-    filter(!is.na(diet)) %>% 
-    mutate(day_post_inf = if_else(day_post_inf == 2, 3, day_post_inf)) %>% 
-    mutate(diet = as.factor(diet)) -> metadata
-  return(metadata)
-}
-
-## 2 
-## for editing my metadata file post metadata fixer 
-meta_diet_fixer <- function(metadata_file,
-                            seq_depth_fp){
-  seq_depths <- read_tsv(seq_depth_fp)
-  metadata_file %>% 
-    select(sampleid, diet, day_post_inf, mouse_id, study) %>% 
-    mutate(diet_true = diet,
-           diet_true = if_else(day_post_inf == -15, "Chow", diet_true),
-           high_fat = case_when(
-             diet_true == 'HF/HF' ~ 1,
-             diet_true == 'HF/LF' ~ 1,
-             .default = 0
-           ), 
-           high_fiber = case_when(
-             diet_true == 'HF/HF' ~ 1,
-             diet_true == 'LF/HF' ~ 1,
-             diet_true == 'Chow' ~ 1,
-             .default = 0
-           ), 
-           purified_diet = case_when(
-             diet_true == 'Chow' ~ 0,
-             .default = 1
-           )
-    ) %>% 
-    left_join(seq_depths) -> metadata
-  return(metadata)
-}
-
-## 3 
 ## this function combines your metadata file and your distance matrix 
 ## it also pulls out the wanted diet variable from the metadata file 
 ## requires the input of a distance matrix (dist_mat), metadata file (meta),
@@ -90,7 +54,7 @@ dist_filter <- function(dist_mat, meta, mydiet){
   return(min_dist_mat)
 }
 
-## 4 
+## 2
 ## this function takes the output from dist_filter and the metadata file 
 ## and pulls all unique distance matrix comparisons out for that particular diet 
 ## and places them in a new column 
@@ -123,7 +87,7 @@ homog_dist_comp <- function(min_dist_mat, meta){
   return(long_dist_mat)
 }
 
-## 5 
+## 3
 ## this is a for loop that does the above analysis for each diet variable and places them 
 ## in a list of dataframes that can be bound together to create one plot for comparison 
 ## requires the input of a distance matrix (dist_mat), metadata file (meta),
@@ -142,16 +106,10 @@ homog_diet_assembly <- function(dist_mat,
 }
 
 ## file prep for homog plot and stats
-metadata_FP <- '../../data/misc/merged_metadata1.tsv'
-seq_depth_FP <- '../../data/misc/tss_seq_depth.tsv'
-uu_dist_fp <- '../../data/qiime/core_outputs/uw_dist_matrix.tsv'
-wu_dist_fp <- '../../data/qiime/core_outputs/w_dist_matrix.tsv'
-
-prep_meta <- metadata_fixer(metadata_fp = metadata_FP)
-meta <- meta_diet_fixer(prep_meta,
-                        seq_depth_FP)
+meta <- read_tsv(metadata_FP)
 uu_dist <- read_tsv(uu_dist_fp)
 wu_dist <- read_tsv(wu_dist_fp)
+
 ## pulling out unique diets 
 diets <- unique(meta$diet)
 

@@ -1,9 +1,7 @@
 ## 6-26-23 
-## Qiime2 core metrics diversity analysis output plot construction
-## unweighed and weighted UniFrac PCoA plots
+## Qiime2 core metrics alpha diversity analysis output plot construction
 ## Faith's PD plot
 ## Shannon Entropy plot
-## might break this up into separate R script files for each plot 
 
 ## needed libraries
 library(qiime2R)
@@ -15,9 +13,15 @@ library(viridis)
 library(ggh4x)
 library(broom)
 
+# change to scripts directory if not there already
+curr_dir <- getwd()
+curr_dir <- str_split(curr_dir, '\\/')
+if (curr_dir[length(curr_dir)] != 'scripts'){
+  setwd('./scripts')
+}
+
 ## input file paths 
-metadata_FP <- '../../data/misc/merged_metadata1.tsv'
-seq_depth_FP <- '../../data/misc/tss_seq_depth.tsv'
+metadata_FP <- '../../data/misc/processed_metadata.tsv'
 faith_pd_FP <- '../../data/qiime/core_outputs/faith_pd.tsv'
 shannon_FP <- '../../data/qiime/core_outputs/shannon_entropy.tsv'
 
@@ -36,20 +40,6 @@ diet_names_labels <- c('Chow',
 
 ## needed functions (in order)
 ## 1
-metadata_fixer <- function(metadata_fp) {
-  tmpMeta <- read_tsv(metadata_fp, n_max = 2)
-  mycols <- colnames(tmpMeta)
-  metadata <- read_tsv(metadata_fp, skip = 2, col_names = mycols)
-  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
-  metadata %>% 
-    filter(!is.na(diet)) %>% 
-    mutate(day_post_inf = if_else(day_post_inf == 2, 3, day_post_inf)) %>% 
-    mutate(diet = as.factor(diet)) %>% 
-    select(sampleid, day_post_inf, study, diet, mouse_id) -> metadata
-  return(metadata)
-}
-
-## 2
 ## faith's pd plot 
 ## assumes that the files is a .tsv
 faith_pd_plot <- function(faith_fp,
@@ -80,7 +70,7 @@ faith_pd_plot <- function(faith_fp,
   return(faith_plot)
 }
 
-## 3
+## 2
 ## shannon entropy plot
 ## assumes that the file is a .tsv
 shannon_plot <- function(shannon_fp,
@@ -113,7 +103,7 @@ shannon_plot <- function(shannon_fp,
 
 ## core metrics file prep
 ## metadata file prep
-metadata <- metadata_fixer(metadata_FP)
+metadata <- read_tsv(metadata_FP)
 
 ## faith's pd plot 
 faith_title <- "Total Sum Scaled Faith's Phylogenic Diversity"

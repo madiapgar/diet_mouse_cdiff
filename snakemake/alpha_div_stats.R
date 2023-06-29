@@ -1,15 +1,7 @@
----
-title: "tss_core_stats"
-author: "Madi"
-date: "2023-05-25"
-output: html_document
----
+## 6-26-23
+## Qiime2 core diversity analysis statistical analysis for alpha diversity metrics
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-```{r}
+## needed libraries
 library(qiime2R)
 library(tidyverse)
 library(cowplot)
@@ -22,11 +14,20 @@ library(ggh4x)
 library(broom)
 library(rstatix)
 library(dunn.test)
-```
 
-**General Functions**
-```{r}
-## initial metadata fixer 
+## input file paths
+metadata_FP <- '../../data/misc/merged_metadata1.tsv'
+seq_depth_FP <- '../../data/misc/tss_seq_depth.tsv'
+faith_pd_fp <- '../../data/qiime/core_outputs/faith_pd.tsv'
+shannon_fp <- '../../data/qiime/core_outputs/shannon_entropy.tsv'
+unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A',
+                      'Mock_3A', 'Mock_4A', 'Mock_5A', 'Mock_6A',
+                      'Mock_7A', 'PCR Blank0',
+                      'PCR Blank1', 'Mock_7', 'Mock_6',
+                      'Mock_5', 'Mock_4', 'PCR blank')
+
+## functions in order that they're used
+## 1 
 metadata_fixer <- function(metadata_fp) {
   tmpMeta <- read_tsv(metadata_fp, n_max = 2)
   mycols <- colnames(tmpMeta)
@@ -39,6 +40,7 @@ metadata_fixer <- function(metadata_fp) {
   return(metadata)
 }
 
+## 2 
 ## for editing my metadata file post metadata fixer 
 meta_diet_fixer <- function(metadata_file,
                             seq_depth_fp){
@@ -46,30 +48,28 @@ meta_diet_fixer <- function(metadata_file,
   metadata_file %>% 
     select(sampleid, diet, day_post_inf, mouse_id, study) %>% 
     mutate(diet_true = diet,
-    diet_true = if_else(day_post_inf == -15, "Chow", diet_true),
-    high_fat = case_when(
-      diet_true == 'HF/HF' ~ 1,
-      diet_true == 'HF/LF' ~ 1,
-      .default = 0
-      ), 
-      high_fiber = case_when(
-      diet_true == 'HF/HF' ~ 1,
-      diet_true == 'LF/HF' ~ 1,
-      diet_true == 'Chow' ~ 1,
-      .default = 0
-      ), 
-      purified_diet = case_when(
-      diet_true == 'Chow' ~ 0,
-      .default = 1
-      )
+           diet_true = if_else(day_post_inf == -15, "Chow", diet_true),
+           high_fat = case_when(
+             diet_true == 'HF/HF' ~ 1,
+             diet_true == 'HF/LF' ~ 1,
+             .default = 0
+           ), 
+           high_fiber = case_when(
+             diet_true == 'HF/HF' ~ 1,
+             diet_true == 'LF/HF' ~ 1,
+             diet_true == 'Chow' ~ 1,
+             .default = 0
+           ), 
+           purified_diet = case_when(
+             diet_true == 'Chow' ~ 0,
+             .default = 1
+           )
     ) %>% 
     left_join(seq_depths) -> metadata
   return(metadata)
 }
-```
 
-**Alpha Diversity Functions**
-```{r}
+## 3 
 ## alpha diversity file prep 
 alpha_div_prep <- function(file_path1,
                            file_path2,
@@ -111,7 +111,7 @@ alpha_div_prep <- function(file_path1,
   return(my_list)
 }
 
-
+## 4 
 ## stats calculations
 ## faith's pd 
 faith_div_stats <- function(biom_table){
@@ -138,6 +138,7 @@ faith_div_stats <- function(biom_table){
   return(my_list)
 }
 
+## 5 
 ## shannon entropy 
 shannon_div_stats <- function(biom_table){
   ## alpha_cat is what the alpha div column is called (faith_pd or shannon_entropy)
@@ -162,78 +163,8 @@ shannon_div_stats <- function(biom_table){
                   OverallDiet = not_sectioned_lm)
   return(my_list)
 }
-```
 
-**Beta Diversity Functions**
-```{r}
-## for distance matrix processing
-## for beta diversity statistical analysis 
-dist_matrix_prep <- function(metadata_file,
-                             dist_matrix_fp,
-                             sample_filter){ 
-  ## metadata filtering
-  metadata_file %>% 
-    filter(!(sampleid %in% sample_filter)) -> metadata
-  ## distance matrix
-  dist <- read_tsv(dist_matrix_fp)
-  names(dist)[names(dist) == '...1'] <- 'sampleid'
-  dist %>% 
-    gather(-sampleid, key = sample_col, value = dist) %>% 
-    filter(sampleid %in% metadata$sampleid) %>% 
-    filter(sample_col %in% metadata$sampleid) %>% 
-    spread(sample_col, dist) -> dist_long
-  dist_long %>% 
-    select(-sampleid) -> dist_proc
-  metadata %>% 
-    arrange(sampleid) -> metadata
-  metadata %>% 
-    filter(sampleid %in% dist_long$sampleid) -> filt_meta
-  dist_proc <- as.matrix(dist_proc)
-  row.names(dist_proc) <- colnames(dist_proc)
-  filt_meta <- filt_meta[order(filt_meta$sampleid),]
-  ## list of outputs
-  my_list <- list(Metadata = filt_meta,
-                  DistanceMatrix = dist_proc)
-  return(my_list)
-}
-
-
-
-## beta diversity adonis2 testing function
-adonis_test <- function(dist_matrix,
-                        metadata_file){
-  adonis_results <- adonis2(as.dist(dist_matrix) ~ purified_diet * seq_depth + high_fat + high_fiber +
-                        day_post_inf + study,
-                        data = metadata_file,
-                        permutations = 999, 
-                        parallel = 4)
-  adonis_results <- tidy(adonis_results)
-  return(adonis_results)
-}
-
-```
-
-**File paths for all needed files**
-Doing this so that I don't have to worry about re-entering entire file paths all the time, they'll just be at the beginning
-```{r}
-metadata_FP <- '../data/misc/merged_metadata1.tsv'
-seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
-uw_dist_fp <- '../data/qiime/core_outputs/uw_dist_matrix.tsv'
-w_dist_fp <- '../data/qiime/core_outputs/w_dist_matrix.tsv'
-faith_pd_fp <- '../data/qiime/core_outputs/faith_pd.tsv'
-shannon_fp <- '../data/qiime/core_outputs/shannon_entropy.tsv'
-unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A',
-                      'Mock_3A', 'Mock_4A', 'Mock_5A', 'Mock_6A',
-                      'Mock_7A', 'PCR Blank0',
-                      'PCR Blank1', 'Mock_7', 'Mock_6',
-                      'Mock_5', 'Mock_4', 'PCR blank')
-```
-
-
-**Stats on my total sum scaled core metrics**
-
-**Alpha Diversity Statistical Analysis**
-```{r}
+## use of functions 
 ## alpha diversity analysis  
 alpha_files <- alpha_div_prep(faith_pd_fp,
                               shannon_fp,
@@ -255,50 +186,8 @@ shannon_stats <- shannon_div_stats(shannon)
 sectioned_shannon_lm <- shannon_stats$DietSpecific
 shannon_lm <- shannon_stats$OverallDiet
 
-## example of how to write stats results out as a .tsv for better visualization 
-# write_tsv(faith_lm, '../stats/faith_total_results.tsv')
-```
-
-
-**Beta Diversity Statistical Analysis**
-```{r}
-## weighted unifrac 
-stat_meta <- metadata_fixer(metadata_FP)
-w_dist_files <- dist_matrix_prep(stat_meta,
-                               w_dist_fp,
-                               unwanted_samples)
-
-w_dist <- w_dist_files$DistanceMatrix
-stat_meta <- w_dist_files$Metadata
-
-
-filt_stat_meta <- meta_diet_fixer(stat_meta,
-                                  seq_depth_FP)
- 
-w_adonis <- adonis_test(w_dist,
-                         filt_stat_meta)
-
-
-## unweighted unifrac
-uw_dist_files <- dist_matrix_prep(stat_meta,
-                               uw_dist_fp,
-                               unwanted_samples)
-
-uw_dist <- uw_dist_files$DistanceMatrix
-stat_meta <- uw_dist_files$Metadata
-
-
-filt_stat_meta <- meta_diet_fixer(stat_meta,
-                                  seq_depth_FP)
- 
-uw_adonis <- adonis_test(uw_dist,
-                         filt_stat_meta)
-
-## example of how to write results out as a .tsv 
-# write_tsv(w_adonis, '../stats/w_adonis_results.tsv')
-# write_tsv(uw_adonis, '../stats/uw_adonis_results.tsv')
-```
-
-
-
-
+## writing out results as a .tsv file 
+write_tsv(faith_lm, '../../stats/faith_total_results.tsv')
+write_tsv(sectioned_faith_lm, '../../stats/faith_diet_results.tsv')
+write_tsv(shannon_lm, '../../stats/shannon_total_results.tsv')
+write_tsv(sectioned_shannon_lm, '../../stats/shannon_diet_results.tsv')

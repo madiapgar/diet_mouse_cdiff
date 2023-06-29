@@ -1,0 +1,154 @@
+---
+title: "family_abundance"
+output: html_document
+date: "2023-06-27"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# change to scripts directory if not there already
+# curr_dir <- getwd()
+# curr_dir <- str_split(curr_dir, '\\/')
+# if (curr_dir[length(curr_dir)] != 'scripts'){
+#   setwd('./scripts')
+# } 
+```
+
+```{r}
+library(qiime2R)
+library(tidyverse)
+library(cowplot)
+library(magrittr)
+library(vegan)
+library(viridis)
+library(broom)
+```
+
+**Functions**
+```{r}
+metadata_fixer <- function(metadata_fp) {
+  tmpMeta <- read_tsv(metadata_fp, n_max = 2)
+  mycols <- colnames(tmpMeta)
+  metadata <- read_tsv(metadata_fp, skip = 2, col_names = mycols)
+  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
+  metadata %>% 
+    filter(!is.na(diet)) %>% 
+    mutate(day_post_inf = if_else(day_post_inf == 2, 3, day_post_inf)) %>% 
+    mutate(diet = as.factor(diet)) %>% 
+    select(sampleid, day_post_inf, study, diet, mouse_id) -> metadata
+  return(metadata)
+}
+```
+
+**Needed File Paths**
+```{r}
+otu_table_FP <- '../data/qiime/taxonomy_filtered.qza'
+tax_FP <- '../data/qiime/taxonomy.qza'
+metadata_FP <- '../data/misc/merged_metadata1.tsv'
+diet_labs <- 
+  c('Chow', 
+    'High Fat / High Fiber', 
+    'High Fat / Low Fiber', 
+    'Low Fat / High Fiber', 
+    'Low Fat / Low Fiber')
+names(diet_labs) <- c('Chow', 
+                      'HF/HF', 
+                      'HF/LF', 
+                      'LF/HF', 
+                      'LF/LF')
+wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
+                   'Staphylococcaceae', 'Tannerellaceae', 'Muribaculaceae', 'Bacteroidaceae', 
+                   'Marinifilaceae')
+```
+
+**File Prep for Plot Construction**
+```{r}
+## ggplot file prep 
+metadata <- metadata_fixer(metadata_FP)
+
+tss_tax <- read_qza(tax_FP)$data %>% 
+  parse_taxonomy() %>% 
+  rownames_to_column('asv')
+
+tss_otu <- read_qza(otu_table_FP)$data
+
+tss_otu %>% 
+  as_tibble(rownames = 'asv') %>% 
+  gather(-asv, key = sampleid, value = abun) %>% 
+  group_by(sampleid) %>% 
+  mutate(rel_abun = abun/sum(abun)) %>% 
+  mutate(p_abun = rel_abun + 0.000001) -> tss_otu
+
+tss_otu %>% 
+  left_join(metadata, by = 'sampleid') %>% 
+  left_join(tss_tax, by = 'asv') -> abun_table
+
+abun_table %>% 
+  group_by(sampleid, day_post_inf, diet, mouse_id, Family) %>% 
+  summarise(rel_abund = sum(rel_abun)) %>% 
+  filter(Family %in% wanted_family) %>% 
+  mutate(mouse_fact = as.factor(mouse_id),
+         day_fact = as.factor(day_post_inf)) -> abun_filt
+```
+
+**Microbe Family Abundance Plot**
+Here I plotted the relative abundances (I think) of the listed microbe families of interest below against diet and days post infection to see their change over time and if it follows expected trends. This is option #1 for visualizing this information. 
+```{r, warning=FALSE, fig.width=15, fig.height=10}
+abun_filt %>%
+  filter(!is.na(diet)) %>% 
+  ggplot(aes(x = day_post_inf, y = rel_abund)) +
+    scale_y_continuous(trans = 'log10') +
+    scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
+    geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
+    geom_line(aes(group = mouse_id), alpha = 0.3) +
+    geom_smooth(se = FALSE) +
+    geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
+    theme_bw(base_size = 16) +
+    facet_grid(Family~diet, labeller = labeller(diet = diet_labs)) +
+    theme(strip.text.y = element_text(angle = 0)) +
+    ggtitle("Microbe Family Relative Abundance") +
+    ylab("Relative Abundance") +
+    xlab("Days Relative to Infection") -> family_abun1
+
+family_abun1
+```
+
+Option #2 for tracking the relative abundances of microbe families of interest over the course of time. I attempted to create a heat map that allows the relative abundances of microbe families to be easily trackable over time. The line graph I created above probably looks a bit better but I like the heat map concept. 
+```{r, warning=FALSE, fig.height=10, fig.width=25}
+abun_filt %>%
+  filter(!is.na(diet)) %>% 
+  ggplot(aes(x = mouse_fact, y = day_fact)) +
+  geom_tile(aes(fill = rel_abund), alpha = 0.5) +
+  scale_fill_viridis(option = "H", name = 'Relative\nAbundance') +
+  theme_bw(base_size = 16) +
+  facet_grid(Family~diet, scales = 'free',
+             labeller = labeller(diet = diet_labs)) +
+  theme(strip.text.y = element_text(angle = 0),
+        axis.text.x = element_blank()) + 
+  xlab("Mouse ID") +
+  ylab("Days Relative to Infection") +
+  scale_y_discrete(limits = rev) -> family_abun2
+
+family_abun2
+```
+
+**Saving my plot outputs**
+These go to the plots directory. 
+```{r}
+## microbe family relative abundance plots
+## option #1
+ggsave("family_abun1.pdf",
+       plot = family_abun1, 
+       width = 15, 
+       height = 10, 
+       path = '../plots')
+## option #2
+ggsave("family_abun2.pdf",
+       plot = family_abun2, 
+       width = 25, 
+       height = 10, 
+       path = '../plots')
+```

@@ -318,7 +318,7 @@ bile_title <- 'Total Sum Scaled Secondary Bile Acid Potential Over Time'
 
 **Butyrate Kinase plot construction**
 ```{r, fig.height=5, fig.width=10, warning=FALSE}
-total_butyrate_kinase <- butyrate_plot(buk_meta_fp, 
+total_butyrate_kinase <- butyrate_plot(metadata_FP, 
                                        buk_taxonomy_fp,
                                        buk_ko_contrib_fp, 
                                        buk_tax_level, 
@@ -330,10 +330,13 @@ total_butyrate_kinase
 
 **Butryl-CoA Transferase plot construction**
 ```{r, fig.height=5, fig.width=10, warning=FALSE}
-total_butyrylcoa_transferase <- butyrate_plot(but_meta_fp, but_taxonomy_fp, 
-                                 but_ko_contrib_fp, but_tax_level, 
-                                 but_thresh_level, but_ko,
-                                 but_title)
+total_butyrylcoa_transferase <- butyrate_plot(metadata_FP, 
+                                              but_taxonomy_fp,
+                                              but_ko_contrib_fp, 
+                                              but_tax_level,
+                                              but_thresh_level, 
+                                              but_ko,
+                                              but_title)
 total_butyrylcoa_transferase
 ```
 
@@ -348,18 +351,24 @@ total_all_butyrate
 
 **NEW baiH Secondary Bile Acid Plot**
 ```{r, fig.height=6, fig.width=10, warning=FALSE}
-total_baiH <- other_secondary_bile_acid(bile_meta_fp, bile_taxonomy_fp,
-                                       bile_contrib_fp, bile_tax_level, 
-                                       baiH_ko, baiH_title)
+total_baiH <- other_secondary_bile_acid(metadata_FP, 
+                                        bile_taxonomy_fp,
+                                        bile_contrib_fp, 
+                                        bile_tax_level, 
+                                        baiH_ko, 
+                                        baiH_title)
                                       
 total_baiH
 ```
 
 **NEW baiI plot**
 ```{r, fig.height=6, fig.width=10, warning=FALSE}
-total_baiI <- other_secondary_bile_acid(bile_meta_fp, bile_taxonomy_fp,
-                                       bile_contrib_fp, bile_tax_level, 
-                                       baiI_ko, baiI_title)
+total_baiI <- other_secondary_bile_acid(metadata_FP, 
+                                        bile_taxonomy_fp,
+                                        bile_contrib_fp, 
+                                        bile_tax_level,
+                                        baiI_ko, 
+                                        baiI_title)
                                       
 total_baiI
 ```
@@ -375,9 +384,12 @@ new_bile_acid
 
 **OLD Secondary Bile Acid Plot**
 ```{r, fig.height=6, fig.width=10, warning=FALSE}
-total_bile_acid <- secondary_bile_acid(bile_meta_fp, bile_taxonomy_fp,
-                                       bile_contrib_fp, bile_tax_level, 
-                                       bile_kos, bile_title)
+total_bile_acid <- secondary_bile_acid(metadata_FP, 
+                                       bile_taxonomy_fp,
+                                       bile_contrib_fp, 
+                                       bile_tax_level, 
+                                       bile_kos, 
+                                       bile_title)
                                       
 total_bile_acid
 

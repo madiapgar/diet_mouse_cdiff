@@ -1,0 +1,17 @@
+rule target:
+    input:
+       "plots/faith_pd.pdf",
+        "plots/shannon_entropy.pdf" 
+
+
+rule alpha_diversity:
+    input:
+        r_script = "alpha_div_plots.R"
+    output:
+        "plots/faith_pd.pdf",
+        "plots/shannon_entropy.pdf"
+    conda: "envs/environment.yml"
+    shell: 
+        """
+        {input.r_script}
+        """

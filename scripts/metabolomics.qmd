@@ -112,6 +112,7 @@ pre_metab %>%
 ```
 
 **Putting Together Stats for the Ggplot**\
+Here I'm running a Kruskal-Wallis and Dunn's Post Hoc test on the metabolite data so that I can add the p-value significance to the overall ggplot.
 
 ```{r}
 ## generating stats to place on ggplot for visualization

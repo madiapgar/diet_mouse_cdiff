@@ -48,18 +48,18 @@ func_abun_sum <- function(filtered_biom, taxonomy_level) {
   return(filtered_biom_sum)
 }
 
-**may be able to change this/take it out since I have the processed metadata file**
-##metadata file prep
-##assumes that it is a CSV file
-ko_metadata_prep <- function(metadata_fp) {
-  tmpMeta <- read_csv(metadata_fp, n_max = 2)
-  mycols <- colnames(tmpMeta)
-  metadata <- read_csv(metadata_fp, skip = 2, col_names = mycols)
-  names(metadata)[names(metadata) == '#SampleID'] <- 'sample'
-  metadata %>% 
-    select(sample, diet, study, day_post_inf) -> metadata
-  return(metadata)
-} 
+# **may be able to change this/take it out since I have the processed metadata file**
+# ##metadata file prep
+# ##assumes that it is a CSV file
+# ko_metadata_prep <- function(metadata_fp) {
+#   tmpMeta <- read_csv(metadata_fp, n_max = 2)
+#   mycols <- colnames(tmpMeta)
+#   metadata <- read_csv(metadata_fp, skip = 2, col_names = mycols)
+#   names(metadata)[names(metadata) == '#SampleID'] <- 'sample'
+#   metadata %>% 
+#     select(sample, diet, study, day_post_inf) -> metadata
+#   return(metadata)
+# } 
 
 ##taxonomy prep
 ##assumes that the imput is a qza file from qiime2
@@ -73,7 +73,9 @@ ko_tax_prep <- function(tax_fp){
 
 ##meta contrib file prep and overall table construction
 ##assumes that the input is a tsv file 
-ko_contrib_prep <- function(ko_contrib_fp, metadata, taxonomy){
+ko_contrib_prep <- function(ko_contrib_fp, metadata_fp, taxonomy){
+  metadata <- read_tsv(metadata_fp)
+  names(metadata)[names(metadata) == 'sampleid'] <- 'sample'
   kometa_contrib <- read_tsv(file = ko_contrib_fp)
   names(kometa_contrib)[names(kometa_contrib) == 'function'] <- 'ko'
   kometa_contrib %>% 
@@ -241,9 +243,8 @@ new_bile_acid <- function(new_bile_sum, title){
 ##butyrate
 butyrate_plot <- function(meta_fp, taxonomy_fp, ko_meta_contrib_fp, 
                           tax_level, thresh_level, kos, wanted_title){
-  ko_metadata <- ko_metadata_prep(meta_fp)
   ko_taxonomy <- ko_tax_prep(taxonomy_fp)
-  ko_biom <- ko_contrib_prep(ko_meta_contrib_fp, ko_metadata, ko_taxonomy)
+  ko_biom <- ko_contrib_prep(ko_meta_contrib_fp, meta_fp, ko_taxonomy)
   ko_filtered_biom <- ko_filter(ko_biom, kos, tax_level)
   ko_filtered_biom_sum <- func_abun_sum(ko_filtered_biom, tax_level)
   ko_filt_sample_abun <- ko_sample_abun(ko_filtered_biom_sum, thresh_level)
@@ -319,8 +320,8 @@ bile_title <- 'Total Sum Scaled Secondary Bile Acid Potential Over Time'
 **Butyrate Kinase plot construction**
 ```{r, fig.height=5, fig.width=10, warning=FALSE}
 total_butyrate_kinase <- butyrate_plot(metadata_FP, 
-                                       buk_taxonomy_fp,
-                                       buk_ko_contrib_fp, 
+                                       tax_FP,
+                                       ko_contrib_FP, 
                                        buk_tax_level, 
                                        buk_thresh_level, 
                                        buk_ko, 
@@ -408,31 +409,37 @@ total_sum_scaled
 
 **Saving my outputs as a pdf file**
 ```{r}
-ggsave("tss_buk2.pdf", 
+ggsave("butyrate_kinase.pdf", 
        plot = total_butyrate_kinase,
        width = 15, 
        height = 10,
        path = '../plots/')
 
-ggsave("tss_butcoa2.pdf",
+ggsave("butyryl_coa_transferase.pdf",
        plot = total_butyrylcoa_transferase, 
        width = 15, 
        height = 10, 
        path = '../plots/')
 
-ggsave("tss_but_all2.pdf",
+ggsave("all_butyrate.pdf",
        plot = total_all_butyrate, 
        width = 30, 
        height = 15, 
        path = '../plots/')
 
-ggsave("tss_bile2.pdf",
-       plot = total_bile_acid, 
+ggsave("baiH.pdf",
+       plot = total_baiH, 
        width = 10, 
        height = 6, 
        path = '../plots/')
 
-ggsave("tss_all_plots1.pdf",
+ggsave("baiI.pdf",
+       plot = total_baiI, 
+       width = 10, 
+       height = 6, 
+       path = '../plots/')
+
+ggsave("picrust_plots_assembled.pdf",
        plot = total_sum_scaled, 
        width = 23, 
        height = 15, 

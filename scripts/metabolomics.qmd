@@ -11,6 +11,8 @@ library(magrittr)
 library(qiime2R)
 library(tidyverse)
 library(naniar)
+library(ggpubr)
+library(rstatix)
 ```
 
 ```{r}
@@ -95,36 +97,68 @@ meta_filt %>%
   gather('Acetic Acid (ug/g)', 'Propanoic Acid (ug/g)', '2-methyl-propanoic acid (ug/g)',
          'n-Butanoic Acid (ug/g)', 'Isopentanoic Acid (ug/g)', '2-methyl-Butanoic Acid (ug/g)',
          'Pentanoic Acid (ug/g)', key = metabolite, value = concentration) %>% 
-  filter(!is.na(mouse_id)) %>% 
-  replace_with_na(replace = list(concentration = 'ND')) %>% 
+  filter(!is.na(mouse_id)) -> pre_metab
+
+## changes all 'ND' values in the concentration column to 0 
+pre_metab$concentration[pre_metab$concentration == 'ND'] <- 0
+
+pre_metab %>% 
   select(-'Notes', -'Sample Group', -'SCFA Data File',
          -'Acq. Date-Time', -'Tube_Label', -'Sample_Type',
-         -'Collection Date', -'Dil.') %>% 
+         -'Collection Date', -'Dil.') %>%
+  filter(!is.na(concentration)) %>% 
   mutate(concentration = as.numeric(concentration)) %>% 
   distinct(mouse_id, concentration, .keep_all = TRUE) -> big_metab
-  
-## converts all NAs to 0s 
-big_metab[is.na(big_metab)] <- 0
-  
-  
+```
 
+**Putting Together Stats for the Ggplot**\
+
+```{r}
+## generating stats to place on ggplot for visualization
+## running a kruskal-wallis test on the metabolite data 
+big_metab %>% 
+  group_by(metabolite) %>% 
+  do(tidy(kruskal.test(concentration ~ diet,
+             data = .))) -> metab_kruskal
+
+## running dunn's post hoc test on the metabolite data 
+big_metab %>% 
+  group_by(metabolite) %>% 
+  dunn_test(concentration ~ diet,
+            p.adjust.method = 'bonferroni',
+            data = .) %>% 
+  add_y_position(scales = 'free_y') -> metab_dunn
 ```
 
 **Ggplot Construction for Metabolites**
 
 Very rough draft of the plot for the metabolite data - I know that I will probably need to edit this.
 
-```{r, fig.width=25, fig.height=8}
+```{r, fig.width=35, fig.height=6}
+metab_labs <- c('Acetic Acid', 'Propanoic Acid', '2-methyl-propanoic acid',
+                'n-Butanoic Acid', 'Isopentanoic Acid', '2-methyl-Butanoic Acid',
+                'Pentanoic Acid')
+names(metab_labs) <- c('Acetic Acid (ug/g)', 'Propanoic Acid (ug/g)', 
+                       '2-methyl-propanoic acid (ug/g)','n-Butanoic Acid (ug/g)', 
+                       'Isopentanoic Acid (ug/g)', '2-methyl-Butanoic Acid (ug/g)',
+                       'Pentanoic Acid (ug/g)')
 big_metab %>% 
   ggplot(aes(x = diet, y = concentration)) +
-  geom_boxplot(aes(group = diet)) +
-  scale_y_continuous(trans = 'log10') +
+  geom_violin(aes(group = diet)) +
   geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
+  scale_x_discrete(labels = c('Chow', 'High Fat/\nHigh Fiber', 'High Fat/\nLow Fiber',
+                              'Low Fat/\nHigh Fiber', 'Low Fat/\nLow Fiber')) +
   facet_wrap(~metabolite, 
-             nrow = 1) +
+             nrow = 1,
+             scales = 'free_y',
+             labeller = labeller(metabolite = metab_labs)) +
   theme_bw(base_size = 14) +
+  stat_pvalue_manual(metab_dunn,
+                     tip.length = 0.01,
+                     label = 'p.adj.signif',
+                     hide.ns = TRUE) +
   xlab('Diet') +
-  ylab('Concentration') +
+  ylab('Concentration (ug/g)') +
   ggtitle('Metabolite Concentration by Mouse Diet') -> metab_plot
 
 metab_plot
@@ -138,7 +172,8 @@ Grouped the stats per metabolite detected by the core and compared against conce
 big_metab %>%
   group_by(metabolite) %>% 
   do(tidy(lm(concentration ~ diet,
-             data = .))) -> metab_results
+             data = .))) %>% 
+  adjust_pvalue(method = 'bonferroni') -> metab_results
 
 metab_results
 ```
@@ -146,12 +181,18 @@ metab_results
 **Saving my Outputs**
 
 ```{r}
+## plot
 ggsave("metabolomics.pdf",
        plot = metab_plot,
-       width = 25,
-       height = 8,
+       width = 35,
+       height = 6,
        path = '../plots')
 
+## statistical tests 
 write_tsv(metab_results,
-          '../stats/metabolomics.tsv')
+          '../stats/metab_linear_model.tsv')
+write_tsv(metab_dunn,
+          '../stats/metab_dunn_test.tsv')
+write_tsv(metab_kruskal,
+          '../stats/metab_kruskal_test.tsv')
 ```

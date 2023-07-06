@@ -1,17 +1,18 @@
 rule target:
     input:
        "plots/faith_pd.pdf",
-        "plots/shannon_entropy.pdf" 
+       "plots/shannon_entropy.pdf" 
 
 
 rule alpha_diversity:
     input:
-        r_script = "alpha_div_plots.R"
+        metadata_FP = "data/misc/processed_metadata.tsv",
+        faith_pd_FP = "data/qiime/core_outputs/faith_pd.tsv",
+        shannon_FP = "data/qiime/core_outputs/shannon_entropy.tsv"
     output:
         "plots/faith_pd.pdf",
         "plots/shannon_entropy.pdf"
-    conda: "envs/environment.yml"
-    shell: 
+    shell:
         """
-        {input.r_script}
+        Rscript scripts/alpha_div_plots.R
         """

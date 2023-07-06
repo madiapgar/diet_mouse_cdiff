@@ -13,17 +13,11 @@ library(viridis)
 library(ggh4x)
 library(broom)
 
-# change to scripts directory if not there already
-curr_dir <- getwd()
-curr_dir <- str_split(curr_dir, '\\/')
-if (curr_dir[length(curr_dir)] != 'scripts'){
-  setwd('./scripts')
-}
 
 ## input file paths 
-metadata_FP <- '../data/misc/processed_metadata.tsv'
-faith_pd_FP <- '../data/qiime/core_outputs/faith_pd.tsv'
-shannon_FP <- '../data/qiime/core_outputs/shannon_entropy.tsv'
+metadata_FP <- './data/misc/processed_metadata.tsv'
+faith_pd_FP <- './data/qiime/core_outputs/faith_pd.tsv'
+shannon_FP <- './data/qiime/core_outputs/shannon_entropy.tsv'
 
 diet_labs <- 
   c('Chow', 
@@ -128,10 +122,10 @@ ggsave("faith_pd.pdf",
        plot = faith_plot, 
        width = 10, 
        height = 5, 
-       path = '../plots')
+       path = './plots')
 
 ggsave("shannon_entropy.pdf",
        plot = shannon_entropy_plot, 
        width = 10, 
        height = 5, 
-       path = '../plots')
+       path = './plots')

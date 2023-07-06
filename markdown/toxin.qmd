@@ -92,16 +92,16 @@ metadata %>%
   group_by(mouse_id) %>% 
   filter(mouse_id %in% wanted_ids) -> meta_filt
 
-metadata %>% 
-  left_join(toxin, by = 'mouse_id') %>% 
+toxin %>% 
+  left_join(meta_filt, by = 'mouse_id') %>% 
   gather('Total TcA Neat', 'Total TcB Neat', 
          key = neat_toxin, value = neat_conc) %>% 
   gather('Total TcA 1:10', 'Total TcB 1:10',
          key = dil_toxin, value = dil_conc) -> pre_toxin
 
-pre_toxin$neat_conc[pre_toxin$neat_conc == 'BDL'] <- 0
-pre_toxin$dil_conc[pre_toxin$dil_conc == 'BDL'] <- 0
-pre_toxin$dil_conc[pre_toxin$dil_conc == 'Chow'] <- 0
+pre_toxin$neat_conc[pre_toxin$neat_conc == 'BDL'] <- '0'
+pre_toxin$dil_conc[pre_toxin$dil_conc == 'BDL'] <- '0'
+pre_toxin$dil_conc[pre_toxin$dil_conc == 'Chow'] <- '0'
 
 pre_toxin %>% 
   filter(!is.na(dil_conc),
@@ -113,41 +113,48 @@ pre_toxin %>%
 ## from my subsequent plots 
 big_toxin %>% 
   select(-Extra_Sample) %>% 
-  distinct(mouse_id, dil_conc, .keep_all = TRUE) -> dil_toxin
+  distinct(mouse_id, dil_conc, .keep_all = TRUE) %>% 
+  filter(diet != 'Chow') -> dil_toxin
 
 big_toxin %>% 
   select(-Extra_Sample) %>% 
   distinct(mouse_id, neat_conc, .keep_all = TRUE) -> neat_toxin 
 ```
 
+```{r}
+
+```
+
 **Stats on my Toxin Data for Ggplot**
 
 Running Kruskal-Wallis and Dunn's Post Hoc test on the toxin data.
 
+Re-ran the stats with a less stringent p-value adjustment method (BH instead of Bonferroni) and the results still didn't come out as significant in any case.
+
 ```{r}
 ## neat toxin concentration
-big_toxin %>% 
+neat_toxin %>% 
   group_by(neat_toxin) %>% 
   do(tidy(kruskal.test(neat_conc ~ diet,
              data = .))) -> neat_kruskal
 
-big_toxin %>% 
+neat_toxin %>% 
   group_by(neat_toxin) %>% 
   dunn_test(neat_conc ~ diet,
-            p.adjust.method = 'bonferroni',
+            p.adjust.method = 'BH',
             data = .) %>% 
   add_y_position(scales = 'free_y') -> neat_dunn
 
 ## diluted toxin concentration
-big_toxin %>% 
+dil_toxin %>% 
   group_by(dil_toxin) %>% 
   do(tidy(kruskal.test(dil_conc ~ diet,
              data = .))) -> dil_kruskal
 
-big_toxin %>% 
+dil_toxin %>% 
   group_by(dil_toxin) %>% 
   dunn_test(dil_conc ~ diet,
-            p.adjust.method = 'bonferroni',
+            p.adjust.method = 'BH',
             data = .) %>% 
   add_y_position(scales = 'free_y') -> dil_dunn
 ```
@@ -156,13 +163,16 @@ big_toxin %>%
 
 TcA and TcB concentrations by diet without any kind of dilution factor.
 
+So, I was actually using the wrong table to calculate the stats above for the ggplot and when I re-ran the stats with the correct table, none of the relationships came out as statistically significant according to p-value (rip).
+
 ```{r, fig.height=5, fig.width=10}
-neat_labs <- c('TcA', 'TcB')
+neat_labs <- c('TcdA', 'TcdB')
 names(neat_labs) <- c('Total TcA Neat', 'Total TcB Neat')
 
 neat_toxin %>% 
+  na.omit() %>% 
   ggplot(aes(x = diet, y = neat_conc)) +
-  geom_violin(aes(group = diet)) +
+  geom_violin(aes(group = diet), draw_quantiles = c(0.5)) +
   geom_jitter(alpha = 0.4, width = 0.1, height = 0)+
   scale_x_discrete(labels = c('Chow', 'High Fat/\nHigh Fiber', 'High Fat/\nLow Fiber',
                               'Low Fat/\nHigh Fiber', 'Low Fat/\nLow Fiber')) +
@@ -183,16 +193,19 @@ neat_plot
 
 TcA and TcB concentrations by diet with a 1:10 dilution factor.
 
+You're looking at the plot and you're like, "there must be an issue, there are no significance bars according to p-value, there must be a mistake!", no, there's not a mistake, none of them are significant (unfortunately). This plot also currently doesn't have any points representing the Chow diet on it because the Chow diets weren't diluted to re-run the toxin ELISA and the other diets were.
+
 ```{r, fig.height=5, fig.width=10}
-dil_labs <- c('TcA', 'TcB')
+dil_labs <- c('TcdA', 'TcdB')
 names(dil_labs) <- c('Total TcA 1:10', 'Total TcB 1:10')
 
 
 dil_toxin %>% 
+  na.omit() %>% 
   ggplot(aes(x = diet, y = dil_conc)) +
-  geom_violin(aes(group = diet)) +
+  geom_violin(aes(group = diet), draw_quantiles = c(0.5)) +
   geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-  scale_x_discrete(labels = c('Chow', 'High Fat/\nHigh Fiber', 'High Fat/\nLow Fiber',
+  scale_x_discrete(labels = c('High Fat/\nHigh Fiber', 'High Fat/\nLow Fiber',
                               'Low Fat/\nHigh Fiber', 'Low Fat/\nLow Fiber')) +
   facet_wrap(~dil_toxin,
              labeller = labeller(dil_toxin = dil_labs),

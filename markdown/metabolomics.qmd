@@ -126,7 +126,7 @@ big_metab %>%
 big_metab %>% 
   group_by(metabolite) %>% 
   dunn_test(concentration ~ diet,
-            p.adjust.method = 'bonferroni',
+            p.adjust.method = 'BH',
             data = .) %>% 
   add_y_position(scales = 'free_y') -> metab_dunn
 ```
@@ -135,7 +135,7 @@ big_metab %>%
 
 Very rough draft of the plot for the metabolite data - I know that I will probably need to edit this.
 
-```{r, fig.width=35, fig.height=6}
+```{r, fig.width=25, fig.height=12}
 metab_labs <- c('Acetic Acid', 'Propanoic Acid', '2-methyl-propanoic acid',
                 'n-Butanoic Acid', 'Isopentanoic Acid', '2-methyl-Butanoic Acid',
                 'Pentanoic Acid')
@@ -150,10 +150,10 @@ big_metab %>%
   scale_x_discrete(labels = c('Chow', 'High Fat/\nHigh Fiber', 'High Fat/\nLow Fiber',
                               'Low Fat/\nHigh Fiber', 'Low Fat/\nLow Fiber')) +
   facet_wrap(~metabolite, 
-             nrow = 1,
+             nrow = 2,
              scales = 'free_y',
              labeller = labeller(metabolite = metab_labs)) +
-  theme_bw(base_size = 14) +
+  theme_bw(base_size = 18) +
   stat_pvalue_manual(metab_dunn,
                      tip.length = 0.01,
                      label = 'p.adj.signif',
@@ -174,7 +174,7 @@ big_metab %>%
   group_by(metabolite) %>% 
   do(tidy(lm(concentration ~ diet,
              data = .))) %>% 
-  adjust_pvalue(method = 'bonferroni') -> metab_results
+  adjust_pvalue(method = 'BH') -> metab_results
 
 metab_results
 ```
@@ -185,8 +185,8 @@ metab_results
 ## plot
 ggsave("metabolomics.pdf",
        plot = metab_plot,
-       width = 35,
-       height = 6,
+       width = 25,
+       height = 12,
        path = '../plots')
 
 ## statistical tests 

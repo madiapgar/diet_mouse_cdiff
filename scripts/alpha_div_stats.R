@@ -12,17 +12,10 @@ library(broom)
 library(rstatix)
 library(dunn.test)
 
-# change to scripts directory if not there already
-curr_dir <- getwd()
-curr_dir <- str_split(curr_dir, '\\/')
-if (curr_dir[length(curr_dir)] != 'scripts'){
-  setwd('./scripts')
-}
-
 ## input file paths
-metadata_FP <- '../../data/misc/processed_metadata.tsv'
-faith_pd_fp <- '../../data/qiime/core_outputs/faith_pd.tsv'
-shannon_fp <- '../../data/qiime/core_outputs/shannon_entropy.tsv'
+metadata_FP <- './data/misc/processed_metadata.tsv'
+faith_pd_fp <- './data/qiime/core_outputs/faith_pd.tsv'
+shannon_fp <- './data/qiime/core_outputs/shannon_entropy.tsv'
 unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A',
                       'Mock_3A', 'Mock_4A', 'Mock_5A', 'Mock_6A',
                       'Mock_7A', 'PCR Blank0',
@@ -142,7 +135,7 @@ sectioned_shannon_lm <- shannon_stats$DietSpecific
 shannon_lm <- shannon_stats$OverallDiet
 
 ## writing out results as a .tsv file 
-write_tsv(faith_lm, '../../stats/faith_total_results.tsv')
-write_tsv(sectioned_faith_lm, '../../stats/faith_diet_results.tsv')
-write_tsv(shannon_lm, '../../stats/shannon_total_results.tsv')
-write_tsv(sectioned_shannon_lm, '../../stats/shannon_diet_results.tsv')
+write_tsv(faith_lm, './stats/faith_total_results.tsv')
+write_tsv(sectioned_faith_lm, './stats/faith_diet_results.tsv')
+write_tsv(shannon_lm, './stats/shannon_total_results.tsv')
+write_tsv(sectioned_shannon_lm, './stats/shannon_diet_results.tsv')

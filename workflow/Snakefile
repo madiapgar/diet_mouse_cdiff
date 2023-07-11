@@ -1,10 +1,13 @@
 rule target:
     input:
-       "plots/faith_pd.pdf",
-       "plots/shannon_entropy.pdf" 
+        "plots/unweighted_unifrac_pcoa.pdf",
+        "plots/weighted_unifrac_pcoa.pdf",
+        "stats/w_adonis_results.tsv",
+        "stats/uw_adonis_results.tsv",
+        "plots/faith_pd.pdf",
+        "plots/shannon_entropy.pdf"
 
-
-rule alpha_diversity:
+rule alpha_diversity_plots:
     input:
         metadata_FP = "data/misc/processed_metadata.tsv",
         faith_pd_FP = "data/qiime/core_outputs/faith_pd.tsv",
@@ -16,3 +19,48 @@ rule alpha_diversity:
         """
         Rscript scripts/alpha_div_plots.R
         """
+
+
+rule alpha_diversity_stats:
+    input:
+        metadata_FP = "data/misc/processed_metadata.tsv",
+        faith_pd_fp = "data/qiime/core_outputs/faith_pd.tsv",
+        shannon_fp = "data/qiime/core_outputs/shannon_entropy.tsv"
+    output:
+        "stats/faith_total_results.tsv",
+        "stats/faith_diet_results.tsv",
+        "stats/shannon_total_results.tsv",
+        "stats/shannon_diet_results.tsv"
+    shell:
+        """
+        Rscript scripts/alpha_div_stats.R
+        """
+
+
+rule beta_diversity_plots:
+    input:
+        metadata_FP = "data/misc/processed_metadata.tsv",
+        unweighted_FP = "data/qiime/core_outputs/unweighted_unifrac_pcoa_results.qza",
+        weighted_FP = "data/qiime/core_outputs/weighted_unifrac_pcoa_results.qza"
+    output:
+        "plots/unweighted_unifrac_pcoa.pdf",
+        "plots/weighted_unifrac_pcoa.pdf"
+    shell:
+        """
+        Rscript scripts/beta_div_plots.R
+        """
+
+
+rule beta_diversity_stats:
+    input:
+        metadata_FP = "data/misc/processed_metadata.tsv",
+        uw_dist_fp = "data/qiime/core_outputs/uw_dist_matrix.tsv",
+        w_dist_fp = "data/qiime/core_outputs/w_dist_matrix.tsv"
+    output:
+        "stats/w_adonis_results.tsv",
+        "stats/uw_adonis_results.tsv"
+    shell:
+        """
+        Rscript scripts/beta_div_stats.R
+        """
+

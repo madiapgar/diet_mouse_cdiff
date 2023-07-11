@@ -12,16 +12,10 @@ library(broom)
 library(rstatix)
 # library(AICcmodavg)
 
-# change to scripts directory if not there already
-curr_dir <- getwd()
-curr_dir <- str_split(curr_dir, '\\/')
-if (curr_dir[length(curr_dir)] != 'scripts'){
-  setwd('./scripts')
-}
 
 ## input file paths
-biom_fp <- '../data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza'
-lacto_asv_fp <- '../data/misc/lactoOnlydna-sequences.fasta'
+biom_fp <- './data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza'
+lacto_asv_fp <- './data/misc/lactoOnlydna-sequences.fasta'
 
 ## reading in raw biom table for normalization
 biom_pre <- read_qza(biom_fp)
@@ -48,4 +42,4 @@ biom %>%
 
 ## writing out total sum scaled table as a .tsv
 write_tsv(outtab,
-          '../data/qiime/total_sum_scaling.tsv')
+          './data/qiime/total_sum_scaling.tsv')

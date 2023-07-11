@@ -12,17 +12,11 @@ library(viridis)
 library(ggh4x)
 library(broom)
 
-# change to scripts directory if not there already
-curr_dir <- getwd()
-curr_dir <- str_split(curr_dir, '\\/')
-if (curr_dir[length(curr_dir)] != 'scripts'){
-  setwd('./scripts')
-}
 
 ## input file paths
-metadata_FP <- '../../data/misc/processed_metadata.tsv'
-unweighted_FP <- '../../data/qiime/core_outputs/unweighted_unifrac_pcoa_results.qza'
-weighted_FP <- '../../data/qiime/core_outputs/weighted_unifrac_pcoa_results.qza'
+metadata_FP <- './data/misc/processed_metadata.tsv'
+unweighted_FP <- './data/qiime/core_outputs/unweighted_unifrac_pcoa_results.qza'
+weighted_FP <- './data/qiime/core_outputs/weighted_unifrac_pcoa_results.qza'
 
 diet_labs <- 
   c('Chow', 
@@ -162,10 +156,10 @@ ggsave("unweighted_unifrac_pcoa.pdf",
        plot = unweighted_pcoa, 
        width = 12, 
        height = 5, 
-       path = '../../plots')
+       path = './plots')
 
 ggsave("weighted_unifrac_pcoa.pdf",
        plot = weighted_pcoa, 
        width = 12, 
        height = 5, 
-       path = '../../plots')
+       path = './plots')

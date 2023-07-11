@@ -161,7 +161,7 @@ dil_toxin %>%
 
 **Toxin Plot Construction**
 
-TcA and TcB concentrations by diet without any kind of dilution factor.
+TcdA and TcdB concentrations by diet without any kind of dilution factor.
 
 So, I was actually using the wrong table to calculate the stats above for the ggplot and when I re-ran the stats with the correct table, none of the relationships came out as statistically significant according to p-value (rip).
 

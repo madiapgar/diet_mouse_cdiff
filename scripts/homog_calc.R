@@ -9,17 +9,10 @@ library(magrittr)
 library(qiime2R)
 library(tidyverse)
 
-# change to scripts directory if not there already
-curr_dir <- getwd()
-curr_dir <- str_split(curr_dir, '\\/')
-if (curr_dir[length(curr_dir)] != 'scripts'){
-  setwd('./scripts')
-}
-
 ## input file paths
-metadata_FP <- '../../data/misc/processed_metadata.tsv'
-uu_dist_fp <- '../../data/qiime/core_outputs/uw_dist_matrix.tsv'
-wu_dist_fp <- '../../data/qiime/core_outputs/w_dist_matrix.tsv'
+metadata_FP <- './data/misc/processed_metadata.tsv'
+uu_dist_fp <- './data/qiime/core_outputs/uw_dist_matrix.tsv'
+wu_dist_fp <- './data/qiime/core_outputs/w_dist_matrix.tsv'
 
 ## lists to redo the diet names on the facet labels of the ggplot created below 
 diet_labs <- 
@@ -178,16 +171,16 @@ ggsave("wu_homogeneity.pdf",
        plot = wu_homog_plot,
        width = 11, 
        height = 4,
-       path = '../../plots')
+       path = './plots')
 ggsave("uu_homogeneity.pdf", 
        plot = uu_homog_plot,
        width = 11, 
        height = 4,
-       path = '../../plots')
+       path = './plots')
 
 ## stats 
 write_tsv(wu_homog_results,
-          '../stats/wu_homogeneity.tsv')
+          './stats/wu_homogeneity.tsv')
 write_tsv(uu_homog_results,
-          '../stats/uu_homogeneity.tsv')
+          './stats/uu_homogeneity.tsv')
 

@@ -121,10 +121,6 @@ big_toxin %>%
   distinct(mouse_id, neat_conc, .keep_all = TRUE) -> neat_toxin 
 ```
 
-```{r}
-
-```
-
 **Stats on my Toxin Data for Ggplot**
 
 Running Kruskal-Wallis and Dunn's Post Hoc test on the toxin data.

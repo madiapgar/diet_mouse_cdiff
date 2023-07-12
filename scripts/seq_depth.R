@@ -11,21 +11,14 @@ library(broom)
 library(AICcmodavg)
 library(rstatix)
 
-# change to scripts directory if not there already
-curr_dir <- getwd()
-curr_dir <- str_split(curr_dir, '\\/')
-if (curr_dir[length(curr_dir)] != 'scripts'){
-  setwd('./scripts')
-}
-
 ## reading in pre-total sum scaled file 
-biom_fp <- '../data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza'
+biom_fp <- './data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza'
 biom <- read_qza(file = biom_fp)
 biom <- biom$data 
 
 ## filtering lactococcus asvs out of my pre-total sum biom table 
 ## reading in lactococcus asvs and extracting them 
-lacto_asv_fp <- '../data/misc/lactoOnlydna-sequences.fasta'
+lacto_asv_fp <- './data/misc/lactoOnlydna-sequences.fasta'
 lacto_asv <- read.FASTA(lacto_asv_fp)
 lacto_asv <- names(lacto_asv)
 
@@ -43,4 +36,4 @@ filt_biom %>%
 
 ## writing this out as a tsv 
 write_tsv(total_sum_depth, 
-          '../data/misc/tss_seq_depth.tsv')
+          './data/misc/tss_seq_depth.tsv')

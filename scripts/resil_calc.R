@@ -9,17 +9,10 @@ library(magrittr)
 library(qiime2R)
 library(tidyverse)
 
-# change to scripts directory if not there already
-curr_dir <- getwd()
-curr_dir <- str_split(curr_dir, '\\/')
-if (curr_dir[length(curr_dir)] != 'scripts'){
-  setwd('./scripts')
-}
-
 ## input file paths
-metadata_FP <- '../../data/misc/processed_metadata.tsv'
-uu_dist_fp <- '../../data/qiime/core_outputs/uw_dist_matrix.tsv'
-wu_dist_fp <- '../../data/qiime/core_outputs/w_dist_matrix.tsv'
+metadata_FP <- './data/misc/processed_metadata.tsv'
+uu_dist_fp <- './data/qiime/core_outputs/uw_dist_matrix.tsv'
+wu_dist_fp <- './data/qiime/core_outputs/w_dist_matrix.tsv'
 
 ## lists to redo the diet names on the facet labels of the ggplot created below 
 diet_labs <- 
@@ -179,15 +172,15 @@ ggsave("wu_resiliency.pdf",
        plot = wu_resil_plot,
        width = 11, 
        height = 4,
-       path = '../../plots')
+       path = './plots')
 ggsave("uu_resiliency.pdf", 
        plot = uu_resil_plot,
        width = 11, 
        height = 4,
-       path = '../../plots')
+       path = './plots')
 
 ## stats
 write_tsv(uu_resil_results,
-          '../../stats/uu_resiliency.tsv')
+          './stats/uu_resiliency.tsv')
 write_tsv(wu_resil_results,
-          '../../stats/wu_resiliency.tsv')
+          './stats/wu_resiliency.tsv')

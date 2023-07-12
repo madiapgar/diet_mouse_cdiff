@@ -6,16 +6,9 @@ library(magrittr)
 library(qiime2R)
 library(tidyverse)
 
-# change to scripts directory if not there already
-curr_dir <- getwd()
-curr_dir <- str_split(curr_dir, '\\/')
-if (curr_dir[length(curr_dir)] != 'scripts'){
-  setwd('./scripts')
-}
-
 ## input file paths
-metadata_FP <- '../data/misc/merged_metadata1.tsv'
-seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
+metadata_FP <- './data/misc/merged_metadata1.tsv'
+seq_depth_FP <- './data/misc/tss_seq_depth.tsv'
 
 ## needed functions 
 ## 1 
@@ -69,4 +62,4 @@ metadata <- meta_diet_fixer(metadata_pre,
 
 ## writing out processed metadata file to the data/misc directory
 write_tsv(metadata,
-          '../data/misc/processed_metadata.tsv')
+          './data/misc/processed_metadata.tsv')

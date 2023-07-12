@@ -1,11 +1,64 @@
 rule target:
     input:
+        "data/qiime/total_sum_scaling.tsv",
+        "data/misc/tss_seq_depth.tsv",
+        "data/misc/processed_metadata.tsv",
         "plots/unweighted_unifrac_pcoa.pdf",
         "plots/weighted_unifrac_pcoa.pdf",
         "stats/w_adonis_results.tsv",
         "stats/uw_adonis_results.tsv",
         "plots/faith_pd.pdf",
-        "plots/shannon_entropy.pdf"
+        "plots/shannon_entropy.pdf",
+        "stats/faith_total_results.tsv",
+        "stats/faith_diet_results.tsv",
+        "stats/shannon_total_results.tsv",
+        "stats/shannon_diet_results.tsv",
+        "stats/wu_homogeneity.tsv",
+        "stats/uu_homogeneity.tsv",
+        "plots/wu_homogeneity.pdf",
+        "plots/uu_homogeneity.pdf",
+        "stats/uu_resiliency.tsv",
+        "stats/wu_resiliency.tsv",
+        "plots/wu_resiliency.pdf",
+        "plots/uu_resiliency.pdf"
+
+
+
+rule total_sum_scaling:
+    input:
+        biom_fp = "data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza",
+        lacto_asv_fp = "data/misc/lactoOnlydna-sequences.fasta"
+    output:
+        "data/qiime/total_sum_scaling.tsv"
+    shell:
+        """
+        Rscript scripts/total_sum_scaling.R
+        """
+
+
+rule sequencing_depth_calculation:
+    input:
+        biom_fp = "data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza",
+        lacto_asv_fp = "data/misc/lactoOnlydna-sequences.fasta"
+    output:
+        "data/misc/tss_seq_depth.tsv"
+    shell:
+        """
+        Rscript scripts/seq_depth.R
+        """
+
+
+rule metadata_processing:
+    input:
+        metadata_FP = "data/misc/merged_metadata1.tsv",
+        seq_depth_FP = "data/misc/tss_seq_depth.tsv"
+    output:
+        "data/misc/processed_metadata.tsv"
+    shell:
+        """
+        Rscript scripts/metadata_processing.R
+        """
+
 
 rule alpha_diversity_plots:
     input:
@@ -64,3 +117,34 @@ rule beta_diversity_stats:
         Rscript scripts/beta_div_stats.R
         """
 
+
+rule homogeneity:
+    input:
+        metadata_FP = "data/misc/processed_metadata.tsv",
+        uu_dist_fp = "data/qiime/core_outputs/uw_dist_matrix.tsv",
+        wu_dist_fp = "data/qiime/core_outputs/w_dist_matrix.tsv"
+    output:
+        "stats/wu_homogeneity.tsv",
+        "stats/uu_homogeneity.tsv",
+        "plots/wu_homogeneity.pdf",
+        "plots/uu_homogeneity.pdf"
+    shell:
+        """
+        Rscript scripts/homog_calc.R
+        """
+
+
+rule resiliency:
+    input:
+       metadata_FP = "data/misc/processed_metadata.tsv",
+       uu_dist_fp = "data/qiime/core_outputs/uw_dist_matrix.tsv",
+       wu_dist_fp = "data/qiime/core_outputs/w_dist_matrix.tsv"
+    output:
+        "stats/uu_resiliency.tsv",
+        "stats/wu_resiliency.tsv",
+        "plots/wu_resiliency.pdf",
+        "plots/uu_resiliency.pdf"
+    shell:
+        """
+        Rscript scripts/resil_calc.R
+        """

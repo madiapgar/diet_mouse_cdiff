@@ -1,12 +1,7 @@
 ## 6-28-23
 ## attempting to find a faster way to match mouse_ids with the numbering system on the toxin data
 
-# change to scripts directory if not there already
-curr_dir <- getwd()
-curr_dir <- str_split(curr_dir, '\\/')
-if (curr_dir[length(curr_dir)] != 'scripts'){
-  setwd('./scripts')
-}
+
 
 ## needed libraries 
 library(broom)
@@ -16,8 +11,8 @@ library(qiime2R)
 library(tidyverse)
 
 ## file paths 
-metab_FP <- '../data/misc/metabolomics.csv'
-toxin_FP <- '../data/misc/toxin.csv'
+metab_FP <- './data/misc/metabolomics.csv'
+toxin_FP <- './data/misc/toxin.csv'
 
 ## reading in metabolomics and toxin .csvs
 metab <- read_csv(metab_FP)
@@ -48,4 +43,4 @@ toxin %>%
 names(toxin_final)[names(toxin_final) == 'Sample_Type.x'] <- 'Sample_Type'
 
 write_tsv(toxin_final,
-          '../data/misc/toxin_final_data.tsv')
+          './data/misc/toxin_final_data.tsv')

@@ -21,10 +21,15 @@ rule target:
         "stats/wu_resiliency.tsv",
         "plots/wu_resiliency.pdf",
         "plots/uu_resiliency.pdf",
+        "plots/family_abun1.pdf",
+        "plots/family_abun2.pdf",
+        "stats/family_abun_lm.tsv",
         "plots/butyrate_kinase.pdf",
         "plots/butyryl_coa_transferase.pdf",
         "plots/baiH.pdf",
-        "plots/baiI.pdf"
+        "plots/baiI.pdf",
+        "stats/buty_enzyme_lm.tsv",
+        "stats/bile_enzyme_lm.tsv"
 
 
 
@@ -154,6 +159,33 @@ rule resiliency:
         """
 
 
+rule family_abundance_plots:
+    input:
+        otu_table_FP = "data/qiime/taxonomy_filtered.qza",
+        tax_FP = "data/qiime/taxonomy.qza",
+        metadata_FP = "data/misc/processed_metadata.tsv"
+    output:
+        "plots/family_abun1.pdf",
+        "plots/family_abun2.pdf"
+    shell:
+        """
+        Rscript scripts/family_abun_plots.R
+        """
+
+
+rule family_abundance_stats:
+    input:
+       otu_table_FP = "data/qiime/taxonomy_filtered.qza",
+       tax_FP = "data/qiime/taxonomy.qza",
+       metadata_FP = "data/misc/processed_metadata.tsv"
+    output:
+        "stats/family_abun_lm.tsv"
+    shell:
+        """
+        Rscript scripts/family_abun_stats.R
+        """
+
+
 rule butyrate_plots:
     input:
         metadata_FP = "data/misc/processed_metadata.tsv",
@@ -179,4 +211,17 @@ rule bile_acid_plots:
     shell:
         """
         Rscript scripts/bile_acid_plots.R
+        """
+
+
+rule butyrate_bile_stats:
+    input:
+       metadata_FP = "data/misc/processed_metadata.tsv",
+       ko_contrib_FP = "data/picrust/tss3_meta_contrib.tsv"
+    output:
+        "stats/buty_enzyme_lm.tsv",
+        "stats/bile_enzyme_lm.tsv"
+    shell:
+        """
+        Rscript scripts/butyrate_bile_stats.R
         """

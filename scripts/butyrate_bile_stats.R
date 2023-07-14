@@ -1,15 +1,8 @@
----
-title: "tss3_picrust_stats"
-author: "Madi"
-date: "2023-06-08"
-output: html_document
----
+## 7-14-23
+## creating a script that runs linear modeling statistics on the picrust 
+## taxon functional abundance outputs for butyrate and secondary bile acid enzymes
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-```{r}
+## needed libraries 
 library(ape)
 library(ggpubr)
 library(magrittr)
@@ -18,10 +11,14 @@ library(tidyverse)
 library(broom)
 library(AICcmodavg)
 library(rstatix)
-```
 
-**Functions**
-```{r}
+## input file paths and KOs
+metadata_FP <- './data/misc/processed_metadata.tsv'
+ko_contrib_FP <- './data/picrust/tss3_meta_contrib.tsv'
+but_kos <- c('K00929','K01034')
+bile_kos <- c('K15873', 'K15874')
+
+## needed function
 stat_file_prep <- function(metadata_fp,
                            ko_contrib_fp,
                            ko_list){
@@ -43,33 +40,19 @@ stat_file_prep <- function(metadata_fp,
            key = day_post_inf, value = taxon_function_abun) -> biom_long
   return(biom_long)
 }
-```
 
-**Input File Paths**
-```{r}
-metadata_FP <- '../data/misc/processed_metadata.tsv'
-ko_contrib_FP <- '../data/picrust/tss3_meta_contrib.tsv'
-but_kos <- c('K00929','K01034')
-bile_kos <- c('K15873', 'K15874')
-```
-
-**Testing out my stat_file_prep Function**
-yay!! it works!! 
-```{r}
+## file prep 
 ## butyrate 
 but_long <- stat_file_prep(metadata_FP,
-                            ko_contrib_FP,
-                            but_kos)
+                           ko_contrib_FP,
+                           but_kos)
 
-## bile acids 
+## bile acids
 bile_long <- stat_file_prep(metadata_FP,
                             ko_contrib_FP,
                             bile_kos)
-```
 
-**Butyrate Enzyme Linear Modeling**
-Should I filter day -15 out of these results as well? 
-```{r}
+## butyrate linear model
 but_long %>% 
   group_by(ko, day_post_inf) %>% 
   do(tidy(lm(taxon_function_abun ~ high_fat + high_fiber + (purified_diet * seq_depth), 
@@ -77,11 +60,7 @@ but_long %>%
   adjust_pvalue(method = 'BH') %>% 
   filter(p.value <= 0.05) -> buty_lm
 
-buty_lm
-```
-
-**Secondary Bile Acid Linear Modeling**
-```{r}
+## bile acid linear model
 bile_long %>% 
   group_by(ko, day_post_inf) %>% 
   do(tidy(lm(taxon_function_abun ~ high_fat + high_fiber + (purified_diet * seq_depth), 
@@ -89,16 +68,8 @@ bile_long %>%
   adjust_pvalue(method = 'BH') %>% 
   filter(p.value <= 0.05) -> bile_lm
 
-bile_lm
-```
-
-**Saving my Outputs**
-```{r}
+## saving my outputs as a .tsv
 write_tsv(buty_lm,
-          '../stats/buty_enzyme_lm.tsv')
+          './stats/buty_enzyme_lm.tsv')
 write_tsv(bile_lm,
-          '../stats/bile_enzyme_lm.tsv')
-```
-
-
-
+          './stats/bile_enzyme_lm.tsv')

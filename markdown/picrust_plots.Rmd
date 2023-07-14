@@ -20,79 +20,95 @@ library(microshades)
 
 ```{r}
 # change to scripts directory if not there already
-curr_dir <- getwd()
-curr_dir <- str_split(curr_dir, '\\/')
-if (curr_dir[length(curr_dir)] != 'scripts'){
-  setwd('./scripts')
-}
+# curr_dir <- getwd()
+# curr_dir <- str_split(curr_dir, '\\/')
+# if (curr_dir[length(curr_dir)] != 'scripts'){
+#   setwd('./scripts')
+# }
 ```
 
-**Main/Butyrate Functions**
+**Input File Paths**
 ```{r}
-## allows you to filter your biom table for specified KOs and by the taxonomic level of interest
-## can feed this output into func_abun_sum 
-ko_filter <- function(kometa_contrib_big, ko_list, taxonomy_level) { 
+metadata_FP <- '../data/misc/processed_metadata.tsv'
+tax_FP <- '../data/qiime/taxonomy.qza'
+ko_contrib_FP <- '../data/picrust/tss3_meta_contrib.tsv'
+diet_labs <- 
+    c('Chow', 
+      'High Fat / High Fiber', 
+      'High Fat / Low Fiber', 
+      'Low Fat / High Fiber', 
+      'Low Fat / Low Fiber')
+diet_names_labs <- c('Chow',
+                     'HF/HF',
+                     'HF/LF',
+                     'LF/HF',
+                     'LF/LF')
+
+## butyrate kinase specs
+buk_tax_level <- 'class'
+buk_thresh_level <- 200
+buk_ko <- 'K00929'
+buk_title <- 'Butyrate Kinase Potential Over Time'
+
+## butyryl coa transferase specs
+but_tax_level <- 'class'
+but_thresh_level <- 50
+but_ko <- 'K01034'
+but_title <- 'Butyryl-CoA Transferase Potential Over Time'
+
+## baiH specs
+bile_tax_level <- 'genus'
+baiH_ko <- 'K15873'
+baiH_title <- 'baiH Potential Over Time'
+
+## baiI specs
+baiI_ko <- 'K15874'
+baiI_title <- 'baiI Potential Over Time'
+```
+
+**Reworking Functions**
+```{r}
+## input file prep (metadata, taxonomy, ko meta contrib prep) for butyrate plots
+buty_file_prep <- function(tax_fp,
+                           ko_contrib_fp,
+                           metadata_fp,
+                           ko_list,
+                           taxonomy_level,
+                           threshold){
+  ## taxonomy file
+  read_qza(file = tax_fp)$data %>% 
+    parse_taxonomy() %>% 
+    as_tibble(rownames = 'taxon') %>% 
+    rename_all(tolower) -> taxonomy
+  ## metadata file
+  metadata <- read_tsv(metadata_fp)
+  names(metadata)[names(metadata) == 'sampleid'] <- 'sample'
+  ## ko meta contrib file
+  kometa_contrib <- read_tsv(file = ko_contrib_fp)
+  names(kometa_contrib)[names(kometa_contrib) == 'function'] <- 'ko'
+  ## putting all components together into one giant table
+  kometa_contrib %>% 
+    left_join(taxonomy, by = 'taxon') %>% 
+    left_join(metadata, by = 'sample') -> kometa_contrib_big
+  ## filtering for wanted kos and taxonomic level
   kometa_contrib_big %>% 
   select(sample, ko, taxon_function_abun, study, diet, day_post_inf, 
          any_of(taxonomy_level)) %>% 
     filter(ko %in% ko_list) -> filtered_biom
-  return(filtered_biom)
-}
-
-## overall taxon grouping and sum of that taxon's abundance for a particular KO 
-func_abun_sum <- function(filtered_biom, taxonomy_level) {
+  ## summing the wanted taxonomic level's abundance for a particular ko
   filtered_biom %>% 
    group_by(sample, ko, study, diet, day_post_inf, .data[[taxonomy_level]]) %>% 
    summarize(taxon_function_abun = sum(taxon_function_abun)) %>% 
    ungroup() -> filtered_biom_sum
-  return(filtered_biom_sum)
-}
-
-# **may be able to change this/take it out since I have the processed metadata file**
-# ##metadata file prep
-# ##assumes that it is a CSV file
-# ko_metadata_prep <- function(metadata_fp) {
-#   tmpMeta <- read_csv(metadata_fp, n_max = 2)
-#   mycols <- colnames(tmpMeta)
-#   metadata <- read_csv(metadata_fp, skip = 2, col_names = mycols)
-#   names(metadata)[names(metadata) == '#SampleID'] <- 'sample'
-#   metadata %>% 
-#     select(sample, diet, study, day_post_inf) -> metadata
-#   return(metadata)
-# } 
-
-##taxonomy prep
-##assumes that the imput is a qza file from qiime2
-ko_tax_prep <- function(tax_fp){
-  taxonomy <- read_qza(file = tax_fp)$data %>% 
-    parse_taxonomy() %>% 
-    as_tibble(rownames = 'taxon') %>% 
-    rename_all(tolower)
-  return(taxonomy)
-}
-
-##meta contrib file prep and overall table construction
-##assumes that the input is a tsv file 
-ko_contrib_prep <- function(ko_contrib_fp, metadata_fp, taxonomy){
-  metadata <- read_tsv(metadata_fp)
-  names(metadata)[names(metadata) == 'sampleid'] <- 'sample'
-  kometa_contrib <- read_tsv(file = ko_contrib_fp)
-  names(kometa_contrib)[names(kometa_contrib) == 'function'] <- 'ko'
-  kometa_contrib %>% 
-    left_join(taxonomy, by = 'taxon') %>% 
-    left_join(metadata, by = 'sample') -> kometa_contrib_big
-  return(kometa_contrib_big)
-}
-
-##ggplot biom table prep equation 
-ko_sample_abun <- function(filtered_biom_sum, threshold){
+  ## creating a facet that will contain the total plot to reference
+  ## fill is set at 0.01 since its less than the lowest abundance which is 0.88
   THRESHOLD = threshold
   filtered_biom_sum %>% 
     group_by(sample, day_post_inf, ko, diet, study) %>% 
     summarize(taxon_function_abun = sum(taxon_function_abun)) %>% 
     mutate(class = 'Total') %>% 
     filter(!is.na(day_post_inf)) %>%
-    spread(day_post_inf, taxon_function_abun, fill = 0) %>% 
+    spread(day_post_inf, taxon_function_abun, fill = 0.01) %>% 
     gather(-sample, -ko, -diet, -study, -class,
          key = day_post_inf, value = taxon_function_abun) %>% 
     mutate(day_post_inf = as.numeric(day_post_inf)) %>% 
@@ -100,14 +116,11 @@ ko_sample_abun <- function(filtered_biom_sum, threshold){
     mutate(other_col = mean(taxon_function_abun),
          class = if_else(other_col < THRESHOLD, 'Other', class)) %>% 
     arrange(other_col) -> filtered_sample_abun
-  return(filtered_sample_abun)
-}
-
-ko_sample_facet <- function(filtered_biom_sum, filtered_sample_abun, threshold){
-  THRESHOLD = threshold
+  ## classifying all taxonomic level abundances below determined threshold as 'Other'
+  ## needs to be processed the exact same way as above so rbind() will work
   filtered_biom_sum %>% 
     filter(!is.na(day_post_inf)) %>%
-    spread(day_post_inf, taxon_function_abun, fill = 0) %>% 
+    spread(day_post_inf, taxon_function_abun, fill = 0.01) %>% 
     gather(-sample, -ko, -diet, -study, -class,
          key = day_post_inf, value = taxon_function_abun) %>% 
     mutate(day_post_inf = as.numeric(day_post_inf)) %>% 
@@ -115,118 +128,125 @@ ko_sample_facet <- function(filtered_biom_sum, filtered_sample_abun, threshold){
     mutate(other_col = mean(taxon_function_abun),
          class = if_else(other_col < THRESHOLD, 'Other', class)) %>% 
     arrange(other_col) -> filtered_sum_other
+  ## rbinding filtered_sample_abun and filtered_sum_other together into the same table
   filtered_sum_other %>% 
-    rbind(filtered_sample_abun) -> filtered_sum_other
-  return(filtered_sum_other)
+    rbind(filtered_sample_abun) -> big_filtered_sum
+  ## creating a list of my outputs
+  my_list <- list(Taxonomy = taxonomy,
+                  Metadata = metadata,
+                  KOContrib = kometa_contrib,
+                  ProcessedKOBiom = big_filtered_sum)
+  return(my_list)
 }
 
-##actual ggplot construction for butyrate enzymes 
-butyrate <- function(filtered_sum_other, title){
-  diet_labs <- 
-    c('Chow', 'High Fat / High Fiber', 'High Fat / Low Fiber', 'Low Fat / High Fiber', 'Low Fat / Low Fiber')
-  names(diet_labs) <- c('Chow', 'HF/HF', 'HF/LF', 'LF/HF', 'LF/LF')
-  filtered_sum_other %>% 
+## buty plot construction 
+butyrate_plot <- function(processed_ko_biom,
+                          labels,
+                          names_labels,
+                          title){
+  labs <- labels
+  names(labs) <- names_labels
+  processed_ko_biom %>% 
     filter(!is.na(diet)) %>% 
     ggplot(aes(x = day_post_inf, y = taxon_function_abun)) +
-    scale_y_continuous(trans = 'log10') +
-    geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
-    geom_smooth(se = FALSE, size = 0.5) +
-    geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
-    geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
-    geom_jitter(width = 0.1, height = 0, 
-              alpha = 0.4) +
-    scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
-    facet_grid(class~diet, scales = 'free_x', labeller = labeller(diet = diet_labs)) +
-    theme_bw(base_size = 14) +
-    theme(legend.text = element_text(size = 8.5),
-        strip.text.y = element_text(angle = 0)) +
-    guides(color = guide_legend(override.aes = list(size = 0.9))) +
-    ggtitle(title) +
-    xlab('Days Relative to Infection') +
-    ylab('KO Counts') -> butyrate
+      scale_y_continuous(trans = 'log10') +
+      scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
+      geom_violin(aes(group = day_post_inf), outlier.shape = NA) +
+      geom_smooth(se = FALSE, size = 0.5) +
+      geom_jitter(width = 0.1, height = 0, 
+                  alpha = 0.4) +
+      geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
+      geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
+      facet_grid(class~diet, labeller = labeller(diet = labs)) +
+      theme_bw(base_size = 14) +
+      theme(legend.text = element_text(size = 8.5),
+            strip.text.y = element_text(angle = 0)) +
+      guides(color = guide_legend(override.aes = list(size = 0.9))) +
+      ggtitle(title) +
+      xlab('Days Relative to Infection') +
+      ylab('KO Counts') -> butyrate
   return(butyrate)
 }
 
-```
-
-**Secondary Bile Acid Functions**
-these are the functions that differ from the butyrate plot prep
-```{r}
-bile_sum <- function(filtered_biom_sum){
+## input file prep for bile acid plots 
+bile_file_prep <- function(tax_fp,
+                           ko_contrib_fp,
+                           metadata_fp,
+                           ko_list,
+                           taxonomy_level){
+  ## taxonomy file
+  read_qza(file = tax_fp)$data %>% 
+    parse_taxonomy() %>% 
+    as_tibble(rownames = 'taxon') %>% 
+    rename_all(tolower) -> taxonomy
+  ## metadata file
+  metadata <- read_tsv(metadata_fp)
+  names(metadata)[names(metadata) == 'sampleid'] <- 'sample'
+  ## ko meta contrib file
+  kometa_contrib <- read_tsv(file = ko_contrib_fp)
+  names(kometa_contrib)[names(kometa_contrib) == 'function'] <- 'ko'
+  ## putting all components together into one giant table
+  kometa_contrib %>% 
+    left_join(taxonomy, by = 'taxon') %>% 
+    left_join(metadata, by = 'sample') -> kometa_contrib_big
+  ## filtering for wanted kos and taxonomic level
+  kometa_contrib_big %>% 
+  select(sample, ko, taxon_function_abun, study, diet, day_post_inf, 
+         any_of(taxonomy_level)) %>% 
+    filter(ko %in% ko_list) -> filtered_biom
+  ## summing the wanted taxonomic level's abundance for a particular ko
+  filtered_biom %>% 
+   group_by(sample, ko, study, diet, day_post_inf, .data[[taxonomy_level]]) %>% 
+   summarize(taxon_function_abun = sum(taxon_function_abun)) %>% 
+   ungroup() -> filtered_biom_sum
+  ## prep for bile acid table
   filtered_biom_sum %>% 
     filter(!is.na(day_post_inf)) %>% 
-    spread(day_post_inf, taxon_function_abun, fill = 1) %>% 
+    spread(day_post_inf, taxon_function_abun, fill = 0.01) %>% 
     gather(-sample, -ko, -study, -diet, -genus, 
           key = day_post_inf, value = taxon_function_abun) %>% 
-    mutate(day_post_inf = as.numeric(day_post_inf)) -> new_bile_sum
-  return(new_bile_sum)
-}
-
-bile_total <- function(filtered_biom_sum, new_bile_sum){
+    mutate(day_post_inf = as.numeric(day_post_inf)) -> bile_sum
+  ## creating the 'total' facet table to rbind to bile_sum
   filtered_biom_sum %>% 
     group_by(sample, day_post_inf, ko, diet, study) %>% 
     summarize(taxon_function_abun = sum(taxon_function_abun)) %>% 
     mutate(genus = 'Total') %>% 
     filter(!is.na(day_post_inf)) %>% 
-    spread(day_post_inf, taxon_function_abun, fill = 0) %>% 
+    spread(day_post_inf, taxon_function_abun, fill = 0.01) %>% 
     gather(-sample, -ko, -study, -diet, -genus, 
           key = day_post_inf, value = taxon_function_abun) %>% 
-    mutate(day_post_inf = as.numeric(day_post_inf)) -> new_bile_total
-  new_bile_total %>% 
-    rbind(new_bile_sum) -> filtered_sum_other
-  return(filtered_sum_other)
+    mutate(day_post_inf = as.numeric(day_post_inf)) -> bile_total
+  ## rbinding them together 
+  bile_total %>% 
+    rbind(bile_sum) -> bile_filtered_sum
+  ## creating a list of my outputs
+  my_list <- list(Taxonomy = taxonomy,
+                  Metadata = metadata,
+                  KOContrib = kometa_contrib,
+                  ProcessedKOBiom = bile_filtered_sum)
+  return(my_list)
 }
 
-bile_acid <- function(new_bile_sum, title){
-  bile_acid_labs <- c('baiH', 'baiI')
-  names(bile_acid_labs) <- c('K15873', 'K15874')
-  diet_labs <- 
-    c('Chow', 'High Fat / High Fiber', 'High Fat / Low Fiber', 'Low Fat / High Fiber', 'Low Fat / Low Fiber')
-  names(diet_labs) <- c('Chow', 'HF/HF', 'HF/LF', 'LF/HF', 'LF/LF')
-  new_bile_sum %>% 
+## bile acid plot 
+bile_plot <- function(processed_ko_biom,
+                      labels,
+                      names_labels,
+                      title){
+  labs <- labels
+  names(labs) <- names_labels
+  processed_ko_biom %>% 
     filter(!is.na(diet)) %>% 
     filter(!is.na(genus)) %>% 
     ggplot(aes(x = day_post_inf, y = taxon_function_abun)) +
       scale_y_continuous(trans = 'log10') +
-      geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
-      geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
-      geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
-      geom_jitter(width = 0.1, height = 0, alpha = 0.7, pch=21,
-                aes(fill = genus)) +
-      geom_smooth(se = FALSE, color = 'blue') +
       scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
-      scale_fill_brewer(palette = 'Dark2') +
-      facet_grid(ko~diet, scales = 'free_x', 
-                 labeller = labeller(ko = bile_acid_labs, diet = diet_labs)) +
-      theme_bw(base_size = 14) +
-      theme(legend.text = element_text(size = 9.5), 
-            legend.position = 'bottom') +
-      guides(fill = guide_legend(override.aes = list(size = 2.5))) + 
-      ggtitle(title) +
-      xlab('Days Relative to Infection') +
-      ylab('KO Counts') +
-      labs(fill = 'Genus') -> bile_plot
-  return(bile_plot)
-}
-
-##attempting to make bile acid plot the same as my butyrate plots
-new_bile_acid <- function(new_bile_sum, title){
-  diet_labs <- 
-    c('Chow', 'High Fat / High Fiber', 'High Fat / Low Fiber', 'Low Fat / High Fiber', 'Low Fat / Low Fiber')
-  names(diet_labs) <- c('Chow', 'HF/HF', 'HF/LF', 'LF/HF', 'LF/LF')
-  new_bile_sum %>% 
-    filter(!is.na(diet)) %>% 
-    filter(!is.na(genus)) %>% 
-    ggplot(aes(x = day_post_inf, y = taxon_function_abun)) +
-      scale_y_continuous(trans = 'log10') +
-      geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
+      geom_violin(aes(group = day_post_inf), outlier.shape = NA) +
       geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
       geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
       geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
       geom_smooth(se = FALSE, color = 'blue') +
-      scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
-      facet_grid(genus~diet, scales = 'free_x', 
-                 labeller = labeller(diet = diet_labs)) +
+      facet_grid(genus~diet, 
+                 labeller = labeller(diet = labs)) +
       theme_bw(base_size = 14) +
       theme(legend.text = element_text(size = 8.5),
         strip.text.y = element_text(angle = 0)) +
@@ -238,210 +258,133 @@ new_bile_acid <- function(new_bile_sum, title){
 }
 ```
 
-**Mini-pipelines for Butyrate and Secondary Bile Acid Plot Construction**
-```{r}
-##butyrate
-butyrate_plot <- function(meta_fp, taxonomy_fp, ko_meta_contrib_fp, 
-                          tax_level, thresh_level, kos, wanted_title){
-  ko_taxonomy <- ko_tax_prep(taxonomy_fp)
-  ko_biom <- ko_contrib_prep(ko_meta_contrib_fp, meta_fp, ko_taxonomy)
-  ko_filtered_biom <- ko_filter(ko_biom, kos, tax_level)
-  ko_filtered_biom_sum <- func_abun_sum(ko_filtered_biom, tax_level)
-  ko_filt_sample_abun <- ko_sample_abun(ko_filtered_biom_sum, thresh_level)
-  ko_filt_sum_other <- ko_sample_facet(ko_filtered_biom_sum, ko_filt_sample_abun,
-                                       thresh_level)
-  full_plot <- butyrate(ko_filt_sum_other, wanted_title)
-  return(full_plot)
-}
+**Butyrate Kinase Plot**
+```{r, fig.height=7, fig.width=11, warning=FALSE}
+buk_files <- buty_file_prep(tax_FP,
+                            ko_contrib_FP,
+                            metadata_FP,
+                            buk_ko,
+                            buk_tax_level,
+                            buk_thresh_level)
+metadata <- buk_files$Metadata
+taxonomy <- buk_files$Taxonomy
+kometa_contrib <- buk_files$KOContrib
+for_buk_plot <- buk_files$ProcessedKOBiom
 
-##secondary bile acid
-secondary_bile_acid <- function(meta_fp, taxonomy_fp, ko_meta_contrib_fp, 
-                                tax_level, kos, wanted_title){
-  ko_metadata <- ko_metadata_prep(meta_fp)
-  ko_taxonomy <- ko_tax_prep(taxonomy_fp)
-  ko_biom <- ko_contrib_prep(ko_meta_contrib_fp, ko_metadata, ko_taxonomy)
-  ko_filtered_biom <- ko_filter(ko_biom, kos, tax_level)
-  ko_filtered_biom_sum <- func_abun_sum(ko_filtered_biom, tax_level)
-  ko_bile_sum <- bile_sum(ko_filtered_biom_sum)
-  bile_acid_plot <- bile_acid(ko_bile_sum, wanted_title)
-  return(bile_acid_plot)
-}
-
-##another secondary bile acid function
-other_secondary_bile_acid <- function(meta_fp, taxonomy_fp, ko_meta_contrib_fp, 
-                                tax_level, kos, wanted_title){
-  ko_metadata <- ko_metadata_prep(meta_fp)
-  ko_taxonomy <- ko_tax_prep(taxonomy_fp)
-  ko_biom <- ko_contrib_prep(ko_meta_contrib_fp, ko_metadata, ko_taxonomy)
-  ko_filtered_biom <- ko_filter(ko_biom, kos, tax_level)
-  ko_filtered_biom_sum <- func_abun_sum(ko_filtered_biom, tax_level)
-  ko_bile_sum <- bile_sum(ko_filtered_biom_sum)
-  ko_bile_total <- bile_total(ko_filtered_biom_sum, ko_bile_sum)
-  bile_acid_plot <- new_bile_acid(ko_bile_total, wanted_title)
-  return(bile_acid_plot)
-}
+butyrate_kinase <- butyrate_plot(for_buk_plot,
+                                 diet_labs,
+                                 diet_names_labs,
+                                 buk_title)
+butyrate_kinase
 ```
 
-**Input File Paths**
-```{r}
-metadata_FP <- '../data/misc/processed_metadata.tsv'
-tax_FP <- '../data/qiime/taxonomy.qza'
-ko_contrib_FP <- '../data/picrust/tss3_meta_contrib.tsv'
+**Butyryl-CoA Transferase**
+```{r, fig.height=7, fig.width=11, warning=FALSE}
+but_files <- buty_file_prep(tax_FP,
+                            ko_contrib_FP,
+                            metadata_FP,
+                            but_ko,
+                            but_tax_level,
+                            but_thresh_level)
 
-## butyrate kinase specs
-buk_tax_level <- 'class'
-buk_thresh_level <- 200
-buk_ko <- 'K00929'
-buk_title <- 'Total Sum Scaled Butyrate Kinase Potential Over Time'
+for_but_plot <- but_files$ProcessedKOBiom
 
-## butyryl coa transferase specs
-but_tax_level <- 'class'
-but_thresh_level <- 50
-but_ko <- 'K01034'
-but_title <- 'Total Sum Scaled Butyryl-CoA Transferase Potential Over Time'
-
-## baiH specs
-bile_tax_level <- 'genus'
-baiH_ko <- c('K15873')
-baiH_title <- 'Total Sum Scaled baiH Potential Over Time'
-
-## baiI specs
-bile_tax_level <- 'genus'
-baiI_ko <- c('K15874')
-baiI_title <- 'Total Sum Scaled baiI Potential Over Time'
-baiI_y_axis <- 'axis.text.y = element_blank()'
-
-## old bile acid plot specs
-bile_tax_level <- 'genus'
-bile_kos <- c('K15873', 'K15874')
-bile_title <- 'Total Sum Scaled Secondary Bile Acid Potential Over Time'
-```
-
-**Butyrate Kinase plot construction**
-```{r, fig.height=5, fig.width=10, warning=FALSE}
-total_butyrate_kinase <- butyrate_plot(metadata_FP, 
-                                       tax_FP,
-                                       ko_contrib_FP, 
-                                       buk_tax_level, 
-                                       buk_thresh_level, 
-                                       buk_ko, 
-                                       buk_title)
-total_butyrate_kinase
-```
-
-**Butryl-CoA Transferase plot construction**
-```{r, fig.height=5, fig.width=10, warning=FALSE}
-total_butyrylcoa_transferase <- butyrate_plot(metadata_FP, 
-                                              but_taxonomy_fp,
-                                              but_ko_contrib_fp, 
-                                              but_tax_level,
-                                              but_thresh_level, 
-                                              but_ko,
-                                              but_title)
-total_butyrylcoa_transferase
+butyryl_coa_transferase <- butyrate_plot(for_but_plot,
+                                         diet_labs,
+                                         diet_names_labs,
+                                         but_title)
+butyryl_coa_transferase
 ```
 
 **All Butyrate Plots Together**
-```{r, fig.height=11, fig.width=23, warning=FALSE}
-total_all_butyrate <- plot_grid(total_butyrate_kinase, total_butyrylcoa_transferase,
-                                ncol = 2, 
-                                labels = c('A', 'B'),
-                                label_size = 22)
-total_all_butyrate
+```{r, fig.height=8, fig.width=25, warning=FALSE}
+all_butyrate <- plot_grid(butyrate_kinase, butyryl_coa_transferase,
+                          ncol = 2, 
+                          labels = c('A', 'B'),
+                          label_size = 22)
+all_butyrate
 ```
 
-**NEW baiH Secondary Bile Acid Plot**
-```{r, fig.height=6, fig.width=10, warning=FALSE}
-total_baiH <- other_secondary_bile_acid(metadata_FP, 
-                                        bile_taxonomy_fp,
-                                        bile_contrib_fp, 
-                                        bile_tax_level, 
-                                        baiH_ko, 
-                                        baiH_title)
-                                      
-total_baiH
+**baiH Plot**
+```{r, fig.height=5, fig.width=12, warning=FALSE}
+baiH_files <- bile_file_prep(tax_FP,
+                             ko_contrib_FP,
+                             metadata_FP,
+                             baiH_ko,
+                             bile_tax_level)
+
+for_baiH_plot <- baiH_files$ProcessedKOBiom
+
+baiH <- bile_plot(for_baiH_plot,
+                  diet_labs,
+                  diet_names_labs,
+                  baiH_title)
+baiH
 ```
 
-**NEW baiI plot**
-```{r, fig.height=6, fig.width=10, warning=FALSE}
-total_baiI <- other_secondary_bile_acid(metadata_FP, 
-                                        bile_taxonomy_fp,
-                                        bile_contrib_fp, 
-                                        bile_tax_level,
-                                        baiI_ko, 
-                                        baiI_title)
-                                      
-total_baiI
+**baiI Plot**
+```{r, fig.height=4, fig.width=7, warning=FALSE}
+baiI_files <- bile_file_prep(tax_FP,
+                             ko_contrib_FP,
+                             metadata_FP,
+                             baiI_ko,
+                             bile_tax_level)
+
+for_baiI_plot <- baiI_files$ProcessedKOBiom
+
+baiI <- bile_plot(for_baiI_plot,
+                  diet_labs,
+                  diet_names_labs,
+                  baiI_title)
+baiI
 ```
 
-**NEW bile acid plots together**
-```{r, fig.height=5, fig.width=10, warning=FALSE}
-new_bile_acid <- plot_grid(total_baiH, total_baiI,
-                                ncol = 2, 
-                                labels = c('A', 'B'),
-                                label_size = 22)
-new_bile_acid
+**Bile Acid Plots Together**
+```{r, fig.height=5, fig.width=20, warning=FALSE}
+bile_acid <- plot_grid(baiH, 
+                       baiI,
+                       ncol = 2, 
+                       labels = c('A', 'B'),
+                       label_size = 22)
+bile_acid
 ```
 
-**OLD Secondary Bile Acid Plot**
-```{r, fig.height=6, fig.width=10, warning=FALSE}
-total_bile_acid <- secondary_bile_acid(metadata_FP, 
-                                       bile_taxonomy_fp,
-                                       bile_contrib_fp, 
-                                       bile_tax_level, 
-                                       bile_kos, 
-                                       bile_title)
-                                      
-total_bile_acid
-
-```
-
-**All Total Sum Scaled plots together**
+**All Plots Together**
 ```{r, fig.height=15, fig.width=23, warning=FALSE}
-total_sum_scaled <- plot_grid(total_butyrate_kinase, total_butyrylcoa_transferase, 
-                              total_baiH, total_baiI,
-                              nrow = 2,
-                              labels = c('A', 'B', 'C', 'D'),
-                              label_size = 22)
+all_plots <- plot_grid(butyrate_kinase,
+                       butyryl_coa_transferase, 
+                       baiH,
+                       baiI,
+                       nrow = 2,
+                       labels = c('A', 'B', 'C', 'D'),
+                       label_size = 22)
 
-total_sum_scaled
+all_plots
 ```
 
 **Saving my outputs as a pdf file**
 ```{r}
 ggsave("butyrate_kinase.pdf", 
-       plot = total_butyrate_kinase,
-       width = 15, 
-       height = 10,
+       plot = butyrate_kinase,
+       width = 11, 
+       height = 7,
        path = '../plots/')
 
 ggsave("butyryl_coa_transferase.pdf",
-       plot = total_butyrylcoa_transferase, 
-       width = 15, 
-       height = 10, 
-       path = '../plots/')
-
-ggsave("all_butyrate.pdf",
-       plot = total_all_butyrate, 
-       width = 30, 
-       height = 15, 
+       plot = butyryl_coa_transferase, 
+       width = 11, 
+       height = 7, 
        path = '../plots/')
 
 ggsave("baiH.pdf",
-       plot = total_baiH, 
-       width = 10, 
-       height = 6, 
+       plot = baiH, 
+       width = 12, 
+       height = 5, 
        path = '../plots/')
 
 ggsave("baiI.pdf",
-       plot = total_baiI, 
-       width = 10, 
-       height = 6, 
-       path = '../plots/')
-
-ggsave("picrust_plots_assembled.pdf",
-       plot = total_sum_scaled, 
-       width = 23, 
-       height = 15, 
+       plot = baiI, 
+       width = 7, 
+       height = 4, 
        path = '../plots/')
 ```

@@ -20,7 +20,11 @@ rule target:
         "stats/uu_resiliency.tsv",
         "stats/wu_resiliency.tsv",
         "plots/wu_resiliency.pdf",
-        "plots/uu_resiliency.pdf"
+        "plots/uu_resiliency.pdf",
+        "plots/butyrate_kinase.pdf",
+        "plots/butyryl_coa_transferase.pdf",
+        "plots/baiH.pdf",
+        "plots/baiI.pdf"
 
 
 
@@ -147,4 +151,32 @@ rule resiliency:
     shell:
         """
         Rscript scripts/resil_calc.R
+        """
+
+
+rule butyrate_plots:
+    input:
+        metadata_FP = "data/misc/processed_metadata.tsv",
+        tax_FP = "data/qiime/taxonomy.qza",
+        ko_contrib_FP = "data/picrust/tss3_meta_contrib.tsv"
+    output:
+        "plots/butyrate_kinase.pdf",
+        "plots/butyryl_coa_transferase.pdf"
+    shell:
+        """
+        Rscript scripts/butyrate_plots.R
+        """
+
+
+rule bile_acid_plots:
+    input:
+       metadata_FP = "data/misc/processed_metadata.tsv",
+       tax_FP = "data/qiime/taxonomy.qza",
+       ko_contrib_FP = "data/picrust/tss3_meta_contrib.tsv"
+    output:
+        "plots/baiH.pdf",
+        "plots/baiI.pdf"
+    shell:
+        """
+        Rscript scripts/bile_acid_plots.R
         """

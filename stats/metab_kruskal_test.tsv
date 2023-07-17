@@ -1,8 +1,4 @@
 metabolite	statistic	p.value	parameter	method
-2-methyl-Butanoic Acid (ug/g)	10.591980259099344	0.03155329726798269	4	Kruskal-Wallis rank sum test
-2-methyl-propanoic acid (ug/g)	7.977039362698256	0.09242290211661734	4	Kruskal-Wallis rank sum test
 Acetic Acid (ug/g)	32.4932473137616	1.5166489992296416e-6	4	Kruskal-Wallis rank sum test
-Isopentanoic Acid (ug/g)	11.382272191248857	0.022587640204107688	4	Kruskal-Wallis rank sum test
-Pentanoic Acid (ug/g)	24.46707317073168	6.437518486062749e-5	4	Kruskal-Wallis rank sum test
 Propanoic Acid (ug/g)	19.133997237942065	7.397022539918879e-4	4	Kruskal-Wallis rank sum test
 n-Butanoic Acid (ug/g)	23.732820824294894	9.035263827917233e-5	4	Kruskal-Wallis rank sum test

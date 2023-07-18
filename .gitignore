@@ -9,10 +9,6 @@
 # Session Data files
 .RData
 
-# Rendering Documents
-./scripts/resilience_homog_files/
-
-# Reference Databases 
-./databases/
+# Reference Databases
 
 

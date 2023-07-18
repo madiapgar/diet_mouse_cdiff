@@ -1,0 +1,5 @@
+name: qiime2_env_activation
+channels:
+  - qiime2
+dependencies:
+  - qiime2=2023.5.1

@@ -24,13 +24,15 @@ rule target:
         "plots/family_abun1.pdf",
         "plots/family_abun2.pdf",
         "stats/family_abun_lm.tsv",
+        "plots/histopathology.pdf",
+        "stats/histopathology_lm.tsv",
+        "stats/histopathology_dunn.tsv",
         "plots/butyrate_kinase.pdf",
         "plots/butyryl_coa_transferase.pdf",
         "plots/baiH.pdf",
         "plots/baiI.pdf",
         "stats/buty_enzyme_lm.tsv",
         "stats/bile_enzyme_lm.tsv"
-
 
 
 rule total_sum_scaling:
@@ -42,6 +44,192 @@ rule total_sum_scaling:
     shell:
         """
         Rscript scripts/total_sum_scaling.R
+        """
+
+
+rule tss_tsv2biom:
+    input:
+       "data/qiime/total_sum_scaling.tsv" 
+    output:
+        "data/qiime/total_sum_scaling.biom"
+    conda:
+        "envs/qiime2.yml"
+    shell:
+        """
+        biom convert \
+            -i ./data/qiime/total_sum_scaling.tsv \
+            -o ./data/qiime/total_sum_scaling.biom \
+            --table-type "Table" \
+            --to-hdf5
+        """
+
+
+rule tss_biom2qza:
+    input:
+        "data/qiime/total_sum_scaling.biom"
+    output:
+        "data/qiime/total_sum_scaling.qza"
+    conda:
+        "envs/qiime2.yml"
+    shell:
+        """
+        qiime tools import \
+            --input-path ./data/qiime/total_sum_scaling.biom \
+            --type 'FeatureTable[Frequency]' \
+            --output-path ./data/qiime/total_sum_scaling.qza
+        """
+
+
+rule rep_seqs2fasta:
+    input:
+        "data/misc/euk_filt-mergedDietAim1rep-seqs_051523-Copy1.qza"
+    output:
+        "data/misc/dna-sequences.fasta"
+    conda:
+        "envs/qiime2.yml"
+    shell:
+        """
+        qiime tools export \
+            --input-path ./data/misc/euk_filt-mergedDietAim1rep-seqs_051523-Copy1.qza \
+            --output-path ./data/misc
+        """
+
+
+rule get_reference_databases:
+    output:
+        "databases/sepp-refs-silva-128.qza",
+        "databases/silva-138-99-515-806-nb-classifier.qza"
+    shell:
+        """
+        wget https://data.qiime2.org/2023.5/common/sepp-refs-silva-128.qza -P ./databases/
+        wget https://data.qiime2.org/2020.8/common/silva-138-99-515-806-nb-classifier.qza -P./databases/
+        """
+
+
+rule sepp_phylo_tree:
+    input:
+        "data/misc/euk_filt-mergedDietAim1rep-seqs_051523-Copy1.qza",
+        "databases/sepp-refs-silva-128.qza"
+    output:
+        "data/qiime/tree.qza",
+        "data/qiime/placements.qza"
+    conda:
+        "envs/qiime2.yml"
+    shell:
+        """
+        qiime fragment-insertion sepp \
+            --i-representative-sequences ./data/misc/euk_filt-mergedDietAim1rep-seqs_051523-Copy1.qza \
+            --i-reference-database ./databases/sepp-refs-silva-128.qza \
+            --o-tree ./data/qiime/tree.qza \
+            --o-placements ./data/qiime/placements.qza
+        """
+
+
+rule sepp_ASV_filtering:
+    input:
+        "data/qiime/total_sum_scaling.qza",
+        "data/qiime/tree.qza"
+    output:
+        "data/qiime/total_sum_filt_table.qza",
+        "data/qiime/total_sum_rem_table.qza"
+    conda:
+        "envs/qiime2.yml"
+    shell:
+        """
+        qiime fragment-insertion filter-features \
+            --i-table ./data/qiime/total_sum_scaling.qza \
+            --i-tree ./data/qiime/tree.qza \
+            --o-filtered-table ./data/qiime/total_sum_filt_table.qza \
+            --o-removed-table ./data/qiime/total_sum_rem_table.qza
+        """
+
+
+rule taxonomic_classification:
+    input:
+        "databases/silva-138-99-515-806-nb-classifier.qza",
+        "data/misc/euk_filt-mergedDietAim1rep-seqs_051523-Copy1.qza"
+    output:
+        "data/qiime/taxonomy.qza"
+    conda:
+        "envs/qiime2.yml"
+    shell:
+        """
+        qiime feature-classifier classify-sklearn \
+            --i-classifier ./databases/silva-138-99-515-806-nb-classifier.qza \
+            --i-reads ./data/misc/euk_filt-mergedDietAim1rep-seqs_051523-Copy1.qza \
+            --o-classification ./data/qiime/taxonomy.qza
+        """
+
+
+rule filter_taxonomy:
+    input:
+        "data/qiime/total_sum_scaling.qza",
+        "data/qiime/taxonomy.qza"
+    output:
+        "data/qiime/taxonomy_filtered.qza"
+    conda:
+        "envs/qiime2.yml"
+    shell:
+        """
+        qiime taxa filter-table \
+            --i-table ./data/qiime/total_sum_scaling.qza \
+            --i-taxonomy ./data/qiime/taxonomy.qza \
+            --p-include p_ \
+            --p-exclude mitochondria,chloroplast \
+            --o-filtered-table ./data/qiime/taxonomy_filtered.qza
+        """
+
+
+rule filter_taxonomy_vis:
+    input:
+        "data/qiime/taxonomy_filtered.qza"
+    output:
+        "data/qiime/taxonomy_filtered.qzv"
+    conda:
+        "envs/qiime2.yml"
+    shell:
+        """
+        qiime feature-table summarize \
+            --i-table ./data/qiime/taxonomy_filtered.qza \
+            --o-visualization ./data/qiime/taxonomy_filtered.qzv
+        """
+
+
+rule pre_core_metrics_filter:
+    input:
+        "data/qiime/taxonomy_filtered.qza",
+        "data/misc/merged_metadata1.tsv"
+    output:
+        "data/qiime/tax_filt_actual.qza"
+    conda:
+        "envs/qiime2.yml"
+    shell:
+        """
+        qiime feature-table filter-samples \
+            --i-table ./data/qiime/taxonomy_filtered.qza \
+            --m-metadata-file ./data/misc/merged_metadata1.tsv \
+            --o-filtered-table ./data/qiime/tax_filt_actual.qza
+        """
+
+
+rule core_metrics_analysis:
+##  NEED TO CHECK THE SAMPLING DEPTH BEFORE YOU RUN THIS STEP
+    input:
+        "data/qiime/tree.qza",
+        "data/qiime/taxonomy_filtered.qza",
+        "data/misc/merged_metadata1.tsv"
+    output:
+        "data/qiime/core_outputs"
+    conda:
+        "envs/qiime2.yml"
+    shell:
+        """
+        qiime diversity core-metrics-phylogenetic \
+            --i-phylogeny ./data/qiime/tree.qza \
+            --i-table ./data/qiime/taxonomy_filtered.qza \
+            --p-sampling-depth  99976 \
+            --m-metadata-file ./data/misc/merged_metadata1.tsv \
+            --output-dir ./data/qiime/core_outputs
         """
 
 
@@ -183,6 +371,20 @@ rule family_abundance_stats:
     shell:
         """
         Rscript scripts/family_abun_stats.R
+        """
+
+
+rule histopathology:
+    input:
+        metadata_FP = "data/misc/processed_metadata.tsv",
+        histo_FP = "data/misc/histo_data.csv"
+    output:
+        "plots/histopathology.pdf",
+        "stats/histopathology_lm.tsv",
+        "stats/histopathology_dunn.tsv"
+    shell:
+        """
+        Rscript scripts/histopathology.R
         """
 
 

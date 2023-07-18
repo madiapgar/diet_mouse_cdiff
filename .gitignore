@@ -13,6 +13,6 @@
 ./scripts/resilience_homog_files/
 
 # Reference Databases 
-./databases/*.qza
+./databases/
 
 

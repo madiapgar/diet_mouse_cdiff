@@ -15,8 +15,6 @@ rule target:
         "data/qiime/taxonomy_filtered.qzv",
         "data/qiime/tax_filt_actual.qza",
         "data/qiime/core_outputs",
-        "data/picrust/out_pipeline",
-        "data/picrust/tss3_meta_contrib.tsv",
         "data/misc/tss_seq_depth.tsv",
         "data/misc/processed_metadata.tsv",
         "plots/unweighted_unifrac_pcoa.pdf",
@@ -43,6 +41,8 @@ rule target:
         "plots/histopathology.pdf",
         "stats/histopathology_lm.tsv",
         "stats/histopathology_dunn.tsv",
+        "data/picrust/out_pipeline",
+        "data/picrust/tss3_meta_contrib.tsv",
         "plots/butyrate_kinase.pdf",
         "plots/butyryl_coa_transferase.pdf",
         "plots/baiH.pdf",
@@ -249,37 +249,6 @@ rule core_metrics_analysis:
         """
 
 
-rule picrust2:
-    input:
-       "data/misc/dna-sequences.fasta",
-       "data/qiime/total_sum_scaling.biom"
-    output:
-       "data/picrust/out_pipeline"
-    conda:
-        "envs/picrust2.yml"
-    shell:
-        """
-        picrust2_pipeline.py \
-            -s ./data/misc/dna-sequences.fasta \
-            -i ./data/qiime/total_sum_scaling.biom \
-            -o ./data/picrust/out_pipeline \
-            --stratified \
-            --per_sequence_contrib \
-            -p 32
-        """
-
-
-rule ko_contrib_filter:
-    input:
-        ko_in = "data/picrust/out_pipeline/KO_metagenome_out/pred_metagenome_contrib.tsv.gz"
-    output:
-        ko_out = "data/picrust/tss3_meta_contrib.tsv"
-    shell:
-        """
-        Rscript scripts/ko_contrib_filter.R
-        """
-
-
 rule sequencing_depth_calculation:
     input:
         biom_fp = "data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza",
@@ -432,6 +401,37 @@ rule histopathology:
     shell:
         """
         Rscript scripts/histopathology.R
+        """
+
+
+rule picrust2:
+    input:
+       "data/misc/dna-sequences.fasta",
+       "data/qiime/total_sum_scaling.biom"
+    output:
+       "data/picrust/out_pipeline"
+    conda:
+        "envs/picrust2.yml"
+    shell:
+        """
+        picrust2_pipeline.py \
+            -s ./data/misc/dna-sequences.fasta \
+            -i ./data/qiime/total_sum_scaling.biom \
+            -o ./data/picrust/out_pipeline \
+            --stratified \
+            --per_sequence_contrib \
+            -p 32
+        """
+
+
+rule ko_contrib_filter:
+    input:
+        ko_in = "data/picrust/out_pipeline/KO_metagenome_out/pred_metagenome_contrib.tsv.gz"
+    output:
+        ko_out = "data/picrust/tss3_meta_contrib.tsv"
+    shell:
+        """
+        Rscript scripts/ko_contrib_filter.R
         """
 
 

@@ -10,7 +10,6 @@ library(qiime2R)
 library(tidyverse)
 library(broom)
 library(rstatix)
-library(AICcmodavg)
 
 
 ## input file paths

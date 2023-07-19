@@ -14,7 +14,26 @@ rule target:
         "data/qiime/taxonomy_filtered.qza",
         "data/qiime/taxonomy_filtered.qzv",
         "data/qiime/tax_filt_actual.qza",
-        "data/qiime/core_outputs",
+        "data/qiime/core_outputs/bray_curtis_distance_matrix.qza",
+        "data/qiime/core_outputs/bray_curtis_emperor.qzv",
+        "data/qiime/core_outputs/bray_curtis_pcoa_results.qza",
+        "data/qiime/core_outputs/evenness_vector.qza",
+        "data/qiime/core_outputs/faith_pd.tsv",
+        "data/qiime/core_outputs/faith_pd_vector.qza",
+        "data/qiime/core_outputs/jaccard_distance_matrix.qza",
+        "data/qiime/core_outputs/jaccard_emperor.qzv",
+        "data/qiime/core_outputs/jaccard_pcoa_results.qza",
+        "data/qiime/core_outputs/observed_features_vector.qza",
+        "data/qiime/core_outputs/rarefied_table.qza",
+        "data/qiime/core_outputs/shannon_vector.qza",
+        "data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza",
+        "data/qiime/core_outputs/unweighted_unifrac_emperor.qzv",
+        "data/qiime/core_outputs/unweighted_unifrac_pcoa_results.qza",
+        "data/qiime/core_outputs/weighted_unifrac_distance_matrix.qza",
+        "data/qiime/core_outputs/weighted_unifrac_emperor.qzv",
+        "data/qiime/core_outputs/weighted_unifrac_pcoa_results.qza",
+        "data/qiime/core_outputs/uw_dist_matrix.tsv",
+        "data/qiime/core_outputs/w_dist_matrix.tsv",
         "data/misc/tss_seq_depth.tsv",
         "data/misc/processed_metadata.tsv",
         "plots/unweighted_unifrac_pcoa.pdf",
@@ -41,7 +60,7 @@ rule target:
         "plots/histopathology.pdf",
         "stats/histopathology_lm.tsv",
         "stats/histopathology_dunn.tsv",
-        "data/picrust/out_pipeline",
+        "data/picrust/out_pipeline/KO_metagenome_out/pred_metagenome_contrib.tsv.gz",
         "data/picrust/tss3_meta_contrib.tsv",
         "plots/butyrate_kinase.pdf",
         "plots/butyryl_coa_transferase.pdf",
@@ -235,7 +254,24 @@ rule core_metrics_analysis:
         "data/qiime/taxonomy_filtered.qza",
         "data/misc/merged_metadata1.tsv"
     output:
-        "data/qiime/core_outputs"
+        "data/qiime/core_outputs/bray_curtis_distance_matrix.qza",
+        "data/qiime/core_outputs/bray_curtis_emperor.qzv",
+        "data/qiime/core_outputs/bray_curtis_pcoa_results.qza",
+        "data/qiime/core_outputs/evenness_vector.qza",
+        "data/qiime/core_outputs/faith_pd.tsv",
+        "data/qiime/core_outputs/faith_pd_vector.qza",
+        "data/qiime/core_outputs/jaccard_distance_matrix.qza",
+        "data/qiime/core_outputs/jaccard_emperor.qzv",
+        "data/qiime/core_outputs/jaccard_pcoa_results.qza",
+        "data/qiime/core_outputs/observed_features_vector.qza",
+        "data/qiime/core_outputs/rarefied_table.qza",
+        "data/qiime/core_outputs/shannon_vector.qza",
+        "data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza",
+        "data/qiime/core_outputs/unweighted_unifrac_emperor.qzv",
+        "data/qiime/core_outputs/unweighted_unifrac_pcoa_results.qza",
+        "data/qiime/core_outputs/weighted_unifrac_distance_matrix.qza",
+        "data/qiime/core_outputs/weighted_unifrac_emperor.qzv",
+        "data/qiime/core_outputs/weighted_unifrac_pcoa_results.qza"
     conda:
         "envs/qiime2.yml"
     shell:
@@ -246,6 +282,30 @@ rule core_metrics_analysis:
             --p-sampling-depth  99976 \
             --m-metadata-file ./data/misc/merged_metadata1.tsv \
             --output-dir ./data/qiime/core_outputs
+        """
+
+
+rule unzip_uw_distance_matrix:
+    input:
+       "data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza"
+    output:
+        "data/qiime/core_outputs/uw_dist_matrix.tsv"
+    shell:
+        """
+        unzip ./data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza
+        mv ./data/qiime/core_outputs/b3bff196-0b00-4a60-abbf-69d2e1ee5299/data/distance-matrix.tsv ~/diet_mouse_cdiff/data/qiime/core_outputs/uw_dist_matrix.tsv
+        """
+
+
+rule unzip_w_distance_matrix:
+    input:
+       "data/qiime/core_outputs/weighted_unifrac_distance_matrix.qza"
+    output:
+        "data/qiime/core_outputs/w_dist_matrix.tsv"
+    shell:
+        """
+        unzip ./data/qiime/core_outputs/weighted_unifrac_distance_matrix.qza
+        mv ./data/qiime/core_outputs/e2ab732a-c011-4b72-a624-2a726381e916/data/distance-matrix.tsv ~/diet_mouse_cdiff/data/qiime/core_outputs/w_dist_matrix.tsv
         """
 
 
@@ -409,7 +469,7 @@ rule picrust2:
        "data/misc/dna-sequences.fasta",
        "data/qiime/total_sum_scaling.biom"
     output:
-       "data/picrust/out_pipeline"
+       "data/picrust/out_pipeline/KO_metagenome_out/pred_metagenome_contrib.tsv.gz"
     conda:
         "envs/picrust2.yml"
     shell:

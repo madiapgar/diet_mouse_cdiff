@@ -10,5 +10,6 @@
 .RData
 
 # Reference Databases
-./databases/
+./databases/sepp-refs-silva-128.qza
+./databases/silva-138-99-515-806-nb-classifier.qza
 

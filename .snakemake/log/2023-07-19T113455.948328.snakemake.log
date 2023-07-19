@@ -1,0 +1,6 @@
+Building DAG of jobs...
+MissingInputException in rule picrust2 in file /Users/apgarm/projects/diet_mouse_cdiff/workflow/Snakefile, line 252:
+Missing input files for rule picrust2:
+    output: data/picrust/out_pipeline
+    affected files:
+        data/misc/total_sum_scaling.biom

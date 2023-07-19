@@ -1,0 +1,5 @@
+name: picrust2_env_activation
+channels:
+  - picrust2
+dependencies:
+  - picrust2=2.5.1

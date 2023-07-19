@@ -1,6 +1,22 @@
 rule target:
     input:
         "data/qiime/total_sum_scaling.tsv",
+        "data/qiime/total_sum_scaling.biom",
+        "data/qiime/total_sum_scaling.qza",
+        "data/misc/dna-sequences.fasta",
+        "databases/sepp-refs-silva-128.qza",
+        "databases/silva-138-99-515-806-nb-classifier.qza",
+        "data/qiime/tree.qza",
+        "data/qiime/placements.qza",
+        "data/qiime/total_sum_filt_table.qza",
+        "data/qiime/total_sum_rem_table.qza",
+        "data/qiime/taxonomy.qza",
+        "data/qiime/taxonomy_filtered.qza",
+        "data/qiime/taxonomy_filtered.qzv",
+        "data/qiime/tax_filt_actual.qza",
+        "data/qiime/core_outputs",
+        "data/picrust/out_pipeline",
+        "data/picrust/tss3_meta_contrib.tsv",
         "data/misc/tss_seq_depth.tsv",
         "data/misc/processed_metadata.tsv",
         "plots/unweighted_unifrac_pcoa.pdf",
@@ -230,6 +246,37 @@ rule core_metrics_analysis:
             --p-sampling-depth  99976 \
             --m-metadata-file ./data/misc/merged_metadata1.tsv \
             --output-dir ./data/qiime/core_outputs
+        """
+
+
+rule picrust2:
+    input:
+       "data/misc/dna-sequences.fasta",
+       "data/qiime/total_sum_scaling.biom"
+    output:
+       "data/picrust/out_pipeline"
+    conda:
+        "envs/picrust2.yml"
+    shell:
+        """
+        picrust2_pipeline.py \
+            -s ./data/misc/dna-sequences.fasta \
+            -i ./data/qiime/total_sum_scaling.biom \
+            -o ./data/picrust/out_pipeline \
+            --stratified \
+            --per_sequence_contrib \
+            -p 32
+        """
+
+
+rule ko_contrib_filter:
+    input:
+        ko_in = "data/picrust/out_pipeline/KO_metagenome_out/pred_metagenome_contrib.tsv.gz"
+    output:
+        ko_out = "data/picrust/tss3_meta_contrib.tsv"
+    shell:
+        """
+        Rscript scripts/ko_contrib_filter.R
         """
 
 

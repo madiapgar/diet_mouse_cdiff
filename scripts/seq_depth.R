@@ -8,7 +8,6 @@ library(magrittr)
 library(qiime2R)
 library(tidyverse)
 library(broom)
-library(AICcmodavg)
 library(rstatix)
 
 ## reading in pre-total sum scaled file 

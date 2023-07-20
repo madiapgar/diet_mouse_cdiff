@@ -77,6 +77,8 @@ rule total_sum_scaling:
         lacto_asv_fp = "data/misc/lactoOnlydna-sequences.fasta"
     output:
         "data/qiime/total_sum_scaling.tsv"
+    conda:
+        "envs/environment.yml"
     shell:
         """
         Rscript scripts/total_sum_scaling.R
@@ -328,6 +330,8 @@ rule sequencing_depth_calculation:
         lacto_asv_fp = "data/misc/lactoOnlydna-sequences.fasta"
     output:
         "data/misc/tss_seq_depth.tsv"
+    conda:
+        "envs/environment.yml"
     shell:
         """
         Rscript scripts/seq_depth.R
@@ -340,6 +344,8 @@ rule metadata_processing:
         seq_depth_FP = "data/misc/tss_seq_depth.tsv"
     output:
         "data/misc/processed_metadata.tsv"
+    conda:
+        "envs/environment.yml"
     shell:
         """
         Rscript scripts/metadata_processing.R
@@ -354,6 +360,8 @@ rule alpha_diversity_plots:
     output:
         "plots/faith_pd.pdf",
         "plots/shannon_entropy.pdf"
+    conda:
+        "envs/environment.yml"
     shell:
         """
         Rscript scripts/alpha_div_plots.R
@@ -370,6 +378,8 @@ rule alpha_diversity_stats:
         "stats/faith_diet_results.tsv",
         "stats/shannon_total_results.tsv",
         "stats/shannon_diet_results.tsv"
+    conda:
+        "envs/environment.yml"
     shell:
         """
         Rscript scripts/alpha_div_stats.R
@@ -384,6 +394,8 @@ rule beta_diversity_plots:
     output:
         "plots/unweighted_unifrac_pcoa.pdf",
         "plots/weighted_unifrac_pcoa.pdf"
+    conda:
+        "envs/environment.yml"
     shell:
         """
         Rscript scripts/beta_div_plots.R
@@ -398,6 +410,8 @@ rule beta_diversity_stats:
     output:
         "stats/w_adonis_results.tsv",
         "stats/uw_adonis_results.tsv"
+    conda:
+        "envs/environment.yml"
     shell:
         """
         Rscript scripts/beta_div_stats.R
@@ -414,6 +428,8 @@ rule homogeneity:
         "stats/uu_homogeneity.tsv",
         "plots/wu_homogeneity.pdf",
         "plots/uu_homogeneity.pdf"
+    conda:
+        "envs/environment.yml"
     shell:
         """
         Rscript scripts/homog_calc.R
@@ -430,6 +446,8 @@ rule resiliency:
         "stats/wu_resiliency.tsv",
         "plots/wu_resiliency.pdf",
         "plots/uu_resiliency.pdf"
+    conda:
+        "envs/environment.yml"
     shell:
         """
         Rscript scripts/resil_calc.R
@@ -444,6 +462,8 @@ rule family_abundance_plots:
     output:
         "plots/family_abun1.pdf",
         "plots/family_abun2.pdf"
+    conda:
+        "envs/environment.yml"
     shell:
         """
         Rscript scripts/family_abun_plots.R
@@ -457,6 +477,8 @@ rule family_abundance_stats:
        metadata_FP = "data/misc/processed_metadata.tsv"
     output:
         "stats/family_abun_lm.tsv"
+    conda:
+        "envs/environment.yml"
     shell:
         """
         Rscript scripts/family_abun_stats.R
@@ -471,6 +493,8 @@ rule histopathology:
         "plots/histopathology.pdf",
         "stats/histopathology_lm.tsv",
         "stats/histopathology_dunn.tsv"
+    conda:
+        "envs/environment.yml"
     shell:
         """
         Rscript scripts/histopathology.R
@@ -502,6 +526,8 @@ rule ko_contrib_filter:
         ko_in = "data/picrust/out_pipeline/KO_metagenome_out/pred_metagenome_contrib.tsv.gz"
     output:
         ko_out = "data/picrust/tss3_meta_contrib.tsv"
+    conda:
+        "envs/environment.yml"
     shell:
         """
         Rscript scripts/ko_contrib_filter.R
@@ -516,6 +542,8 @@ rule butyrate_plots:
     output:
         "plots/butyrate_kinase.pdf",
         "plots/butyryl_coa_transferase.pdf"
+    conda:
+        "envs/environment.yml"
     shell:
         """
         Rscript scripts/butyrate_plots.R
@@ -530,6 +558,8 @@ rule bile_acid_plots:
     output:
         "plots/baiH.pdf",
         "plots/baiI.pdf"
+    conda:
+        "envs/environment.yml"
     shell:
         """
         Rscript scripts/bile_acid_plots.R
@@ -543,6 +573,8 @@ rule butyrate_bile_stats:
     output:
         "stats/buty_enzyme_lm.tsv",
         "stats/bile_enzyme_lm.tsv"
+    conda:
+        "envs/environment.yml"
     shell:
         """
         Rscript scripts/butyrate_bile_stats.R

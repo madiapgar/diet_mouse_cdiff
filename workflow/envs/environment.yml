@@ -3,7 +3,19 @@ channels:
     - bioconda
     - conda-forge
     - R
+    - R_actual
 dependencies:
+    - qiime2R
     - r-base
     - r-tidyverse
+    - r-ape
+    - r-broom
+    - r-cowplot
+    - r-ggh4x
+    - r-ggplot2
+    - r-ggpubr
+    - r-rstatix
+    - r-vegan
+    - r-viridis
+    - r-magrittr
     - snakemake

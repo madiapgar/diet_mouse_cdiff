@@ -1,7 +1,6 @@
 library(tidyverse)
 library(survminer)
 require(survival)
-
 library (readr)
 survival <- read_csv("/Users/keithhazleton/Library/CloudStorage/Box-Box/Issa/aim1a_survival.csv", 
                      col_types = cols(Day = col_integer(), status = col_integer(), diet = col_character(), 

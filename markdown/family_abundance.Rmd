@@ -87,7 +87,7 @@ abun_plots <- function(abundance_table){
       ylab("Relative Abundance") +
       xlab("Days Relative to Infection") -> family_abun1
   ## second plot
-  abun_filt %>%
+  abundance_table %>%
     filter(!is.na(diet)) %>% 
     ggplot(aes(x = mouse_fact, y = day_fact)) +
       geom_tile(aes(fill = rel_abund), alpha = 0.5) +
@@ -124,27 +124,50 @@ names(diet_labs) <- c('Chow',
                       'LF/HF', 
                       'LF/LF')
 wanted_level <- 'Family'
-wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
-                   'Staphylococcaceae', 'Tannerellaceae', 'Muribaculaceae', 'Bacteroidaceae', 
-                   'Marinifilaceae')
+long_wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
+                        'Staphylococcaceae', 'Tannerellaceae', 'Muribaculaceae', 'Bacteroidaceae', 
+                        'Marinifilaceae')
+short_wanted_family <- c('Enterobacteriaceae', 
+                         'Enterococcaceae', 
+                         'Staphylococcaceae',
+                         'Bacteroidaceae')
 ```
 
 **File Prep for Plot Construction**
 ```{r}
-abun_files <- family_abun_file_prep(metadata_FP,
-                                   tax_FP,
-                                   otu_table_FP,
-                                   wanted_level,
-                                   wanted_family)
+## full table 
+long_abun_files <- family_abun_file_prep(metadata_FP,
+                                         tax_FP,
+                                         otu_table_FP,
+                                         wanted_level,
+                                         long_wanted_family)
 
-abun_filt <- abun_files$AbundanceTable
+long_abun_filt <- long_abun_files$AbundanceTable
+
+## shortened table for poster presentation
+short_abun_files <- family_abun_file_prep(metadata_FP,
+                                          tax_FP,
+                                          otu_table_FP,
+                                          wanted_level,
+                                          short_wanted_family)
+
+short_abun_filt <- short_abun_files$AbundanceTable
 ```
 **Testing the New Plots Function**
-```{r}
-family_abun_plots <- abun_plots(abun_filt)
+```{r, warning=FALSE, fig.width=15, fig.height=8}
+## full table
+long_family_abun_plots <- abun_plots(long_abun_filt)
 
-abun1 <- family_abun_plots$FamilyAbundance1
-abun2 <- family_abun_plots$FamilyAbundance2
+long_abun1 <- long_family_abun_plots$FamilyAbundance1
+long_abun2 <- long_family_abun_plots$FamilyAbundance2
+
+## shortened table for poster presentation
+short_family_abun_plots <- abun_plots(short_abun_filt)
+
+short_abun1 <- short_family_abun_plots$FamilyAbundance1
+short_abun2 <- short_family_abun_plots$FamilyAbundance2
+
+short_abun1
 ```
 
 **Microbe Family Abundance Plot**
@@ -210,15 +233,22 @@ These go to the plots and stats directories.
 ## microbe family relative abundance plots
 ## option #1
 ggsave("family_abun1.pdf",
-       plot = family_abun1, 
+       plot = long_abun1, 
        width = 15, 
        height = 10, 
        path = '../plots')
 ## option #2
 ggsave("family_abun2.pdf",
-       plot = family_abun2, 
+       plot = long_abun2, 
        width = 25, 
        height = 10, 
+       path = '../plots')
+
+## family abundance plot for poster presentation
+ggsave("poster_family_abun.pdf",
+       plot = short_abun1, 
+       width = 15, 
+       height = 8, 
        path = '../plots')
 
 ## linear modeling results

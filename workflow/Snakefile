@@ -290,13 +290,19 @@ rule core_metrics_analysis:
 
 rule unzip_uw_distance_matrix:
     input:
-       "data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza"
+       "data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza" 
     output:
         "data/qiime/core_outputs/uw_dist_matrix.tsv"
+    conda:
+        "envs/qiime2.yml"
     shell:
         """
-        unzip ./data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza
-        mv ./data/qiime/core_outputs/b3bff196-0b00-4a60-abbf-69d2e1ee5299/data/distance-matrix.tsv ~/diet_mouse_cdiff/data/qiime/core_outputs/uw_dist_matrix.tsv
+        qiime tools export \
+            --input-path ./data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza \
+            --output-path ./data/qiime/core_outputs/
+        
+        mv ./data/qiime/core_outputs/distance-matrix.tsv \
+        ./data/qiime/core_outputs/uw_dist_matrix.tsv
         """
 
 
@@ -305,10 +311,16 @@ rule unzip_w_distance_matrix:
        "data/qiime/core_outputs/weighted_unifrac_distance_matrix.qza"
     output:
         "data/qiime/core_outputs/w_dist_matrix.tsv"
+    conda:
+        "envs/qiime2.yml"
     shell:
         """
-        unzip ./data/qiime/core_outputs/weighted_unifrac_distance_matrix.qza
-        mv ./data/qiime/core_outputs/e2ab732a-c011-4b72-a624-2a726381e916/data/distance-matrix.tsv ~/diet_mouse_cdiff/data/qiime/core_outputs/w_dist_matrix.tsv
+        qiime tools export \
+            --input-path ./data/qiime/core_outputs/weighted_unifrac_distance_matrix.qza \
+            --output-path ./data/qiime/core_outputs/
+        
+        mv ./data/qiime/core_outputs/distance-matrix.tsv \
+        ./data/qiime/core_outputs/w_dist_matrix.tsv
         """
 
 
@@ -317,12 +329,35 @@ rule unzip_shannon:
         "data/qiime/core_outputs/shannon_vector.qza"
     output:
         "data/qiime/core_outputs/shannon_entropy.tsv"
+    conda:
+        "envs/qiime2.yml"
     shell:
         """
-        unzip ./data/qiime/core_outputs/shannon_vector.qza
-        mv ./data/qiime/core_outputs/045d6cb0-857c-47a0-80b8-8612e7c31418/data/alpha-diversity.tsv ~/diet_mouse_cdiff/data/qiime/core_outputs/shannon_entropy.tsv 
+        qiime tools export \
+            --input-path ./data/qiime/core_outputs/shannon_vector.qza \
+            --output-path ./data/qiime/core_outputs/
+        
+        mv ./data/qiime/core_outputs/alpha-diversity.tsv \
+        ./data/qiime/core_outputs/shannon_entropy.tsv
         """
 
+
+rule unzip_faith_pd:
+    input:
+        "data/qiime/core_outputs/faith_pd_vector.qza"
+    output:
+        "data/qiime/core_outputs/faith_pd.tsv"
+    conda:
+        "envs/qiime2.yml"
+    shell:
+        """
+        qiime tools export \
+            --input-path ./data/qiime/core_outputs/faith_pd_vector.qza \
+            --output-path ./data/qiime/core_outputs/
+        
+        mv ./data/qiime/core_outputs/alpha-diversity.tsv \
+        ./data/qiime/core_outputs/faith_pd.tsv
+        """
 
 rule sequencing_depth_calculation:
     input:

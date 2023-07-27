@@ -1,10 +1,9 @@
-name: diet_mouse_cdiff
+name: r_env
 channels:
     - bioconda
     - conda-forge
-    - R
+    - r
 dependencies:
-    - qiime2R
     - r-base
     - r-tidyverse
     - r-ape
@@ -17,4 +16,6 @@ dependencies:
     - r-vegan
     - r-viridis
     - r-magrittr
-    - snakemake
+    - r-qiime2r
+    - pip:
+        - snakemake

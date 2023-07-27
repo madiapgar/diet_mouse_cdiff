@@ -3,14 +3,20 @@
 ## since we can't rarefy it due to lactococcus contamination
 
 ## needed libraries 
-library(ape)
-library(ggpubr)
-library(magrittr)
-library(qiime2R)
-library(tidyverse)
-library(broom)
-library(rstatix)
+packages <- c("ape", 
+              "ggpubr", 
+              "magrittr", 
+              "qiime2R", 
+              "tidyverse", 
+              "broom", 
+              "rstatix")
 
+for(package in packages){
+  if(!require(package, character.only = T)){
+    install.packages(package)
+    library(package)
+  }
+}
 
 ## input file paths
 biom_fp <- './data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza'

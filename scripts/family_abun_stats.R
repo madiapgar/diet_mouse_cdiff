@@ -3,13 +3,21 @@
 ## by days relative to infection and diet
 
 ## needed libraries
-library(qiime2R)
-library(tidyverse)
-library(cowplot)
-library(magrittr)
-library(vegan)
-library(viridis)
-library(broom)
+packages <- c("ggpubr", 
+              "magrittr", 
+              "qiime2R", 
+              "tidyverse", 
+              "broom",
+              "cowplot",
+              "vegan",
+              "viridis")
+
+for(package in packages){
+  if(!require(package, character.only = T)){
+    install.packages(package)
+    library(package)
+  }
+}
 
 ## input file paths and others
 otu_table_FP <- './data/qiime/taxonomy_filtered.qza'

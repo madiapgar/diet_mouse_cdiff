@@ -3,10 +3,17 @@
 ## to only contain the desired kos (since that file is massive)
 
 ## needed libraries
-library(cowplot)
-library(magrittr)
-library(qiime2R)
-library(tidyverse)
+packages <- c("ggpubr", 
+              "magrittr",
+              "tidyverse", 
+              "broom")
+
+for(package in packages){
+  if(!require(package, character.only = T)){
+    install.packages(package)
+    library(package)
+  }
+}
 
 ## input file paths and others
 ko_in <- './data/picrust/out_pipeline/KO_metagenome_out/pred_metagenome_contrib.tsv.gz'

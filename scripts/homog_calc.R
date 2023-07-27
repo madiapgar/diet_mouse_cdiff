@@ -3,11 +3,19 @@
 ## outputs a plot and the statistical results
 
 ## needed libraries
-library(broom)
-library(cowplot)
-library(magrittr)
-library(qiime2R)
-library(tidyverse)
+packages <- c("ggpubr", 
+              "magrittr", 
+              "qiime2R", 
+              "tidyverse", 
+              "broom",
+              "cowplot")
+
+for(package in packages){
+  if(!require(package, character.only = T)){
+    install.packages(package)
+    library(package)
+  }
+}
 
 ## input file paths
 metadata_FP <- './data/misc/processed_metadata.tsv'

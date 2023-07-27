@@ -2,9 +2,17 @@
 ## creating my processed metadata file 
 
 ## needed libraries
-library(magrittr)
-library(qiime2R)
-library(tidyverse)
+packages <- c("ggpubr", 
+              "magrittr",
+              "tidyverse", 
+              "broom")
+
+for(package in packages){
+  if(!require(package, character.only = T)){
+    install.packages(package)
+    library(package)
+  }
+}
 
 ## input file paths
 metadata_FP <- './data/misc/merged_metadata1.tsv'

@@ -3,14 +3,23 @@
 ## taxon functional abundance outputs for butyrate and secondary bile acid enzymes
 
 ## needed libraries 
-library(ape)
-library(ggpubr)
-library(magrittr)
-library(qiime2R)
-library(tidyverse)
-library(broom)
-library(AICcmodavg)
-library(rstatix)
+packages <- c("ggpubr", 
+              "magrittr", 
+              "qiime2R", 
+              "tidyverse", 
+              "broom",
+              "cowplot",
+              "viridis",
+              "ape",
+              "AICcmodavg",
+              "rstatix")
+
+for(package in packages){
+  if(!require(package, character.only = T)){
+    install.packages(package)
+    library(package)
+  }
+}
 
 ## input file paths and KOs
 metadata_FP <- './data/misc/processed_metadata.tsv'

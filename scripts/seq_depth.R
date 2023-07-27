@@ -1,14 +1,21 @@
 ## 6-29-23
 ## calculating the sequencing depth for each sample for later statistical use
 
-## needed libraries 
-library(ape)
-library(ggpubr)
-library(magrittr)
-library(qiime2R)
-library(tidyverse)
-library(broom)
-library(rstatix)
+## needed libraries
+packages <- c("ape", 
+              "ggpubr", 
+              "magrittr", 
+              "qiime2R", 
+              "tidyverse", 
+              "broom", 
+              "rstatix")
+
+for(package in packages){
+  if(!require(package, character.only = T)){
+    install.packages(package)
+    library(package)
+  }
+}
 
 ## reading in pre-total sum scaled file 
 biom_fp <- './data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza'

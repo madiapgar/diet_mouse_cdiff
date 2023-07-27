@@ -2,16 +2,25 @@
 ## Qiime2 core diversity analysis statistical analysis for beta diversity metrics
 
 ## needed libraries
-library(qiime2R)
-library(tidyverse)
-library(cowplot)
-library(magrittr)
-library(vegan)
-library(viridis)
-library(ggh4x)
-library(broom)
-library(rstatix)
-library(dunn.test)
+packages <- c("ape", 
+              "ggpubr", 
+              "magrittr", 
+              "qiime2R", 
+              "tidyverse", 
+              "broom", 
+              "rstatix",
+              "ggh4x",
+              "vegan",
+              "viridis",
+              "cowplot",
+              "dunn.test")
+
+for(package in packages){
+  if(!require(package, character.only = T)){
+    install.packages(package)
+    library(package)
+  }
+}
 
 
 ## input file paths

@@ -9,15 +9,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-# change to scripts directory if not there already
-# curr_dir <- getwd()
-# curr_dir <- str_split(curr_dir, '\\/')
-# if (curr_dir[length(curr_dir)] != 'scripts'){
-#   setwd('./scripts')
-# } 
-```
-
-```{r}
 library(qiime2R)
 library(tidyverse)
 library(cowplot)
@@ -35,16 +26,13 @@ micro_file_prep <- function(metadata_fp,
                             otu_table_fp,
                             tax_table_fp){
   ## metadata file prep 
-  tmpMeta <- read_tsv(metadata_fp, n_max = 2)
-  mycols <- colnames(tmpMeta)
-  metadata <- read_tsv(metadata_fp, skip = 2, col_names = mycols)
-  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
+  metadata <- read_tsv(metadata_fp)
   metadata <- as.data.frame(metadata)
   rownames(metadata) <- metadata$sampleid
   ## otu file prep
-  otu_table <- read_qza(file = otu_fp)$data
+  otu_table <- read_qza(file = otu_table_fp)$data
   ## taxonomy file prep
-  tax_table <- read_qza(file = tax_fp)$data %>% 
+  tax_table <- read_qza(file = tax_table_fp)$data %>% 
     parse_taxonomy()
   tax_table %>% 
     filter(rownames(tax_table) %in% rownames(otu_table)) -> tax_table
@@ -56,10 +44,10 @@ micro_file_prep <- function(metadata_fp,
 }
 
 
-## 2
-pseq <- phyloseq(otu_table(pseq_otu, taxa_are_rows = TRUE),
-                 tax_table(as.matrix(pseq_tax)),
-                 sample_data(pseq_meta))
+# ## 2
+# pseq <- phyloseq(otu_table(pseq_otu, taxa_are_rows = TRUE),
+#                  tax_table(as.matrix(pseq_tax)),
+#                  sample_data(pseq_meta))
 
 ## 3 
 ## generating color palettes based on the phyloseq object you generated
@@ -145,7 +133,7 @@ microshades_tax_barplot <- function(meta_fp,
 
 **Needed Input File Paths**
 ```{r}
-metadata_FP <- '../data/misc/merged_metadata1.tsv'
+metadata_FP <- '../data/misc/processed_metadata.tsv'
 tax_FP <- '../data/qiime/taxonomy.qza'
 otu_table_FP <- '../data/qiime/taxonomy_filtered.qza'
 tss_tax_rank <- "Phylum"
@@ -178,7 +166,7 @@ tss_barplot_files <- microshades_tax_barplot(metadata_FP,
 ```
 
 **Messing with the Taxa Barplot Outputs**
-```{r}
+```{r, warning=FALSE, fig.height=10, fig.width=25}
 ## pulling the tax barplot out of the named list output of the microshades_tax_barplot function
 main_barplot <- tss_barplot_files$TaxBarplot
 
@@ -188,7 +176,7 @@ main_barplot +
   theme(legend.text = element_text(size = 8.5),
         strip.text.y = element_text(angle = 0)) -> main_barplot 
 
-legend <- tss_barplot_files$Legend
+legend <- tss_barplot_files$TaxLegend
 
 ## putting them together in the same plot via cowplot 
 tax_all <- plot_grid(main_barplot, 
@@ -196,6 +184,8 @@ tax_all <- plot_grid(main_barplot,
                      rel_widths = c(1, .25),
                      align = 'tblr',
                      axis = 'tblr')
+
+tax_all
 ```
 
 **Saving my Outputs** 

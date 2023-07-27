@@ -71,6 +71,15 @@ rule target:
         "stats/bile_enzyme_lm.tsv"
 
 
+rule create_environments:
+    input:
+        "workflow/envs/run.sh"
+    shell:
+        """
+        sh workflow/envs/run.sh
+        """
+
+
 rule total_sum_scaling:
     input:
         biom_fp = "data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza",
@@ -78,7 +87,7 @@ rule total_sum_scaling:
     output:
         "data/qiime/total_sum_scaling.tsv"
     conda:
-        "envs/environment.yml"
+        "r_env"
     shell:
         """
         Rscript scripts/total_sum_scaling.R
@@ -91,7 +100,7 @@ rule tss_tsv2biom:
     output:
         "data/qiime/total_sum_scaling.biom"
     conda:
-        "envs/qiime2.yml"
+        "qiime2_testing"
     shell:
         """
         biom convert \
@@ -108,7 +117,7 @@ rule tss_biom2qza:
     output:
         "data/qiime/total_sum_scaling.qza"
     conda:
-        "envs/qiime2.yml"
+        "qiime2_testing"
     shell:
         """
         qiime tools import \
@@ -124,7 +133,7 @@ rule rep_seqs2fasta:
     output:
         "data/misc/dna-sequences.fasta"
     conda:
-        "envs/qiime2.yml"
+        "qiime2_testing"
     shell:
         """
         qiime tools export \
@@ -152,7 +161,7 @@ rule sepp_phylo_tree:
         "data/qiime/tree.qza",
         "data/qiime/placements.qza"
     conda:
-        "envs/qiime2.yml"
+        "qiime2_testing"
     shell:
         """
         qiime fragment-insertion sepp \
@@ -171,7 +180,7 @@ rule sepp_ASV_filtering:
         "data/qiime/total_sum_filt_table.qza",
         "data/qiime/total_sum_rem_table.qza"
     conda:
-        "envs/qiime2.yml"
+        "qiime2_testing"
     shell:
         """
         qiime fragment-insertion filter-features \
@@ -189,7 +198,7 @@ rule taxonomic_classification:
     output:
         "data/qiime/taxonomy.qza"
     conda:
-        "envs/qiime2.yml"
+        "qiime2_testing"
     shell:
         """
         qiime feature-classifier classify-sklearn \
@@ -206,7 +215,7 @@ rule filter_taxonomy:
     output:
         "data/qiime/taxonomy_filtered.qza"
     conda:
-        "envs/qiime2.yml"
+        "qiime2_testing"
     shell:
         """
         qiime taxa filter-table \
@@ -224,7 +233,7 @@ rule filter_taxonomy_vis:
     output:
         "data/qiime/taxonomy_filtered.qzv"
     conda:
-        "envs/qiime2.yml"
+        "qiime2_testing"
     shell:
         """
         qiime feature-table summarize \
@@ -240,7 +249,7 @@ rule pre_core_metrics_filter:
     output:
         "data/qiime/tax_filt_actual.qza"
     conda:
-        "envs/qiime2.yml"
+        "qiime2_testing"
     shell:
         """
         qiime feature-table filter-samples \
@@ -276,7 +285,7 @@ rule core_metrics_analysis:
         "data/qiime/core_outputs/weighted_unifrac_emperor.qzv",
         "data/qiime/core_outputs/weighted_unifrac_pcoa_results.qza"
     conda:
-        "envs/qiime2.yml"
+        "qiime2_testing"
     shell:
         """
         qiime diversity core-metrics-phylogenetic \
@@ -294,7 +303,7 @@ rule unzip_uw_distance_matrix:
     output:
         "data/qiime/core_outputs/uw_dist_matrix.tsv"
     conda:
-        "envs/qiime2.yml"
+        "qiime2_testing"
     shell:
         """
         qiime tools export \
@@ -312,7 +321,7 @@ rule unzip_w_distance_matrix:
     output:
         "data/qiime/core_outputs/w_dist_matrix.tsv"
     conda:
-        "envs/qiime2.yml"
+        "qiime2_testing"
     shell:
         """
         qiime tools export \
@@ -330,7 +339,7 @@ rule unzip_shannon:
     output:
         "data/qiime/core_outputs/shannon_entropy.tsv"
     conda:
-        "envs/qiime2.yml"
+        "qiime2_testing"
     shell:
         """
         qiime tools export \
@@ -348,7 +357,7 @@ rule unzip_faith_pd:
     output:
         "data/qiime/core_outputs/faith_pd.tsv"
     conda:
-        "envs/qiime2.yml"
+        "qiime2_testing"
     shell:
         """
         qiime tools export \
@@ -366,7 +375,7 @@ rule sequencing_depth_calculation:
     output:
         "data/misc/tss_seq_depth.tsv"
     conda:
-        "envs/environment.yml"
+        "r_env"
     shell:
         """
         Rscript scripts/seq_depth.R
@@ -380,7 +389,7 @@ rule metadata_processing:
     output:
         "data/misc/processed_metadata.tsv"
     conda:
-        "envs/environment.yml"
+        "r_env"
     shell:
         """
         Rscript scripts/metadata_processing.R
@@ -396,7 +405,7 @@ rule alpha_diversity_plots:
         "plots/faith_pd.pdf",
         "plots/shannon_entropy.pdf"
     conda:
-        "envs/environment.yml"
+        "r_env"
     shell:
         """
         Rscript scripts/alpha_div_plots.R
@@ -414,7 +423,7 @@ rule alpha_diversity_stats:
         "stats/shannon_total_results.tsv",
         "stats/shannon_diet_results.tsv"
     conda:
-        "envs/environment.yml"
+        "r_env"
     shell:
         """
         Rscript scripts/alpha_div_stats.R
@@ -430,7 +439,7 @@ rule beta_diversity_plots:
         "plots/unweighted_unifrac_pcoa.pdf",
         "plots/weighted_unifrac_pcoa.pdf"
     conda:
-        "envs/environment.yml"
+        "r_env"
     shell:
         """
         Rscript scripts/beta_div_plots.R
@@ -446,7 +455,7 @@ rule beta_diversity_stats:
         "stats/w_adonis_results.tsv",
         "stats/uw_adonis_results.tsv"
     conda:
-        "envs/environment.yml"
+        "r_env"
     shell:
         """
         Rscript scripts/beta_div_stats.R
@@ -464,7 +473,7 @@ rule homogeneity:
         "plots/wu_homogeneity.pdf",
         "plots/uu_homogeneity.pdf"
     conda:
-        "envs/environment.yml"
+        "r_env"
     shell:
         """
         Rscript scripts/homog_calc.R
@@ -482,7 +491,7 @@ rule resiliency:
         "plots/wu_resiliency.pdf",
         "plots/uu_resiliency.pdf"
     conda:
-        "envs/environment.yml"
+        "r_env"
     shell:
         """
         Rscript scripts/resil_calc.R
@@ -498,7 +507,7 @@ rule family_abundance_plots:
         "plots/family_abun1.pdf",
         "plots/family_abun2.pdf"
     conda:
-        "envs/environment.yml"
+        "r_env"
     shell:
         """
         Rscript scripts/family_abun_plots.R
@@ -513,7 +522,7 @@ rule family_abundance_stats:
     output:
         "stats/family_abun_lm.tsv"
     conda:
-        "envs/environment.yml"
+        "r_env"
     shell:
         """
         Rscript scripts/family_abun_stats.R
@@ -529,7 +538,7 @@ rule histopathology:
         "stats/histopathology_lm.tsv",
         "stats/histopathology_dunn.tsv"
     conda:
-        "envs/environment.yml"
+        "r_env"
     shell:
         """
         Rscript scripts/histopathology.R
@@ -543,7 +552,7 @@ rule picrust2:
     output:
        "data/picrust/out_pipeline/KO_metagenome_out/pred_metagenome_contrib.tsv.gz"
     conda:
-        "envs/picrust2.yml"
+        "picrust2_testing"
     shell:
         """
         picrust2_pipeline.py \
@@ -562,7 +571,7 @@ rule ko_contrib_filter:
     output:
         ko_out = "data/picrust/tss3_meta_contrib.tsv"
     conda:
-        "envs/environment.yml"
+        "r_env"
     shell:
         """
         Rscript scripts/ko_contrib_filter.R
@@ -578,7 +587,7 @@ rule butyrate_plots:
         "plots/butyrate_kinase.pdf",
         "plots/butyryl_coa_transferase.pdf"
     conda:
-        "envs/environment.yml"
+        "r_env"
     shell:
         """
         Rscript scripts/butyrate_plots.R
@@ -594,7 +603,7 @@ rule bile_acid_plots:
         "plots/baiH.pdf",
         "plots/baiI.pdf"
     conda:
-        "envs/environment.yml"
+        "r_env"
     shell:
         """
         Rscript scripts/bile_acid_plots.R
@@ -609,7 +618,7 @@ rule butyrate_bile_stats:
         "stats/buty_enzyme_lm.tsv",
         "stats/bile_enzyme_lm.tsv"
     conda:
-        "envs/environment.yml"
+        "r_env"
     shell:
         """
         Rscript scripts/butyrate_bile_stats.R

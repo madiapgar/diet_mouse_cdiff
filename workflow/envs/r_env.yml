@@ -2,20 +2,9 @@ name: r_env
 channels:
     - bioconda
     - conda-forge
-    - r
+    - anaconda
 dependencies:
-    - r-base
-    - r-tidyverse
-    - r-ape
-    - r-broom
-    - r-cowplot
-    - r-ggh4x
-    - r-ggplot2
-    - r-ggpubr
-    - r-rstatix
-    - r-vegan
-    - r-viridis
-    - r-magrittr
-    - r-qiime2r
+    - pip
+    - r-base=> 4.0
     - pip:
         - snakemake

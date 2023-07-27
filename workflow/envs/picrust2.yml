@@ -1,5 +1,7 @@
-name: picrust2_env_activation
+name: picrust2_testing
 channels:
-  - picrust2
+  - bioconda
+  - conda-forge
+  - anaconda
 dependencies:
   - picrust2=2.5.1

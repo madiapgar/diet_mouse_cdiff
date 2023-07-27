@@ -1,5 +1,13 @@
-name: qiime2_env_activation
+name: qiime2_testing
 channels:
-  - qiime2
+  - bioconda
+  - conda-forge
+  - anaconda
 dependencies:
-  - qiime2=2023.5.1
+  - pip
+  - r-base=> 4.0
+  - qiime2
+  - qiime2:
+    - qiime2
+  - pip:
+    - snakemake

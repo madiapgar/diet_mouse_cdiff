@@ -233,18 +233,24 @@ summary(nc.fat.fit.cox)
 need to have plot = print() to save ggsurvplot plots! regular ggsave doesn't work.
 
 ```{r}
+## have to extract the actual plot from the ggsurvplot object to save it and 
+## actually see it, otherwise it won't work
+surv_all <- diet_plot$plot
+fib_surv <- fiber_plot$plot
+fat_surv <- fat_plot$plot
+
 ggsave('survival_curve_all.pdf',
-       plot = print(diet_plot),
+       plot = surv_all,
        width = 10,
        height = 5,
        path = '../plots')
 ggsave('fiber_survival_curve.pdf',
-       plot = print(fiber_plot),
+       plot = fib_surv,
        width = 10,
        height = 5,
        path = '../plots')
 ggsave('fat_survival_curve.pdf',
-       plot = print(fat_plot),
+       plot = fat_surv,
        width = 10,
        height = 5,
        path = '../plots')

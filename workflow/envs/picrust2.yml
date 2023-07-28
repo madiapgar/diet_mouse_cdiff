@@ -4,6 +4,7 @@ channels:
   - conda-forge
   - anaconda
 dependencies:
+  - pip
   - picrust2=2.5.1
   - pip:
     - snakemake

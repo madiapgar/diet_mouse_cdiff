@@ -5,13 +5,11 @@ editor: visual
 ---
 
 ```{r, include=FALSE}
-library(broom)
-library(cowplot)
-library(magrittr)
-library(qiime2R)
 library(tidyverse)
-library(ggpubr)
-library(rstatix)
+library(survminer)
+require(survival)
+library(readr)
+library(viridis)
 ```
 
 **Input File Path**
@@ -31,4 +29,223 @@ survival <- read_csv(survival_fp,
                                       diet = col_character(),
                                       group = col_integer()))
 
+```
+
+**Creating Survival Plot by Diet**
+
+```{r, fig.height=5, fig.width=10}
+diet_fit <- surv_fit(Surv(Day, status) ~ diet, data = survival)
+ggsurvplot(diet_fit, 
+           data = survival,
+           ggtheme = theme_bw (base_size = 14),
+           break.x.by = 1,
+           legend = "right",
+           legend.labs = c('Chow', 
+                           'High-Fat/\nLow-Fiber', 
+                           'High-Fat/\nHigh-Fiber', 
+                           'Low-Fat/\nLow-Fiber',
+                           'Low-Fat/\nHigh-Fiber'),
+           palette = 'lancet',
+           font.x = 14, 
+           font.y = 14, 
+           font.legend = 12,
+           legend.title = 'Diet',
+           pval = TRUE, 
+           pval.method =TRUE, 
+           conf.int = TRUE, 
+           xlab = 'Days Post Infection',
+           ylab = 'Survival Probability',
+           title = 'Mouse Survival by Diet') -> diet_plot
+
+diet_plot
+```
+
+**Cox PH for Diet**
+
+```{r}
+surv_obj <- Surv(time = survival$Day, event = survival$status)
+survival$diet_f = factor(survival$diet, 
+                         levels = c("HF/LF", 
+                                    "LF+fiber",
+                                    "LF/LF", 
+                                    "chow", 
+                                    "HF+fiber"))
+diet.fit.cox <- coxph(surv_obj ~ diet_f, data = survival)
+summary(diet.fit.cox)
+```
+
+**Creating Survival Plot by Fiber Content**
+
+```{r, fig.height=5, fig.width=10}
+fiber_fit <- surv_fit(Surv(Day, status) ~ fiber, data = survival)
+ggsurvplot(fiber_fit, 
+           data = survival,
+           ggtheme = theme_bw (base_size = 14),
+           break.x.by = 1,
+           legend = "right",
+           legend.labs = c('High Fiber',
+                           'Low Fiber'),
+           palette = 'aaas',
+           font.x = 14, 
+           font.y = 14, 
+           font.legend = 12,
+           legend.title = 'Diet',
+           pval = TRUE, 
+           pval.method =TRUE, 
+           conf.int = TRUE, 
+           xlab = 'Days Post Infection',
+           ylab = 'Survival Probability',
+           title = 'Mouse Survival by Diet Fiber Content') -> fiber_plot
+
+fiber_plot
+```
+
+**Cox PH for Fiber Content**
+
+```{r}
+surv_obj <- Surv(time = survival$Day, event = survival$status)
+survival$fiber_f = factor(survival$fiber, 
+                          levels = c("high_fiber", 
+                                     "low_fiber"))
+fiber.fit.cox <- coxph(surv_obj ~ fiber_f, data = survival)
+summary(fiber.fit.cox)
+```
+
+**Survival Plot by Fat Content**
+
+```{r, fig.width=10, fig.height=5}
+fat_fit <- surv_fit(Surv(Day, status) ~ fat, data = survival)
+ggsurvplot(fat_fit, 
+           data = survival,
+           ggtheme = theme_bw (base_size = 14),
+           break.x.by = 1,
+           legend = "right",
+           legend.labs = c('High Fat',
+                           'Low Fat'),
+           palette = 'jco',
+           font.x = 14, 
+           font.y = 14, 
+           font.legend = 12,
+           legend.title = 'Diet',
+           pval = TRUE, 
+           pval.method =TRUE, 
+           conf.int = TRUE, 
+           xlab = 'Days Post Infection',
+           ylab = 'Survival Probability',
+           title = 'Mouse Survival by Diet Fat Content') -> fat_plot
+
+fat_plot
+```
+
+**Cox PH by Fat Content**
+
+```{r}
+surv_obj <- Surv(time = survival$Day, event = survival$status)
+survival$fat_f = factor(survival$fat, 
+                        levels = c("low_fat", 
+                                   "high_fat"))
+fat.fit.cox <- coxph(surv_obj ~ fat_f, data = survival)
+summary(fat.fit.cox)
+```
+
+**Repeating Above Analysis Without Chow Diet**
+
+```{r}
+no_chow <- filter(survival, diet != "chow")
+```
+
+Fiber Content Plot
+
+```{r, fig.width=10, fig.height=5}
+nochow_fib_fit <- surv_fit(Surv(Day, status) ~ fiber, data = no_chow)
+ggsurvplot(nochow_fib_fit, 
+           data = survival,
+           ggtheme = theme_bw (base_size = 14),
+           break.x.by = 1,
+           legend = "right",
+           legend.labs = c('High Fiber',
+                           'Low Fiber'),
+           palette = 'aaas',
+           font.x = 14, 
+           font.y = 14, 
+           font.legend = 12,
+           legend.title = 'Diet',
+           pval = TRUE, 
+           pval.method =TRUE, 
+           conf.int = TRUE, 
+           xlab = 'Days Post Infection',
+           ylab = 'Survival Probability',
+           title = 'Mouse Survival by Diet Fiber Content (No Chow)') -> nc_fiber_plot
+
+nc_fiber_plot
+```
+
+Fiber Content Cox PH
+
+```{r}
+nc_surv_obj <- Surv(time = no_chow$Day, event = no_chow$status)
+no_chow$fiber_f = factor(no_chow$fiber, 
+                         levels = c("low_fiber", 
+                                    "high_fiber"))
+nc.fib.fit.cox <- coxph(nc_surv_obj ~ fiber_f, data = no_chow)
+summary(nc.fib.fit.cox)
+```
+
+Fat Content Plot
+
+```{r, fig.height=5, fig.width=10}
+nc_fat_fit <- surv_fit(Surv(Day, status) ~ fat, data = no_chow)
+ggsurvplot(nc_fat_fit, 
+           data = survival,
+           ggtheme = theme_bw (base_size = 14),
+           break.x.by = 1,
+           legend = "right",
+           legend.labs = c('High Fat',
+                           'Low Fat'),
+           palette = 'jco',
+           font.x = 14, 
+           font.y = 14, 
+           font.legend = 12,
+           legend.title = 'Diet',
+           pval = TRUE, 
+           pval.method =TRUE, 
+           conf.int = TRUE, 
+           xlab = 'Days Post Infection',
+           ylab = 'Survival Probability',
+           title = 'Mouse Survival by Diet Fat Content (No Chow)') -> nc_fat_plot
+
+nc_fat_plot
+```
+
+Fat Content Cox PH
+
+```{r}
+nc_surv_obj <- Surv(time = no_chow$Day, event = no_chow$status)
+no_chow$fat_f = factor(no_chow$fat, 
+                       levels = c("low_fat", 
+                                  "high_fat"))
+nc.fat.fit.cox <- coxph(nc_surv_obj ~ fat_f, data = no_chow)
+summary(nc.fat.fit.cox)
+```
+
+**Saving my Outputs**
+
+need to have plot = print() to save ggsurvplot plots! regular ggsave doesn't work.
+
+```{r}
+ggsave('survival_curve_all.pdf',
+       plot = print(diet_plot),
+       width = 10,
+       height = 5,
+       path = '../plots')
+ggsave('fiber_survival_curve.pdf',
+       plot = print(fiber_plot),
+       width = 10,
+       height = 5,
+       path = '../plots')
+ggsave('fat_survival_curve.pdf',
+       plot = print(fat_plot),
+       width = 10,
+       height = 5,
+       path = '../plots')
 ```

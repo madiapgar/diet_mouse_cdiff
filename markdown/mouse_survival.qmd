@@ -1,0 +1,34 @@
+---
+title: "mouse_survival"
+format: html
+editor: visual
+---
+
+```{r, include=FALSE}
+library(broom)
+library(cowplot)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+library(ggpubr)
+library(rstatix)
+```
+
+**Input File Path**
+
+```{r}
+survival_fp <- '../data/misc/aim1a_survival.csv'
+```
+
+**Reading in Mouse Survival Data**
+
+col_types tells R what to classify the data in each column as
+
+```{r}
+survival <- read_csv(survival_fp,
+                     col_types = cols(Day = col_integer(),
+                                      status = col_integer(), 
+                                      diet = col_character(),
+                                      group = col_integer()))
+
+```

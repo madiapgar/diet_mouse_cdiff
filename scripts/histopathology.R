@@ -3,7 +3,7 @@
 ## plot along with running a linear model on the results 
 
 ## needed libraries
-packages <- c("ggpubr", 
+packages <- c("ggplot2",
               "magrittr", 
               "qiime2R", 
               "tidyverse", 

@@ -121,7 +121,7 @@ diets <- unique(meta$diet)
 resil_dist_comp <- function(min_dist_mat, meta){
   meta %>% 
     select(sampleid, diet, day_post_inf, high_fat, high_fiber, purified_diet,
-           seq_depth) -> min_meta
+           seq_depth, mouse_id) -> min_meta
   
   min_dist_mat %>% 
     rename(sampleid_x = sampleid) %>% 
@@ -174,7 +174,7 @@ resil_diet_assembly <- function(dist_mat,
 homog_dist_comp <- function(min_dist_mat, meta){
   meta %>% 
     select(sampleid, diet, day_post_inf, high_fat, high_fiber, purified_diet,
-           seq_depth) -> min_meta
+           seq_depth, mouse_id) -> min_meta
   
   min_dist_mat %>% 
     rename(sampleid_x = sampleid) %>% 
@@ -247,6 +247,9 @@ This plot looks at microbiome resiliency over time by the five different diets u
 uu_resil %>% 
   ggplot(aes(x = day_post_inf.y, y = dist)) +
     geom_boxplot((aes(group = day_post_inf.y)), outlier.shape = NA) +
+    geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
+    geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
+    geom_line(aes(group = mouse_id.y), alpha = 0.1) +
     geom_jitter(width = 0.1, alpha = 0.2) +
     geom_smooth(se = FALSE, method = 'loess') + 
     scale_x_continuous(breaks = c(-3, 0, 3)) + 
@@ -281,10 +284,12 @@ uu_resil_results
 This plot looks at microbiome resiliency over time by the five different diets using the weighted UniFrac distance matrix and metadata file (above functions).
 
 ```{r, warning=FALSE, fig.width=10, fig.height=4}
-
 wu_resil %>% 
   ggplot(aes(x = day_post_inf.y, y = dist)) +
     geom_boxplot((aes(group = day_post_inf.y)), outlier.shape = NA) +
+    geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
+    geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
+    geom_line(aes(group = mouse_id.y), alpha = 0.1) +
     geom_jitter(width = 0.1, alpha = 0.2) +
     geom_smooth(se = FALSE, method = 'loess') + 
     scale_x_continuous(breaks = c(-3, 0, 3)) + 
@@ -318,6 +323,9 @@ wu_resil_results
 uu_homog %>% 
   ggplot(aes(x = day_post_inf.y, y = dist)) +
     geom_boxplot((aes(group = day_post_inf.y)), outlier.shape = NA) +
+    geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
+    geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
+    geom_line(aes(group = mouse_id.y), alpha = 0.1) +
     geom_jitter(width = 0.1, alpha = 0.2) +
     geom_smooth(se = FALSE, method = 'loess', color = 'blue') + 
     scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) + 
@@ -351,6 +359,9 @@ uu_homog_results
 wu_homog %>% 
   ggplot(aes(x = day_post_inf.y, y = dist)) +
     geom_boxplot((aes(group = day_post_inf.y)), outlier.shape = NA) +
+    geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
+    geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
+    geom_line(aes(group = mouse_id.y), alpha = 0.1) +
     geom_jitter(width = 0.1, alpha = 0.2) +
     geom_smooth(se = FALSE, method = 'loess', color = 'blue') + 
     scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) + 

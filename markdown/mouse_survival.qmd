@@ -16,6 +16,27 @@ library(viridis)
 
 ```{r}
 survival_fp <- '../data/misc/aim1a_survival.csv'
+diet_labs <- 
+  c('Chow', 
+    'High Fat / High Fiber', 
+    'High Fat / Low Fiber', 
+    'Low Fat / High Fiber', 
+    'Low Fat / Low Fiber')
+names(diet_labs) <- c('chow',
+                      'HF+fiber',
+                      'HF/LF',
+                      'LF+fiber',
+                      'LF/LF')
+
+fib_labs <- c('High Fiber',
+              'Low Fiber')
+names(fib_labs) <- c('high_fiber',
+                     'low_fiber')
+
+fat_labs <- c('High Fat',
+              'Low Fat')
+names(fat_labs) <- c('high_fat',
+                     'low_fat')
 ```
 
 **Reading in Mouse Survival Data**
@@ -33,31 +54,31 @@ survival <- read_csv(survival_fp,
 
 **Creating Survival Plot by Diet**
 
-```{r, fig.height=5, fig.width=10}
+```{r, fig.height=8, fig.width=13}
 diet_fit <- surv_fit(Surv(Day, status) ~ diet, data = survival)
 ggsurvplot(diet_fit, 
            data = survival,
            ggtheme = theme_bw (base_size = 14),
            break.x.by = 1,
-           legend = "right",
-           legend.labs = c('Chow', 
-                           'High-Fat/\nLow-Fiber', 
-                           'High-Fat/\nHigh-Fiber', 
-                           'Low-Fat/\nLow-Fiber',
-                           'Low-Fat/\nHigh-Fiber'),
+           legend = "none",
            palette = 'lancet',
            font.x = 14, 
-           font.y = 14, 
-           font.legend = 12,
-           legend.title = 'Diet',
+           font.y = 14,
            pval = TRUE, 
-           pval.method =TRUE, 
+           pval.method =TRUE,
+           pval.size = 4,
            conf.int = TRUE, 
            xlab = 'Days Post Infection',
            ylab = 'Survival Probability',
-           title = 'Mouse Survival by Diet') -> diet_plot
+           title = 'Mouse Survival After Infection by Diet') -> diet_plot
 
-diet_plot
+diet_plot$plot +
+    facet_wrap(~diet, 
+               labeller = labeller(diet = diet_labs)) +
+    scale_color_viridis(option = 'H', discrete = TRUE) +
+    scale_fill_viridis(option = 'H', discrete = TRUE) -> diet_plot_final
+
+diet_plot_final
 ```
 
 **Cox PH for Diet**
@@ -82,22 +103,24 @@ ggsurvplot(fiber_fit,
            data = survival,
            ggtheme = theme_bw (base_size = 14),
            break.x.by = 1,
-           legend = "right",
-           legend.labs = c('High Fiber',
-                           'Low Fiber'),
-           palette = 'aaas',
+           legend = "none",
            font.x = 14, 
            font.y = 14, 
-           font.legend = 12,
-           legend.title = 'Diet',
            pval = TRUE, 
-           pval.method =TRUE, 
+           pval.method =TRUE,
+           pval.size = 4,
            conf.int = TRUE, 
            xlab = 'Days Post Infection',
            ylab = 'Survival Probability',
-           title = 'Mouse Survival by Diet Fiber Content') -> fiber_plot
+           title = 'Mouse Survival After Infection by Diet Fiber Content') -> fiber_plot
 
-fiber_plot
+fiber_plot$plot +
+  facet_wrap(~fiber,
+             labeller = labeller(fiber = fib_labs)) +
+  scale_color_viridis(option = "H", discrete = TRUE) +
+  scale_fill_viridis(option = "H", discrete = TRUE) -> fiber_plot_final
+
+fiber_plot_final
 ```
 
 **Cox PH for Fiber Content**
@@ -119,22 +142,24 @@ ggsurvplot(fat_fit,
            data = survival,
            ggtheme = theme_bw (base_size = 14),
            break.x.by = 1,
-           legend = "right",
-           legend.labs = c('High Fat',
-                           'Low Fat'),
-           palette = 'jco',
+           legend = "none",
            font.x = 14, 
            font.y = 14, 
-           font.legend = 12,
-           legend.title = 'Diet',
            pval = TRUE, 
-           pval.method =TRUE, 
+           pval.method =TRUE,
+           pval.size = 4, 
            conf.int = TRUE, 
            xlab = 'Days Post Infection',
            ylab = 'Survival Probability',
-           title = 'Mouse Survival by Diet Fat Content') -> fat_plot
+           title = 'Mouse Survival After Infection by Diet Fat Content') -> fat_plot
 
-fat_plot
+fat_plot$plot +
+  facet_wrap(~fat,
+             labeller = labeller(fat = fat_labs)) +
+  scale_color_viridis(option = "H", discrete = TRUE) +
+  scale_fill_viridis(option = "H", discrete = TRUE) -> fat_plot_final
+
+fat_plot_final
 ```
 
 **Cox PH by Fat Content**
@@ -162,22 +187,24 @@ ggsurvplot(nochow_fib_fit,
            data = survival,
            ggtheme = theme_bw (base_size = 14),
            break.x.by = 1,
-           legend = "right",
-           legend.labs = c('High Fiber',
-                           'Low Fiber'),
-           palette = 'aaas',
+           legend = "none",
            font.x = 14, 
            font.y = 14, 
-           font.legend = 12,
-           legend.title = 'Diet',
            pval = TRUE, 
-           pval.method =TRUE, 
+           pval.method =TRUE,
+           pval.size = 4,
            conf.int = TRUE, 
            xlab = 'Days Post Infection',
            ylab = 'Survival Probability',
            title = 'Mouse Survival by Diet Fiber Content (No Chow)') -> nc_fiber_plot
 
-nc_fiber_plot
+nc_fiber_plot$plot +
+  facet_wrap(~fiber,
+             labeller = labeller(fiber = fib_labs)) +
+  scale_color_viridis(option = "H", discrete = TRUE) +
+  scale_fill_viridis(option = "H", discrete = TRUE) -> nc_fiber_plot_final
+
+nc_fiber_plot_final
 ```
 
 Fiber Content Cox PH
@@ -197,24 +224,26 @@ Fat Content Plot
 nc_fat_fit <- surv_fit(Surv(Day, status) ~ fat, data = no_chow)
 ggsurvplot(nc_fat_fit, 
            data = survival,
-           ggtheme = theme_bw (base_size = 14),
+           ggtheme = theme_bw(base_size = 14),
            break.x.by = 1,
-           legend = "right",
-           legend.labs = c('High Fat',
-                           'Low Fat'),
-           palette = 'jco',
+           legend = "none",
            font.x = 14, 
            font.y = 14, 
-           font.legend = 12,
-           legend.title = 'Diet',
            pval = TRUE, 
-           pval.method =TRUE, 
+           pval.method =TRUE,
+           pval.size = 4,
            conf.int = TRUE, 
            xlab = 'Days Post Infection',
            ylab = 'Survival Probability',
            title = 'Mouse Survival by Diet Fat Content (No Chow)') -> nc_fat_plot
 
-nc_fat_plot
+nc_fat_plot$plot +
+  facet_wrap(~fat,
+             labeller = labeller(fat = fat_labs)) +
+  scale_color_viridis(option = "H", discrete = TRUE) +
+  scale_fill_viridis(option = "H", discrete = TRUE) -> nc_fat_plot_final
+
+nc_fat_plot_final
 ```
 
 Fat Content Cox PH
@@ -235,22 +264,22 @@ need to have plot = print() to save ggsurvplot plots! regular ggsave doesn't wor
 ```{r}
 ## have to extract the actual plot from the ggsurvplot object to save it and 
 ## actually see it, otherwise it won't work
-surv_all <- diet_plot$plot
-fib_surv <- fiber_plot$plot
-fat_surv <- fat_plot$plot
+# surv_all <- diet_plot$plot
+# fib_surv <- fiber_plot$plot
+# fat_surv <- fat_plot$plot
 
 ggsave('survival_curve_all.pdf',
-       plot = surv_all,
+       plot = diet_plot_final,
        width = 10,
        height = 5,
        path = '../plots')
 ggsave('fiber_survival_curve.pdf',
-       plot = fib_surv,
+       plot = fiber_plot_final,
        width = 10,
        height = 5,
        path = '../plots')
 ggsave('fat_survival_curve.pdf',
-       plot = fat_surv,
+       plot = fat_plot_final,
        width = 10,
        height = 5,
        path = '../plots')

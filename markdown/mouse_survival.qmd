@@ -49,36 +49,57 @@ survival <- read_csv(survival_fp,
                                       status = col_integer(), 
                                       diet = col_character(),
                                       group = col_integer()))
-
 ```
 
 **Creating Survival Plot by Diet**
 
-```{r, fig.height=8, fig.width=13}
+use surv_fit for each pairwise comparison and then extract the p-values from those. able to compare them that way. take out p-value from plots
+
+```{r, fig.height=5, fig.width=16}
 diet_fit <- surv_fit(Surv(Day, status) ~ diet, data = survival)
 ggsurvplot(diet_fit, 
            data = survival,
            ggtheme = theme_bw (base_size = 14),
            break.x.by = 1,
            legend = "none",
-           palette = 'lancet',
            font.x = 14, 
            font.y = 14,
-           pval = TRUE, 
-           pval.method =TRUE,
-           pval.size = 4,
            conf.int = TRUE, 
            xlab = 'Days Post Infection',
            ylab = 'Survival Probability',
            title = 'Mouse Survival After Infection by Diet') -> diet_plot
 
 diet_plot$plot +
-    facet_wrap(~diet, 
-               labeller = labeller(diet = diet_labs)) +
+    facet_grid(~factor(diet, levels = c('chow',
+                                        'HF+fiber',
+                                        'HF/LF',
+                                        'LF+fiber',
+                                        'LF/LF')),
+               labeller = labeller(.cols = diet_labs)) +
     scale_color_viridis(option = 'H', discrete = TRUE) +
     scale_fill_viridis(option = 'H', discrete = TRUE) -> diet_plot_final
 
 diet_plot_final
+```
+
+**Pairwise Comparisons**\
+not sure how to get my significance matrix into a ggplot visualization...
+
+```{r}
+pairwise_survdiff(Surv(Day, status) ~ diet,
+                  data = survival, 
+                  p.adjust.method = "BH") -> diet_pairwise
+
+diet_pvalue <- as_tibble(diet_pairwise$p.value,
+                         rownames = 'diet')
+
+symnum(diet_pairwise$p.value, 
+       cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+       symbols = c("****", "***", "**", "*", "+", " "),
+       abbr.colnames = FALSE, 
+       na = "") -> diet_pair_signif
+
+diet_pair_signif
 ```
 
 **Cox PH for Diet**
@@ -270,7 +291,7 @@ need to have plot = print() to save ggsurvplot plots! regular ggsave doesn't wor
 
 ggsave('survival_curve_all.pdf',
        plot = diet_plot_final,
-       width = 10,
+       width = 16,
        height = 5,
        path = '../plots')
 ggsave('fiber_survival_curve.pdf',

@@ -292,7 +292,23 @@ rule core_metrics_analysis:
             --i-table ./data/qiime/taxonomy_filtered.qza \
             --p-sampling-depth  99976 \
             --m-metadata-file ./data/misc/merged_metadata1.tsv \
-            --output-dir ./data/qiime/core_outputs
+            --o-rarefied-table ./data/qiime/core_outputs/rarefied_table.qza \
+            --o-faith-pd-vector ./data/qiime/core_outputs/faith_pd_vector.qza \
+            --o-observed-features-vector ./data/qiime/core_outputs/observed_features_vector.qza \
+            --o-shannon-vector ./data/qiime/core_outputs/shannon_vector.qza \
+            --o-evenness-vector ./data/qiime/core_outputs/evenness_vector.qza \
+            --o-unweighted-unifrac-distance-matrix ./data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza \
+            --o-weighted-unifrac-distance-matrix ./data/qiime/core_outputs/weighted_unifrac_distance_matrix.qza \
+            --o-jaccard-distance-matrix ./data/qiime/core_outputs/jaccard_distance_matrix.qza \
+            --o-bray-curtis-distance-matrix ./data/qiime/core_outputs/bray_curtis_distance_matrix.qza \
+            --o-unweighted-unifrac-pcoa-results ./data/qiime/core_outputs/unweighted_unifrac_pcoa_results.qza \
+            --o-weighted-unifrac-pcoa-results ./data/qiime/core_outputs/weighted_unifrac_pcoa_results.qza \
+            --o-jaccard-pcoa-results ./data/qiime/core_outputs/jaccard_pcoa_results.qza \
+            --o-bray-curtis-pcoa-results ./data/qiime/core_outputs/bray_curtis_pcoa_results.qza \
+            --o-unweighted-unifrac-emperor ./data/qiime/core_outputs/unweighted_unifrac_emperor.qzv \
+            --o-weighted-unifrac-emperor ./data/qiime/core_outputs/weighted_unifrac_emperor.qzv \
+            --o-jaccard-emperor ./data/qiime/core_outputs/jaccard_emperor.qzv \
+            --o-bray-curtis-emperor ./data/qiime/core_outputs/bray_curtis_emperor.qzv
         """
 
 

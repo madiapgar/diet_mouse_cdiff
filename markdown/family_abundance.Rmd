@@ -48,7 +48,7 @@ family_abun_file_prep <- function(metadata_fp,
     gather(-asv, key = sampleid, value = abun) %>% 
     group_by(sampleid) %>% 
     mutate(rel_abun = abun/sum(abun)) %>% 
-    mutate(p_abun = rel_abun + 0.000001) -> otu_table
+    mutate(rel_abun = rel_abun + 0.000001) -> otu_table
   ## joining all tables together 
   otu_table %>% 
     left_join(metadata, by = 'sampleid') %>% 
@@ -132,7 +132,8 @@ long_wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospirace
 short_wanted_family <- c('Enterobacteriaceae', 
                          'Enterococcaceae', 
                          'Staphylococcaceae',
-                         'Bacteroidaceae')
+                         'Bacteroidaceae',
+                         'Lachnospiraceae')
 ```
 
 **File Prep for Plot Construction**
@@ -155,6 +156,7 @@ short_abun_files <- family_abun_file_prep(metadata_FP,
 
 short_abun_filt <- short_abun_files$AbundanceTable
 ```
+
 **Testing the New Plots Function**
 ```{r, warning=FALSE, fig.width=15, fig.height=8}
 ## full table
@@ -169,54 +171,13 @@ short_family_abun_plots <- abun_plots(short_abun_filt)
 short_abun1 <- short_family_abun_plots$FamilyAbundance1
 short_abun2 <- short_family_abun_plots$FamilyAbundance2
 
-short_abun1
+short_abun2
 ```
-
-**Microbe Family Abundance Plot**
-Here I plotted the relative abundances (I think) of the listed microbe families of interest below against diet and days post infection to see their change over time and if it follows expected trends. This is option #1 for visualizing this information. 
-```{r, warning=FALSE, fig.width=15, fig.height=10}
-abun_filt %>%
-  filter(!is.na(diet)) %>% 
-  ggplot(aes(x = day_post_inf, y = rel_abund)) +
-    scale_y_continuous(trans = 'log10') +
-    scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
-    geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
-    geom_line(aes(group = mouse_id), alpha = 0.3) +
-    geom_smooth(se = FALSE) +
-    geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
-    theme_bw(base_size = 16) +
-    facet_grid(Family~diet, labeller = labeller(diet = diet_labs)) +
-    theme(strip.text.y = element_text(angle = 0)) +
-    ggtitle("Microbe Family Relative Abundance") +
-    ylab("Relative Abundance") +
-    xlab("Days Relative to Infection") -> family_abun1
-
-family_abun1
-```
-
-Option #2 for tracking the relative abundances of microbe families of interest over the course of time. I attempted to create a heat map that allows the relative abundances of microbe families to be easily trackable over time. The line graph I created above probably looks a bit better but I like the heat map concept. 
-```{r, warning=FALSE, fig.height=10, fig.width=25}
-abun_filt %>%
-  filter(!is.na(diet)) %>% 
-  ggplot(aes(x = mouse_fact, y = day_fact)) +
-  geom_tile(aes(fill = rel_abund), alpha = 0.5) +
-  scale_fill_viridis(option = "H", name = 'Relative\nAbundance') +
-  theme_bw(base_size = 16) +
-  facet_grid(Family~diet, scales = 'free',
-             labeller = labeller(diet = diet_labs)) +
-  theme(strip.text.y = element_text(angle = 0),
-        axis.text.x = element_blank()) + 
-  xlab("Mouse ID") +
-  ylab("Days Relative to Infection") +
-  scale_y_discrete(limits = rev) -> family_abun2
-
-family_abun2
-```
-
 
 **Attempt at Linear Modeling for Wanted Family Abundances**
 ```{r}
-abun_filt %>%
+## for overall plot 
+long_abun_filt %>%
   na.omit() %>% 
   group_by(Family, day_post_inf) %>% 
   do(tidy(lm(rel_abund ~ (purified_diet * seq_depth) + high_fat + high_fiber,
@@ -228,6 +189,68 @@ abun_filt %>%
 
 family_abun_lm
 ```
+
+these stats are for the shortened figure that I am putting on my poster presentation!
+```{r}
+## for poster presentation plot linear model
+short_abun_filt %>%
+  na.omit() %>% 
+  group_by(Family, day_post_inf) %>% 
+  do(tidy(lm(rel_abund ~ (purified_diet * seq_depth) + high_fat + high_fiber,
+             data =.))) %>% 
+  adjust_pvalue(method = 'BH') %>% 
+  na.omit() %>% 
+  filter(term != '(Intercept)') -> poster_family_abun_lm
+
+## kruskal-wallis and dunn's post hoc test
+short_abun_filt %>% 
+  group_by(Family) %>% 
+  do(tidy(kruskal.test(rel_abund ~ diet,
+             data = .))) -> poster_kruskal
+
+short_abun_filt %>% 
+  group_by(Family) %>% 
+    dunn_test(rel_abund ~ diet,
+            p.adjust.method = 'BH',
+            data = .) -> poster_dunn
+
+poster_dunn
+
+```
+
+possible heat map for statistical results for my poster presentation
+```{r, fig.height=7, fig.width=10}
+## option #1 based on dunn's post hoc test 
+poster_dunn %>% 
+  ggplot(aes(x = group1, y = group2)) +
+  geom_tile(aes(fill = p.adj.signif), alpha = 0.5) +
+  scale_fill_viridis(option = "H", discrete = TRUE) +
+  facet_wrap(~Family,
+             strip.position = "right",
+             ncol = 1) +
+  theme_bw(base_size = 16) +
+  theme(strip.text.y = element_text(angle = 0)) -> stat_plot1
+
+## option #2 based on the linear model
+poster_family_abun_lm %>% 
+  filter(term != 'seq_depth',
+         term != 'purified_diet:seq_depth') %>% 
+  mutate(day_fact = as.factor(day_post_inf)) %>% 
+  ggplot(aes(x = day_fact, y = term)) +
+  geom_tile(aes(fill = p.value.adj), alpha = 0.5) +
+  theme_bw(base_size = 16) +
+  scale_fill_viridis(option = "H", name = 'Adjusted P-Value') +
+  facet_wrap(~Family,
+             scales = "free_x",
+             ncol = 1,
+             strip.position = "right") +
+  theme(strip.text.y = element_text(angle = 0)) +
+  xlab('Days Relative to Infection') +
+  ylab('Diet Composition') -> stat_plot2
+
+stat_plot2
+```
+
 
 **Saving my Outputs**
 These go to the plots and stats directories. 
@@ -246,11 +269,23 @@ ggsave("family_abun2.pdf",
        height = 10, 
        path = '../plots')
 
-## family abundance plot for poster presentation
+## family abundance plots for poster presentation
 ggsave("poster_family_abun.pdf",
        plot = short_abun1, 
        width = 15, 
        height = 8, 
+       path = '../plots')
+
+ggsave("poster_famAbun_stats1.pdf",
+       plot = stat_plot1, 
+       width = 10, 
+       height = 7, 
+       path = '../plots')
+
+ggsave("poster_famAbun_stats2.pdf",
+       plot = stat_plot2, 
+       width = 10, 
+       height = 7, 
        path = '../plots')
 
 ## linear modeling results

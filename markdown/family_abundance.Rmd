@@ -200,6 +200,13 @@ short_abun_filt %>%
   na.omit() %>% 
   filter(term != '(Intercept)') -> poster_family_abun_lm
 
+## this is how you add a p-value significance level column to your linear modeling results!!
+poster_family_abun_lm['signif'] <- symnum(poster_family_abun_lm$p.value.adj,
+                                          cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                          symbols = c("****", "***", "**", "*", "+", "ns"),
+                                          abbr.colnames = FALSE,
+                                          na = "")
+
 ## kruskal-wallis and dunn's post hoc test
 short_abun_filt %>% 
   na.omit() %>% 
@@ -257,6 +264,7 @@ poster_family_abun_lm %>%
   mutate(day_fact = as.factor(day_post_inf)) %>% 
   ggplot(aes(x = day_fact, y = term)) +
   geom_tile(aes(fill = p.value.adj), alpha = 0.5) +
+  geom_text(aes(label = signif)) +
   theme_gray(base_size = 16) +
   scale_fill_viridis(limits = c(0, 0.05), option = "H", name = 'Adjusted P-Value') +
   facet_wrap(~Family,

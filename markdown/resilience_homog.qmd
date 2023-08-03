@@ -13,16 +13,6 @@ library(tidyverse)
 ```
 
 ```{r}
-## lists to redo the diet names on the facet labels of the ggplot created below 
-diet_labs <- 
-    c('Chow', 
-      'High Fat / High Fiber', 
-      'High Fat / Low Fiber', 
-      'Low Fat / High Fiber', 
-      'Low Fat / Low Fiber')
-
-names(diet_labs) <- c('Chow', 'HF/HF', 'HF/LF', 'LF/HF', 'LF/LF')
-
 ## general function to prep the metadata file for further data analyses 
 metadata_fixer <- function(metadata_fp) {
   tmpMeta <- read_tsv(metadata_fp, n_max = 2)
@@ -95,6 +85,23 @@ metadata_FP <- '../data/misc/merged_metadata1.tsv'
 seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
 uu_dist_fp <- '../data/qiime/core_outputs/uw_dist_matrix.tsv'
 wu_dist_fp <- '../data/qiime/core_outputs/w_dist_matrix.tsv'
+## lists to redo the diet names on the facet labels of the ggplot created below 
+diet_labs <- 
+    c('Chow', 
+      'High Fat / High Fiber', 
+      'High Fat / Low Fiber', 
+      'Low Fat / High Fiber', 
+      'Low Fat / Low Fiber')
+
+names(diet_labs) <- c('Chow', 'HF/HF', 'HF/LF', 'LF/HF', 'LF/LF')
+stat_labs <- c('Chow',
+               'High Fat / High Fiber', 
+               'High Fat / Low Fiber', 
+               'Low Fat / High Fiber')
+names(stat_labs) <- c('Chow',
+                      'HF/HF',
+                      'HF/LF',
+                      'LF/HF')
 
 prep_meta <- metadata_fixer(metadata_fp = metadata_FP)
 meta <- meta_diet_fixer(prep_meta,
@@ -314,7 +321,44 @@ wu_resil %>%
              data = .))) %>% 
   filter(p.value <= 0.05) -> wu_resil_results
 
-wu_resil_results
+
+## kruskal wallis and dunns post hoc test
+wu_resil %>% 
+  na.omit() %>% 
+  group_by(day_post_inf.y) %>% 
+  do(tidy(kruskal.test(dist ~ diet,
+             data = .))) -> w_resil_kruskal
+
+wu_resil %>% 
+  na.omit() %>% 
+  group_by(day_post_inf.y) %>% 
+  dunn_test(dist ~ diet,
+            p.adjust.method = 'BH',
+            data = .) -> w_resil_dunn
+
+w_resil_dunn
+```
+
+Weighted UniFrac Resiliency Dunn's Post Hoc Visualization
+
+```{r, fig.height=2.5, fig.width=10}
+w_resil_dunn %>% 
+  ggplot(aes(x = day_post_inf.y, y = group2)) +
+  geom_tile(aes(fill = statistic), alpha = 0.5) +
+  scale_fill_viridis(option = "H", name = 'Difference\nin Means') +
+  geom_text(aes(label = p.adj.signif)) +
+  scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
+  scale_y_discrete(labels = c('LFt / LFb',
+                              'LFt / HFb',
+                              'HFt / LFb',
+                              'HFt / HFb')) +
+  facet_grid(~group1,
+             labeller = labeller(group1 = stat_labs)) +
+  theme_bw(base_size = 16) +
+  theme(axis.title.y = element_blank()) +
+  xlab('Days Relative to Infection') -> w_resil_stat_vis
+
+w_resil_stat_vis
 ```
 
 **Unweighted UniFrac Homogeneity Plot**\
@@ -386,7 +430,42 @@ wu_homog %>%
              data = .))) %>% 
   filter(p.value <= 0.05) -> wu_homog_results
 
-wu_homog_results
+## kruskal wallis and dunns post hoc test
+wu_homog %>% 
+  na.omit() %>% 
+  group_by(day_post_inf.y) %>% 
+  do(tidy(kruskal.test(dist ~ diet,
+             data = .))) -> w_homog_kruskal
+
+wu_homog %>% 
+  na.omit() %>% 
+  group_by(day_post_inf.y) %>% 
+  dunn_test(dist ~ diet,
+            p.adjust.method = 'BH',
+            data = .) -> w_homog_dunn
+```
+
+Weighted UniFrac Homogeneity Dunn's Post Hoc Visualization
+
+```{r, fig.height=2.5, fig.width=10}
+w_homog_dunn %>% 
+  ggplot(aes(x = day_post_inf.y, y = group2)) +
+  geom_tile(aes(fill = statistic), alpha = 0.5) +
+  scale_fill_viridis(option = "H", name = 'Difference\nin Means') +
+  geom_text(aes(label = p.adj.signif)) +
+  scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
+  scale_y_discrete(labels = c('LFt / LFb',
+                              'LFt / HFb',
+                              'HFt / LFb',
+                              'HFt / HFb')) +
+  facet_grid(~group1,
+             scales = 'free_x',
+             labeller = labeller(group1 = stat_labs)) +
+  theme_bw(base_size = 16) +
+  theme(axis.title.y = element_blank()) +
+  xlab('Days Relative to Infection') -> w_homog_stat_vis
+
+w_homog_stat_vis
 ```
 
 **Writing all Statistical Results to a .tsv**
@@ -424,5 +503,15 @@ ggsave("uu_homogeneity.pdf",
        plot = uu_homog_plot,
        width = 11, 
        height = 4,
+       path = '../plots')
+ggsave("wu_resil_stats.pdf", 
+       plot = w_resil_stat_vis,
+       width = 10, 
+       height = 2.5,
+       path = '../plots')
+ggsave("wu_homog_stats.pdf", 
+       plot = w_homog_stat_vis,
+       width = 10, 
+       height = 2.5,
        path = '../plots')
 ```

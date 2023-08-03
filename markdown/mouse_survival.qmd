@@ -93,13 +93,45 @@ pairwise_survdiff(Surv(Day, status) ~ diet,
 diet_pvalue <- as_tibble(diet_pairwise$p.value,
                          rownames = 'diet')
 
-symnum(diet_pairwise$p.value, 
-       cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-       symbols = c("****", "***", "**", "*", "+", " "),
-       abbr.colnames = FALSE, 
-       na = "") -> diet_pair_signif
+## changing format from wide to long so I can work with it 
+diet_pvalue %>% 
+  gather(-diet, key = diet2, value = p.value) -> diet_pvalue
 
-diet_pair_signif
+names(diet_pvalue)[names(diet_pvalue) == 'diet'] <- 'diet1'
+
+
+diet_pvalue['signif'] <- symnum(diet_pvalue$p.value,
+                                cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                symbols = c("****", "***", "**", "*", "+", "ns"),
+                                abbr.colnames = FALSE,
+                                na = "")
+
+```
+
+pairwise comparison visualization
+
+```{r, fig.height=3, fig.width=7}
+diet_pvalue %>%
+  na.omit() %>% 
+  ggplot(aes(x = diet2, y = diet1)) +
+  geom_tile(aes(fill = p.value), alpha = 0.6) +
+  geom_text(aes(label = signif), size = 3) +
+  scale_fill_viridis(limits = c(0, 0.05), option = "H", name = "P-Value") +
+  theme_bw(base_size = 12) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.text = element_text(size = 7),
+        legend.title = element_text(size = 11)) +
+  scale_x_discrete(labels = c("Chow",
+                              "High-Fat/\nLow-Fiber",
+                              "High-Fat/\nHigh-Fiber",
+                              "Low-Fat/\nLow-Fiber")) +
+  scale_y_discrete(labels = c("Low-Fat/\nHigh-fiber",
+                              "Low-Fat/\nLow-Fiber",
+                              "High-Fat/\nHigh-Fiber",
+                              "High-Fat/\nLow-Fiber")) -> surv_stat_vis
+
+surv_stat_vis
 ```
 
 **Cox PH for Diet**
@@ -303,5 +335,10 @@ ggsave('fat_survival_curve.pdf',
        plot = fat_plot_final,
        width = 10,
        height = 5,
+       path = '../plots')
+ggsave('survival_curve_stats.pdf',
+       plot = surv_stat_vis,
+       width = 7,
+       height = 3,
        path = '../plots')
 ```

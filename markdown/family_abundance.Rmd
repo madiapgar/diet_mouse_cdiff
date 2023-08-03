@@ -170,8 +170,6 @@ short_family_abun_plots <- abun_plots(short_abun_filt)
 
 short_abun1 <- short_family_abun_plots$FamilyAbundance1
 short_abun2 <- short_family_abun_plots$FamilyAbundance2
-
-short_abun2
 ```
 
 **Attempt at Linear Modeling for Wanted Family Abundances**
@@ -204,33 +202,54 @@ short_abun_filt %>%
 
 ## kruskal-wallis and dunn's post hoc test
 short_abun_filt %>% 
-  group_by(Family) %>% 
+  na.omit() %>% 
+  group_by(Family, day_post_inf) %>% 
   do(tidy(kruskal.test(rel_abund ~ diet,
              data = .))) -> poster_kruskal
 
 short_abun_filt %>% 
-  group_by(Family) %>% 
+  na.omit() %>% 
+  group_by(Family, day_post_inf) %>% 
     dunn_test(rel_abund ~ diet,
             p.adjust.method = 'BH',
             data = .) -> poster_dunn
-
-poster_dunn
-
 ```
 
-possible heat map for statistical results for my poster presentation
-```{r, fig.height=7, fig.width=10}
-## option #1 based on dunn's post hoc test 
-poster_dunn %>% 
-  ggplot(aes(x = group1, y = group2)) +
-  geom_tile(aes(fill = p.adj.signif), alpha = 0.5) +
-  scale_fill_viridis(option = "H", discrete = TRUE) +
-  facet_wrap(~Family,
-             strip.position = "right",
-             ncol = 1) +
-  theme_bw(base_size = 16) +
-  theme(strip.text.y = element_text(angle = 0)) -> stat_plot1
+**Statistical Figure Visualizations**
+possible heat map for statistical results for my poster presentation. this is option #1. 
+```{r, fig.height=7, fig.width=15}
+stat_labs <- c('Chow',
+               'High Fat / High Fiber', 
+               'High Fat / Low Fiber', 
+               'Low Fat / High Fiber')
+names(stat_labs) <- c('Chow',
+                      'HF/HF',
+                      'HF/LF',
+                      'LF/HF')
 
+## option #1 based on dunns post hoc test 
+poster_dunn %>% 
+  ggplot(aes(x = day_post_inf, y = group2)) +
+  geom_tile(aes(fill = statistic), alpha = 0.5) +
+  scale_fill_viridis(option = "H", name = 'Difference\nin Means') +
+  geom_text(aes(label = p.adj.signif)) +
+  scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
+  scale_y_discrete(labels = c('LFt / LFb',
+                              'LFt / HFb',
+                              'HFt / LFb',
+                              'HFt / HFb')) +
+  facet_grid(Family~group1,
+             scales = 'free_x',
+             labeller = labeller(group1 = stat_labs)) +
+  theme_bw(base_size = 16) +
+  theme(strip.text.y = element_text(angle = 0)) +
+  theme(axis.title.y = element_blank()) +
+  xlab('Days Relative to Infection') -> stat_plot1
+
+stat_plot1
+```
+this is option #2. 
+```{r, fig.height=5, fig.width=9}
 ## option #2 based on the linear model
 poster_family_abun_lm %>% 
   filter(term != 'seq_depth',
@@ -238,8 +257,8 @@ poster_family_abun_lm %>%
   mutate(day_fact = as.factor(day_post_inf)) %>% 
   ggplot(aes(x = day_fact, y = term)) +
   geom_tile(aes(fill = p.value.adj), alpha = 0.5) +
-  theme_bw(base_size = 16) +
-  scale_fill_viridis(option = "H", name = 'Adjusted P-Value') +
+  theme_gray(base_size = 16) +
+  scale_fill_viridis(limits = c(0, 0.05), option = "H", name = 'Adjusted P-Value') +
   facet_wrap(~Family,
              scales = "free_x",
              ncol = 1,
@@ -278,14 +297,14 @@ ggsave("poster_family_abun.pdf",
 
 ggsave("poster_famAbun_stats1.pdf",
        plot = stat_plot1, 
-       width = 10, 
+       width = 15, 
        height = 7, 
        path = '../plots')
 
 ggsave("poster_famAbun_stats2.pdf",
        plot = stat_plot2, 
        width = 10, 
-       height = 7, 
+       height = 5, 
        path = '../plots')
 
 ## linear modeling results

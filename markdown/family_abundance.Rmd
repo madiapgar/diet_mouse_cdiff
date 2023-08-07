@@ -82,7 +82,7 @@ abun_plots <- function(abundance_table){
       geom_line(aes(group = mouse_id), alpha = 0.1) +
       geom_smooth(se = FALSE) +
       geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
-      theme_bw(base_size = 16) +
+      theme_bw(base_size = 20) +
       facet_grid(Family~diet, labeller = labeller(diet = diet_labs)) +
       theme(strip.text.y = element_text(angle = 0)) +
       ggtitle("Microbe Family Relative Abundance") +
@@ -158,7 +158,7 @@ short_abun_filt <- short_abun_files$AbundanceTable
 ```
 
 **Testing the New Plots Function**
-```{r, warning=FALSE, fig.width=15, fig.height=8}
+```{r, warning=FALSE, fig.width=15, fig.height=8.5}
 ## full table
 long_family_abun_plots <- abun_plots(long_abun_filt)
 
@@ -170,6 +170,8 @@ short_family_abun_plots <- abun_plots(short_abun_filt)
 
 short_abun1 <- short_family_abun_plots$FamilyAbundance1
 short_abun2 <- short_family_abun_plots$FamilyAbundance2
+
+short_abun1
 ```
 
 **Attempt at Linear Modeling for Wanted Family Abundances**
@@ -188,6 +190,7 @@ long_abun_filt %>%
 family_abun_lm
 ```
 
+**Poster Presentation Stats**
 these stats are for the shortened figure that I am putting on my poster presentation!
 ```{r}
 ## for poster presentation plot linear model
@@ -220,41 +223,63 @@ short_abun_filt %>%
     dunn_test(rel_abund ~ diet,
             p.adjust.method = 'BH',
             data = .) -> poster_dunn
+
+## editing my dunn's post hoc test to include the difference in means between groups 
+short_abun_filt %>% 
+  group_by(diet, Family, day_post_inf) %>% 
+  summarise(mean_rel_abund = mean(rel_abund)) -> mean_family_abun
+
+poster_dunn %>% 
+  merge(mean_family_abun, 
+        by.x = c('group1',
+                 'day_post_inf',
+                 'Family'),
+        by.y = c('diet',
+                 'day_post_inf',
+                 'Family')) %>% 
+  rename('group1_rel_abun' = 'mean_rel_abund') %>% 
+  merge(mean_family_abun,
+        by.x = c('group2',
+                 'day_post_inf',
+                 'Family'),
+        by.y = c('diet',
+                 'day_post_inf',
+                 'Family')) %>% 
+  rename('group2_rel_abun' = 'mean_rel_abund') %>% 
+  mutate(diff_means = (group1_rel_abun - group2_rel_abun),
+         stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_poster_dunn
+  
 ```
 
 **Statistical Figure Visualizations**
 possible heat map for statistical results for my poster presentation. this is option #1. 
-```{r, fig.height=7, fig.width=15}
-stat_labs <- c('Chow',
-               'High Fat / High Fiber', 
-               'High Fat / Low Fiber', 
-               'Low Fat / High Fiber')
-names(stat_labs) <- c('Chow',
-                      'HF/HF',
-                      'HF/LF',
-                      'LF/HF')
-
+```{r, fig.height=8, fig.width=18}
 ## option #1 based on dunns post hoc test 
-poster_dunn %>% 
-  ggplot(aes(x = day_post_inf, y = group2)) +
-  geom_tile(aes(fill = statistic), alpha = 0.5) +
-  scale_fill_viridis(option = "H", name = 'Difference\nin Means') +
+new_poster_dunn %>% 
+  filter(day_post_inf != -15) %>% 
+  ggplot(aes(x = group1, y = group2)) +
+  geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
+  # scale_fill_viridis(option = "H", name = 'Difference\nin Means') +
+  scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
   geom_text(aes(label = p.adj.signif)) +
-  scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
+  scale_x_discrete(labels = c('Chow',
+                              'HFt/\nHFb',
+                              'HFt/\nLFb',
+                              'LFt/\nHFb')) +
   scale_y_discrete(labels = c('LFt / LFb',
                               'LFt / HFb',
                               'HFt / LFb',
                               'HFt / HFb')) +
-  facet_grid(Family~group1,
-             scales = 'free_x',
-             labeller = labeller(group1 = stat_labs)) +
-  theme_bw(base_size = 16) +
+  facet_grid(Family~day_post_inf,
+             scales = 'free_x') +
+  theme_bw(base_size = 20) +
   theme(strip.text.y = element_text(angle = 0)) +
-  theme(axis.title.y = element_blank()) +
-  xlab('Days Relative to Infection') -> stat_plot1
+  xlab('Group 1') +
+  ylab('Group 2') -> stat_plot1
 
 stat_plot1
 ```
+
 this is option #2. 
 ```{r, fig.height=5, fig.width=9}
 ## option #2 based on the linear model
@@ -276,6 +301,18 @@ poster_family_abun_lm %>%
   ylab('Diet Composition') -> stat_plot2
 
 stat_plot2
+```
+
+**Putting my Plots Together**
+I'm doing this for my poster presentation!
+```{r, fig.height = 10, fig.width = 35}
+plot_grid(short_abun1, stat_plot1,
+          nrow = 1,
+          labels = c('a)', 'b)'),
+          label_size = 22,
+          rel_widths = c(1, 0.8)) -> plots_together
+
+plots_together
 ```
 
 
@@ -300,19 +337,25 @@ ggsave("family_abun2.pdf",
 ggsave("poster_family_abun.pdf",
        plot = short_abun1, 
        width = 15, 
-       height = 8, 
+       height = 8.5, 
        path = '../plots')
 
 ggsave("poster_famAbun_stats1.pdf",
        plot = stat_plot1, 
-       width = 15, 
-       height = 7, 
+       width = 18, 
+       height = 8, 
        path = '../plots')
 
 ggsave("poster_famAbun_stats2.pdf",
        plot = stat_plot2, 
        width = 10, 
        height = 5, 
+       path = '../plots')
+
+ggsave("poster_famAbun_together.pdf",
+       plot = plots_together, 
+       width = 35, 
+       height = 10, 
        path = '../plots')
 
 ## linear modeling results

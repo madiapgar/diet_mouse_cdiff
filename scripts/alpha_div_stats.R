@@ -16,8 +16,8 @@ packages <- c("ape",
 for(package in packages){
   if(!require(package, character.only = T)){
     install.packages(package)
-    library(package)
   }
+  library(package)
 }
 
 ## input file paths

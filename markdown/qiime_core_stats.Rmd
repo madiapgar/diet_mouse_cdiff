@@ -291,34 +291,104 @@ shannon_dunn <- shannon_stats$DunnPostHoc
 # write_tsv(faith_lm, '../stats/faith_total_results.tsv')
 ```
 
+**Calculating Difference in Means for my Dunn's Post Hoc Test**
+```{r}
+## editing my dunn's post hoc test to include the difference in means between groups 
+faith %>% 
+  group_by(diet, day_post_inf) %>% 
+  summarise(mean_faith = mean(faith_pd)) -> mean_faith
+
+faith_dunn %>% 
+  merge(mean_faith, 
+        by.x = c('group1',
+                 'day_post_inf'),
+        by.y = c('diet',
+                 'day_post_inf')) %>% 
+  rename('group1_faith' = 'mean_faith') %>% 
+  merge(mean_faith,
+        by.x = c('group2',
+                 'day_post_inf'),
+        by.y = c('diet',
+                 'day_post_inf')) %>% 
+  rename('group2_faith' = 'mean_faith') %>% 
+  mutate(diff_means = (group1_faith - group2_faith),
+         stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_faith_dunn
+
+## creating a function for this so I don't have to keep doing each one by hand 
+
+stat_plot_prep <- function(biom_table,
+                           dunn_test,
+                           value){
+  biom_table %>% 
+    group_by(diet, day_post_inf) %>% 
+    summarise(mean_value = mean(value)) -> mean_value
+  dunn_test %>% 
+    merge(mean_value, 
+        by.x = c('group1',
+                 'day_post_inf'),
+        by.y = c('diet',
+                 'day_post_inf')) %>% 
+    rename('group1_value' = 'mean_value') %>% 
+    merge(mean_value,
+        by.x = c('group2',
+                 'day_post_inf'),
+        by.y = c('diet',
+                 'day_post_inf')) %>% 
+    rename('group2_value' = 'mean_value') %>% 
+    mutate(diff_means = (group1_value - group2_value),
+          stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
+  return(new_dunn)
+}
+
+stat_plot <- function(new_dunn){
+  new_dunn %>% 
+    filter(day_post_inf != -15) %>%
+    ggplot(aes(x = group1, y = group2)) +
+    geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
+    scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
+    geom_text(aes(label = p.adj.signif)) +
+    scale_x_discrete(labels = c('Chow',
+                                'HFt/\nHFb',
+                                'HFt/\nLFb',
+                                'LFt/\nHFb')) +
+    scale_y_discrete(labels = c('LFt / LFb',
+                                'LFt / HFb',
+                                'HFt / LFb',
+                                'HFt / HFb')) +
+    facet_grid(~day_post_inf,
+              scales = 'free_x') +
+    theme_bw(base_size = 20) +
+    theme(strip.text.y = element_text(angle = 0)) +
+    xlab('Group 1') +
+    ylab('Group 2') -> stat_vis
+  return(stat_vis)
+}
+```
+
 **Alpha Diversity Statistical Visualizations**
 I'm doing this for my poster presentation but these will be helpful overall in the future.
-```{r, fig.height=2.5, fig.width=11}
-stat_labs <- c('Chow',
-               'High Fat / High Fiber', 
-               'High Fat / Low Fiber', 
-               'Low Fat / High Fiber')
-names(stat_labs) <- c('Chow',
-                      'HF/HF',
-                      'HF/LF',
-                      'LF/HF')
-faith_dunn %>% 
-  ggplot(aes(x = day_post_inf, y = group2)) +
-  geom_tile(aes(fill = statistic), alpha = 0.5) +
-  scale_fill_viridis(option = "H", name = 'Difference\nin Means') +
+```{r, fig.height=4, fig.width=14}
+new_faith_dunn %>% 
+  filter(day_post_inf != -15) %>%
+  ggplot(aes(x = group1, y = group2)) +
+  geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
+  # scale_fill_viridis(option = "H", name = 'Difference\nin Means') +
+  scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
   geom_text(aes(label = p.adj.signif)) +
-  scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
+  scale_x_discrete(labels = c('Chow',
+                              'HFt/\nHFb',
+                              'HFt/\nLFb',
+                              'LFt/\nHFb')) +
   scale_y_discrete(labels = c('LFt / LFb',
                               'LFt / HFb',
                               'HFt / LFb',
                               'HFt / HFb')) +
-  facet_grid(~group1,
-             scales = 'free_x',
-             labeller = labeller(group1 = stat_labs)) +
-  theme_bw(base_size = 16) +
+  facet_grid(~day_post_inf,
+             scales = 'free_x') +
+  theme_bw(base_size = 20) +
   theme(strip.text.y = element_text(angle = 0)) +
-  theme(axis.title.y = element_blank()) +
-  xlab('Days Relative to Infection') -> faith_stat_vis
+  xlab('Group 1') +
+  ylab('Group 2') -> faith_stat_vis
 
 faith_stat_vis
 ```
@@ -376,8 +446,8 @@ w_adonis['signif'] <- symnum(w_adonis$p.value,
 ```{r}
 ggsave("poster_faith_stats.pdf",
        plot = faith_stat_vis, 
-       width = 11, 
-       height = 2.5, 
+       width = 14, 
+       height = 4, 
        path = '../plots')
 ```
 

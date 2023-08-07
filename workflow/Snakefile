@@ -149,7 +149,7 @@ rule get_reference_databases:
     shell:
         """
         wget https://data.qiime2.org/2023.5/common/sepp-refs-silva-128.qza -P ./databases/
-        wget https://data.qiime2.org/2023.5/common/silva-138-99-515-806-nb-classifier.qza -P./databases/
+        wget https://data.qiime2.org/2023.5/common/silva-138-99-515-806-nb-classifier.qza -P ./databases/
         """
 
 
@@ -289,7 +289,7 @@ rule core_metrics_analysis:
         """
         qiime diversity core-metrics-phylogenetic \
             --i-phylogeny ./data/qiime/tree.qza \
-            --i-table ./data/qiime/taxonomy_filtered.qza \
+            --i-table ./data/qiime/tax_filt_actual.qza \
             --p-sampling-depth  99976 \
             --m-metadata-file ./data/misc/merged_metadata1.tsv \
             --o-rarefied-table ./data/qiime/core_outputs/rarefied_table.qza \
@@ -325,8 +325,7 @@ rule unzip_uw_distance_matrix:
             --input-path ./data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza \
             --output-path ./data/qiime/core_outputs/
         
-        mv ./data/qiime/core_outputs/distance-matrix.tsv \
-        ./data/qiime/core_outputs/uw_dist_matrix.tsv
+        mv distance-matrix.tsv uw_dist_matrix.tsv
         """
 
 
@@ -361,8 +360,7 @@ rule unzip_shannon:
             --input-path ./data/qiime/core_outputs/shannon_vector.qza \
             --output-path ./data/qiime/core_outputs/
         
-        mv ./data/qiime/core_outputs/alpha-diversity.tsv \
-        ./data/qiime/core_outputs/shannon_entropy.tsv
+        mv alpha-diversity.tsv shannon_entropy.tsv
         """
 
 
@@ -559,7 +557,8 @@ rule histopathology:
         Rscript scripts/histopathology.R
         """
 
-
+## need to be able to change the name of the temporary output directory to the actual output directory in the code so that it will 
+## run the following rules for plots/stats
 rule picrust2:
     input:
        "data/misc/dna-sequences.fasta",
@@ -573,10 +572,12 @@ rule picrust2:
         picrust2_pipeline.py \
             -s ./data/misc/dna-sequences.fasta \
             -i ./data/qiime/total_sum_scaling.biom \
-            -o ./data/picrust/out_pipeline \
+            -o ./data/picrust/tmp_out_pipeline \
             --stratified \
             --per_sequence_contrib \
             -p 32
+        
+        mv ./data/picrust/tmp_out_pipeline ./data/picrust/out_pipeline
         """
 
 

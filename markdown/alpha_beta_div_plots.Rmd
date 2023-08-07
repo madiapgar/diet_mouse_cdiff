@@ -133,7 +133,7 @@ faith_pd_plot <- function(faith_fp,
     geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
     scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
     geom_smooth(se = FALSE) +
-    theme_bw(base_size = 16) +
+    theme_bw(base_size = 20) +
     facet_grid(~diet, labeller = labeller(diet = labs) ) +
     ggtitle(title) +
     xlab('Days Relative to Infection') +
@@ -166,7 +166,7 @@ shannon_plot <- function(shannon_fp,
     geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
     scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
     geom_smooth(se = FALSE) +
-    theme_bw(base_size = 16) +
+    theme_bw(base_size = 20) +
     facet_grid(~diet, labeller = labeller(diet = labs) ) +
     ggtitle(title) +
     xlab('Days Relative to Infection') +
@@ -193,7 +193,7 @@ pcoa_plot <- function(biom_file,
     filter(!is.na(diet)) %>% 
     ggplot(aes(x = PC1, y = PC2)) +
     geom_point(aes(fill = faith_pd), pch = 21, alpha = 0.7) +
-    theme_bw(base_size = 14) +
+    theme_bw(base_size = 20) +
     scale_fill_distiller(palette = 'Spectral', name = "Faith's PD") +
     facet_grid(day_post_inf~diet, 
                labeller = labeller(diet = labs)) +
@@ -258,7 +258,7 @@ weighted_biom <- core_files$WeightedBiom
 
 
 **Unweighted PcoA plot**
-```{r, fig.height=5, fig.width=12, warning=FALSE}
+```{r, fig.height=8.5, fig.width=17, warning=FALSE}
 uw_uni_xlab <- pcoa_ax_lab(uw_var, 'PC1')
 uw_uni_ylab <- pcoa_ax_lab(uw_var, 'PC2')
 
@@ -275,7 +275,7 @@ unweighted_pcoa
 ```
 
 **Weighted PcoA plot**
-```{r, fig.height=5, fig.width=12, warning=FALSE}
+```{r, fig.height=8.5, fig.width=17, warning=FALSE}
 w_uni_xlab <- pcoa_ax_lab(w_var, 'PC1')
 w_uni_ylab <- pcoa_ax_lab(w_var, 'PC2')
 
@@ -292,7 +292,7 @@ weighted_pcoa
 ```
 
 **Faith's PD plot**
-```{r, warning=FALSE, fig.height=5, fig.width=10}
+```{r, warning=FALSE, fig.height=4.5, fig.width=14}
 faith_title <- "Faith's Phylogenetic Diversity"
 
 faith_plot <- faith_pd_plot(faith_pd_FP,
@@ -304,7 +304,7 @@ faith_plot
 ```
 
 **Shannon Entropy plot**
-```{r, warning=FALSE, fig.height=5, fig.width=10}
+```{r, warning=FALSE, fig.height=4.5, fig.width=14}
 shannon_title <- "Shannon Entropy"
 
 shannon_entropy_plot <- shannon_plot(shannon_FP,
@@ -331,23 +331,23 @@ These go to the plots directory.
 ## this is an example of how to save my plot outputs
 ggsave("faith_pd.pdf",
        plot = faith_plot,
-       width = 10,
-       height = 5,
+       width = 14,
+       height = 4.5,
        path = '../plots')
 ggsave("shannon_entropy.pdf",
        plot = shannon_entropy_plot,
-       width = 10,
-       height = 5,
+       width = 14,
+       height = 4.5,
        path = '../plots')
 ggsave("tss_weighted_unifrac.pdf",
        plot = weighted_pcoa,
-       width = 12,
-       height = 5,
+       width = 17,
+       height = 8.5,
        path = '../plots')
 ggsave("tss_unweighted_unifrac.pdf",
        plot = unweighted_pcoa,
-       width = 12,
-       height = 5,
+       width = 17,
+       height = 8.5,
        path = '../plots')
 
 ## composed alpha/beta div figures for poster

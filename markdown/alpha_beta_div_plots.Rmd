@@ -315,14 +315,15 @@ shannon_entropy_plot <- shannon_plot(shannon_FP,
 shannon_entropy_plot
 ```
 
-**Putting my Alpha Diversity Plots together**
-I'm doing this for an upcoming poster presentation that I would like to do. Putting a pause on this temporarily so I can mess with the formatting with the individual plots. 
-```{r, fig.height=7, fig.width=25}
-poster_uu_faith <- plot_grid(faith_plot, unweighted_pcoa,
-                             ncol = 2,
-                             labels = c('A', 'B'),
-                             label_size = 22)
-poster_uu_faith
+**Putting my Faith's PD Plots together**
+I'm doing this for an upcoming poster presentation that I would like to do. NOTE: you did something lazy here and you had the faith_stat_vis plot loaded into your global environment so if you want to replicate this, you'll need to run the code in qiime_core_stats.Rmd before you run this chunk!!
+```{r, fig.height=7.5, fig.width=14}
+# poster_faith <- plot_grid(faith_plot, faith_stat_vis,
+#                              nrow = 2,
+#                              labels = c('a)', 'b)'),
+#                              label_size = 22,
+#                              rel_heights = c(1, 0.8))
+# poster_faith
 ```
 
 **Saving my plot outputs**
@@ -350,11 +351,11 @@ ggsave("tss_unweighted_unifrac.pdf",
        height = 8.5,
        path = '../plots')
 
-## composed alpha/beta div figures for poster
-# ggsave("poster_uu_faith.pdf",
-#        plot = poster_uu_faith,
-#        width = 25,
-#        height = 7,
+## composed faith plot and stat figures for poster
+# ggsave("poster_faith.pdf",
+#        plot = poster_faith,
+#        width = 14,
+#        height = 7.5,
 #        path = '../plots')
 ```
 

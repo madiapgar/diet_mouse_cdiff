@@ -7,6 +7,7 @@ packages <- c("ggpubr",
               "tidyverse", 
               "broom")
 
+chooseCRANmirror(ind = 1)
 install.packages(setdiff(packages, rownames(installed.packages())))
 lapply(packages, library, character.only = TRUE)
 

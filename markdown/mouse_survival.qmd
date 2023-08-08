@@ -53,17 +53,18 @@ survival <- read_csv(survival_fp,
 
 **Creating Survival Plot by Diet**
 
-use surv_fit for each pairwise comparison and then extract the p-values from those. able to compare them that way. take out p-value from plots
+Legit can't figure out how to take color by diet off of this plot so rip.
 
-```{r, fig.height=5, fig.width=16}
+```{r, fig.height=6, fig.width=25}
 diet_fit <- surv_fit(Surv(Day, status) ~ diet, data = survival)
 ggsurvplot(diet_fit, 
            data = survival,
-           ggtheme = theme_bw (base_size = 14),
+           color = 'blue',
+           ggtheme = theme_bw(base_size = 20),
            break.x.by = 1,
            legend = "none",
-           font.x = 14, 
-           font.y = 14,
+           font.x = 20, 
+           font.y = 20,
            conf.int = TRUE, 
            xlab = 'Days Post Infection',
            ylab = 'Survival Probability',
@@ -76,8 +77,8 @@ diet_plot$plot +
                                         'LF+fiber',
                                         'LF/LF')),
                labeller = labeller(.cols = diet_labs)) +
-    scale_color_viridis(option = 'H', discrete = TRUE) +
-    scale_fill_viridis(option = 'H', discrete = TRUE) -> diet_plot_final
+    # scale_color_brewer(option = "H", discrete = TRUE) +
+    scale_fill_grey() -> diet_plot_final
 
 diet_plot_final
 ```
@@ -105,23 +106,26 @@ diet_pvalue['signif'] <- symnum(diet_pvalue$p.value,
                                 symbols = c("****", "***", "**", "*", "+", "ns"),
                                 abbr.colnames = FALSE,
                                 na = "")
+diet_pvalue %>% 
+  mutate(p.value = )
 
 ```
 
 pairwise comparison visualization
 
-```{r, fig.height=3, fig.width=7}
+```{r, fig.height=4.5, fig.width=8}
 diet_pvalue %>%
   na.omit() %>% 
   ggplot(aes(x = diet2, y = diet1)) +
-  geom_tile(aes(fill = p.value), alpha = 0.6) +
-  geom_text(aes(label = signif), size = 3) +
-  scale_fill_viridis(limits = c(0, 0.05), option = "H", name = "P-Value") +
-  theme_bw(base_size = 12) +
+  geom_tile(aes(fill = p.value), alpha = 0.6, color = 'black') +
+  geom_text(aes(label = signif), size = 5) +
+  # scale_fill_gradient2(low = 'blue', high = 'green', midpoint = 0.025) +
+  scale_fill_distiller(limits = c(0, 0.05), palette = 'Blues', name = "P-Value") +
+  theme_bw(base_size = 20) +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_blank(),
-        legend.text = element_text(size = 7),
-        legend.title = element_text(size = 11)) +
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 14)) +
   scale_x_discrete(labels = c("Chow",
                               "High-Fat/\nLow-Fiber",
                               "High-Fat/\nHigh-Fiber",
@@ -146,6 +150,16 @@ survival$diet_f = factor(survival$diet,
                                     "HF+fiber"))
 diet.fit.cox <- coxph(surv_obj ~ diet_f, data = survival)
 summary(diet.fit.cox)
+```
+
+**Putting Survival Plot by Diet with Statistical Visualization**\
+
+```{r, fig.width=15, fig.height=8}
+plot_grid(diet_plot_final, surv_stat_vis,
+          nrow = 2, 
+          labels = c('a)', 'b)'),
+          label_size = 22,
+          rel_heights = c(1, 0.5))
 ```
 
 **Creating Survival Plot by Fiber Content**
@@ -323,8 +337,8 @@ need to have plot = print() to save ggsurvplot plots! regular ggsave doesn't wor
 
 ggsave('survival_curve_all.pdf',
        plot = diet_plot_final,
-       width = 16,
-       height = 5,
+       width = 25,
+       height = 6,
        path = '../plots')
 ggsave('fiber_survival_curve.pdf',
        plot = fiber_plot_final,
@@ -338,7 +352,7 @@ ggsave('fat_survival_curve.pdf',
        path = '../plots')
 ggsave('survival_curve_stats.pdf',
        plot = surv_stat_vis,
-       width = 7,
-       height = 3,
+       width = 8,
+       height = 4.5,
        path = '../plots')
 ```

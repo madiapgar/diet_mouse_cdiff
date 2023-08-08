@@ -10,12 +10,8 @@ packages <- c("ape",
               "broom", 
               "rstatix")
 
-for(package in packages){
-  if(!require(package, character.only = T)){
-    install.packages(package)
-  }
-  library(package)
-}
+install.packages(setdiff(packages, rownames(installed.packages())))
+lapply(packages, library, character.only = TRUE)
 
 ## reading in pre-total sum scaled file 
 biom_fp <- './data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza'

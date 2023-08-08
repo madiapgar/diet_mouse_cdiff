@@ -14,12 +14,8 @@ packages <- c("ggpubr",
               "AICcmodavg",
               "rstatix")
 
-for(package in packages){
-  if(!require(package, character.only = T)){
-    install.packages(package)
-  }
-  library(package)
-}
+install.packages(setdiff(packages, rownames(installed.packages())))
+lapply(packages, library, character.only = TRUE)
 
 ## input file paths and KOs
 metadata_FP <- './data/misc/processed_metadata.tsv'

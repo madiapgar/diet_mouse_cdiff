@@ -8,12 +8,8 @@ packages <- c("ggpubr",
               "tidyverse", 
               "broom")
 
-for(package in packages){
-  if(!require(package, character.only = T)){
-    install.packages(package)
-  }
-  library(package)
-}
+install.packages(setdiff(packages, rownames(installed.packages())))
+lapply(packages, library, character.only = TRUE)
 
 ## input file paths and others
 ko_in <- './data/picrust/out_pipeline/KO_metagenome_out/pred_metagenome_contrib.tsv.gz'

@@ -60,7 +60,7 @@ dist_matrix_prep <- function(metadata_file,
 }
 
 
-## 4 
+## 2
 ## beta diversity adonis2 testing function
 adonis_test <- function(dist_matrix,
                         metadata_file){

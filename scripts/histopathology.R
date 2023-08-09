@@ -9,6 +9,8 @@ library(qiime2R)
 library(tidyverse)
 library(broom)
 library(cowplot)
+library(rstatix)
+library(ggpubr)
 
 ## input file paths and others
 metadata_FP <- './data/misc/processed_metadata.tsv'

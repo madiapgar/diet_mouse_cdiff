@@ -12,6 +12,7 @@ library(broom)
 library(cowplot)
 library(vegan)
 library(viridis)
+library(rstatix)
 
 ## input file paths and others
 otu_table_FP <- './data/qiime/taxonomy_filtered.qza'

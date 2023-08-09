@@ -21,6 +21,8 @@ library(viridis)
 metadata_FP <- './data/misc/processed_metadata.tsv'
 unweighted_FP <- './data/qiime/core_outputs/unweighted_unifrac_pcoa_results.qza'
 weighted_FP <- './data/qiime/core_outputs/weighted_unifrac_pcoa_results.qza'
+faith_pd_FP <- './data/qiime/core_outputs/faith_pd.tsv'
+shannon_FP <- './data/qiime/core_outputs/shannon_entropy.tsv'
 
 diet_labs <- 
   c('Chow', 

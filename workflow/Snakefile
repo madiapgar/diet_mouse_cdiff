@@ -311,8 +311,7 @@ rule core_metrics_analysis:
             --o-bray-curtis-emperor ./data/qiime/core_outputs/bray_curtis_emperor.qzv
         """
 
-## UNZIPPING AND RENAMING VIA QIIME DOES NOT WORK! 
-## NEED TO PROBLEM SOLVE THIS! 
+
 rule unzip_uw_distance_matrix:
     input:
        "data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza" 
@@ -324,9 +323,13 @@ rule unzip_uw_distance_matrix:
         """
         qiime tools export \
             --input-path ./data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza \
-            --output-path ./data/qiime/core_outputs/
+            --output-path ./data/qiime/core_outputs/uw_dist_matrix
         
-        mv distance-matrix.tsv uw_dist_matrix.tsv
+        mv ./data/qiime/core_outputs/uw_dist_matrix/distance-matrix.tsv \
+        ./data/qiime/core_outputs/uw_dist_matrix/uw_dist_matrix.tsv
+
+        mv ./data/qiime/core_outputs/uw_dist_matrix/uw_dist_matrix.tsv \
+        ./data/qiime/core_outputs/
         """
 
 
@@ -341,10 +344,13 @@ rule unzip_w_distance_matrix:
         """
         qiime tools export \
             --input-path ./data/qiime/core_outputs/weighted_unifrac_distance_matrix.qza \
-            --output-path ./data/qiime/core_outputs/
+            --output-path ./data/qiime/core_outputs/w_dist_matrix
         
-        mv ./data/qiime/core_outputs/distance-matrix.tsv \
-        ./data/qiime/core_outputs/w_dist_matrix.tsv
+        mv ./data/qiime/core_outputs/w_dist_matrix/distance-matrix.tsv \
+        ./data/qiime/core_outputs/w_dist_matrix/w_dist_matrix.tsv
+
+        mv ./data/qiime/core_outputs/w_dist_matrix/w_dist_matrix.tsv \
+        ./data/qiime/core_outputs/ 
         """
 
 
@@ -359,9 +365,13 @@ rule unzip_shannon:
         """
         qiime tools export \
             --input-path ./data/qiime/core_outputs/shannon_vector.qza \
-            --output-path ./data/qiime/core_outputs/
+            --output-path ./data/qiime/core_outputs/shannon_entropy
         
-        mv alpha-diversity.tsv shannon_entropy.tsv
+        mv ./data/qiime/core_outputs/shannon_entropy/alpha-diversity.tsv \
+        ./data/qiime/core_outputs/shannon_entropy/shannon_entropy.tsv
+
+        mv ./data/qiime/core_outputs/shannon_entropy/shannon_entropy.tsv \
+        ./data/qiime/core_outputs/
         """
 
 
@@ -376,11 +386,15 @@ rule unzip_faith_pd:
         """
         qiime tools export \
             --input-path ./data/qiime/core_outputs/faith_pd_vector.qza \
-            --output-path ./data/qiime/core_outputs/
+            --output-path ./data/qiime/core_outputs/faith_pd
         
-        mv ./data/qiime/core_outputs/alpha-diversity.tsv \
-        ./data/qiime/core_outputs/faith_pd.tsv
+        mv ./data/qiime/core_outputs/faith_pd/alpha-diversity.tsv \
+        ./data/qiime/core_outputs/faith_pd/faith_pd.tsv
+
+        mv ./data/qiime/core_outputs/faith_pd/faith_pd.tsv \
+        ./data/qiime/core_outputs/
         """
+
 
 rule sequencing_depth_calculation:
     input:

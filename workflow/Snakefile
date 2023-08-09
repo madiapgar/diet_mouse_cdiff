@@ -311,7 +311,8 @@ rule core_metrics_analysis:
             --o-bray-curtis-emperor ./data/qiime/core_outputs/bray_curtis_emperor.qzv
         """
 
-
+## UNZIPPING AND RENAMING VIA QIIME DOES NOT WORK! 
+## NEED TO PROBLEM SOLVE THIS! 
 rule unzip_uw_distance_matrix:
     input:
        "data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza" 

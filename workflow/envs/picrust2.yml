@@ -1,4 +1,4 @@
-name: picrust2_testing
+name: picrust2
 channels:
   - bioconda
   - conda-forge

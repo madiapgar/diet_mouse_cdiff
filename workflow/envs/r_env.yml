@@ -1,4 +1,4 @@
-name: updated_r_env_test
+name: r_env
 channels:
     - bioconda
     - conda-forge

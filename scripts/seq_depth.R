@@ -2,17 +2,13 @@
 ## calculating the sequencing depth for each sample for later statistical use
 
 ## needed libraries
-packages <- c("ape", 
-              "ggpubr", 
-              "magrittr", 
-              "qiime2R", 
-              "tidyverse", 
-              "broom", 
-              "rstatix")
-
-chooseCRANmirror(ind = 1)
-install.packages(setdiff(packages, rownames(installed.packages())))
-lapply(packages, library, character.only = TRUE)
+library(ape)
+library(ggpubr)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+library(broom)
+library(rstatix)
 
 ## reading in pre-total sum scaled file 
 biom_fp <- './data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza'

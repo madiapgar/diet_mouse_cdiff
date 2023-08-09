@@ -2,20 +2,17 @@
 ## Qiime2 core diversity analysis statistical analysis for alpha diversity metrics
 
 ## needed libraries
-packages <- c("ape", 
-              "ggpubr", 
-              "magrittr", 
-              "qiime2R", 
-              "tidyverse", 
-              "broom", 
-              "rstatix",
-              "ggh4x",
-              "vegan",
-              "dunn.test")
-
-chooseCRANmirror(ind = 1)
-install.packages(setdiff(packages, rownames(installed.packages())))
-lapply(packages, library, character.only = TRUE)
+library(ggpubr)
+library(ggplot2)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+library(broom)
+library(cowplot)
+library(ape)
+library(rstatix)
+library(ggh4x)
+library(vegan)
 
 ## input file paths
 metadata_FP <- './data/misc/processed_metadata.tsv'

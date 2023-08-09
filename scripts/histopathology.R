@@ -3,16 +3,12 @@
 ## plot along with running a linear model on the results 
 
 ## needed libraries
-packages <- c("ggplot2",
-              "magrittr", 
-              "qiime2R", 
-              "tidyverse", 
-              "broom",
-              "cowplot")
-
-chooseCRANmirror(ind = 1)
-install.packages(setdiff(packages, rownames(installed.packages())))
-lapply(packages, library, character.only = TRUE)
+library(ggplot2)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+library(broom)
+library(cowplot)
 
 ## input file paths and others
 metadata_FP <- './data/misc/processed_metadata.tsv'

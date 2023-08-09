@@ -106,8 +106,6 @@ diet_pvalue['signif'] <- symnum(diet_pvalue$p.value,
                                 symbols = c("****", "***", "**", "*", "+", "ns"),
                                 abbr.colnames = FALSE,
                                 na = "")
-diet_pvalue %>% 
-  mutate(p.value = )
 
 ```
 

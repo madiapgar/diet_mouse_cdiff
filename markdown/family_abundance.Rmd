@@ -12,9 +12,9 @@ knitr::opts_chunk$set(echo = TRUE)
 # change to scripts directory if not there already
 # curr_dir <- getwd()
 # curr_dir <- str_split(curr_dir, '\\/')
-# if (curr_dir[length(curr_dir)] != 'scripts'){
-#   setwd('./scripts')
-# } 
+# if (curr_dir[length(curr_dir)] != 'markdown'){
+#   setwd('./markdown')
+# }
 ```
 
 ```{r}
@@ -128,7 +128,7 @@ names(diet_labs) <- c('Chow',
 wanted_level <- 'Family'
 long_wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
                         'Staphylococcaceae', 'Tannerellaceae', 'Muribaculaceae', 'Bacteroidaceae', 
-                        'Marinifilaceae')
+                        'Marinifilaceae', 'Ruminococcaceae')
 short_wanted_family <- c('Enterobacteriaceae', 
                          'Enterococcaceae', 
                          'Staphylococcaceae',
@@ -158,7 +158,7 @@ short_abun_filt <- short_abun_files$AbundanceTable
 ```
 
 **Testing the New Plots Function**
-```{r, warning=FALSE, fig.width=15, fig.height=8.5}
+```{r, warning=FALSE, fig.width=17, fig.height=15}
 ## full table
 long_family_abun_plots <- abun_plots(long_abun_filt)
 
@@ -171,7 +171,7 @@ short_family_abun_plots <- abun_plots(short_abun_filt)
 short_abun1 <- short_family_abun_plots$FamilyAbundance1
 short_abun2 <- short_family_abun_plots$FamilyAbundance2
 
-short_abun1
+long_abun1
 ```
 
 **Attempt at Linear Modeling for Wanted Family Abundances**
@@ -323,8 +323,8 @@ These go to the plots and stats directories.
 ## option #1
 ggsave("family_abun1.pdf",
        plot = long_abun1, 
-       width = 15, 
-       height = 10, 
+       width = 17, 
+       height = 15, 
        path = '../plots')
 ## option #2
 ggsave("family_abun2.pdf",

@@ -3,17 +3,13 @@
 ## since we can't rarefy it due to lactococcus contamination
 
 ## needed libraries 
-packages <- c("ape", 
-              "ggpubr", 
-              "magrittr", 
-              "qiime2R", 
-              "tidyverse", 
-              "broom", 
-              "rstatix")
-
-chooseCRANmirror(ind = 1)
-install.packages(setdiff(packages, rownames(installed.packages())))
-lapply(packages, library, character.only = TRUE)
+library(ape)
+library(ggpubr)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+library(broom)
+library(rstatix)
 
 ## input file paths
 biom_fp <- './data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza'

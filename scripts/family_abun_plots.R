@@ -4,18 +4,15 @@
 ## you have two options
 
 ## needed libraries
-packages <- c("ggpubr", 
-              "magrittr", 
-              "qiime2R", 
-              "tidyverse", 
-              "broom",
-              "cowplot",
-              "vegan",
-              "viridis")
-
-chooseCRANmirror(ind = 1)
-install.packages(setdiff(packages, rownames(installed.packages())))
-lapply(packages, library, character.only = TRUE)
+library(ggpubr)
+library(ggplot2)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+library(broom)
+library(cowplot)
+library(vegan)
+library(viridis)
 
 ## input file paths and others
 otu_table_FP <- './data/qiime/taxonomy_filtered.qza'

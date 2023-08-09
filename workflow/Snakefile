@@ -559,6 +559,7 @@ rule histopathology:
 
 ## need to be able to change the name of the temporary output directory to the actual output directory in the code so that it will 
 ## run the following rules for plots/stats
+## figure out which error code picrust is exiting out on
 rule picrust2:
     input:
        "data/misc/dna-sequences.fasta",

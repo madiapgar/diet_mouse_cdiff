@@ -3,21 +3,18 @@
 ## unweighted and weighted UniFrac PCoA plots
 
 ## needed libraries
-packages <- c("ape", 
-              "ggpubr", 
-              "magrittr", 
-              "qiime2R", 
-              "tidyverse", 
-              "broom", 
-              "rstatix",
-              "ggh4x",
-              "vegan",
-              "viridis",
-              "cowplot")
-
-chooseCRANmirror(ind = 1)
-install.packages(setdiff(packages, rownames(installed.packages())))
-lapply(packages, library, character.only = TRUE)
+library(ggpubr)
+library(ggplot2)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+library(broom)
+library(cowplot)
+library(rstatix)
+library(ape)
+library(vegan)
+library(ggh4x)
+library(viridis)
 
 
 ## input file paths

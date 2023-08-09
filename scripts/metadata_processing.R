@@ -2,14 +2,10 @@
 ## creating my processed metadata file 
 
 ## needed libraries
-packages <- c("ggpubr", 
-              "magrittr",
-              "tidyverse", 
-              "broom")
-
-chooseCRANmirror(ind = 1)
-install.packages(setdiff(packages, rownames(installed.packages())))
-lapply(packages, library, character.only = TRUE)
+library(ggpubr)
+library(magrittr)
+library(tidyverse)
+library(broom)
 
 ## input file paths
 metadata_FP <- './data/misc/merged_metadata1.tsv'

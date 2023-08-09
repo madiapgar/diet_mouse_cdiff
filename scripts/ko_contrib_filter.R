@@ -3,14 +3,11 @@
 ## to only contain the desired kos (since that file is massive)
 
 ## needed libraries
-packages <- c("ggpubr", 
-              "magrittr",
-              "tidyverse", 
-              "broom")
+library(ggpubr)
+library(magrittr)
+library(tidyverse)
+library(broom)
 
-chooseCRANmirror(ind = 1)
-install.packages(setdiff(packages, rownames(installed.packages())))
-lapply(packages, library, character.only = TRUE)
 
 ## input file paths and others
 ko_in <- './data/picrust/out_pipeline/KO_metagenome_out/pred_metagenome_contrib.tsv.gz'

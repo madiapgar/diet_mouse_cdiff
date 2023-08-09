@@ -2,17 +2,14 @@
 ## script that contains all of the needed functions for baiH and baiI plots 
 
 ## needed libraries
-packages <- c("ggpubr", 
-              "magrittr", 
-              "qiime2R", 
-              "tidyverse", 
-              "broom",
-              "cowplot",
-              "viridis")
-
-chooseCRANmirror(ind = 1)
-install.packages(setdiff(packages, rownames(installed.packages())))
-lapply(packages, library, character.only = TRUE)
+library(ggpubr)
+library(ggplot2)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+library(broom)
+library(cowplot)
+library(viridis)
 
 ## input file paths 
 metadata_FP <- './data/misc/processed_metadata.tsv'

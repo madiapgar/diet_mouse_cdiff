@@ -136,7 +136,7 @@ weighted_biom <- core_files$WeightedBiom
 uw_uni_xlab <- pcoa_ax_lab(uw_var, 'PC1')
 uw_uni_ylab <- pcoa_ax_lab(uw_var, 'PC2')
 
-uw_title <- 'Total Sum Scaled Unweighted UniFrac'
+uw_title <- 'Unweighted UniFrac PCoA Plot'
 
 unweighted_pcoa <- pcoa_plot(unweighted_biom,
                              diet_labs,
@@ -148,7 +148,7 @@ unweighted_pcoa <- pcoa_plot(unweighted_biom,
 w_uni_xlab <- pcoa_ax_lab(w_var, 'PC1')
 w_uni_ylab <- pcoa_ax_lab(w_var, 'PC2')
 
-w_title <- 'Total Sum Scaled Weighted UniFrac'
+w_title <- 'Weighted UniFrac PCoA Plot'
 
 weighted_pcoa <- pcoa_plot(weighted_biom,
                            diet_labs,

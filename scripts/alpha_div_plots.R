@@ -106,7 +106,7 @@ shannon_plot <- function(shannon_fp,
 metadata <- read_tsv(metadata_FP)
 
 ## faith's pd plot 
-faith_title <- "Total Sum Scaled Faith's Phylogenic Diversity"
+faith_title <- "Faith's Phylogenetic Diversity"
 
 faith_plot <- faith_pd_plot(faith_pd_FP,
                             metadata,
@@ -115,7 +115,7 @@ faith_plot <- faith_pd_plot(faith_pd_FP,
                             faith_title)
 
 ## shannon entropy plot 
-shannon_title <- "Total Sum Scaled Shannon Entropy"
+shannon_title <- "Shannon Entropy"
 
 shannon_entropy_plot <- shannon_plot(shannon_FP,
                                      metadata,

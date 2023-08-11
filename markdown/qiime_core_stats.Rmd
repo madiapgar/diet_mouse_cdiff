@@ -245,28 +245,27 @@ adonis_test <- function(dist_matrix,
 Note: this may need to be edited based on the statistical tests used and column names of the dataset, could make these more easiy accessible for other types of data but I was being lazy when I created them. 
 ```{r}
 ## creating a function for this so I don't have to keep doing each one by hand 
-
 stat_plot_prep <- function(biom_table,
                            dunn_test,
                            value){
   biom_table %>% 
     group_by(diet, day_post_inf) %>% 
-    summarise(mean_value = mean(value)) -> mean_value
+    summarise(means = mean(.data[[value]])) -> mean_table
   dunn_test %>% 
-    merge(mean_value, 
-        by.x = c('group1',
-                 'day_post_inf'),
-        by.y = c('diet',
-                 'day_post_inf')) %>% 
-    rename('group1_value' = 'mean_value') %>% 
-    merge(mean_value,
-        by.x = c('group2',
-                 'day_post_inf'),
-        by.y = c('diet',
-                 'day_post_inf')) %>% 
-    rename('group2_value' = 'mean_value') %>% 
-    mutate(diff_means = (group1_value - group2_value),
-          stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
+    merge(mean_table, 
+          by.x = c('group1',
+                   'day_post_inf'),
+          by.y = c('diet',
+                   'day_post_inf')) %>% 
+    rename('group1_means' = 'means') %>% 
+    merge(mean_table,
+          by.x = c('group2',
+                   'day_post_inf'),
+          by.y = c('diet',
+                   'day_post_inf')) %>% 
+    rename('group2_means' = 'means') %>% 
+    mutate(diff_means = (group1_means - group2_means),
+           stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
   return(new_dunn)
 }
 
@@ -371,7 +370,7 @@ faith_dunn %>%
 
 **Alpha Diversity Statistical Visualizations**
 I'm doing this for my poster presentation but these will be helpful overall in the future.
-```{r, fig.height=4, fig.width=14}
+```{r, fig.height=3, fig.width=13}
 new_faith_dunn %>% 
   filter(day_post_inf != -15) %>%
   ggplot(aes(x = group1, y = group2)) +
@@ -389,7 +388,7 @@ new_faith_dunn %>%
                               'HFt / HFb')) +
   facet_grid(~day_post_inf,
              scales = 'free_x') +
-  theme_bw(base_size = 20) +
+  theme_bw(base_size = 16) +
   theme(strip.text.y = element_text(angle = 0)) +
   xlab('Group 1') +
   ylab('Group 2') -> faith_stat_vis

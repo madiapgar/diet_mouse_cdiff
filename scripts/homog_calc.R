@@ -10,6 +10,7 @@ library(qiime2R)
 library(tidyverse)
 library(broom)
 library(cowplot)
+library(rstatix)
 
 ## input file paths
 metadata_FP <- './data/misc/processed_metadata.tsv'
@@ -100,6 +101,56 @@ homog_diet_assembly <- function(dist_mat,
   return(homog)
 }
 
+## 4
+## prepping the dunn test for the statistical visualization
+stat_plot_prep <- function(biom_table,
+                           dunn_test){
+  biom_table %>% 
+    group_by(diet, day_post_inf.y) %>% 
+    summarise(mean_dist = mean(dist)) -> mean_dist
+  dunn_test %>% 
+    merge(mean_dist, 
+          by.x = c('group1',
+                   'day_post_inf.y'),
+          by.y = c('diet',
+                   'day_post_inf.y')) %>% 
+    rename('group1_dist' = 'mean_dist') %>% 
+    merge(mean_dist,
+          by.x = c('group2',
+                   'day_post_inf.y'),
+          by.y = c('diet',
+                   'day_post_inf.y')) %>% 
+    rename('group2_dist' = 'mean_dist') %>% 
+    mutate(diff_means = (group1_dist - group2_dist),
+           stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
+  return(new_dunn)
+}
+
+## 5
+## actual statistical visualization 
+stat_plot <- function(new_dunn){
+  new_dunn %>% 
+    filter(day_post_inf.y != -15) %>%
+    ggplot(aes(x = group1, y = group2)) +
+    geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
+    scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
+    geom_text(aes(label = p.adj.signif)) +
+    scale_x_discrete(labels = c('Chow',
+                                'HFt/\nHFb',
+                                'HFt/\nLFb',
+                                'LFt/\nHFb')) +
+    scale_y_discrete(labels = c('LFt / LFb',
+                                'LFt / HFb',
+                                'HFt / LFb',
+                                'HFt / HFb')) +
+    facet_grid(~day_post_inf.y) +
+    theme_bw(base_size = 16) +
+    theme(strip.text.y = element_text(angle = 0)) +
+    xlab('Group 1') +
+    ylab('Group 2') -> stat_vis
+  return(stat_vis)
+}
+
 ## file prep for homog plot and stats
 meta <- read_tsv(metadata_FP)
 uu_dist <- read_tsv(uu_dist_fp)
@@ -124,6 +175,9 @@ wu_homog <- homog_diet_assembly(wu_dist,
 uu_homog %>% 
   ggplot(aes(x = day_post_inf.y, y = dist)) +
   geom_boxplot((aes(group = day_post_inf.y)), outlier.shape = NA) +
+  geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
+  geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
+  geom_line(aes(group = mouse_id.y), alpha = 0.1) +
   geom_jitter(width = 0.1, alpha = 0.2) +
   geom_smooth(se = FALSE, method = 'loess', color = 'blue') + 
   scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) + 
@@ -131,23 +185,49 @@ uu_homog %>%
   facet_wrap(~diet, 
              labeller = labeller(diet = diet_labs),
              nrow = 1) +
-  theme_bw(base_size = 14) +
+  theme_bw(base_size = 16) +
   xlab('Days Relative to Infection') +
   ylab('Unweighted UniFrac Distance\n(Pairwise Distances within Day)') +
   ggtitle("Microbiome Homogeneity Over Time") -> uu_homog_plot
 
 ## stats
+## linear modeling
 uu_homog %>% 
   group_by(day_post_inf.y) %>% 
   do(tidy(lm(dist ~ (purified_diet.y * seq_depth.y) + high_fat.y + high_fiber.y,
              data = .))) %>% 
+  adjust_pvalue(method = 'BH') %>% 
   filter(p.value <= 0.05) -> uu_homog_results
+
+## kruskal-wallis and dunns post hoc test
+uu_homog %>% 
+  na.omit() %>% 
+  group_by(day_post_inf.y) %>% 
+  do(tidy(kruskal.test(dist ~ diet,
+                       data = .))) -> uu_homog_kruskal
+
+uu_homog %>% 
+  na.omit() %>% 
+  group_by(day_post_inf.y) %>% 
+  dunn_test(dist ~ diet,
+            p.adjust.method = 'BH',
+            data = .) -> uu_homog_dunn
+
+## statistical visualization
+stat_plot_prep(uu_homog,
+               uu_homog_dunn) -> new_uu_homog_dunn
+
+stat_plot(new_uu_homog_dunn) -> uu_homog_stat_vis
+
 
 ## weighted UniFrac plot and stats
 ## plot
 wu_homog %>% 
   ggplot(aes(x = day_post_inf.y, y = dist)) +
   geom_boxplot((aes(group = day_post_inf.y)), outlier.shape = NA) +
+  geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
+  geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
+  geom_line(aes(group = mouse_id.y), alpha = 0.1) +
   geom_jitter(width = 0.1, alpha = 0.2) +
   geom_smooth(se = FALSE, method = 'loess', color = 'blue') + 
   scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) + 
@@ -155,34 +235,71 @@ wu_homog %>%
   facet_wrap(~diet, 
              labeller = labeller(diet = diet_labs),
              nrow = 1) +
-  theme_bw(base_size = 14) +
+  theme_bw(base_size = 16) +
   xlab('Days Relative to Infection') +
   ylab('Weighted UniFrac Distance\n(Pairwise Distances within Day)') +
   ggtitle("Microbiome Homogeneity Over Time") -> wu_homog_plot
 
 ## stats
+## linear modeling 
 wu_homog %>% 
   group_by(day_post_inf.y) %>% 
   do(tidy(lm(dist ~ (purified_diet.y * seq_depth.y) + high_fat.y + high_fiber.y,
-             data = .))) %>% 
+             data = .))) %>%
+  adjust_pvalue(method = 'BH') %>% 
   filter(p.value <= 0.05) -> wu_homog_results
+
+## kruskal-wallis and dunns post hoc test
+wu_homog %>% 
+  na.omit() %>% 
+  group_by(day_post_inf.y) %>% 
+  do(tidy(kruskal.test(dist ~ diet,
+                       data = .))) -> wu_homog_kruskal
+
+wu_homog %>% 
+  na.omit() %>% 
+  group_by(day_post_inf.y) %>% 
+  dunn_test(dist ~ diet,
+            p.adjust.method = 'BH',
+            data = .) -> wu_homog_dunn
+
+## statistical visualization
+stat_plot_prep(wu_homog,
+               wu_homog_dunn) -> new_wu_homog_dunn
+
+stat_plot(new_wu_homog_dunn) -> wu_homog_stat_vis
+
 
 ## saving my output plots and stats
 ## plots
 ggsave("wu_homogeneity.pdf", 
        plot = wu_homog_plot,
-       width = 11, 
+       width = 12, 
+       height = 4,
+       path = './plots')
+ggsave("wu_homog_stats.pdf", 
+       plot = wu_homog_stat_vis,
+       width = 14, 
        height = 4,
        path = './plots')
 ggsave("uu_homogeneity.pdf", 
        plot = uu_homog_plot,
-       width = 11, 
+       width = 12, 
+       height = 4,
+       path = './plots')
+ggsave("uu_homog_stats.pdf", 
+       plot = uu_homog_stat_vis,
+       width = 14, 
        height = 4,
        path = './plots')
 
 ## stats 
 write_tsv(wu_homog_results,
           './stats/wu_homogeneity.tsv')
+write_tsv(wu_homog_dunn,
+          './stats/wu_homog_dunn.tsv')
 write_tsv(uu_homog_results,
           './stats/uu_homogeneity.tsv')
+write_tsv(uu_homog_dunn,
+          './stats/uu_homog_dunn.tsv')
 

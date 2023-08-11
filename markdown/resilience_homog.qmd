@@ -427,7 +427,19 @@ uu_homog %>%
              data = .))) %>% 
   filter(p.value <= 0.05) -> uu_homog_results
 
-uu_homog_results
+## kruskal wallis and dunns post hoc test
+uu_homog %>% 
+  na.omit() %>% 
+  group_by(day_post_inf.y) %>% 
+  do(tidy(kruskal.test(dist ~ diet,
+             data = .))) -> uu_homog_kruskal
+
+uu_homog %>% 
+  na.omit() %>% 
+  group_by(day_post_inf.y) %>% 
+  dunn_test(dist ~ diet,
+            p.adjust.method = 'BH',
+            data = .) -> uu_homog_dunn
 ```
 
 **Weighted UniFrac Homogeneity Plot**

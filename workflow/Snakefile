@@ -45,19 +45,33 @@ rule target:
         "plots/shannon_entropy.pdf",
         "stats/faith_total_results.tsv",
         "stats/faith_diet_results.tsv",
+        "stats/faith_dunn.tsv",
         "stats/shannon_total_results.tsv",
         "stats/shannon_diet_results.tsv",
+        "stats/shannon_dunn.tsv",
+        "plots/faith_stat_vis.pdf",
+        "plots/shannon_stat_vis.pdf",
         "stats/wu_homogeneity.tsv",
+        "stats/wu_homog_dunn.tsv",
         "stats/uu_homogeneity.tsv",
+        "stats/uu_homog_dunn.tsv",
         "plots/wu_homogeneity.pdf",
+        "plots/wu_homog_stats.pdf",
         "plots/uu_homogeneity.pdf",
+        "plots/uu_homog_stats.pdf",
         "stats/uu_resiliency.tsv",
+        "stats/uu_resil_dunn.tsv",
         "stats/wu_resiliency.tsv",
+        "stats/wu_resil_dunn.tsv",
         "plots/wu_resiliency.pdf",
+        "plots/wu_resil_stats.pdf",
         "plots/uu_resiliency.pdf",
+        "plots/uu_resil_stats.pdf",
         "plots/family_abun1.pdf",
         "plots/family_abun2.pdf",
         "stats/family_abun_lm.tsv",
+        "stats/family_abun_dunn.tsv",
+        "plots/famAbun_stat_vis.pdf",
         "plots/histopathology.pdf",
         "stats/histopathology_lm.tsv",
         "stats/histopathology_dunn.tsv",
@@ -448,8 +462,12 @@ rule alpha_diversity_stats:
     output:
         "stats/faith_total_results.tsv",
         "stats/faith_diet_results.tsv",
+        "stats/faith_dunn.tsv",
         "stats/shannon_total_results.tsv",
-        "stats/shannon_diet_results.tsv"
+        "stats/shannon_diet_results.tsv",
+        "stats/shannon_dunn.tsv",
+        "plots/faith_stat_vis.pdf",
+        "plots/shannon_stat_vis.pdf"
     conda:
         "r_env"
     shell:
@@ -497,9 +515,13 @@ rule homogeneity:
         wu_dist_fp = "data/qiime/core_outputs/w_dist_matrix.tsv"
     output:
         "stats/wu_homogeneity.tsv",
+        "stats/wu_homog_dunn.tsv",
         "stats/uu_homogeneity.tsv",
+        "stats/uu_homog_dunn.tsv",
         "plots/wu_homogeneity.pdf",
-        "plots/uu_homogeneity.pdf"
+        "plots/wu_homog_stats.pdf",
+        "plots/uu_homogeneity.pdf",
+        "plots/uu_homog_stats.pdf"
     conda:
         "r_env"
     shell:
@@ -515,9 +537,13 @@ rule resiliency:
        wu_dist_fp = "data/qiime/core_outputs/w_dist_matrix.tsv"
     output:
         "stats/uu_resiliency.tsv",
+        "stats/uu_resil_dunn.tsv",
         "stats/wu_resiliency.tsv",
+        "stats/wu_resil_dunn.tsv",
         "plots/wu_resiliency.pdf",
-        "plots/uu_resiliency.pdf"
+        "plots/wu_resil_stats.pdf",
+        "plots/uu_resiliency.pdf",
+        "plots/uu_resil_stats.pdf"
     conda:
         "r_env"
     shell:
@@ -548,7 +574,9 @@ rule family_abundance_stats:
        tax_FP = "data/qiime/taxonomy.qza",
        metadata_FP = "data/misc/processed_metadata.tsv"
     output:
-        "stats/family_abun_lm.tsv"
+        "stats/family_abun_lm.tsv",
+        "stats/family_abun_dunn.tsv",
+        "plots/famAbun_stat_vis.pdf"
     conda:
         "r_env"
     shell:

@@ -160,12 +160,12 @@ weighted_pcoa <- pcoa_plot(weighted_biom,
 ## saving my plot outputs to the plots folder
 ggsave("unweighted_unifrac_pcoa.pdf",
        plot = unweighted_pcoa, 
-       width = 12, 
-       height = 5, 
+       width = 17, 
+       height = 8.5, 
        path = './plots')
 
 ggsave("weighted_unifrac_pcoa.pdf",
        plot = weighted_pcoa, 
-       width = 12, 
-       height = 5, 
+       width = 17, 
+       height = 8.5, 
        path = './plots')

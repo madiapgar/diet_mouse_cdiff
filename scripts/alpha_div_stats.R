@@ -83,9 +83,23 @@ faith_div_stats <- function(biom_table){
   not_sectioned_lm %>% 
     filter(day_post_inf != -15) %>% 
     filter(p.value <= 0.05) -> not_sectioned_lm
+  ## kruskal wallis and dunns post hoc tests
+  biom_table %>% 
+    na.omit() %>% 
+    group_by(day_post_inf) %>% 
+    do(tidy(kruskal.test(faith_pd ~ diet,
+                         data = .))) -> kruskal
+  biom_table %>% 
+    na.omit() %>% 
+    group_by(day_post_inf) %>% 
+    dunn_test(faith_pd ~ diet,
+              p.adjust.method = 'BH',
+              data = .) -> dunn
   ## creating a list 
   my_list <- list(DietSpecific = sectioned_lm,
-                  OverallDiet = not_sectioned_lm)
+                  OverallDiet = not_sectioned_lm,
+                  KruskalTest = kruskal,
+                  DunnPostHoc = dunn)
   return(my_list)
 }
 
@@ -109,10 +123,76 @@ shannon_div_stats <- function(biom_table){
   not_sectioned_lm %>% 
     filter(day_post_inf != -15) %>% 
     filter(p.value <= 0.05) -> not_sectioned_lm
+  ## kruskal wallis and dunns post hoc tests
+  biom_table %>% 
+    na.omit() %>% 
+    group_by(day_post_inf) %>% 
+    do(tidy(kruskal.test(shannon_entropy ~ diet,
+                         data = .))) -> kruskal
+  biom_table %>% 
+    na.omit() %>% 
+    group_by(day_post_inf) %>% 
+    dunn_test(shannon_entropy ~ diet,
+              p.adjust.method = 'BH',
+              data = .) -> dunn
   ## creating a list 
   my_list <- list(DietSpecific = sectioned_lm,
-                  OverallDiet = not_sectioned_lm)
+                  OverallDiet = not_sectioned_lm,
+                  KruskalTest = kruskal,
+                  DunnPostHoc = dunn)
   return(my_list)
+}
+
+## 4 
+## preps dunns post hoc results for statistical visualization
+stat_plot_prep <- function(biom_table,
+                           dunn_test,
+                           value){
+  biom_table %>% 
+    group_by(diet, day_post_inf) %>% 
+    summarise(means = mean(.data[[value]])) -> mean_table
+  dunn_test %>% 
+    merge(mean_table, 
+          by.x = c('group1',
+                   'day_post_inf'),
+          by.y = c('diet',
+                   'day_post_inf')) %>% 
+    rename('group1_means' = 'means') %>% 
+    merge(mean_table,
+          by.x = c('group2',
+                   'day_post_inf'),
+          by.y = c('diet',
+                   'day_post_inf')) %>% 
+    rename('group2_means' = 'means') %>% 
+    mutate(diff_means = (group1_means - group2_means),
+           stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
+  return(new_dunn)
+}
+
+## 5 
+## statistical visualization 
+stat_plot <- function(new_dunn){
+  new_dunn %>% 
+    filter(day_post_inf != -15) %>%
+    ggplot(aes(x = group1, y = group2)) +
+    geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
+    scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
+    geom_text(aes(label = p.adj.signif)) +
+    scale_x_discrete(labels = c('Chow',
+                                'HFt/\nHFb',
+                                'HFt/\nLFb',
+                                'LFt/\nHFb')) +
+    scale_y_discrete(labels = c('LFt / LFb',
+                                'LFt / HFb',
+                                'HFt / LFb',
+                                'HFt / HFb')) +
+    facet_grid(~day_post_inf,
+               scales = 'free_x') +
+    theme_bw(base_size = 16) +
+    theme(strip.text.y = element_text(angle = 0)) +
+    xlab('Group 1') +
+    ylab('Group 2') -> stat_vis
+  return(stat_vis)
 }
 
 ## use of functions 
@@ -126,18 +206,49 @@ faith <- alpha_files$FaithPD
 shannon <- alpha_files$Shannon
 metadata <- alpha_files$Metadata
 
-## faith's pd stats
+## faith's pd stats and visualization
 faith_stats <- faith_div_stats(faith)
 sectioned_faith_lm <- faith_stats$DietSpecific
 faith_lm <- faith_stats$OverallDiet
+faith_kruskal <- faith_stats$KruskalTest
+faith_dunn <- faith_stats$DunnPostHoc
 
-## shannon entropy stats
+new_faith_dunn <- stat_plot_prep(faith,
+                                 faith_dunn,
+                                 'faith_pd')
+
+faith_stat_vis <- stat_plot(new_faith_dunn)
+
+## shannon entropy stats and visualization 
 shannon_stats <- shannon_div_stats(shannon)
 sectioned_shannon_lm <- shannon_stats$DietSpecific
 shannon_lm <- shannon_stats$OverallDiet
+shannon_kruskal <- shannon_stats$KruskalTest
+shannon_dunn <- shannon_stats$DunnPostHoc
+
+new_shannon_dunn <- stat_plot_prep(shannon,
+                                   shannon_dunn,
+                                   'shannon_entropy')
+
+shannon_stat_vis <- stat_plot(new_shannon_dunn)
 
 ## writing out results as a .tsv file 
 write_tsv(faith_lm, './stats/faith_total_results.tsv')
 write_tsv(sectioned_faith_lm, './stats/faith_diet_results.tsv')
+write_tsv(new_faith_dunn, './stats/faith_dunn.tsv')
 write_tsv(shannon_lm, './stats/shannon_total_results.tsv')
 write_tsv(sectioned_shannon_lm, './stats/shannon_diet_results.tsv')
+write_tsv(new_shannon_dunn, './stats/shannon_dunn.tsv')
+
+## saving my statistical visualizations
+ggsave("faith_stat_vis.pdf",
+       plot = faith_stat_vis, 
+       width = 13, 
+       height = 3, 
+       path = './plots')
+
+ggsave("shannon_stat_vis.pdf",
+       plot = shannon_stat_vis, 
+       width = 13, 
+       height = 3, 
+       path = './plots')

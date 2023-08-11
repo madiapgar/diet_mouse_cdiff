@@ -25,6 +25,7 @@ library(magrittr)
 library(vegan)
 library(viridis)
 library(broom)
+library(rstatix)
 ```
 
 **Function**
@@ -171,7 +172,7 @@ short_family_abun_plots <- abun_plots(short_abun_filt)
 short_abun1 <- short_family_abun_plots$FamilyAbundance1
 short_abun2 <- short_family_abun_plots$FamilyAbundance2
 
-long_abun1
+long_abun2
 ```
 
 **Attempt at Linear Modeling for Wanted Family Abundances**

@@ -53,6 +53,9 @@ faith_pd_plot <- function(faith_fp,
     filter(!is.na(diet)) %>% 
     ggplot(aes(x = day_post_inf, y = faith_pd)) +
     geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
+    geom_line(aes(group = mouse_id), alpha = 0.1) +
+    geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
+    geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
     geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
     scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
     geom_smooth(se = FALSE) +
@@ -84,6 +87,9 @@ shannon_plot <- function(shannon_fp,
     filter(!is.na(diet)) %>% 
     ggplot(aes(x = day_post_inf, y = shannon_entropy)) +
     geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
+    geom_line(aes(group = mouse_id), alpha = 0.1) +
+    geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
+    geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
     geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
     scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
     geom_smooth(se = FALSE) +
@@ -120,12 +126,12 @@ shannon_entropy_plot <- shannon_plot(shannon_FP,
 ## saving my plot outputs to the plots folder
 ggsave("faith_pd.pdf",
        plot = faith_plot, 
-       width = 10, 
-       height = 5, 
+       width = 14, 
+       height = 4.5, 
        path = './plots')
 
 ggsave("shannon_entropy.pdf",
        plot = shannon_entropy_plot, 
-       width = 10, 
-       height = 5, 
+       width = 14, 
+       height = 4.5, 
        path = './plots')

@@ -21,9 +21,9 @@ metadata_FP <- './data/misc/processed_metadata.tsv'
 wanted_level <- 'Family'
 wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
                    'Staphylococcaceae', 'Tannerellaceae', 'Muribaculaceae', 'Bacteroidaceae', 
-                   'Marinifilaceae')
+                   'Marinifilaceae', 'Ruminococcaceae')
 
-## function
+## function 1
 family_abun_file_prep <- function(metadata_fp,
                                   tax_fp,
                                   otu_table_fp,
@@ -63,6 +63,62 @@ family_abun_file_prep <- function(metadata_fp,
   return(my_list)
 }
 
+## 2 
+## preps dunns post hoc results for statistical visualization
+stat_plot_prep <- function(biom_table,
+                           dunn_test,
+                           value){
+  biom_table %>% 
+    group_by(diet, Family, day_post_inf) %>% 
+    summarise(means = mean(.data[[value]])) -> mean_table
+  dunn_test %>% 
+    merge(mean_table, 
+          by.x = c('group1',
+                   'day_post_inf',
+                   'Family'),
+          by.y = c('diet',
+                   'day_post_inf',
+                   'Family')) %>% 
+    rename('group1_means' = 'means') %>% 
+    merge(mean_table,
+          by.x = c('group2',
+                   'day_post_inf',
+                   'Family'),
+          by.y = c('diet',
+                   'day_post_inf',
+                   'Family')) %>% 
+    rename('group2_means' = 'means') %>% 
+    mutate(diff_means = (group1_means - group2_means),
+           stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
+  return(new_dunn)
+}
+
+## 3 
+## statistical visualization 
+stat_plot <- function(new_dunn){
+  new_dunn %>% 
+    filter(day_post_inf != -15) %>%
+    ggplot(aes(x = group1, y = group2)) +
+    geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
+    scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
+    geom_text(aes(label = p.adj.signif)) +
+    scale_x_discrete(labels = c('Chow',
+                                'HFt/\nHFb',
+                                'HFt/\nLFb',
+                                'LFt/\nHFb')) +
+    scale_y_discrete(labels = c('LFt / LFb',
+                                'LFt / HFb',
+                                'HFt / LFb',
+                                'HFt / HFb')) +
+    facet_grid(Family~day_post_inf,
+               scales = 'free_x') +
+    theme_bw(base_size = 16) +
+    theme(strip.text.y = element_text(angle = 0)) +
+    xlab('Group 1') +
+    ylab('Group 2') -> stat_vis
+  return(stat_vis)
+}
+
 ## prepping the file needed to run the linear model
 abun_files <- family_abun_file_prep(metadata_FP,
                                     tax_FP,
@@ -86,6 +142,36 @@ abun_filt %>%
   filter(term != '(Intercept)',
          p.value <= 0.05) -> family_abun_lm
 
-## saving my output as a .tsv
+## performing Kruskal-Wallis and Dunn's Post Hoc test
+abun_filt %>% 
+  na.omit() %>% 
+  group_by(Family, day_post_inf) %>% 
+  do(tidy(kruskal.test(rel_abund ~ diet,
+                       data = .))) -> kruskal_test
+
+abun_filt %>% 
+  na.omit() %>% 
+  group_by(Family, day_post_inf) %>% 
+  dunn_test(rel_abund ~ diet,
+            p.adjust.method = 'BH',
+            data = .) -> abun_dunn_test
+
+## prepping for and putting together the statistical visualization based on dunns post hoc test
+new_dunn_test <- stat_plot_prep(abun_filt,
+                                abun_dunn_test,
+                                'rel_abund')
+
+abun_stat_vis <- stat_plot(new_dunn_test)
+
+## saving my outputs as a .tsv
 write_tsv(family_abun_lm,
           './stats/family_abun_lm.tsv')
+write_tsv(abun_dunn_test,
+          './stats/family_abun_dunn.tsv')
+
+## saving statistical visualization
+ggsave("famAbun_stat_vis.pdf",
+       plot = abun_stat_vis, 
+       width = 18, 
+       height = 8, 
+       path = './plots')

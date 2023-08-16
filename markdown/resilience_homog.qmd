@@ -76,6 +76,65 @@ dist_filter <- function(dist_mat, meta, mydiet){
   return(min_dist_mat)
 }
 
+## all functions for calculating statistical analysis and creating a plot visualization
+stats <- function(biom_table){
+  ## linear modeling 
+  biom_table %>% 
+    filter(day_post_inf.y != -15) %>% 
+    group_by(day_post_inf.y) %>% 
+    do(glance(lm(dist ~ (purified_diet.y * seq_depth.y) + high_fat.y * high_fiber.y,
+             data = .))) %>% 
+    ungroup() %>% 
+    na.omit() %>% 
+    mutate(adj.p = p.adjust(p.value, 
+                            method = "BH"),
+          test_id = paste(day_post_inf.y)) %>%
+    filter(p.value <= 0.05) -> lm_full
+
+  biom_table %>% 
+    group_by(day_post_inf.y) %>% 
+    mutate(test_id = paste(day_post_inf.y)) %>% 
+    filter(test_id %in% lm_full$test_id) %>% 
+    do(tidy(lm(dist ~ (purified_diet.y * seq_depth.y) + high_fat.y * high_fiber.y,
+                 data = .))) %>%
+    filter(term != '(Intercept)') %>% 
+    na.omit() -> lm_results
+
+  lm_results['signif'] <- symnum(lm_results$p.value,
+                                  cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                  symbols = c("****", "***", "**", "*", "+", "ns"),
+                                  abbr.colnames = FALSE,
+                                  na = "")
+  ## kruskal wallis and dunns post hoc test
+  biom_table %>% 
+    na.omit() %>% 
+    filter(day_post_inf.y != -15) %>% 
+    group_by(day_post_inf.y) %>% 
+    do(tidy(kruskal.test(dist ~ diet,
+               data = .))) %>% 
+    ungroup() %>% 
+    arrange(p.value) %>% 
+    mutate(p.adj = p.adjust(p.value,
+                            method = "BH"),
+          test_id = paste(day_post_inf.y)) %>%
+    filter(p.adj <= 0.05) -> kruskal
+  
+  biom_table %>% 
+    na.omit() %>% 
+    group_by(day_post_inf.y) %>% 
+    mutate(test_id = paste(day_post_inf.y)) %>% 
+    filter(test_id %in% kruskal$test_id) %>% 
+    dunn_test(dist ~ diet,
+              p.adjust.method = 'BH',
+              data = .) -> dunn
+  ## creating a named list of results
+  my_list <- list(LinearModel = lm_results,
+                  KruskalTest = kruskal,
+                  DunnPostHoc = dunn)
+  return(my_list)
+}
+
+## editing dunns post hoc test so that I can calculate the difference between means
 stat_plot_prep <- function(biom_table,
                            dunn_test){
   biom_table %>% 
@@ -99,6 +158,7 @@ stat_plot_prep <- function(biom_table,
   return(new_dunn)
 }
 
+## actual statistical plot visualization!!
 stat_plot <- function(new_dunn){
   new_dunn %>% 
     filter(day_post_inf.y != -15) %>%
@@ -110,10 +170,10 @@ stat_plot <- function(new_dunn){
                                 'HFt/\nHFb',
                                 'HFt/\nLFb',
                                 'LFt/\nHFb')) +
-    scale_y_discrete(labels = c('LFt / LFb',
-                                'LFt / HFb',
+    scale_y_discrete(labels = c('HFt / HFb',
                                 'HFt / LFb',
-                                'HFt / HFb')) +
+                                'LFt / HFb',
+                                'LFt / LFb')) +
     facet_grid(~day_post_inf.y) +
     theme_bw(base_size = 20) +
     theme(strip.text.y = element_text(angle = 0)) +
@@ -317,18 +377,19 @@ uu_resil %>%
 uu_resil_plot
 ```
 
-**Unweighted UniFrac Resiliency Linear Modeling**
+**Unweighted UniFrac Resiliency Linear Modeling, Kruskal-Wallis, and Dunn's Post Hoc Test**
 
 Statistical analysis by diet for the unweighted UniFrac resiliency plot above.
 
 ```{r}
-uu_resil %>% 
-  group_by(day_post_inf.y) %>% 
-  do(tidy(lm(dist ~ (purified_diet.y * seq_depth.y) + high_fat.y + high_fiber.y,
-             data = .))) %>% 
-  filter(p.value <= 0.05) -> uu_resil_results
+uu_resil_stats <- stats(uu_resil)
 
-uu_resil_results
+uu_resil_lm <- uu_resil_stats$LinearModel
+uu_resil_kruskal <- uu_resil_stats$KruskalTest
+uu_resil_dunn <- uu_resil_stats$DunnPostHoc
+
+new_uu_resil_dunn <- stat_plot_prep(uu_resil,
+                                    uu_resil_dunn)
 ```
 
 **Weighted UniFrac Resiliency Plot**
@@ -357,29 +418,14 @@ wu_resil %>%
 wu_resil_plot
 ```
 
-**Weighted UniFrac Resiliency Linear Modeling**
+**Weighted UniFrac Resiliency Linear Modeling, Kruskal-Wallis, and Dunn's Post Hoc Test**
 
 ```{r}
-wu_resil %>% 
-  group_by(day_post_inf.y) %>% 
-  do(tidy(lm(dist ~ (purified_diet.y * seq_depth.y) + high_fat.y + high_fiber.y,
-             data = .))) %>% 
-  filter(p.value <= 0.05) -> wu_resil_results
+wu_resil_stats <- stats(wu_resil)
 
-
-## kruskal wallis and dunns post hoc test
-wu_resil %>% 
-  na.omit() %>% 
-  group_by(day_post_inf.y) %>% 
-  do(tidy(kruskal.test(dist ~ diet,
-             data = .))) -> w_resil_kruskal
-
-wu_resil %>% 
-  na.omit() %>% 
-  group_by(day_post_inf.y) %>% 
-  dunn_test(dist ~ diet,
-            p.adjust.method = 'BH',
-            data = .) -> w_resil_dunn
+wu_resil_lm <- wu_resil_stats$LinearModel
+wu_resil_kruskal <- wu_resil_stats$KruskalTest
+wu_resil_dunn <- wu_resil_stats$DunnPostHoc
 
 stat_plot_prep(wu_resil,
                w_resil_dunn) -> new_w_resil_dunn
@@ -421,25 +467,14 @@ uu_homog_plot
 **Unweighted UniFrac Homogeneity Linear Modeling**
 
 ```{r}
-uu_homog %>% 
-  group_by(day_post_inf.y) %>% 
-  do(tidy(lm(dist ~ (purified_diet.y * seq_depth.y) + high_fat.y + high_fiber.y,
-             data = .))) %>% 
-  filter(p.value <= 0.05) -> uu_homog_results
+uu_homog_stats <- stats(uu_homog)
 
-## kruskal wallis and dunns post hoc test
-uu_homog %>% 
-  na.omit() %>% 
-  group_by(day_post_inf.y) %>% 
-  do(tidy(kruskal.test(dist ~ diet,
-             data = .))) -> uu_homog_kruskal
+uu_homog_lm <- uu_homog_stats$LinearModel
+uu_homog_kruskal <- uu_homog_stats$KruskalTest
+uu_homog_dunn <- uu_homog_stats$DunnPostHoc
 
-uu_homog %>% 
-  na.omit() %>% 
-  group_by(day_post_inf.y) %>% 
-  dunn_test(dist ~ diet,
-            p.adjust.method = 'BH',
-            data = .) -> uu_homog_dunn
+stat_plot_prep(uu_homog,
+               uu_homog_dunn) -> new_uu_homog_dunn
 ```
 
 **Weighted UniFrac Homogeneity Plot**
@@ -469,34 +504,20 @@ wu_homog_plot
 **Weighted UniFrac Homogeneity Linear Modeling**
 
 ```{r}
-wu_homog %>% 
-  group_by(day_post_inf.y) %>% 
-  do(tidy(lm(dist ~ (purified_diet.y * seq_depth.y) + high_fat.y + high_fiber.y,
-             data = .))) %>% 
-  filter(p.value <= 0.05) -> wu_homog_results
+wu_homog_stats <- stats(wu_homog)
 
-## kruskal wallis and dunns post hoc test
-wu_homog %>% 
-  na.omit() %>% 
-  group_by(day_post_inf.y) %>% 
-  do(tidy(kruskal.test(dist ~ diet,
-             data = .))) -> w_homog_kruskal
-
-wu_homog %>% 
-  na.omit() %>% 
-  group_by(day_post_inf.y) %>% 
-  dunn_test(dist ~ diet,
-            p.adjust.method = 'BH',
-            data = .) -> w_homog_dunn
+wu_homog_lm <- wu_homog_stats$LinearModel
+wu_homog_kruskal <- wu_homog_stats$KruskalTest
+wu_homog_dunn <- wu_homog_stats$DunnPostHoc
 
 stat_plot_prep(wu_homog,
-               w_homog_dunn) -> new_w_homog_dunn
+               wu_homog_dunn) -> new_wu_homog_dunn
 ```
 
 Weighted UniFrac Homogeneity Dunn's Post Hoc Visualization
 
 ```{r, fig.height=4, fig.width=14}
-stat_plot(new_w_homog_dunn) -> w_homog_stat_vis
+stat_plot(new_wu_homog_dunn) -> w_homog_stat_vis
 
 w_homog_stat_vis
 ```
@@ -518,13 +539,13 @@ resil_homog_together
 **Writing all Statistical Results to a .tsv**
 
 ```{r}
-write_tsv(wu_homog_results,
+write_tsv(wu_homog_lm,
           '../stats/wu_homogeneity.tsv')
-write_tsv(uu_homog_results,
+write_tsv(uu_homog_lm,
           '../stats/uu_homogeneity.tsv')
-write_tsv(uu_resil_results,
+write_tsv(uu_resil_lm,
           '../stats/uu_resiliency.tsv')
-write_tsv(wu_resil_results,
+write_tsv(wu_resil_lm,
           '../stats/wu_resiliency.tsv')
 ```
 

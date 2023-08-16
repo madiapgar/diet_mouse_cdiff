@@ -131,11 +131,19 @@ Here I'm running a Kruskal-Wallis and Dunn's Post Hoc test on the metabolite dat
 big_metab %>% 
   group_by(metabolite) %>% 
   do(tidy(kruskal.test(concentration ~ diet,
-             data = .))) -> metab_kruskal
+             data = .))) %>% 
+  ungroup() %>% 
+  arrange(p.value) %>% 
+  mutate(p.adj = p.adjust(p.value,
+                          method = "BH"),
+        test_id = paste(metabolite)) %>%
+  filter(p.adj <= 0.05)-> metab_kruskal
 
 ## running dunn's post hoc test on the metabolite data 
 big_metab %>% 
   group_by(metabolite) %>% 
+  mutate(test_id = paste(metabolite)) %>% 
+  filter(test_id %in% metab_kruskal$test_id) %>% 
   dunn_test(concentration ~ diet,
             p.adjust.method = 'BH',
             data = .) %>% 
@@ -146,7 +154,7 @@ big_metab %>%
 
 Very rough draft of the plot for the metabolite data - I know that I will probably need to edit this.
 
-```{r, fig.width=18, fig.height=7}
+```{r, fig.width=19.75, fig.height=7}
 metab_labs <- c('Acetic Acid',
                 'Propanoic Acid',
                 'n-Butanoic Acid')
@@ -162,7 +170,7 @@ big_metab %>%
              nrow = 1,
              scales = 'free_y',
              labeller = labeller(metabolite = metab_labs)) +
-  theme_bw(base_size = 18) +
+  theme_bw(base_size = 20) +
   stat_pvalue_manual(metab_dunn,
                      tip.length = 0.01,
                      label = 'p.adj.signif',
@@ -181,12 +189,28 @@ Grouped the stats per metabolite detected by the core and compared against conce
 ```{r}
 big_metab %>%
   group_by(metabolite) %>% 
-  do(tidy(lm(concentration ~ diet,
+  do(glance(lm(concentration ~ (purified_diet * seq_depth) + high_fat * high_fiber,
              data = .))) %>% 
-  adjust_pvalue(method = 'BH') %>% 
-  filter(term != '(Intercept)',
-         p.value <= 0.05) -> metab_results
+  ungroup() %>%
+  na.omit() %>%
+  mutate(adj.p = p.adjust(p.value,
+                          method = "BH"),
+        test_id = paste(metabolite)) -> metab_results_full
 
+big_metab %>% 
+  group_by(metabolite) %>% 
+  mutate(test_id = paste(metabolite)) %>% 
+  filter(test_id %in% metab_results_full$test_id) %>% 
+  do(tidy(lm(concentration ~ (purified_diet * seq_depth) + high_fat * high_fiber,
+             data = .))) %>%
+  filter(term != '(Intercept)') %>% 
+  na.omit() -> metab_results
+
+metab_results['signif'] <- symnum(metab_results$p.value,
+                                  cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                  symbols = c("****", "***", "**", "*", "+", "ns"),
+                                  abbr.colnames = FALSE,
+                                  na = "")
 metab_results
 ```
 
@@ -196,7 +220,7 @@ metab_results
 ## plot
 ggsave("metabolomics.pdf",
        plot = metab_plot,
-       width = 18,
+       width = 19.75,
        height = 7,
        path = '../plots')
 

@@ -55,16 +55,13 @@ survival <- read_csv(survival_fp,
 
 Legit can't figure out how to take color by diet off of this plot so rip.
 
-```{r, fig.height=10, fig.width=18}
+```{r, fig.height=10, fig.width=15}
 diet_fit <- surv_fit(Surv(Day, status) ~ diet, data = survival)
 ggsurvplot(diet_fit, 
            data = survival,
            color = 'black',
            ggtheme = theme_bw(base_size = 20),
-           break.x.by = 1,
            legend = "none",
-           font.x = 20, 
-           font.y = 20,
            conf.int = TRUE, 
            xlab = 'Days Post Infection',
            ylab = 'Survival Probability',
@@ -111,7 +108,9 @@ diet_pvalue['signif'] <- symnum(diet_pvalue$p.value,
 
 pairwise comparison visualization
 
-```{r, fig.height=4.5, fig.width=7.5}
+REVERSE THE ORDER OF YOUR Y-AXIS (GROUP 2) ON ALL PLOTS!!
+
+```{r, fig.height=4.5, fig.width=7}
 diet_pvalue %>%
   na.omit() %>% 
   ggplot(aes(x = diet2, y = diet1)) +
@@ -122,16 +121,18 @@ diet_pvalue %>%
   theme_bw(base_size = 20) +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_blank(),
-        legend.text = element_text(size = 10),
-        legend.title = element_text(size = 14)) +
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18),
+        legend.position = 'none') +
   scale_x_discrete(labels = c("Chow",
                               "High-Fat/\nLow-Fiber",
                               "High-Fat/\nHigh-Fiber",
                               "Low-Fat/\nLow-Fiber")) +
-  scale_y_discrete(labels = c("Low-Fat/\nHigh-fiber",
-                              "Low-Fat/\nLow-Fiber",
-                              "High-Fat/\nHigh-Fiber",
-                              "High-Fat/\nLow-Fiber")) -> surv_stat_vis
+  scale_y_discrete(labels = c("High-Fat/\nLow-Fiber",
+                               "High-Fat/\nHigh-Fiber",
+                               "Low-Fat/\nLow-Fiber",
+                               "Low-Fat/\nHigh-Fiber")) +
+  ggtitle("Pairwise Differences in Survival") -> surv_stat_vis
 
 surv_stat_vis
 ```
@@ -335,7 +336,7 @@ need to have plot = print() to save ggsurvplot plots! regular ggsave doesn't wor
 
 ggsave('survival_curve_all.pdf',
        plot = diet_plot_final,
-       width = 18,
+       width = 15,
        height = 10,
        path = '../plots')
 ggsave('fiber_survival_curve.pdf',
@@ -350,7 +351,7 @@ ggsave('fat_survival_curve.pdf',
        path = '../plots')
 ggsave('survival_curve_stats.pdf',
        plot = surv_stat_vis,
-       width = 7.5,
+       width = 7,
        height = 4.5,
        path = '../plots')
 ```

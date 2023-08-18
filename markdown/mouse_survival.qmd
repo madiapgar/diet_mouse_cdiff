@@ -81,6 +81,10 @@ diet_plot$plot +
 diet_plot_final
 ```
 
+```{r}
+as_tibble(diet_fit$surv)
+```
+
 **Pairwise Comparisons**
 
 ```{r}
@@ -110,7 +114,7 @@ pairwise comparison visualization
 
 REVERSE THE ORDER OF YOUR Y-AXIS (GROUP 2) ON ALL PLOTS!!
 
-```{r, fig.height=4.5, fig.width=7}
+```{r, fig.height=3, fig.width=4.5}
 diet_pvalue %>%
   na.omit() %>% 
   ggplot(aes(x = diet2, y = diet1)) +
@@ -125,14 +129,13 @@ diet_pvalue %>%
         legend.title = element_text(size = 18),
         legend.position = 'none') +
   scale_x_discrete(labels = c("Chow",
-                              "High-Fat/\nLow-Fiber",
-                              "High-Fat/\nHigh-Fiber",
-                              "Low-Fat/\nLow-Fiber")) +
-  scale_y_discrete(labels = c("High-Fat/\nLow-Fiber",
-                               "High-Fat/\nHigh-Fiber",
-                               "Low-Fat/\nLow-Fiber",
-                               "Low-Fat/\nHigh-Fiber")) +
-  ggtitle("Pairwise Differences in Survival") -> surv_stat_vis
+                              "HFt/\nLFb",
+                              "HFt/\nHFb",
+                              "LFt/\nLFb")) +
+  scale_y_discrete(labels = c("HFt / LFb",
+                               "HFt / HFb",
+                               "LFt / LFb",
+                               "LFt / HFb")) -> surv_stat_vis
 
 surv_stat_vis
 ```
@@ -351,7 +354,7 @@ ggsave('fat_survival_curve.pdf',
        path = '../plots')
 ggsave('survival_curve_stats.pdf',
        plot = surv_stat_vis,
-       width = 7,
-       height = 4.5,
+       width = 4.5,
+       height = 3,
        path = '../plots')
 ```

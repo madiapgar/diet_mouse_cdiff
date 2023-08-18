@@ -279,12 +279,17 @@ dist_matrix_prep <- function(metadata_file,
 ## beta diversity adonis2 testing function
 adonis_test <- function(dist_matrix,
                         metadata_file){
-  adonis_results <- adonis2(as.dist(dist_matrix) ~ purified_diet * seq_depth + high_fat + high_fiber +
+  adonis_results <- adonis2(as.dist(dist_matrix) ~ (purified_diet * seq_depth) + (high_fat * high_fiber) +
                         day_post_inf + study,
                         data = metadata_file,
                         permutations = 999, 
                         parallel = 4)
   adonis_results <- tidy(adonis_results)
+  adonis_results['signif'] <- symnum(adonis_results$p.value,
+                                     cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                     symbols = c("****", "***", "**", "*", "+", "ns"),
+                                     abbr.colnames = FALSE,
+                                     na = "")
   return(adonis_results)
 }
 
@@ -479,10 +484,6 @@ filt_stat_meta <- meta_diet_fixer(stat_meta,
  
 uw_adonis <- adonis_test(uw_dist,
                          filt_stat_meta)
-
-## example of how to write results out as a .tsv 
-# write_tsv(w_adonis, '../stats/w_adonis_results.tsv')
-# write_tsv(uw_adonis, '../stats/uw_adonis_results.tsv')
 ```
 
 ```{r}
@@ -491,16 +492,27 @@ w_adonis['signif'] <- symnum(w_adonis$p.value,
                              symbols = c("****", "***", "**", "*", "+", "ns"),
                              abbr.colnames = FALSE,
                              na = "")
+
+uw_adonis['signif'] <- symnum(uw_adonis$p.value,
+                              cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                              symbols = c("****", "***", "**", "*", "+", "ns"),
+                              abbr.colnames = FALSE,
+                              na = "")
 ```
 
 
 **Saving my Outputs**
 ```{r}
+## plot
 ggsave("poster_faith_stats.pdf",
        plot = faith_stat_vis, 
        width = 14, 
        height = 4, 
        path = '../plots')
+
+## example of how to write results out as a .tsv 
+write_tsv(w_adonis, '../stats/w_adonis_results.tsv')
+write_tsv(uw_adonis, '../stats/uw_adonis_results.tsv')
 ```
 
 

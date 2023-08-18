@@ -1,3 +1,3 @@
-dil_toxin	statistic	p.value	parameter	method
-Total TcA 1:10	3.3630767428909727	0.33895958194322984	3	Kruskal-Wallis rank sum test
-Total TcB 1:10	3.43999611499612	0.32862821413004023	3	Kruskal-Wallis rank sum test
+dil_toxin	statistic	p.value	parameter	method	p.adj	test_id
+Total TcB 1:10	3.43999611499612	0.32862821413004023	3	Kruskal-Wallis rank sum test	0.33895958194322984	Total TcB 1:10
+Total TcA 1:10	3.3630767428909727	0.33895958194322984	3	Kruskal-Wallis rank sum test	0.33895958194322984	Total TcA 1:10

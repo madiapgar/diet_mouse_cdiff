@@ -651,7 +651,7 @@ rule ko_contrib_filter:
     shell:
         """
         Rscript scripts/ko_contrib_filter.R --ko_in {input.ko_in} \
-                                            --ko_out {input.ko_out}
+                                            --ko_out {output.ko_out}
         """
 
 

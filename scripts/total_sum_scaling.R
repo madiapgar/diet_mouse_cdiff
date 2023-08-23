@@ -10,17 +10,36 @@ library(qiime2R)
 library(tidyverse)
 library(broom)
 library(rstatix)
+library(argparse)
+
+## using argparse for my file paths
+## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
+parser <- ArgumentParser()
+parser$add_argument("-b",
+                    "--biom",
+                    dest = "biom_fp",
+                    help = "Filepath to biom table in .qza format.")
+parser$add_argument("-s",
+                    "--sequence",
+                    dest = "lacto_asv_fp",
+                    help = "Filepath to wanted sequences in .fasta format.")
+parser$add_argument("-o",
+                    "--output",
+                    dest = "output_fp",
+                    help = "Filepath to location for output file(s).")
+
+args <- parser$parse_args()
 
 ## input file paths
-biom_fp <- './data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza'
-lacto_asv_fp <- './data/misc/lactoOnlydna-sequences.fasta'
+# biom_fp <- './data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza'
+# lacto_asv_fp <- './data/misc/lactoOnlydna-sequences.fasta'
 
 ## reading in raw biom table for normalization
-biom_pre <- read_qza(biom_fp)
+biom_pre <- read_qza(args$biom_fp)
 biom_pre <- biom_pre$data
 
 ## reading in file with the lactococcus asvs
-lacto_asv <- read.FASTA(lacto_asv_fp)
+lacto_asv <- read.FASTA(args$lacto_asv_fp)
 lacto_asv <- names(lacto_asv)
 
 ## filtering lactococcus asvs out of the pre-total sum scaled biom table 
@@ -40,4 +59,4 @@ biom %>%
 
 ## writing out total sum scaled table as a .tsv
 write_tsv(outtab,
-          './data/qiime/total_sum_scaling.tsv')
+          args$output_fp)

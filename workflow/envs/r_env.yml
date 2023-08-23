@@ -1,4 +1,4 @@
-name: r_env
+name: r_env_test
 channels:
     - bioconda
     - conda-forge
@@ -13,5 +13,6 @@ dependencies:
     - r-ggpubr
     - r-cowplot
     - r-ggh4x
+    - r-argparse
     - pip:
         - snakemake

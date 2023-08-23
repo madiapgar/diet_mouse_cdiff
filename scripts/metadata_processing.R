@@ -6,18 +6,37 @@ library(ggpubr)
 library(magrittr)
 library(tidyverse)
 library(broom)
+library(argparse)
+
+## using argparse for my file paths
+## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
+parser <- ArgumentParser()
+parser$add_argument("-m",
+                    "--metadata",
+                    dest = "metadata_FP",
+                    help = "Filepath to metadata file in .csv format.")
+parser$add_argument("-d",
+                    "--seq_depth",
+                    dest = "seq_depth_FP",
+                    help = "Filepath to sequencing depth file in .tsv format.")
+parser$add_argument("-o",
+                    "--output",
+                    dest = "output_fp",
+                    help = "Filepath to location for output file(s).")
+
+args <- parser$parse_args()
 
 ## input file paths
-metadata_FP <- './data/misc/merged_metadata1.tsv'
-seq_depth_FP <- './data/misc/tss_seq_depth.tsv'
+# metadata_FP <- './data/misc/merged_metadata1.tsv'
+# seq_depth_FP <- './data/misc/tss_seq_depth.tsv'
 
 ## needed functions 
 ## 1 
 ## general function to prep the metadata file for further data analyses 
 metadata_fixer <- function(metadata_fp) {
-  tmpMeta <- read_tsv(metadata_fp, n_max = 2)
+  tmpMeta <- read_csv(metadata_fp, n_max = 2)
   mycols <- colnames(tmpMeta)
-  metadata <- read_tsv(metadata_fp, skip = 2, col_names = mycols)
+  metadata <- read_csv(metadata_fp, skip = 2, col_names = mycols)
   names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
   metadata %>% 
     filter(!is.na(diet)) %>% 
@@ -57,10 +76,10 @@ meta_diet_fixer <- function(metadata_file,
 
 
 ## metadata processing and adding in the sequencing depth 
-metadata_pre <- metadata_fixer(metadata_FP)
+metadata_pre <- metadata_fixer(args$metadata_FP)
 metadata <- meta_diet_fixer(metadata_pre,
-                            seq_depth_FP)
+                            args$seq_depth_FP)
 
 ## writing out processed metadata file to the data/misc directory
 write_tsv(metadata,
-          './data/misc/processed_metadata.tsv')
+          args$output_fp)

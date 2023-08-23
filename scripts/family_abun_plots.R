@@ -13,11 +13,38 @@ library(broom)
 library(cowplot)
 library(vegan)
 library(viridis)
+library(argparse)
+
+## using argparse for my file paths
+## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
+parser <- ArgumentParser()
+parser$add_argument("-m",
+                    "--metadata",
+                    dest = "metadata_FP",
+                    help = "Filepath to metadata file in .tsv format.")
+parser$add_argument("-o",
+                    "--otu",
+                    dest = "otu_table_FP",
+                    help = "Filepath to OTU Table file in .qza format.")
+parser$add_argument("-t",
+                    "--taxonomy",
+                    dest = "tax_FP",
+                    help = "Filepath to taxonomy file in .qza format.")
+parser$add_argument("-p1",
+                    "--plot1",
+                    dest = "plot1_FP",
+                    help = "Filepath to first family abundance plot in .pdf format.")
+parser$add_argument("-p2",
+                    "--plot2",
+                    dest = "plot2_FP",
+                    help = "Filepath to second family abundance plot in .pdf format.")
+
+args <- parser$parse_args()
 
 ## input file paths and others
-otu_table_FP <- './data/qiime/taxonomy_filtered.qza'
-tax_FP <- './data/qiime/taxonomy.qza'
-metadata_FP <- './data/misc/processed_metadata.tsv'
+# otu_table_FP <- './data/qiime/taxonomy_filtered.qza'
+# tax_FP <- './data/qiime/taxonomy.qza'
+# metadata_FP <- './data/misc/processed_metadata.tsv'
 diet_labs <- 
   c('Chow', 
     'High Fat / High Fiber', 
@@ -116,9 +143,9 @@ abun_plots <- function(abundance_table){
 }
 
 ## family abundance table prep 
-abun_files <- family_abun_file_prep(metadata_FP,
-                                    tax_FP,
-                                    otu_table_FP,
+abun_files <- family_abun_file_prep(args$metadata_FP,
+                                    args$tax_FP,
+                                    args$otu_table_FP,
                                     wanted_level,
                                     wanted_family)
 
@@ -136,14 +163,12 @@ abun2 <- family_abun_plots$FamilyAbundance2
 
 ## saving my plot outputs
 ## option #1
-ggsave("family_abun1.pdf",
+ggsave(args$plot1_FP,
        plot = abun1, 
        width = 17, 
-       height = 15, 
-       path = './plots')
+       height = 15)
 ## option #2
-ggsave("family_abun2.pdf",
+ggsave(args$plot2_FP,
        plot = abun2, 
        width = 25, 
-       height = 10, 
-       path = './plots')
+       height = 10)

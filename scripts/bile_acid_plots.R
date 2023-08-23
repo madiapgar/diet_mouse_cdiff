@@ -10,11 +10,38 @@ library(tidyverse)
 library(broom)
 library(cowplot)
 library(viridis)
+library(argparse)
+
+## using argparse for my file paths
+## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
+parser <- ArgumentParser()
+parser$add_argument("-m",
+                    "--metadata",
+                    dest = "metadata_FP",
+                    help = "Filepath to metadata file in .tsv format.")
+parser$add_argument("-t",
+                    "--taxonomy",
+                    dest = "tax_FP",
+                    help = "Filepath to taxonomy file in .qza format.")
+parser$add_argument("-k",
+                    "--ko",
+                    dest = "ko_contrib_FP",
+                    help = "Filepath to KO metagenome contrib file in .tsv format.")
+parser$add_argument("-bh",
+                    "--baiH_plot",
+                    dest = "baiH_plot_FP",
+                    help = "Filepath to baiH plot in .pdf format.")
+parser$add_argument("-bi",
+                    "--baiI_plot",
+                    dest = "baiI_plot_FP",
+                    help = "Filepath to baiI plot in .pdf format.")
+
+args <- parser$parse_args()
 
 ## input file paths 
-metadata_FP <- './data/misc/processed_metadata.tsv'
-tax_FP <- './data/qiime/taxonomy.qza'
-ko_contrib_FP <- './data/picrust/tss3_meta_contrib.tsv'
+# metadata_FP <- './data/misc/processed_metadata.tsv'
+# tax_FP <- './data/qiime/taxonomy.qza'
+# ko_contrib_FP <- './data/picrust/tss3_meta_contrib.tsv'
 
 ## other needed inputs 
 diet_labs <- 
@@ -131,9 +158,9 @@ bile_plot <- function(processed_ko_biom,
 
 ## baiH
 ## file prep
-baiH_files <- bile_file_prep(tax_FP,
-                             ko_contrib_FP,
-                             metadata_FP,
+baiH_files <- bile_file_prep(args$tax_FP,
+                             args$ko_contrib_FP,
+                             args$metadata_FP,
                              baiH_ko,
                              bile_tax_level)
 
@@ -147,9 +174,9 @@ baiH <- bile_plot(for_baiH_plot,
 
 ## baiI
 ## file prep
-baiI_files <- bile_file_prep(tax_FP,
-                             ko_contrib_FP,
-                             metadata_FP,
+baiI_files <- bile_file_prep(args$tax_FP,
+                             args$ko_contrib_FP,
+                             args$metadata_FP,
                              baiI_ko,
                              bile_tax_level)
 
@@ -162,14 +189,12 @@ baiI <- bile_plot(for_baiI_plot,
                   baiI_title)
 
 ## saving my plot outputs
-ggsave("baiH.pdf",
+ggsave(args$baiH_plot_FP,
        plot = baiH, 
        width = 12, 
-       height = 5, 
-       path = './plots/')
+       height = 5)
 
-ggsave("baiI.pdf",
+ggsave(args$baiI_plot_FP,
        plot = baiI, 
        width = 7, 
-       height = 4, 
-       path = './plots/')
+       height = 4)

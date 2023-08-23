@@ -12,10 +12,33 @@ library(broom)
 library(cowplot)
 library(ape)
 library(rstatix)
+library(argparse)
+
+## using argparse for my file paths
+## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
+parser <- ArgumentParser()
+parser$add_argument("-m",
+                    "--metadata",
+                    dest = "metadata_FP",
+                    help = "Filepath to metadata file in .tsv format.")
+parser$add_argument("-k",
+                    "--ko",
+                    dest = "ko_contrib_FP",
+                    help = "Filepath to KO metagenome contrib file in .tsv format.")
+parser$add_argument("-bt",
+                    "--buty",
+                    dest = "butyrate_lm_FP",
+                    help = "Filepath to butyrate enzyme linear model results in .tsv format.")
+parser$add_argument("-ba",
+                    "--bile",
+                    dest = "bile_lm_FP",
+                    help = "Filepath to bile acid enzyme linear model results in .tsv format.")
+
+args <- parser$parse_args()
 
 ## input file paths and KOs
-metadata_FP <- './data/misc/processed_metadata.tsv'
-ko_contrib_FP <- './data/picrust/tss3_meta_contrib.tsv'
+# metadata_FP <- './data/misc/processed_metadata.tsv'
+# ko_contrib_FP <- './data/picrust/tss3_meta_contrib.tsv'
 but_kos <- c('K00929','K01034')
 bile_kos <- c('K15873', 'K15874')
 
@@ -44,13 +67,13 @@ stat_file_prep <- function(metadata_fp,
 
 ## file prep 
 ## butyrate 
-but_long <- stat_file_prep(metadata_FP,
-                           ko_contrib_FP,
+but_long <- stat_file_prep(args$metadata_FP,
+                           args$ko_contrib_FP,
                            but_kos)
 
 ## bile acids
-bile_long <- stat_file_prep(metadata_FP,
-                            ko_contrib_FP,
+bile_long <- stat_file_prep(args$metadata_FP,
+                            args$ko_contrib_FP,
                             bile_kos)
 
 ## butyrate linear model
@@ -71,6 +94,6 @@ bile_long %>%
 
 ## saving my outputs as a .tsv
 write_tsv(buty_lm,
-          './stats/buty_enzyme_lm.tsv')
+          args$butyrate_lm_FP)
 write_tsv(bile_lm,
-          './stats/bile_enzyme_lm.tsv')
+          args$bile_lm_FP)

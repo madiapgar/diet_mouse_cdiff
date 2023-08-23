@@ -15,14 +15,49 @@ library(ape)
 library(vegan)
 library(ggh4x)
 library(viridis)
+library(argparse)
+
+## using argparse for my file paths
+## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
+parser <- ArgumentParser()
+parser$add_argument("-m",
+                    "--metadata",
+                    dest = "metadata_FP",
+                    help = "Filepath to metadata file in .tsv format.")
+parser$add_argument("-uu",
+                    "--unweighted_unifrac",
+                    dest = "unweighted_FP",
+                    help = "Filepath to Unweighted UniFrac PCoA in .qza format.")
+parser$add_argument("-wu",
+                    "--weighted_unifrac",
+                    dest = "weighted_FP",
+                    help = "Filepath to Weighted UniFrac PCoA in .qza format")
+parser$add_argument("-f",
+                    "--faith_pd",
+                    dest = "faith_pd_FP",
+                    help = "Filepath to Faith's PD file in .tsv format.")
+parser$add_argument("-s",
+                    "--shannon",
+                    dest = "shannon_FP",
+                    help = "Filepath to Shannon Entropy file in .tsv format.")
+parser$add_argument("-ou",
+                    "--output_uu",
+                    dest = "output_uu_FP",
+                    help = "Filepath to Unweighted UniFrac PCoA plot in .pdf format.")
+parser$add_argument("-ow",
+                    "--output_wu",
+                    dest = "output_wu_FP",
+                    help = "Filepath to Weighted UniFrac PCoA plot in .pdf format.")
+
+args <- parser$parse_args()
 
 
 ## input file paths
-metadata_FP <- './data/misc/processed_metadata.tsv'
-unweighted_FP <- './data/qiime/core_outputs/unweighted_unifrac_pcoa_results.qza'
-weighted_FP <- './data/qiime/core_outputs/weighted_unifrac_pcoa_results.qza'
-faith_pd_FP <- './data/qiime/core_outputs/faith_pd.tsv'
-shannon_FP <- './data/qiime/core_outputs/shannon_entropy.tsv'
+# metadata_FP <- './data/misc/processed_metadata.tsv'
+# unweighted_FP <- './data/qiime/core_outputs/unweighted_unifrac_pcoa_results.qza'
+# weighted_FP <- './data/qiime/core_outputs/weighted_unifrac_pcoa_results.qza'
+# faith_pd_FP <- './data/qiime/core_outputs/faith_pd.tsv'
+# shannon_FP <- './data/qiime/core_outputs/shannon_entropy.tsv'
 
 diet_labs <- 
   c('Chow', 
@@ -118,13 +153,13 @@ pcoa_plot <- function(biom_file,
 
 ## core metrics file prep
 ## metadata file prep
-metadata <- read_tsv(metadata_FP)
+metadata <- read_tsv(args$metadata_FP)
 
 ## preparing core beta diversity files for ggplot
-core_files <- biom_table_prep(unweighted_FP,
-                              weighted_FP,
-                              faith_pd_FP,
-                              shannon_FP,
+core_files <- biom_table_prep(args$unweighted_FP,
+                              args$weighted_FP,
+                              args$faith_pd_FP,
+                              args$shannon_FP,
                               metadata)
 ## extracting core beta diversity files from named list 
 uw_var <- core_files$UnweightedVar
@@ -158,14 +193,12 @@ weighted_pcoa <- pcoa_plot(weighted_biom,
                            w_title)
 
 ## saving my plot outputs to the plots folder
-ggsave("unweighted_unifrac_pcoa.pdf",
+ggsave(args$output_uu_FP,
        plot = unweighted_pcoa, 
        width = 17, 
-       height = 8.5, 
-       path = './plots')
+       height = 8.5)
 
-ggsave("weighted_unifrac_pcoa.pdf",
+ggsave(args$output_wu_FP,
        plot = weighted_pcoa, 
        width = 17, 
-       height = 8.5, 
-       path = './plots')
+       height = 8.5)

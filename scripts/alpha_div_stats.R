@@ -13,11 +13,62 @@ library(ape)
 library(rstatix)
 library(ggh4x)
 library(vegan)
+library(argparse)
+
+## using argparse for my file paths
+## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
+parser <- ArgumentParser()
+parser$add_argument("-m",
+                    "--metadata",
+                    dest = "metadata_FP",
+                    help = "Filepath to metadata file in .tsv format.")
+parser$add_argument("-f",
+                    "--faith_pd",
+                    dest = "faith_pd_FP",
+                    help = "Filepath to Faith's PD file in .tsv format.")
+parser$add_argument("-s",
+                    "--shannon",
+                    dest = "shannon_FP",
+                    help = "Filepath to Shannon Entropy file in .tsv format.")
+parser$add_argument("-flm",
+                    "--faith_lm",
+                    dest = "faith_lm_FP",
+                    help = "Filepath to Faith's PD total linear model results in .tsv format.")
+parser$add_argument("-flms",
+                    "--faith_lm_sec",
+                    dest = "faith_lm_sec_FP",
+                    help = "Filepath to Faith's PD sectioned linear model results in .tsv format.")
+parser$add_argument("-fd",
+                    "--faith_dunn",
+                    dest = "faith_dunn_FP",
+                    help = "Filepath to Faith's PD Dunn's Post Hoc test results in .tsv format.")
+parser$add_argument("-slm",
+                    "--shannon_lm",
+                    dest = "shannon_lm_FP",
+                    help = "Filepath to Shannon Entropy total linear model results in .tsv format.")
+parser$add_argument("-slms",
+                    "--shannon_lm_sec",
+                    dest = "shannon_lm_sec_FP",
+                    help = "Filepath to Shannon Entropy sectioned linear model results in .tsv format.")
+parser$add_argument("-sd",
+                    "--shannon_dunn",
+                    dest = "shannon_dunn_FP",
+                    help = "Filepath to Shannon Entropy Dunn's Post Hoc test results in .tsv format.")
+parser$add_argument("-fp",
+                    "--faith_plot",
+                    dest = "faith_plot_FP",
+                    help = "Filepath to Faith's PD plot in .pdf format.")
+parser$add_argument("-sp",
+                    "--shannon_plot",
+                    dest = "shannon_plot_FP",
+                    help = "Filepath to Shannon Entropy plot in .pdf format.")
+
+args <- parser$parse_args()
 
 ## input file paths
-metadata_FP <- './data/misc/processed_metadata.tsv'
-faith_pd_fp <- './data/qiime/core_outputs/faith_pd.tsv'
-shannon_fp <- './data/qiime/core_outputs/shannon_entropy.tsv'
+# metadata_FP <- './data/misc/processed_metadata.tsv'
+# faith_pd_fp <- './data/qiime/core_outputs/faith_pd.tsv'
+# shannon_fp <- './data/qiime/core_outputs/shannon_entropy.tsv'
 unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A',
                       'Mock_3A', 'Mock_4A', 'Mock_5A', 'Mock_6A',
                       'Mock_7A', 'PCR Blank0',
@@ -197,10 +248,10 @@ stat_plot <- function(new_dunn){
 
 ## use of functions 
 ## alpha diversity analysis  
-alpha_files <- alpha_div_prep(faith_pd_fp,
-                              shannon_fp,
+alpha_files <- alpha_div_prep(args$faith_pd_FP,
+                              args$shannon_FP,
                               unwanted_samples,
-                              metadata_FP)
+                              args$metadata_FP)
 
 faith <- alpha_files$FaithPD
 shannon <- alpha_files$Shannon
@@ -233,21 +284,21 @@ new_shannon_dunn <- stat_plot_prep(shannon,
 shannon_stat_vis <- stat_plot(new_shannon_dunn)
 
 ## writing out results as a .tsv file 
-write_tsv(faith_lm, './stats/faith_total_results.tsv')
-write_tsv(sectioned_faith_lm, './stats/faith_diet_results.tsv')
-write_tsv(new_faith_dunn, './stats/faith_dunn.tsv')
-write_tsv(shannon_lm, './stats/shannon_total_results.tsv')
-write_tsv(sectioned_shannon_lm, './stats/shannon_diet_results.tsv')
-write_tsv(new_shannon_dunn, './stats/shannon_dunn.tsv')
+write_tsv(faith_lm, args$faith_lm_FP)
+write_tsv(sectioned_faith_lm, args$faith_lm_sec_FP)
+write_tsv(new_faith_dunn, args$faith_dunn_FP)
+write_tsv(shannon_lm, args$shannon_lm_FP)
+write_tsv(sectioned_shannon_lm, args$shannon_lm_sec_FP)
+write_tsv(new_shannon_dunn, args$shannon_dunn_FP)
 
 ## saving my statistical visualizations
-ggsave("faith_stat_vis.pdf",
+ggsave(args$faith_plot_FP,
        plot = faith_stat_vis, 
        width = 13, 
        height = 3, 
        path = './plots')
 
-ggsave("shannon_stat_vis.pdf",
+ggsave(args$shannon_plot_FP,
        plot = shannon_stat_vis, 
        width = 13, 
        height = 3, 

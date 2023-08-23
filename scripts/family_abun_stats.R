@@ -13,11 +13,42 @@ library(cowplot)
 library(vegan)
 library(viridis)
 library(rstatix)
+library(argparse)
+
+## using argparse for my file paths
+## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
+parser <- ArgumentParser()
+parser$add_argument("-m",
+                    "--metadata",
+                    dest = "metadata_FP",
+                    help = "Filepath to metadata file in .tsv format.")
+parser$add_argument("-o",
+                    "--otu",
+                    dest = "otu_table_FP",
+                    help = "Filepath to OTU Table file in .qza format.")
+parser$add_argument("-t",
+                    "--taxonomy",
+                    dest = "tax_FP",
+                    help = "Filepath to taxonomy file in .qza format.")
+parser$add_argument("-s",
+                    "--stat_plot",
+                    dest = "stat_plot_FP",
+                    help = "Filepath to family abundance statistical plot in .pdf format.")
+parser$add_argument("-lm",
+                    "--linear_model",
+                    dest = "lm_FP",
+                    help = "Filepath to family abundance linear model results in .tsv format.")
+parser$add_argument("-d",
+                    "--dunn",
+                    dest = "dunn_FP",
+                    help = "Filepath to family abundance Dunn's Post Hoc test results in .tsv format.")
+
+args <- parser$parse_args()
 
 ## input file paths and others
-otu_table_FP <- './data/qiime/taxonomy_filtered.qza'
-tax_FP <- './data/qiime/taxonomy.qza'
-metadata_FP <- './data/misc/processed_metadata.tsv'
+# otu_table_FP <- './data/qiime/taxonomy_filtered.qza'
+# tax_FP <- './data/qiime/taxonomy.qza'
+# metadata_FP <- './data/misc/processed_metadata.tsv'
 wanted_level <- 'Family'
 wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
                    'Staphylococcaceae', 'Tannerellaceae', 'Muribaculaceae', 'Bacteroidaceae', 
@@ -66,11 +97,10 @@ family_abun_file_prep <- function(metadata_fp,
 ## 2 
 ## preps dunns post hoc results for statistical visualization
 stat_plot_prep <- function(biom_table,
-                           dunn_test,
-                           value){
+                           dunn_test){
   biom_table %>% 
     group_by(diet, Family, day_post_inf) %>% 
-    summarise(means = mean(.data[[value]])) -> mean_table
+    summarise(mean_abund = mean(rel_abund)) -> mean_table
   dunn_test %>% 
     merge(mean_table, 
           by.x = c('group1',
@@ -79,7 +109,7 @@ stat_plot_prep <- function(biom_table,
           by.y = c('diet',
                    'day_post_inf',
                    'Family')) %>% 
-    rename('group1_means' = 'means') %>% 
+    rename('group1_mean' = 'mean_abund') %>% 
     merge(mean_table,
           by.x = c('group2',
                    'day_post_inf',
@@ -87,8 +117,8 @@ stat_plot_prep <- function(biom_table,
           by.y = c('diet',
                    'day_post_inf',
                    'Family')) %>% 
-    rename('group2_means' = 'means') %>% 
-    mutate(diff_means = (group1_means - group2_means),
+    rename('group2_mean' = 'mean_abund') %>% 
+    mutate(diff_means = (group1_mean - group2_mean),
            stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
   return(new_dunn)
 }
@@ -120,9 +150,9 @@ stat_plot <- function(new_dunn){
 }
 
 ## prepping the file needed to run the linear model
-abun_files <- family_abun_file_prep(metadata_FP,
-                                    tax_FP,
-                                    otu_table_FP,
+abun_files <- family_abun_file_prep(args$metadata_FP,
+                                    args$tax_FP,
+                                    args$otu_table_FP,
                                     wanted_level,
                                     wanted_family)
 
@@ -158,20 +188,18 @@ abun_filt %>%
 
 ## prepping for and putting together the statistical visualization based on dunns post hoc test
 new_dunn_test <- stat_plot_prep(abun_filt,
-                                abun_dunn_test,
-                                'rel_abund')
+                                abun_dunn_test)
 
 abun_stat_vis <- stat_plot(new_dunn_test)
 
 ## saving my outputs as a .tsv
 write_tsv(family_abun_lm,
-          './stats/family_abun_lm.tsv')
+          args$lm_FP)
 write_tsv(abun_dunn_test,
-          './stats/family_abun_dunn.tsv')
+          args$dunn_FP)
 
 ## saving statistical visualization
-ggsave("famAbun_stat_vis.pdf",
+ggsave(args$stat_plot_FP,
        plot = abun_stat_vis, 
        width = 18, 
-       height = 8, 
-       path = './plots')
+       height = 8)

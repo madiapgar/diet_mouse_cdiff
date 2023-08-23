@@ -12,12 +12,38 @@ library(tidyverse)
 library(broom)
 library(cowplot)
 library(viridis)
+library(argparse)
 
+## using argparse for my file paths
+## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
+parser <- ArgumentParser()
+parser$add_argument("-m",
+                    "--metadata",
+                    dest = "metadata_FP",
+                    help = "Filepath to metadata file in .tsv format.")
+parser$add_argument("-f",
+                    "--faith_pd",
+                    dest = "faith_pd_FP",
+                    help = "Filepath to Faith's PD file in .tsv format.")
+parser$add_argument("-s",
+                    "--shannon",
+                    dest = "shannon_FP",
+                    help = "Filepath to Shannon Entropy file in .tsv format.")
+parser$add_argument("-of",
+                    "--output_faith",
+                    dest = "output_faith_FP",
+                    help = "Filepath to Faith's PD plot in .pdf format.")
+parser$add_argument("-os",
+                    "--output_shannon",
+                    dest = "output_shannon_FP",
+                    help = "Filepath to Shannon Entropy plot in .pdf format.")
+
+args <- parser$parse_args()
 
 ## input file paths 
-metadata_FP <- './data/misc/processed_metadata.tsv'
-faith_pd_FP <- './data/qiime/core_outputs/faith_pd.tsv'
-shannon_FP <- './data/qiime/core_outputs/shannon_entropy.tsv'
+# metadata_FP <- './data/misc/processed_metadata.tsv'
+# faith_pd_FP <- './data/qiime/core_outputs/faith_pd.tsv'
+# shannon_FP <- './data/qiime/core_outputs/shannon_entropy.tsv'
 
 diet_labs <- 
   c('Chow', 
@@ -103,12 +129,12 @@ shannon_plot <- function(shannon_fp,
 
 ## core metrics file prep
 ## metadata file prep
-metadata <- read_tsv(metadata_FP)
+metadata <- read_tsv(args$metadata_FP)
 
 ## faith's pd plot 
 faith_title <- "Faith's Phylogenetic Diversity"
 
-faith_plot <- faith_pd_plot(faith_pd_FP,
+faith_plot <- faith_pd_plot(args$faith_pd_FP,
                             metadata,
                             diet_labs,
                             diet_names_labels,
@@ -117,21 +143,19 @@ faith_plot <- faith_pd_plot(faith_pd_FP,
 ## shannon entropy plot 
 shannon_title <- "Shannon Entropy"
 
-shannon_entropy_plot <- shannon_plot(shannon_FP,
+shannon_entropy_plot <- shannon_plot(args$shannon_FP,
                                      metadata,
                                      diet_labs,
                                      diet_names_labels,
                                      shannon_title)
 
 ## saving my plot outputs to the plots folder
-ggsave("faith_pd.pdf",
+ggsave(args$output_faith_FP,
        plot = faith_plot, 
        width = 14, 
-       height = 4.5, 
-       path = './plots')
+       height = 4.5)
 
-ggsave("shannon_entropy.pdf",
+ggsave(args$output_shannon_FP,
        plot = shannon_entropy_plot, 
        width = 14, 
-       height = 4.5, 
-       path = './plots')
+       height = 4.5)

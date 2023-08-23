@@ -11,11 +11,38 @@ library(tidyverse)
 library(broom)
 library(cowplot)
 library(viridis)
+library(argparse)
+
+## using argparse for my file paths
+## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
+parser <- ArgumentParser()
+parser$add_argument("-m",
+                    "--metadata",
+                    dest = "metadata_FP",
+                    help = "Filepath to metadata file in .tsv format.")
+parser$add_argument("-t",
+                    "--taxonomy",
+                    dest = "tax_FP",
+                    help = "Filepath to taxonomy file in .qza format.")
+parser$add_argument("-k",
+                    "--ko",
+                    dest = "ko_contrib_FP",
+                    help = "Filepath to KO metagenome contrib file in .tsv format.")
+parser$add_argument("-bk",
+                    "--buk_plot",
+                    dest = "buk_plot_FP",
+                    help = "Filepath to butyrate kinase plot in .pdf format.")
+parser$add_argument("-bt",
+                    "--but_plot",
+                    dest = "but_plot_FP",
+                    help = "Filepath to butyryl-coa transferase plot in .pdf format.")
+
+args <- parser$parse_args()
 
 ## input file paths 
-metadata_FP <- './data/misc/processed_metadata.tsv'
-tax_FP <- './data/qiime/taxonomy.qza'
-ko_contrib_FP <- './data/picrust/tss3_meta_contrib.tsv'
+# metadata_FP <- './data/misc/processed_metadata.tsv'
+# tax_FP <- './data/qiime/taxonomy.qza'
+# ko_contrib_FP <- './data/picrust/tss3_meta_contrib.tsv'
 
 ## other needed inputs 
 diet_labs <- 
@@ -145,9 +172,9 @@ butyrate_plot <- function(processed_ko_biom,
 
 ## butyrate kinase
 ## file prep
-buk_files <- buty_file_prep(tax_FP,
-                            ko_contrib_FP,
-                            metadata_FP,
+buk_files <- buty_file_prep(args$tax_FP,
+                            args$ko_contrib_FP,
+                            args$metadata_FP,
                             buk_ko,
                             buk_tax_level,
                             buk_thresh_level)
@@ -165,9 +192,9 @@ butyrate_kinase <- butyrate_plot(for_buk_plot,
 
 ## butyryl coa transferase 
 ## file prep
-but_files <- buty_file_prep(tax_FP,
-                            ko_contrib_FP,
-                            metadata_FP,
+but_files <- buty_file_prep(args$tax_FP,
+                            args$ko_contrib_FP,
+                            args$metadata_FP,
                             but_ko,
                             but_tax_level,
                             but_thresh_level)
@@ -181,14 +208,12 @@ butyryl_coa_transferase <- butyrate_plot(for_but_plot,
                                          but_title)
 
 ## saving my plot outputs
-ggsave("butyrate_kinase.pdf", 
+ggsave(args$buk_plot_FP, 
        plot = butyrate_kinase,
        width = 11, 
-       height = 7,
-       path = './plots/')
+       height = 7)
 
-ggsave("butyryl_coa_transferase.pdf",
+ggsave(args$but_plot_FP,
        plot = butyryl_coa_transferase, 
        width = 11, 
-       height = 7, 
-       path = './plots/')
+       height = 7)

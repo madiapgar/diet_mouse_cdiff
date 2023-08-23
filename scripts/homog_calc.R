@@ -11,11 +11,62 @@ library(tidyverse)
 library(broom)
 library(cowplot)
 library(rstatix)
+library(argparse)
+
+## using argparse for my file paths
+## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
+parser <- ArgumentParser()
+parser$add_argument("-m",
+                    "--metadata",
+                    dest = "metadata_FP",
+                    help = "Filepath to metadata file in .tsv format.")
+parser$add_argument("-uu",
+                    "--uu_dist",
+                    dest = "uu_dist_fp",
+                    help = "Filepath to Unweighted UniFrac Distance Matrix in .tsv format.")
+parser$add_argument("-wu",
+                    "--wu_dist",
+                    dest = "wu_dist_fp",
+                    help = "Filepath to Weighted UniFrac Distance Matrix in .tsv format")
+parser$add_argument("-wlm",
+                    "--weighted_lm",
+                    dest = "wu_lm_fp",
+                    help = "Filepath to Weighted Distance Matrix linear model results in .tsv format.")
+parser$add_argument("-wd",
+                    "--weighted_dunn",
+                    dest = "wu_dunn_fp",
+                    help = "Filepath to Weighted UniFrac Dunn's Post Hoc test results in .tsv format.")
+parser$add_argument("-ulm",
+                    "--unweighted_lm",
+                    dest = "uu_lm_fp",
+                    help = "Filepath to Unweighted Distance Matrix linear model results in .tsv format.")
+parser$add_argument("-ud",
+                    "--unweighted_dunn",
+                    dest = "uu_dunn_fp",
+                    help = "Filepath to Unweighted UniFrac Dunn's Post Hoc test results in .tsv format.")
+parser$add_argument("-wp",
+                    "--weighted_plot",
+                    dest = "wu_plot_fp",
+                    help = "Filepath to Weighted UniFrac homogeneity plot in .pdf format.")
+parser$add_argument("-wsp",
+                    "--weighted_stat_plot",
+                    dest = "wu_stat_plot_fp",
+                    help = "Filepath to Weighted UniFrac homogeneity statistical plot in .pdf format.")
+parser$add_argument("-up",
+                    "--unweighted_plot",
+                    dest = "uu_plot_fp",
+                    help = "Filepath to Unweighted UniFrac homogeneity plot in .pdf format.")
+parser$add_argument("-usp",
+                    "--unweighted_stat_plot",
+                    dest = "uu_stat_plot_fp",
+                    help = "Filepath to Unweighted UniFrac homogeneity statistical plot in .pdf format.")
+
+args <- parser$parse_args()
 
 ## input file paths
-metadata_FP <- './data/misc/processed_metadata.tsv'
-uu_dist_fp <- './data/qiime/core_outputs/uw_dist_matrix.tsv'
-wu_dist_fp <- './data/qiime/core_outputs/w_dist_matrix.tsv'
+# metadata_FP <- './data/misc/processed_metadata.tsv'
+# uu_dist_fp <- './data/qiime/core_outputs/uw_dist_matrix.tsv'
+# wu_dist_fp <- './data/qiime/core_outputs/w_dist_matrix.tsv'
 
 ## lists to redo the diet names on the facet labels of the ggplot created below 
 diet_labs <- 
@@ -152,9 +203,9 @@ stat_plot <- function(new_dunn){
 }
 
 ## file prep for homog plot and stats
-meta <- read_tsv(metadata_FP)
-uu_dist <- read_tsv(uu_dist_fp)
-wu_dist <- read_tsv(wu_dist_fp)
+meta <- read_tsv(args$metadata_FP)
+uu_dist <- read_tsv(args$uu_dist_fp)
+wu_dist <- read_tsv(args$wu_dist_fp)
 
 ## pulling out unique diets 
 diets <- unique(meta$diet)
@@ -270,36 +321,33 @@ stat_plot_prep(wu_homog,
 stat_plot(new_wu_homog_dunn) -> wu_homog_stat_vis
 
 
+## NEED TO FIGURE OUT ARGPARSE WITH MY PLOTS
 ## saving my output plots and stats
 ## plots
-ggsave("wu_homogeneity.pdf", 
+ggsave(args$wu_plot_fp, 
        plot = wu_homog_plot,
        width = 12, 
-       height = 4,
-       path = './plots')
-ggsave("wu_homog_stats.pdf", 
+       height = 4)
+ggsave(args$wu_stat_plot_fp, 
        plot = wu_homog_stat_vis,
        width = 14, 
-       height = 4,
-       path = './plots')
-ggsave("uu_homogeneity.pdf", 
+       height = 4)
+ggsave(args$uu_plot_fp, 
        plot = uu_homog_plot,
        width = 12, 
-       height = 4,
-       path = './plots')
-ggsave("uu_homog_stats.pdf", 
+       height = 4)
+ggsave(args$uu_stat_plot_fp, 
        plot = uu_homog_stat_vis,
        width = 14, 
-       height = 4,
-       path = './plots')
+       height = 4)
 
 ## stats 
 write_tsv(wu_homog_results,
-          './stats/wu_homogeneity.tsv')
+          args$wu_lm_fp)
 write_tsv(wu_homog_dunn,
-          './stats/wu_homog_dunn.tsv')
+          args$wu_dunn_fp)
 write_tsv(uu_homog_results,
-          './stats/uu_homogeneity.tsv')
+          args$uu_lm_fp)
 write_tsv(uu_homog_dunn,
-          './stats/uu_homog_dunn.tsv')
+          args$uu_dunn_fp)
 

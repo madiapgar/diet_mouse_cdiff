@@ -11,10 +11,37 @@ library(broom)
 library(cowplot)
 library(rstatix)
 library(ggpubr)
+library(argparse)
+
+## using argparse for my file paths
+## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
+parser <- ArgumentParser()
+parser$add_argument("-m",
+                    "--metadata",
+                    dest = "metadata_FP",
+                    help = "Filepath to metadata file in .tsv format.")
+parser$add_argument("-h",
+                    "--histo",
+                    dest = "histo_FP",
+                    help = "Filepath to histopathology score file in .csv format.")
+parser$add_argument("-hp",
+                    "--histo_plot",
+                    dest = "histo_plot_FP",
+                    help = "Filepath to histopathology score plot in .pdf format.")
+parser$add_argument("-lm",
+                    "--linear_model",
+                    dest = "lm_FP",
+                    help = "Filepath to histopathology linear modeling results in .tsv format.")
+parser$add_argument("-d",
+                    "--dunn",
+                    dest = "dunn_FP",
+                    help = "Filepath to histopathology Dunns Post Hoc test results in .tsv format.")
+
+args <- parser$parse_args()
 
 ## input file paths and others
-metadata_FP <- './data/misc/processed_metadata.tsv'
-histo_FP <- './data/misc/histo_data.csv'
+# metadata_FP <- './data/misc/processed_metadata.tsv'
+# histo_FP <- './data/misc/histo_data.csv'
 tissue_labs <- c('Cecum',
                  'Colon')
 names(tissue_labs) <- c('cecum',
@@ -95,8 +122,8 @@ histo_plot <- function(big_histo,
 
 
 ## file prep 
-histo <- histo_file_prep(metadata_FP,
-                             histo_FP)
+histo <- histo_file_prep(args$metadata_FP,
+                         args$histo_FP)
 
 ## stats 
 stats <- histo_stats(big_histo = histo)
@@ -110,13 +137,12 @@ plot <- histo_plot(histo,
                    dunn)
 
 ## saving my plot and stats outputs 
-ggsave("histopathology.pdf", 
+ggsave(args$histo_plot_FP, 
        plot = plot,
        width = 10, 
-       height = 5,
-       path = './plots')
+       height = 5)
 
 write_tsv(linear_model,
-          './stats/histopathology_lm.tsv')
+          args$lm_FP)
 write_tsv(dunn,
-          './stats/histopathology_dunn.tsv')
+          args$dunn_FP)

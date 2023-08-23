@@ -200,7 +200,7 @@ pcoa_plot <- function(biom_file,
 **File paths for all needed files**
 Doing this so that I don't have to worry about re-entering entire file paths all the time, they'll just be at the beginning
 ```{r}
-metadata_FP <- '../data/misc/merged_metadata1.tsv'
+metadata_FP <- '../data/misc/updated_metadata.tsv'
 seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
 unweighted_FP <- '../data/qiime/core_outputs/unweighted_unifrac_pcoa_results.qza'
 weighted_FP <- '../data/qiime/core_outputs/weighted_unifrac_pcoa_results.qza'

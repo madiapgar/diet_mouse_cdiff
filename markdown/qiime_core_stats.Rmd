@@ -351,7 +351,7 @@ stat_plot <- function(new_dunn){
 **File paths for all needed files**
 Doing this so that I don't have to worry about re-entering entire file paths all the time, they'll just be at the beginning
 ```{r}
-metadata_FP <- '../data/misc/merged_metadata1.tsv'
+metadata_FP <- '../data/misc/updated_metadata.tsv'
 seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
 uw_dist_fp <- '../data/qiime/core_outputs/uw_dist_matrix.tsv'
 w_dist_fp <- '../data/qiime/core_outputs/w_dist_matrix.tsv'

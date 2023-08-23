@@ -188,7 +188,7 @@ Load in datums
 Needed file paths for analysis and reading in the needed files for simplicity later on.
 
 ```{r, include=FALSE}
-metadata_FP <- '../data/misc/merged_metadata1.tsv'
+metadata_FP <- '../data/misc/updated_metadata.tsv'
 seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
 uu_dist_fp <- '../data/qiime/core_outputs/uw_dist_matrix.tsv'
 wu_dist_fp <- '../data/qiime/core_outputs/w_dist_matrix.tsv'
@@ -428,7 +428,7 @@ wu_resil_kruskal <- wu_resil_stats$KruskalTest
 wu_resil_dunn <- wu_resil_stats$DunnPostHoc
 
 stat_plot_prep(wu_resil,
-               w_resil_dunn) -> new_w_resil_dunn
+               wu_resil_dunn) -> new_w_resil_dunn
 
 ```
 
@@ -552,11 +552,10 @@ write_tsv(wu_resil_lm,
 **Saving all Plots**
 
 ```{r}
-ggsave("wu_resiliency.pdf", 
+ggsave("../plots/wu_resiliency.pdf",
        plot = wu_resil_plot,
        width = 14, 
-       height = 5,
-       path = '../plots')
+       height = 5)
 ggsave("uu_resiliency.pdf", 
        plot = uu_resil_plot,
        width = 14, 

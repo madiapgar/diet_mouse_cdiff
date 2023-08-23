@@ -20,7 +20,7 @@ parser$add_argument("-m",
                     "--metadata",
                     dest = "metadata_FP",
                     help = "Filepath to metadata file in .tsv format.")
-parser$add_argument("-h",
+parser$add_argument("-hi",
                     "--histo",
                     dest = "histo_FP",
                     help = "Filepath to histopathology score file in .csv format.")

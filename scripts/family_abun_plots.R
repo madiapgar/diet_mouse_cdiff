@@ -69,13 +69,13 @@ family_abun_file_prep <- function(metadata_fp,
                                   tax_level,
                                   wanted_tax){
   ## metadata
-  metadata <- read_tsv(metadata_FP)
+  metadata <- read_tsv(metadata_fp)
   ## taxonomy
-  taxonomy <- read_qza(tax_FP)$data %>% 
+  taxonomy <- read_qza(tax_fp)$data %>% 
     parse_taxonomy() %>% 
     rownames_to_column('asv')
   ## otu table 
-  otu_table <- read_qza(otu_table_FP)$data
+  otu_table <- read_qza(otu_table_fp)$data
   otu_table %>% 
     as_tibble(rownames = 'asv') %>% 
     gather(-asv, key = sampleid, value = abun) %>% 

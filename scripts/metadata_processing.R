@@ -27,16 +27,17 @@ parser$add_argument("-o",
 args <- parser$parse_args()
 
 ## input file paths
-# metadata_FP <- './data/misc/merged_metadata1.tsv'
+# metadata_FP <- './data/misc/updated_metadata.tsv'
 # seq_depth_FP <- './data/misc/tss_seq_depth.tsv'
+# output_fp <- './data/misc/processed_metadata.tsv'
 
 ## needed functions 
 ## 1 
 ## general function to prep the metadata file for further data analyses 
 metadata_fixer <- function(metadata_fp) {
-  tmpMeta <- read_csv(metadata_fp, n_max = 2)
+  tmpMeta <- read_tsv(metadata_fp, n_max = 2)
   mycols <- colnames(tmpMeta)
-  metadata <- read_csv(metadata_fp, skip = 2, col_names = mycols)
+  metadata <- read_tsv(metadata_fp, skip = 2, col_names = mycols)
   names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
   metadata %>% 
     filter(!is.na(diet)) %>% 

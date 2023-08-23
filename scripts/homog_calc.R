@@ -111,7 +111,7 @@ dist_filter <- function(dist_mat, meta, mydiet){
 homog_dist_comp <- function(min_dist_mat, meta){
   meta %>% 
     select(sampleid, diet, day_post_inf, high_fat, high_fiber, purified_diet,
-           seq_depth) -> min_meta
+           seq_depth, mouse_id) -> min_meta
   
   min_dist_mat %>% 
     rename(sampleid_x = sampleid) %>% 
@@ -153,6 +153,65 @@ homog_diet_assembly <- function(dist_mat,
 }
 
 ## 4
+## all functions for calculating statistical analysis and creating a plot visualization
+stats <- function(biom_table){
+  ## linear modeling 
+  biom_table %>% 
+    filter(day_post_inf.y != -15) %>% 
+    group_by(day_post_inf.y) %>% 
+    do(glance(lm(dist ~ (purified_diet.y * seq_depth.y) + high_fat.y * high_fiber.y,
+                 data = .))) %>% 
+    ungroup() %>% 
+    na.omit() %>% 
+    mutate(adj.p = p.adjust(p.value, 
+                            method = "BH"),
+           test_id = paste(day_post_inf.y)) %>%
+    filter(p.value <= 0.05) -> lm_full
+  
+  biom_table %>% 
+    group_by(day_post_inf.y) %>% 
+    mutate(test_id = paste(day_post_inf.y)) %>% 
+    filter(test_id %in% lm_full$test_id) %>% 
+    do(tidy(lm(dist ~ (purified_diet.y * seq_depth.y) + high_fat.y * high_fiber.y,
+               data = .))) %>%
+    filter(term != '(Intercept)') %>% 
+    na.omit() -> lm_results
+  
+  lm_results['signif'] <- symnum(lm_results$p.value,
+                                 cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                 symbols = c("****", "***", "**", "*", "+", "ns"),
+                                 abbr.colnames = FALSE,
+                                 na = "")
+  ## kruskal wallis and dunns post hoc test
+  biom_table %>% 
+    na.omit() %>% 
+    filter(day_post_inf.y != -15) %>% 
+    group_by(day_post_inf.y) %>% 
+    do(tidy(kruskal.test(dist ~ diet,
+                         data = .))) %>% 
+    ungroup() %>% 
+    arrange(p.value) %>% 
+    mutate(p.adj = p.adjust(p.value,
+                            method = "BH"),
+           test_id = paste(day_post_inf.y)) %>%
+    filter(p.adj <= 0.05) -> kruskal
+  
+  biom_table %>% 
+    na.omit() %>% 
+    group_by(day_post_inf.y) %>% 
+    mutate(test_id = paste(day_post_inf.y)) %>% 
+    filter(test_id %in% kruskal$test_id) %>% 
+    dunn_test(dist ~ diet,
+              p.adjust.method = 'BH',
+              data = .) -> dunn
+  ## creating a named list of results
+  my_list <- list(LinearModel = lm_results,
+                  KruskalTest = kruskal,
+                  DunnPostHoc = dunn)
+  return(my_list)
+}
+
+## 5 
 ## prepping the dunn test for the statistical visualization
 stat_plot_prep <- function(biom_table,
                            dunn_test){
@@ -242,27 +301,11 @@ uu_homog %>%
   ggtitle("Microbiome Homogeneity Over Time") -> uu_homog_plot
 
 ## stats
-## linear modeling
-uu_homog %>% 
-  group_by(day_post_inf.y) %>% 
-  do(tidy(lm(dist ~ (purified_diet.y * seq_depth.y) + high_fat.y + high_fiber.y,
-             data = .))) %>% 
-  adjust_pvalue(method = 'BH') %>% 
-  filter(p.value <= 0.05) -> uu_homog_results
+uu_homog_stats <- stats(uu_homog)
 
-## kruskal-wallis and dunns post hoc test
-uu_homog %>% 
-  na.omit() %>% 
-  group_by(day_post_inf.y) %>% 
-  do(tidy(kruskal.test(dist ~ diet,
-                       data = .))) -> uu_homog_kruskal
-
-uu_homog %>% 
-  na.omit() %>% 
-  group_by(day_post_inf.y) %>% 
-  dunn_test(dist ~ diet,
-            p.adjust.method = 'BH',
-            data = .) -> uu_homog_dunn
+uu_homog_lm <- uu_homog_stats$LinearModel
+uu_homog_kruskal <- uu_homog_stats$KruskalTest
+uu_homog_dunn <- uu_homog_stats$DunnPostHoc
 
 ## statistical visualization
 stat_plot_prep(uu_homog,
@@ -292,27 +335,11 @@ wu_homog %>%
   ggtitle("Microbiome Homogeneity Over Time") -> wu_homog_plot
 
 ## stats
-## linear modeling 
-wu_homog %>% 
-  group_by(day_post_inf.y) %>% 
-  do(tidy(lm(dist ~ (purified_diet.y * seq_depth.y) + high_fat.y + high_fiber.y,
-             data = .))) %>%
-  adjust_pvalue(method = 'BH') %>% 
-  filter(p.value <= 0.05) -> wu_homog_results
+wu_homog_stats <- stats(wu_homog)
 
-## kruskal-wallis and dunns post hoc test
-wu_homog %>% 
-  na.omit() %>% 
-  group_by(day_post_inf.y) %>% 
-  do(tidy(kruskal.test(dist ~ diet,
-                       data = .))) -> wu_homog_kruskal
-
-wu_homog %>% 
-  na.omit() %>% 
-  group_by(day_post_inf.y) %>% 
-  dunn_test(dist ~ diet,
-            p.adjust.method = 'BH',
-            data = .) -> wu_homog_dunn
+wu_homog_lm <- wu_homog_stats$LinearModel
+wu_homog_kruskal <- wu_homog_stats$KruskalTest
+wu_homog_dunn <- wu_homog_stats$DunnPostHoc
 
 ## statistical visualization
 stat_plot_prep(wu_homog,
@@ -321,33 +348,32 @@ stat_plot_prep(wu_homog,
 stat_plot(new_wu_homog_dunn) -> wu_homog_stat_vis
 
 
-## NEED TO FIGURE OUT ARGPARSE WITH MY PLOTS
 ## saving my output plots and stats
 ## plots
-ggsave(args$wu_plot_fp, 
+ggsave(args$wu_plot_fp,
        plot = wu_homog_plot,
-       width = 12, 
+       width = 12,
        height = 4)
-ggsave(args$wu_stat_plot_fp, 
+ggsave(args$wu_stat_plot_fp,
        plot = wu_homog_stat_vis,
-       width = 14, 
+       width = 14,
        height = 4)
-ggsave(args$uu_plot_fp, 
+ggsave(args$uu_plot_fp,
        plot = uu_homog_plot,
-       width = 12, 
+       width = 12,
        height = 4)
-ggsave(args$uu_stat_plot_fp, 
+ggsave(args$uu_stat_plot_fp,
        plot = uu_homog_stat_vis,
-       width = 14, 
+       width = 14,
        height = 4)
 
 ## stats 
-write_tsv(wu_homog_results,
+write_tsv(wu_homog_lm,
           args$wu_lm_fp)
-write_tsv(wu_homog_dunn,
+write_tsv(new_wu_homog_dunn,
           args$wu_dunn_fp)
-write_tsv(uu_homog_results,
+write_tsv(uu_homog_lm,
           args$uu_lm_fp)
-write_tsv(uu_homog_dunn,
+write_tsv(new_uu_homog_dunn,
           args$uu_dunn_fp)
 

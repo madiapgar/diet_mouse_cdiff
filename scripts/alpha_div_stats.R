@@ -67,8 +67,8 @@ args <- parser$parse_args()
 
 ## input file paths
 # metadata_FP <- './data/misc/processed_metadata.tsv'
-# faith_pd_fp <- './data/qiime/core_outputs/faith_pd.tsv'
-# shannon_fp <- './data/qiime/core_outputs/shannon_entropy.tsv'
+# faith_pd_FP <- './data/qiime/core_outputs/faith_pd.tsv'
+# shannon_FP <- './data/qiime/core_outputs/shannon_entropy.tsv'
 unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A',
                       'Mock_3A', 'Mock_4A', 'Mock_5A', 'Mock_6A',
                       'Mock_7A', 'PCR Blank0',
@@ -295,11 +295,9 @@ write_tsv(new_shannon_dunn, args$shannon_dunn_FP)
 ggsave(args$faith_plot_FP,
        plot = faith_stat_vis, 
        width = 13, 
-       height = 3, 
-       path = './plots')
+       height = 3)
 
 ggsave(args$shannon_plot_FP,
        plot = shannon_stat_vis, 
        width = 13, 
-       height = 3, 
-       path = './plots')
+       height = 3)

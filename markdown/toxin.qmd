@@ -69,7 +69,7 @@ meta_diet_fixer <- function(metadata_file,
 **File Paths**
 
 ```{r}
-metadata_FP <- '../data/misc/merged_metadata1.tsv'
+metadata_FP <- '../data/misc/updated_metadata.tsv'
 toxin_FP <- '../data/misc/toxin_final_data.tsv'
 seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
 

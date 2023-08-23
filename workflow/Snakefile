@@ -214,7 +214,7 @@ rule filter_taxonomy_vis:
 rule pre_core_metrics_filter:
     input:
         "data/qiime/taxonomy_filtered.qza",
-        "data/misc/updated_metadata.csv"
+        "data/misc/updated_metadata.tsv"
     output:
         "data/qiime/tax_filt_actual.qza"
     conda:
@@ -223,7 +223,7 @@ rule pre_core_metrics_filter:
         """
         qiime feature-table filter-samples \
             --i-table ./data/qiime/taxonomy_filtered.qza \
-            --m-metadata-file ./data/misc/updated_metadata.csv \
+            --m-metadata-file ./data/misc/updated_metadata.tsv \
             --o-filtered-table ./data/qiime/tax_filt_actual.qza
         """
 
@@ -232,8 +232,8 @@ rule core_metrics_analysis:
 ##  NEED TO CHECK THE SAMPLING DEPTH BEFORE YOU RUN THIS STEP
     input:
         "data/qiime/tree.qza",
-        "data/qiime/taxonomy_filtered.qza",
-        "data/misc/updated_metadata.csv"
+        "data/qiime/tax_filt_actual.qza",
+        "data/misc/updated_metadata.tsv"
     output:
         "data/qiime/core_outputs/bray_curtis_distance_matrix.qza",
         "data/qiime/core_outputs/bray_curtis_emperor.qzv",
@@ -260,7 +260,7 @@ rule core_metrics_analysis:
             --i-phylogeny ./data/qiime/tree.qza \
             --i-table ./data/qiime/tax_filt_actual.qza \
             --p-sampling-depth  99976 \
-            --m-metadata-file ./data/misc/updated_metadata.csv \
+            --m-metadata-file ./data/misc/updated_metadata.tsv \
             --o-rarefied-table ./data/qiime/core_outputs/rarefied_table.qza \
             --o-faith-pd-vector ./data/qiime/core_outputs/faith_pd_vector.qza \
             --o-observed-features-vector ./data/qiime/core_outputs/observed_features_vector.qza \
@@ -376,7 +376,7 @@ rule sequencing_depth_calculation:
     shell:
         """
         Rscript scripts/seq_depth.R --biom {input.biom} \
-                                    --sequences {input.asvs} \
+                                    --sequence {input.asvs} \
                                     --output {output.table}
         """
 
@@ -517,9 +517,9 @@ rule homogeneity:
                                      --weighted_lm {output.wu_lm} \
                                      --weighted_dunn {output.wu_dunn} \
                                      --unweighted_lm {output.uu_lm} \
-                                     --unweighted_dunn [output.uu_dunn] \
+                                     --unweighted_dunn {output.uu_dunn} \
                                      --weighted_plot {output.wu_plot} \
-                                     --weighted_stat_plot [output.wu_stat_plot] \
+                                     --weighted_stat_plot {output.wu_stat_plot} \
                                      --unweighted_plot {output.uu_plot} \
                                      --unweighted_stat_plot {output.uu_stat_plot}
         """
@@ -549,9 +549,9 @@ rule resiliency:
                                      --weighted_lm {output.wu_lm} \
                                      --weighted_dunn {output.wu_dunn} \
                                      --unweighted_lm {output.uu_lm} \
-                                     --unweighted_dunn [output.uu_dunn] \
+                                     --unweighted_dunn {output.uu_dunn} \
                                      --weighted_plot {output.wu_plot} \
-                                     --weighted_stat_plot [output.wu_stat_plot] \
+                                     --weighted_stat_plot {output.wu_stat_plot} \
                                      --unweighted_plot {output.uu_plot} \
                                      --unweighted_stat_plot {output.uu_stat_plot}
         """

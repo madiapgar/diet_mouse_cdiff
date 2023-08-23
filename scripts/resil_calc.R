@@ -47,19 +47,19 @@ parser$add_argument("-ud",
 parser$add_argument("-wp",
                     "--weighted_plot",
                     dest = "wu_plot_fp",
-                    help = "Filepath to Weighted UniFrac homogeneity plot in .pdf format.")
+                    help = "Filepath to Weighted UniFrac resiliency plot in .pdf format.")
 parser$add_argument("-wsp",
                     "--weighted_stat_plot",
                     dest = "wu_stat_plot_fp",
-                    help = "Filepath to Weighted UniFrac homogeneity statistical plot in .pdf format.")
+                    help = "Filepath to Weighted UniFrac resiliency statistical plot in .pdf format.")
 parser$add_argument("-up",
                     "--unweighted_plot",
                     dest = "uu_plot_fp",
-                    help = "Filepath to Unweighted UniFrac homogeneity plot in .pdf format.")
+                    help = "Filepath to Unweighted UniFrac resiliency plot in .pdf format.")
 parser$add_argument("-usp",
                     "--unweighted_stat_plot",
                     dest = "uu_stat_plot_fp",
-                    help = "Filepath to Unweighted UniFrac homogeneity statistical plot in .pdf format.")
+                    help = "Filepath to Unweighted UniFrac resiliency statistical plot in .pdf format.")
 
 args <- parser$parse_args()
 
@@ -111,7 +111,7 @@ dist_filter <- function(dist_mat, meta, mydiet){
 resil_dist_comp <- function(min_dist_mat, meta){
   meta %>% 
     select(sampleid, diet, day_post_inf, high_fat, high_fiber, purified_diet,
-           seq_depth) -> min_meta
+           seq_depth, mouse_id) -> min_meta
   
   min_dist_mat %>% 
     rename(sampleid_x = sampleid) %>% 
@@ -154,6 +154,65 @@ resil_diet_assembly <- function(dist_mat,
 }
 
 ## 4
+## all functions for calculating statistical analysis and creating a plot visualization
+stats <- function(biom_table){
+  ## linear modeling 
+  biom_table %>% 
+    filter(day_post_inf.y != -15) %>% 
+    group_by(day_post_inf.y) %>% 
+    do(glance(lm(dist ~ (purified_diet.y * seq_depth.y) + high_fat.y * high_fiber.y,
+                 data = .))) %>% 
+    ungroup() %>% 
+    na.omit() %>% 
+    mutate(adj.p = p.adjust(p.value, 
+                            method = "BH"),
+           test_id = paste(day_post_inf.y)) %>%
+    filter(p.value <= 0.05) -> lm_full
+  
+  biom_table %>% 
+    group_by(day_post_inf.y) %>% 
+    mutate(test_id = paste(day_post_inf.y)) %>% 
+    filter(test_id %in% lm_full$test_id) %>% 
+    do(tidy(lm(dist ~ (purified_diet.y * seq_depth.y) + high_fat.y * high_fiber.y,
+               data = .))) %>%
+    filter(term != '(Intercept)') %>% 
+    na.omit() -> lm_results
+  
+  lm_results['signif'] <- symnum(lm_results$p.value,
+                                 cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                 symbols = c("****", "***", "**", "*", "+", "ns"),
+                                 abbr.colnames = FALSE,
+                                 na = "")
+  ## kruskal wallis and dunns post hoc test
+  biom_table %>% 
+    na.omit() %>% 
+    filter(day_post_inf.y != -15) %>% 
+    group_by(day_post_inf.y) %>% 
+    do(tidy(kruskal.test(dist ~ diet,
+                         data = .))) %>% 
+    ungroup() %>% 
+    arrange(p.value) %>% 
+    mutate(p.adj = p.adjust(p.value,
+                            method = "BH"),
+           test_id = paste(day_post_inf.y)) %>%
+    filter(p.adj <= 0.05) -> kruskal
+  
+  biom_table %>% 
+    na.omit() %>% 
+    group_by(day_post_inf.y) %>% 
+    mutate(test_id = paste(day_post_inf.y)) %>% 
+    filter(test_id %in% kruskal$test_id) %>% 
+    dunn_test(dist ~ diet,
+              p.adjust.method = 'BH',
+              data = .) -> dunn
+  ## creating a named list of results
+  my_list <- list(LinearModel = lm_results,
+                  KruskalTest = kruskal,
+                  DunnPostHoc = dunn)
+  return(my_list)
+}
+
+## 5
 ## prepping the dunn test for the statistical visualization
 stat_plot_prep <- function(biom_table,
                            dunn_test){
@@ -243,27 +302,11 @@ uu_resil %>%
   ggtitle("Microbiome Resilience Over Time") -> uu_resil_plot
 
 ## stats
-## linear modeling 
-uu_resil %>% 
-  group_by(day_post_inf.y) %>% 
-  do(tidy(lm(dist ~ (purified_diet.y * seq_depth.y) + high_fat.y + high_fiber.y,
-             data = .))) %>% 
-  adjust_pvalue(method = 'BH') %>% 
-  filter(p.value <= 0.05) -> uu_resil_results
+uu_resil_stats <- stats(uu_resil)
 
-## kruskal-wallis and dunns post hoc test
-uu_resil %>% 
-  na.omit() %>% 
-  group_by(day_post_inf.y) %>% 
-  do(tidy(kruskal.test(dist ~ diet,
-                       data = .))) -> uu_resil_kruskal
-
-uu_resil %>% 
-  na.omit() %>% 
-  group_by(day_post_inf.y) %>% 
-  dunn_test(dist ~ diet,
-            p.adjust.method = 'BH',
-            data = .) -> uu_resil_dunn
+uu_resil_lm <- uu_resil_stats$LinearModel
+uu_resil_kruskal <- uu_resil_stats$KruskalTest
+uu_resil_dunn <- uu_resil_stats$DunnPostHoc
 
 ## statistical visualization
 stat_plot_prep(uu_resil,
@@ -293,27 +336,11 @@ wu_resil %>%
   ggtitle("Microbiome Resilience Over Time") -> wu_resil_plot
 
 ## stats
-## linear modeling 
-wu_resil %>% 
-  group_by(day_post_inf.y) %>% 
-  do(tidy(lm(dist ~ (purified_diet.y * seq_depth.y) + high_fat.y + high_fiber.y,
-             data = .))) %>% 
-  adjust_pvalue(method = 'BH') %>% 
-  filter(p.value <= 0.05) -> wu_resil_results
+wu_resil_stats <- stats(wu_resil)
 
-## kruskal-wallis and dunns post hoc test
-wu_resil %>% 
-  na.omit() %>% 
-  group_by(day_post_inf.y) %>% 
-  do(tidy(kruskal.test(dist ~ diet,
-                       data = .))) -> wu_resil_kruskal
-
-wu_resil %>% 
-  na.omit() %>% 
-  group_by(day_post_inf.y) %>% 
-  dunn_test(dist ~ diet,
-            p.adjust.method = 'BH',
-            data = .) -> wu_resil_dunn
+wu_resil_lm <- wu_resil_stats$LinearModel
+wu_resil_kruskal <- wu_resil_stats$KruskalTest
+wu_resil_dunn <- wu_resil_stats$DunnPostHoc
 
 ## statistical visualization
 stat_plot_prep(wu_resil,
@@ -323,29 +350,29 @@ stat_plot(new_wu_resil_dunn) -> wu_resil_stat_vis
 
 ## saving my output plots and stats
 ## plots
-ggsave(args$wu_plot_fp, 
+ggsave(args$wu_plot_fp,
        plot = wu_resil_plot,
-       width = 12, 
+       width = 12,
        height = 4)
-ggsave(args$wu_stat_plot_fp, 
+ggsave(args$wu_stat_plot_fp,
        plot = wu_resil_stat_vis,
-       width = 14, 
+       width = 14,
        height = 4)
-ggsave(args$uu_plot_fp, 
+ggsave(args$uu_plot_fp,
        plot = uu_resil_plot,
-       width = 12, 
+       width = 12,
        height = 4)
-ggsave(args$uu_stat_plot_fp, 
+ggsave(args$uu_stat_plot_fp,
        plot = uu_resil_stat_vis,
-       width = 14, 
+       width = 14,
        height = 4)
 
 ## stats
-write_tsv(uu_resil_results,
+write_tsv(uu_resil_lm,
           args$uu_lm_fp)
-write_tsv(uu_resil_dunn,
+write_tsv(new_uu_resil_dunn,
           args$uu_dunn_fp)
-write_tsv(wu_resil_results,
+write_tsv(wu_resil_lm,
           args$wu_lm_fp)
-write_tsv(wu_resil_dunn,
+write_tsv(new_wu_resil_dunn,
           args$wu_dunn_fp)

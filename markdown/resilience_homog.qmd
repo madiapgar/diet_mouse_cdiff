@@ -10,7 +10,8 @@ library(cowplot)
 library(magrittr)
 library(qiime2R)
 library(tidyverse)
-library(virdis)
+library(viridis)
+library(rstatix)
 ```
 
 ```{r}
@@ -434,7 +435,7 @@ stat_plot_prep(wu_resil,
 
 Weighted UniFrac Resiliency Dunn's Post Hoc Visualization
 
-```{r, fig.height=4, fig.width=14}
+```{r, fig.height=3.5, fig.width=13}
 stat_plot(new_w_resil_dunn) -> w_resil_stat_vis
 
 w_resil_stat_vis
@@ -516,7 +517,7 @@ stat_plot_prep(wu_homog,
 
 Weighted UniFrac Homogeneity Dunn's Post Hoc Visualization
 
-```{r, fig.height=4, fig.width=14}
+```{r, fig.height=3.5, fig.width=13}
 stat_plot(new_wu_homog_dunn) -> w_homog_stat_vis
 
 w_homog_stat_vis
@@ -530,8 +531,8 @@ plot_grid(wu_resil_plot, wu_homog_plot,
           nrow = 2,
           labels = c('b)', 'c)', 'd)', 'e)'),
           label_size = 22,
-          rel_heights = c(1, 0.8), 
-          rel_widths = c(0.9, 1)) -> resil_homog_together
+          rel_heights = c(1, 0.7),
+          rel_widths = c(0.95, 1)) -> resil_homog_together
 
 resil_homog_together
 ```
@@ -573,13 +574,13 @@ ggsave("uu_homogeneity.pdf",
        path = '../plots')
 ggsave("wu_resil_stats.pdf", 
        plot = w_resil_stat_vis,
-       width = 14, 
-       height = 4,
+       width = 13, 
+       height = 3.5,
        path = '../plots')
 ggsave("wu_homog_stats.pdf", 
        plot = w_homog_stat_vis,
-       width = 14, 
-       height = 4,
+       width = 13, 
+       height = 3.5,
        path = '../plots')
 ggsave("resil_homog_stat_vis.pdf", 
        plot = resil_homog_together,

@@ -9,15 +9,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-# change to scripts directory if not there already
-# curr_dir <- getwd()
-# curr_dir <- str_split(curr_dir, '\\/')
-# if (curr_dir[length(curr_dir)] != 'markdown'){
-#   setwd('./markdown')
-# }
-```
-
-```{r}
 library(qiime2R)
 library(tidyverse)
 library(cowplot)
@@ -133,7 +124,6 @@ long_wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospirace
 short_wanted_family <- c('Enterobacteriaceae', 
                          'Enterococcaceae', 
                          'Staphylococcaceae',
-                         'Bacteroidaceae',
                          'Lachnospiraceae')
 ```
 
@@ -159,7 +149,7 @@ short_abun_filt <- short_abun_files$AbundanceTable
 ```
 
 **Testing the New Plots Function**
-```{r, warning=FALSE, fig.width=17, fig.height=15}
+```{r, warning=FALSE, fig.width=17, fig.height=10}
 ## full table
 long_family_abun_plots <- abun_plots(long_abun_filt)
 
@@ -172,7 +162,7 @@ short_family_abun_plots <- abun_plots(short_abun_filt)
 short_abun1 <- short_family_abun_plots$FamilyAbundance1
 short_abun2 <- short_family_abun_plots$FamilyAbundance2
 
-long_abun2
+short_abun1
 ```
 
 **Attempt at Linear Modeling for Wanted Family Abundances**
@@ -276,7 +266,7 @@ poster_dunn %>%
 
 **Statistical Figure Visualizations**
 possible heat map for statistical results for my poster presentation. this is option #1. 
-```{r, fig.height=8, fig.width=16}
+```{r, fig.height=7.5, fig.width=14.5}
 ## option #1 based on dunns post hoc test 
 new_poster_dunn %>% 
   filter(day_post_inf != -15) %>% 
@@ -359,19 +349,19 @@ ggsave("family_abun2.pdf",
 ## family abundance plots for poster presentation
 ggsave("poster_family_abun.pdf",
        plot = short_abun1, 
-       width = 15, 
-       height = 8.5, 
+       width = 17, 
+       height = 10, 
        path = '../plots')
 
 ggsave("poster_famAbun_stats1.pdf",
        plot = stat_plot1, 
-       width = 18, 
-       height = 8, 
+       width = 14.5, 
+       height = 7.5, 
        path = '../plots')
 
 ggsave("poster_famAbun_stats2.pdf",
        plot = stat_plot2, 
-       width = 10, 
+       width = 9, 
        height = 5, 
        path = '../plots')
 
@@ -382,6 +372,10 @@ ggsave("poster_famAbun_together.pdf",
        path = '../plots')
 
 ## linear modeling results
-write_tsv(family_abun_lm,
-          '../stats/family_abun_lm.tsv')
+# write_tsv(family_abun_lm,
+#           '../stats/family_abun_lm.tsv')
+write_tsv(poster_family_abun_lm,
+          '../stats/poster_family_abun_lm.tsv')
+write_tsv(new_poster_dunn,
+          '../stats/family_abun_dunn.tsv')
 ```

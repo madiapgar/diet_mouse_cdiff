@@ -154,7 +154,7 @@ big_metab %>%
 
 Very rough draft of the plot for the metabolite data - I know that I will probably need to edit this.
 
-```{r, fig.width=19.75, fig.height=7}
+```{r, fig.width=16, fig.height=5}
 metab_labs <- c('Acetic Acid',
                 'Propanoic Acid',
                 'n-Butanoic Acid')
@@ -164,8 +164,8 @@ big_metab %>%
   ggplot(aes(x = diet, y = concentration)) +
   geom_violin(aes(group = diet)) +
   geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-  scale_x_discrete(labels = c('Chow', 'High Fat/\nHigh Fiber', 'High Fat/\nLow Fiber',
-                              'Low Fat/\nHigh Fiber', 'Low Fat/\nLow Fiber')) +
+  scale_x_discrete(labels = c('Chow', 'HFt/\nHFb', 'HFt/\nLFb',
+                              'LFt/\nHFb', 'LFt/\nLFb')) +
   facet_wrap(~metabolite, 
              nrow = 1,
              scales = 'free_y',
@@ -220,8 +220,8 @@ metab_results
 ## plot
 ggsave("metabolomics.pdf",
        plot = metab_plot,
-       width = 19.75,
-       height = 7,
+       width = 16,
+       height = 5,
        path = '../plots')
 
 ## statistical tests 

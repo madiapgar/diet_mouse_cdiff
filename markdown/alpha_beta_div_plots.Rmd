@@ -188,7 +188,7 @@ pcoa_plot <- function(biom_file,
     scale_fill_distiller(palette = 'Spectral', name = "Faith's PD") +
     facet_grid(day_post_inf~diet, 
                labeller = labeller(diet = labs)) +
-    theme(legend.text = element_text(size = 8.5),
+    theme(legend.text = element_text(size = 16),
           strip.text.y = element_text(angle = 0)) +
     ggtitle(title) +
     labs(x = xlab, y = ylab) -> pcoa

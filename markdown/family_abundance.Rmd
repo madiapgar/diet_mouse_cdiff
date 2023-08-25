@@ -148,7 +148,8 @@ short_abun_files <- family_abun_file_prep(metadata_FP,
 short_abun_filt <- short_abun_files$AbundanceTable
 ```
 
-**Testing the New Plots Function**
+**Family Abundance Plots**
+Long = the full family abundance plot. Short = the revised family abundance plot for my poster presentation. 
 ```{r, warning=FALSE, fig.width=17, fig.height=10}
 ## full table
 long_family_abun_plots <- abun_plots(long_abun_filt)
@@ -161,22 +162,40 @@ short_family_abun_plots <- abun_plots(short_abun_filt)
 
 short_abun1 <- short_family_abun_plots$FamilyAbundance1
 short_abun2 <- short_family_abun_plots$FamilyAbundance2
-
-short_abun1
 ```
 
-**Attempt at Linear Modeling for Wanted Family Abundances**
+**Linear Modeling for Wanted Family Abundances**
 ```{r}
 ## for overall plot 
 long_abun_filt %>%
   na.omit() %>% 
+  filter(day_post_inf > -15) %>% 
   group_by(Family, day_post_inf) %>% 
-  do(tidy(lm(rel_abund ~ (purified_diet * seq_depth) + high_fat + high_fiber,
+  do(glance(lm(rel_abund ~ (purified_diet * seq_depth) + high_fat * high_fiber,
              data =.))) %>% 
-  adjust_pvalue(method = 'BH') %>% 
+  ungroup() %>% 
   na.omit() %>% 
-  filter(term != '(Intercept)',
-         p.value <= 0.05) -> family_abun_lm
+  mutate(adj.p = p.adjust(p.value, 
+                          method = "BH"),
+         test_id = paste(Family, day_post_inf, sep = "_")) %>% 
+  filter(adj.p <= 0.05) -> family_abun_lm_full
+
+short_abun_filt %>%
+  na.omit() %>% 
+  group_by(Family, day_post_inf) %>% 
+  mutate(test_id = paste(Family, day_post_inf, sep = "_")) %>% 
+  filter(test_id %in% family_abun_lm_full$test_id) %>% 
+  do(tidy(lm(rel_abund ~ (purified_diet * seq_depth) + high_fat * high_fiber,
+             data =.))) %>% 
+  na.omit() %>% 
+  filter(term != '(Intercept)') -> family_abun_lm
+
+## this is how you add a p-value significance level column to your linear modeling results!!
+family_abun_lm['signif'] <- symnum(family_abun_lm$p.value,
+                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                   symbols = c("****", "***", "**", "*", "+", "ns"),
+                                   abbr.colnames = FALSE,
+                                   na = "")
 
 family_abun_lm
 ```
@@ -372,8 +391,8 @@ ggsave("poster_famAbun_together.pdf",
        path = '../plots')
 
 ## linear modeling results
-# write_tsv(family_abun_lm,
-#           '../stats/family_abun_lm.tsv')
+write_tsv(family_abun_lm,
+          '../stats/family_abun_lm.tsv')
 write_tsv(poster_family_abun_lm,
           '../stats/poster_family_abun_lm.tsv')
 write_tsv(new_poster_dunn,

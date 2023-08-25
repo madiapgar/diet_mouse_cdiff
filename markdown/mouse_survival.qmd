@@ -81,10 +81,6 @@ diet_plot$plot +
 diet_plot_final
 ```
 
-```{r}
-as_tibble(diet_fit$surv)
-```
-
 **Pairwise Comparisons**
 
 ```{r}

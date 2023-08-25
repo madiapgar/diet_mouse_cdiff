@@ -189,8 +189,8 @@ neat_toxin %>%
   ggplot(aes(x = diet, y = neat_conc)) +
   geom_violin(aes(group = diet), draw_quantiles = c(0.5)) +
   geom_jitter(alpha = 0.4, width = 0.1, height = 0)+
-  scale_x_discrete(labels = c('Chow', 'High Fat/\nHigh Fiber', 'High Fat/\nLow Fiber',
-                              'Low Fat/\nHigh Fiber', 'Low Fat/\nLow Fiber')) +
+  scale_x_discrete(labels = c('Chow', 'High-Fat/\nHigh-Fiber', 'High-Fat/\nLow-Fiber',
+                              'Low-Fat/\nHigh-Fiber', 'Low-Fat/\nLow-Fiber')) +
   facet_wrap(~neat_toxin,
              labeller = labeller(neat_toxin = neat_labs), 
              scales = 'free_y') +
@@ -216,8 +216,8 @@ dil_toxin %>%
   ggplot(aes(x = diet, y = dil_conc)) +
   geom_violin(aes(group = diet), draw_quantiles = c(0.5)) +
   geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-  scale_x_discrete(labels = c('High Fat/\nHigh Fiber', 'High Fat/\nLow Fiber',
-                              'Low Fat/\nHigh Fiber', 'Low Fat/\nLow Fiber')) +
+  scale_x_discrete(labels = c('High-Fat/\nHigh-Fiber', 'High-Fat/\nLow-Fiber',
+                              'Low-Fat/\nHigh-Fiber', 'Low-Fat/\nLow-Fiber')) +
   facet_wrap(~dil_toxin,
              labeller = labeller(dil_toxin = dil_labs),
              scales = 'free_y') +

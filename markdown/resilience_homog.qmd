@@ -136,6 +136,7 @@ stats <- function(biom_table){
 }
 
 ## editing dunns post hoc test so that I can calculate the difference between means
+## merge by mouse_id as well!!
 stat_plot_prep <- function(biom_table,
                            dunn_test){
   biom_table %>% 
@@ -165,7 +166,8 @@ stat_plot <- function(new_dunn){
     filter(day_post_inf.y != -15) %>%
     ggplot(aes(x = group1, y = group2)) +
     geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
-    scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
+    scale_fill_gradient2(low = 'green', high = 'blue', name = 'Group 1 -\nGroup 2',
+                         trans = 'reverse') +
     geom_text(aes(label = p.adj.signif)) +
     scale_x_discrete(labels = c('Chow',
                                 'HFt/\nHFb',
@@ -177,7 +179,8 @@ stat_plot <- function(new_dunn){
                                 'LFt / LFb')) +
     facet_grid(~day_post_inf.y) +
     theme_bw(base_size = 20) +
-    theme(strip.text.y = element_text(angle = 0)) +
+    theme(strip.text.y = element_text(angle = 0),
+          legend.position = 'none') +
     xlab('Group 1') +
     ylab('Group 2') -> stat_vis
   return(stat_vis)
@@ -525,7 +528,7 @@ w_homog_stat_vis
 
 **Putting Plots Together for my Poster Presentation**\
 
-```{r, fig.width=30, fig.height=9}
+```{r, fig.width=28, fig.height=9}
 plot_grid(wu_resil_plot, wu_homog_plot,
           w_resil_stat_vis, w_homog_stat_vis,
           nrow = 2,
@@ -584,7 +587,7 @@ ggsave("wu_homog_stats.pdf",
        path = '../plots')
 ggsave("resil_homog_stat_vis.pdf", 
        plot = resil_homog_together,
-       width = 30, 
+       width = 28, 
        height = 9,
        path = '../plots')
 ```

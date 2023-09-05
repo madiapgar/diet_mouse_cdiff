@@ -43,6 +43,112 @@ stat_file_prep <- function(metadata_fp,
            key = day_post_inf, value = taxon_function_abun) -> biom_long
   return(biom_long)
 }
+
+## function for running statisical analysis on picrust kos of interest 
+stat_calc <- function(biom_table){
+  ## linear modeling
+  biom_table %>% 
+    na.omit() %>% 
+    filter(day_post_inf != -15) %>% 
+    group_by(ko, day_post_inf) %>% 
+    do(glance(lm(taxon_function_abun ~ (purified_diet * seq_depth) + high_fat * high_fiber,
+               data = .))) %>% 
+    ungroup() %>% 
+    na.omit() %>% 
+    mutate(adj.p = p.adjust(p.value, 
+                            method = "BH"),
+          test_id = paste(ko, day_post_inf, sep = "_")) %>% 
+    filter(adj.p <= 0.05) -> lm_full
+  biom_table %>% 
+    na.omit() %>% 
+    group_by(ko, day_post_inf) %>% 
+    mutate(test_id = paste(ko, day_post_inf, sep = "_")) %>% 
+    filter(test_id %in% lm_full$test_id) %>% 
+    do(tidy(lm(taxon_function_abun ~ (purified_diet * seq_depth) + high_fat * high_fiber,
+               data = .))) %>%
+    na.omit() %>% 
+    filter(term != '(Intercept)') -> lm
+  lm['signif'] <- symnum(lm$p.value,
+                         cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                         symbols = c("****", "***", "**", "*", "+", "ns"),
+                         abbr.colnames = FALSE,
+                         na = "")
+  ## kruskal wallis and dunns post hoc tests
+  biom_table %>% 
+    na.omit() %>% 
+    filter(day_post_inf != -15) %>% 
+    group_by(ko, day_post_inf) %>% 
+    do(tidy(kruskal.test(taxon_function_abun ~ diet,
+             data = .))) %>% 
+    ungroup() %>% 
+    arrange(p.value) %>% 
+    mutate(p.adj = p.adjust(p.value,
+                            method = "BH"),
+          test_id = paste(ko, day_post_inf, sep = "_")) -> kruskal
+  biom_table %>% 
+    na.omit() %>% 
+    group_by(ko, day_post_inf) %>% 
+    mutate(test_id = paste(ko, day_post_inf, sep = "_")) %>% 
+    filter(test_id %in% kruskal$test_id) %>% 
+    dunn_test(taxon_function_abun ~ diet,
+              p.adjust.method = 'BH',
+              data = .) -> dunn
+  ## creating a list 
+  my_list <- list(LinearModel = lm,
+                  KruskalTest = kruskal,
+                  DunnPostHoc = dunn)
+  return(my_list)
+}
+
+## creating a function for this so I don't have to keep doing each one by hand 
+stat_plot_prep <- function(biom_table,
+                           dunn_test,
+                           value){
+  biom_table %>% 
+    group_by(diet, day_post_inf) %>% 
+    summarise(means = mean(.data[[value]])) -> mean_table
+  dunn_test %>% 
+    merge(mean_table, 
+          by.x = c('group1',
+                   'day_post_inf'),
+          by.y = c('diet',
+                   'day_post_inf')) %>% 
+    rename('group1_means' = 'means') %>% 
+    merge(mean_table,
+          by.x = c('group2',
+                   'day_post_inf'),
+          by.y = c('diet',
+                   'day_post_inf')) %>% 
+    rename('group2_means' = 'means') %>% 
+    mutate(diff_means = (group1_means - group2_means),
+           stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
+  return(new_dunn)
+}
+
+stat_plot <- function(new_dunn){
+  new_dunn %>% 
+    filter(day_post_inf != -15) %>%
+    ggplot(aes(x = group1, y = group2)) +
+    geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
+    scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
+    geom_text(aes(label = p.adj.signif)) +
+    scale_x_discrete(labels = c('Chow',
+                                'HFt/\nHFb',
+                                'HFt/\nLFb',
+                                'LFt/\nHFb')) +
+    scale_y_discrete(labels = c('HFt / HFb',
+                                'HFt / LFb',
+                                'LFt / HFb',
+                                'LFt / LFb')) +
+    facet_grid(ko~day_post_inf,
+              scales = 'free_x') +
+    theme_bw(base_size = 20) +
+    theme(strip.text.y = element_text(angle = 0)) +
+    xlab('Group 1') +
+    ylab('Group 2') -> stat_vis
+  return(stat_vis)
+}
+
 ```
 
 **Input File Paths**
@@ -67,33 +173,38 @@ bile_long <- stat_file_prep(metadata_FP,
                             bile_kos)
 ```
 
-**Butyrate Enzyme Linear Modeling**
+**Butyrate Enzyme Statistical Analysis**
 Should I filter day -15 out of these results as well? 
-```{r}
-but_long %>% 
-  group_by(ko, day_post_inf) %>% 
-  do(tidy(lm(taxon_function_abun ~ high_fat + high_fiber + (purified_diet * seq_depth), 
-             data = .))) %>% 
-  adjust_pvalue(method = 'BH') %>% 
-  filter(p.value <= 0.05) -> buty_lm
+```{r, fig.height=4, fig.width=14}
+buty_stats <- stat_calc(but_long)
 
-buty_lm
+buty_lm <- buty_stats$LinearModel
+buty_kruskal <- buty_stats$KruskalTest
+buty_dunn <- buty_stats$DunnPostHoc
+
+new_buty_dunn <- stat_plot_prep(but_long,
+                                buty_dunn, 
+                                'taxon_function_abun')
+
+buty_plot <- stat_plot(new_buty_dunn)
+
+buty_plot
 ```
 
 **Secondary Bile Acid Linear Modeling**
 ```{r}
-bile_long %>% 
-  group_by(ko, day_post_inf) %>% 
-  do(tidy(lm(taxon_function_abun ~ high_fat + high_fiber + (purified_diet * seq_depth), 
-             data = .))) %>% 
-  adjust_pvalue(method = 'BH') %>% 
-  filter(p.value <= 0.05) -> bile_lm
-
-bile_lm
+bile_stats <- stat_calc(bile_long)
 ```
 
 **Saving my Outputs**
 ```{r}
+ggsave("buty_stat_vis.pdf",
+       plot = buty_plot, 
+       width = 14, 
+       height = 4, 
+       path = '../plots')
+
+
 write_tsv(buty_lm,
           '../stats/buty_enzyme_lm.tsv')
 write_tsv(bile_lm,

@@ -152,12 +152,12 @@ summary(diet.fit.cox)
 
 **Putting Survival Plot by Diet with Statistical Visualization**\
 
-```{r, fig.width=18, fig.height=12}
+```{r, fig.width=20, fig.height=8}
 plot_grid(diet_plot_final, surv_stat_vis,
-          nrow = 2, 
+          ncol = 2, 
           labels = c('a)', 'b)'),
           label_size = 22,
-          rel_heights = c(1, 0.5))
+          rel_widths = c(1, 0.5))
 ```
 
 **Creating Survival Plot by Fiber Content**

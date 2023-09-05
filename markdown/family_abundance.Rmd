@@ -120,11 +120,12 @@ names(diet_labs) <- c('Chow',
 wanted_level <- 'Family'
 long_wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
                         'Staphylococcaceae', 'Tannerellaceae', 'Muribaculaceae', 'Bacteroidaceae', 
-                        'Marinifilaceae', 'Ruminococcaceae')
+                        'Marinifilaceae', 'Ruminococcaceae', 'Peptostreptococcaceae')
 short_wanted_family <- c('Enterobacteriaceae', 
                          'Enterococcaceae', 
                          'Staphylococcaceae',
-                         'Lachnospiraceae')
+                         'Lachnospiraceae',
+                         'Peptostreptococcaceae')
 ```
 
 **File Prep for Plot Construction**
@@ -146,11 +147,12 @@ short_abun_files <- family_abun_file_prep(metadata_FP,
                                           short_wanted_family)
 
 short_abun_filt <- short_abun_files$AbundanceTable
+short_tax <- short_abun_files$Taxonomy
 ```
 
 **Family Abundance Plots**
 Long = the full family abundance plot. Short = the revised family abundance plot for my poster presentation. 
-```{r, warning=FALSE, fig.width=17, fig.height=10}
+```{r, warning=FALSE, fig.width=17, fig.height=15}
 ## full table
 long_family_abun_plots <- abun_plots(long_abun_filt)
 
@@ -162,6 +164,8 @@ short_family_abun_plots <- abun_plots(short_abun_filt)
 
 short_abun1 <- short_family_abun_plots$FamilyAbundance1
 short_abun2 <- short_family_abun_plots$FamilyAbundance2
+
+long_abun1
 ```
 
 **Linear Modeling for Wanted Family Abundances**
@@ -180,7 +184,7 @@ long_abun_filt %>%
          test_id = paste(Family, day_post_inf, sep = "_")) %>% 
   filter(adj.p <= 0.05) -> family_abun_lm_full
 
-short_abun_filt %>%
+long_abun_filt %>%
   na.omit() %>% 
   group_by(Family, day_post_inf) %>% 
   mutate(test_id = paste(Family, day_post_inf, sep = "_")) %>% 
@@ -197,8 +201,93 @@ family_abun_lm['signif'] <- symnum(family_abun_lm$p.value,
                                    abbr.colnames = FALSE,
                                    na = "")
 
-family_abun_lm
+## kruskal-wallis and dunn's post hoc test
+long_abun_filt %>% 
+  na.omit() %>% 
+  group_by(Family, day_post_inf) %>% 
+  do(tidy(kruskal.test(rel_abund ~ diet,
+             data = .))) %>% 
+  ungroup() %>% 
+  arrange(p.value) %>% 
+  mutate(p.adj = p.adjust(p.value,
+                          method = "BH"),
+         test_id = paste(Family, day_post_inf, sep = "_")) %>% 
+  filter(p.adj <= 0.05) -> long_kruskal
+
+long_abun_filt %>% 
+  na.omit() %>% 
+  group_by(Family, day_post_inf) %>%
+  mutate(test_id = paste(Family, day_post_inf, sep = "_")) %>% 
+  filter(test_id %in% long_kruskal$test_id) %>% 
+  dunn_test(rel_abund ~ diet,
+            p.adjust.method = 'BH',
+            data = .) -> long_dunn
+
+## editing my dunn's post hoc test to include the difference in means between groups 
+long_abun_filt %>% 
+  group_by(diet, Family, day_post_inf) %>% 
+  summarise(mean_rel_abund = mean(rel_abund)) -> mean_family_abun_long
+
+long_dunn %>% 
+  merge(mean_family_abun_long, 
+        by.x = c('group1',
+                 'day_post_inf',
+                 'Family'),
+        by.y = c('diet',
+                 'day_post_inf',
+                 'Family')) %>% 
+  rename('group1_rel_abun' = 'mean_rel_abund') %>% 
+  merge(mean_family_abun_long,
+        by.x = c('group2',
+                 'day_post_inf',
+                 'Family'),
+        by.y = c('diet',
+                 'day_post_inf',
+                 'Family')) %>% 
+  rename('group2_rel_abun' = 'mean_rel_abund') %>% 
+  mutate(diff_means = (group1_rel_abun - group2_rel_abun),
+         stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_long_dunn
 ```
+
+**Statistical Visualization**
+```{r, fig.height=15, fig.width=17}
+new_long_dunn %>% 
+  filter(day_post_inf != -15) %>% 
+  ggplot(aes(x = group1, y = group2)) +
+  geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
+  # scale_fill_viridis(option = "H", name = 'Difference\nin Means') +
+  scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
+  geom_text(aes(label = p.adj.signif)) +
+  scale_x_discrete(labels = c('Chow',
+                              'HFt/\nHFb',
+                              'HFt/\nLFb',
+                              'LFt/\nHFb')) +
+  scale_y_discrete(labels = c('HFt / HFb',
+                              'HFt / LFb',
+                              'LFt / HFb',
+                              'LFt / LFb')) +
+  facet_grid(Family~day_post_inf,
+             scales = 'free_x') +
+  theme_bw(base_size = 20) +
+  theme(strip.text.y = element_text(angle = 0)) +
+  xlab('Group 1') +
+  ylab('Group 2') -> long_stat_plot
+
+long_stat_plot
+```
+
+**Putting My (long) Plots Together!**
+```{r, fig.height = 16, fig.width = 36}
+plot_grid(long_abun1, long_stat_plot,
+          nrow = 1,
+          labels = c('a)', 'b)'),
+          label_size = 22,
+          rel_widths = c(1, 0.8)) -> long_plots_together
+
+long_plots_together
+```
+
+
 
 **Poster Presentation Stats**
 these stats are for the shortened figure that I am putting on my poster presentation!
@@ -313,7 +402,7 @@ stat_plot1
 ```
 
 this is option #2. 
-```{r, fig.height=5, fig.width=9}
+```{r, fig.height=7, fig.width=9}
 ## option #2 based on the linear model
 poster_family_abun_lm %>% 
   filter(term != 'seq_depth',
@@ -357,6 +446,11 @@ ggsave("family_abun1.pdf",
        plot = long_abun1, 
        width = 17, 
        height = 15, 
+       path = '../plots')
+ggsave("family_abun1_w_stats.pdf",
+       plot = long_plots_together, 
+       width = 36, 
+       height = 16, 
        path = '../plots')
 ## option #2
 ggsave("family_abun2.pdf",

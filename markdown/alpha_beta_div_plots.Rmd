@@ -249,7 +249,7 @@ weighted_biom <- core_files$WeightedBiom
 
 
 **Unweighted PcoA plot**
-```{r, fig.height=8.5, fig.width=17, warning=FALSE}
+```{r, fig.height=8.5, fig.width=15, warning=FALSE}
 uw_uni_xlab <- pcoa_ax_lab(uw_var, 'PC1')
 uw_uni_ylab <- pcoa_ax_lab(uw_var, 'PC2')
 
@@ -306,15 +306,25 @@ shannon_entropy_plot <- shannon_plot(shannon_FP,
 shannon_entropy_plot
 ```
 
-**Putting my Faith's PD Plots together**
-I'm doing this for an upcoming poster presentation that I would like to do. NOTE: you did something lazy here and you had the faith_stat_vis plot loaded into your global environment so if you want to replicate this, you'll need to run the code in qiime_core_stats.Rmd before you run this chunk!!
-```{r, fig.height=7.5, fig.width=14}
-# poster_faith <- plot_grid(faith_plot, faith_stat_vis,
-#                              nrow = 2,
-#                              labels = c('a)', 'b)'),
-#                              label_size = 22,
-#                              rel_heights = c(1, 0.8))
-# poster_faith
+**Putting my Alpha Diversity Plots together**
+NOTE: you did something lazy here and you had the faith_stat_vis plot loaded into your global environment so if you want to replicate this, you'll need to run the code in qiime_core_stats.Rmd before you run this chunk!!
+```{r, fig.height=8, fig.width=27}
+alpha_plots <- plot_grid(faith_plot, shannon_entropy_plot,
+                          faith_stat_vis, shannon_stat_vis,
+                          nrow = 2,
+                          labels = c('a)', 'b)', 'c)', 'd)'),
+                          label_size = 22,
+                          rel_heights = c(1, 0.7))
+alpha_plots
+```
+**Putting my Beta Diversity Plots Together**
+```{r, fig.height=8, fig.width=30}
+beta_plots <- plot_grid(unweighted_pcoa, weighted_pcoa,
+                        nrow = 1,
+                        labels = c('a)', 'b)'),
+                        label_size = 22,
+                        rel_widths = c(0.9, 1))
+beta_plots
 ```
 
 **Saving my plot outputs**
@@ -341,6 +351,16 @@ ggsave("tss_unweighted_unifrac.pdf",
        width = 17,
        height = 8.5,
        path = '../plots')
+ggsave("alpha_plots.pdf",
+       plot = alpha_plots,
+       width = 27,
+       height = 8,
+       path = '../plots')
+ggsave("beta_plots.pdf",
+       plot = beta_plots,
+       width = 30,
+       height = 8,
+       path = '../plots')
 
 ## composed faith plot and stat figures for poster
 # ggsave("poster_faith.pdf",
@@ -348,6 +368,8 @@ ggsave("tss_unweighted_unifrac.pdf",
 #        width = 14,
 #        height = 7.5,
 #        path = '../plots')
+
+
 ```
 
 

@@ -453,7 +453,7 @@ uw_adonis <- adonis_test(uw_dist,
 **Saving my Outputs**
 ```{r}
 ## plot
-ggsave("poster_faith_stats.pdf",
+ggsave("faith_stats.pdf",
        plot = faith_stat_vis, 
        width = 14, 
        height = 4, 

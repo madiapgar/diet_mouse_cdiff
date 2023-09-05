@@ -179,8 +179,7 @@ stat_plot <- function(new_dunn){
                                 'LFt / LFb')) +
     facet_grid(~day_post_inf.y) +
     theme_bw(base_size = 20) +
-    theme(strip.text.y = element_text(angle = 0),
-          legend.position = 'none') +
+    theme(strip.text.y = element_text(angle = 0)) +
     xlab('Group 1') +
     ylab('Group 2') -> stat_vis
   return(stat_vis)
@@ -385,7 +384,7 @@ uu_resil_plot
 
 Statistical analysis by diet for the unweighted UniFrac resiliency plot above.
 
-```{r}
+```{r, fig.height=3.5, fig.width=13}
 uu_resil_stats <- stats(uu_resil)
 
 uu_resil_lm <- uu_resil_stats$LinearModel
@@ -394,6 +393,9 @@ uu_resil_dunn <- uu_resil_stats$DunnPostHoc
 
 new_uu_resil_dunn <- stat_plot_prep(uu_resil,
                                     uu_resil_dunn)
+stat_plot(new_uu_resil_dunn) -> uu_resil_stat_vis
+
+uu_resil_stat_vis
 ```
 
 **Weighted UniFrac Resiliency Plot**
@@ -470,7 +472,7 @@ uu_homog_plot
 
 **Unweighted UniFrac Homogeneity Linear Modeling**
 
-```{r}
+```{r, fig.height=3.5, fig.width=13}
 uu_homog_stats <- stats(uu_homog)
 
 uu_homog_lm <- uu_homog_stats$LinearModel
@@ -479,6 +481,9 @@ uu_homog_dunn <- uu_homog_stats$DunnPostHoc
 
 stat_plot_prep(uu_homog,
                uu_homog_dunn) -> new_uu_homog_dunn
+stat_plot(new_uu_homog_dunn) -> uu_homog_stat_vis
+
+uu_homog_stat_vis
 ```
 
 **Weighted UniFrac Homogeneity Plot**
@@ -526,18 +531,32 @@ stat_plot(new_wu_homog_dunn) -> w_homog_stat_vis
 w_homog_stat_vis
 ```
 
-**Putting Plots Together for my Poster Presentation**\
+**Putting Unweighted UniFrac Plots Together**
+
+```{r, fig.width=28, fig.height=9}
+plot_grid(uu_resil_plot, uu_homog_plot,
+          uu_resil_stat_vis, uu_homog_stat_vis,
+          nrow = 2,
+          labels = c('a)', 'b)', 'c)', 'd)'),
+          label_size = 22,
+          rel_heights = c(1, 0.6),
+          rel_widths = c(0.95, 1)) -> uu_resil_homog_together
+
+uu_resil_homog_together
+```
+
+**Putting Weighted UniFrac Plots Together**
 
 ```{r, fig.width=28, fig.height=9}
 plot_grid(wu_resil_plot, wu_homog_plot,
           w_resil_stat_vis, w_homog_stat_vis,
           nrow = 2,
-          labels = c('b)', 'c)', 'd)', 'e)'),
+          labels = c('a)', 'b)', 'c)', 'd)'),
           label_size = 22,
-          rel_heights = c(1, 0.7),
-          rel_widths = c(0.95, 1)) -> resil_homog_together
+          rel_heights = c(1, 0.6),
+          rel_widths = c(0.95, 1)) -> w_resil_homog_together
 
-resil_homog_together
+w_resil_homog_together
 ```
 
 **Writing all Statistical Results to a .tsv**
@@ -585,8 +604,13 @@ ggsave("wu_homog_stats.pdf",
        width = 13, 
        height = 3.5,
        path = '../plots')
-ggsave("resil_homog_stat_vis.pdf", 
-       plot = resil_homog_together,
+ggsave("w_resil_homog_stat_vis.pdf", 
+       plot = w_resil_homog_together,
+       width = 28, 
+       height = 9,
+       path = '../plots')
+ggsave("uu_resil_homog_stat_vis.pdf", 
+       plot = uu_resil_homog_together,
        width = 28, 
        height = 9,
        path = '../plots')

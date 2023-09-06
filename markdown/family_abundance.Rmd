@@ -22,6 +22,8 @@ library(rstatix)
 **Function**
 .data[[]] let's you insert a string variable into tidyverse commands which makes your functions more customizable!
 ```{r}
+## abundance file prep and filtering function
+## combines all files into one large table
 family_abun_file_prep <- function(metadata_fp,
                                   tax_fp,
                                   otu_table_fp,
@@ -61,7 +63,9 @@ family_abun_file_prep <- function(metadata_fp,
   return(my_list)
 }
 
-abun_plots <- function(abundance_table){
+## takes large assembled table and creates the quantitative plot 
+abun_plots <- function(abundance_table,
+                       tax_level){
   ## first plot
   abundance_table %>%
     filter(!is.na(diet)) %>% 
@@ -75,9 +79,9 @@ abun_plots <- function(abundance_table){
       geom_smooth(se = FALSE) +
       geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
       theme_bw(base_size = 20) +
-      facet_grid(Family~diet, labeller = labeller(diet = diet_labs)) +
+      facet_grid(.data[[tax_level]]~diet, labeller = labeller(diet = diet_labs)) +
       theme(strip.text.y = element_text(angle = 0)) +
-      ggtitle("Microbe Family Relative Abundance") +
+      ggtitle("Microbe Relative Abundance") +
       ylab("Relative Abundance") +
       xlab("Days Relative to Infection") -> family_abun1
   ## second plot
@@ -87,7 +91,7 @@ abun_plots <- function(abundance_table){
       geom_tile(aes(fill = rel_abund), alpha = 0.5) +
       scale_fill_viridis(option = "H", name = 'Relative\nAbundance') +
       theme_bw(base_size = 16) +
-      facet_grid(Family~diet, scales = 'free',
+      facet_grid(.data[[tax_level]]~diet, scales = 'free',
                  labeller = labeller(diet = diet_labs)) +
       theme(strip.text.y = element_text(angle = 0),
             axis.text.x = element_blank()) + 
@@ -99,6 +103,115 @@ abun_plots <- function(abundance_table){
                   FamilyAbundance2 = family_abun2)
   return(my_list)
 }
+
+## runs statistics on the large assembled data table for stat visualization
+abun_stats <- function(filtered_table,
+                       tax_level){
+  ## linear modeling 
+  filtered_table %>%
+    na.omit() %>% 
+    filter(day_post_inf > -15) %>% 
+    group_by(.data[[tax_level]], day_post_inf) %>% 
+    do(glance(lm(rel_abund ~ (purified_diet * seq_depth) + high_fat * high_fiber,
+              data =.))) %>% 
+    ungroup() %>% 
+    na.omit() %>% 
+    mutate(adj.p = p.adjust(p.value, 
+                            method = "BH"),
+          test_id = paste(.data[[tax_level]], day_post_inf, sep = "_")) %>% 
+    filter(adj.p <= 0.05) -> lm_full
+  filtered_table %>%
+    na.omit() %>% 
+    group_by(.data[[tax_level]], day_post_inf) %>% 
+    mutate(test_id = paste(.data[[tax_level]], day_post_inf, sep = "_")) %>% 
+    filter(test_id %in% lm_full$test_id) %>% 
+    do(tidy(lm(rel_abund ~ (purified_diet * seq_depth) + high_fat * high_fiber,
+             data =.))) %>% 
+    na.omit() %>% 
+    filter(term != '(Intercept)') -> linear_model
+  linear_model['signif'] <- symnum(linear_model$p.value,
+                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                   symbols = c("****", "***", "**", "*", "+", "ns"),
+                                   abbr.colnames = FALSE,
+                                   na = "")
+  ## kruskal wallis test 
+  filtered_table %>% 
+    na.omit() %>% 
+    group_by(.data[[tax_level]], day_post_inf) %>% 
+    do(tidy(kruskal.test(rel_abund ~ diet,
+               data = .))) %>% 
+    ungroup() %>% 
+    arrange(p.value) %>% 
+    mutate(p.adj = p.adjust(p.value,
+                            method = "BH"),
+           test_id = paste(.data[[tax_level]], day_post_inf, sep = "_")) %>% 
+    filter(p.adj <= 0.05) -> kruskal
+  ## dunn's post hoc test
+  filtered_table %>% 
+    na.omit() %>% 
+    group_by(.data[[tax_level]], day_post_inf) %>%
+    mutate(test_id = paste(.data[[tax_level]], day_post_inf, sep = "_")) %>% 
+    filter(test_id %in% kruskal$test_id) %>% 
+    dunn_test(rel_abund ~ diet,
+              p.adjust.method = 'BH',
+              data = .) -> dunn
+  ## editing my dunn's post hoc test to include the difference in means between groups 
+  filtered_table %>% 
+    group_by(diet, .data[[tax_level]], day_post_inf) %>% 
+    summarise(mean_rel_abund = mean(rel_abund)) -> mean_abun
+  dunn %>% 
+    merge(mean_abun, 
+          by.x = c('group1',
+                   'day_post_inf',
+                   'Family'),
+          by.y = c('diet',
+                   'day_post_inf',
+                   'Family')) %>% 
+    rename('group1_rel_abun' = 'mean_rel_abund') %>% 
+    merge(mean_abun,
+          by.x = c('group2',
+                   'day_post_inf',
+                   'Family'),
+          by.y = c('diet',
+                   'day_post_inf',
+                   'Family')) %>% 
+    rename('group2_rel_abun' = 'mean_rel_abund') %>% 
+    mutate(diff_means = (group1_rel_abun - group2_rel_abun),
+           stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
+  ## creating a list of my outputs
+  my_list <- list(LinearModel = linear_model,
+                  KruskalTest = kruskal,
+                  DunnPostHoc = new_dunn)
+  return(my_list)
+}
+
+## can drop the 'new' dunn test results into this function for the 
+## stat visualization 
+stat_plot <- function(new_dunn,
+                      tax_level){
+  new_dunn %>% 
+    filter(day_post_inf != -15) %>% 
+    ggplot(aes(x = group1, y = group2)) +
+    geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
+    scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
+    geom_text(aes(label = p.adj.signif)) +
+    scale_x_discrete(labels = c('Chow',
+                                'HFt/\nHFb',
+                                'HFt/\nLFb',
+                                'LFt/\nHFb')) +
+    scale_y_discrete(labels = c('HFt / HFb',
+                                'HFt / LFb',
+                                'LFt / HFb',
+                                'LFt / LFb')) +
+    facet_grid(.data[[tax_level]]~day_post_inf,
+               scales = 'free_x') +
+    theme_bw(base_size = 20) +
+    theme(strip.text.y = element_text(angle = 0)) +
+    xlab('Group 1') +
+    ylab('Group 2') -> stat_plot
+  return(stat_plot)
+}
+
 ```
 
 **Needed File Paths**
@@ -126,6 +239,8 @@ short_wanted_family <- c('Enterobacteriaceae',
                          'Staphylococcaceae',
                          'Lachnospiraceae',
                          'Peptostreptococcaceae')
+cdiff_level <- 'Genus'
+wanted_genus <- 'Clostridioides'
 ```
 
 **File Prep for Plot Construction**
@@ -154,125 +269,31 @@ short_tax <- short_abun_files$Taxonomy
 Long = the full family abundance plot. Short = the revised family abundance plot for my poster presentation. 
 ```{r, warning=FALSE, fig.width=17, fig.height=15}
 ## full table
-long_family_abun_plots <- abun_plots(long_abun_filt)
+long_family_abun_plots <- abun_plots(long_abun_filt,
+                                     wanted_level)
 
 long_abun1 <- long_family_abun_plots$FamilyAbundance1
 long_abun2 <- long_family_abun_plots$FamilyAbundance2
 
 ## shortened table for poster presentation
-short_family_abun_plots <- abun_plots(short_abun_filt)
+short_family_abun_plots <- abun_plots(short_abun_filt,
+                                      wanted_level)
 
 short_abun1 <- short_family_abun_plots$FamilyAbundance1
 short_abun2 <- short_family_abun_plots$FamilyAbundance2
-
-long_abun1
 ```
 
-**Linear Modeling for Wanted Family Abundances**
-```{r}
-## for overall plot 
-long_abun_filt %>%
-  na.omit() %>% 
-  filter(day_post_inf > -15) %>% 
-  group_by(Family, day_post_inf) %>% 
-  do(glance(lm(rel_abund ~ (purified_diet * seq_depth) + high_fat * high_fiber,
-             data =.))) %>% 
-  ungroup() %>% 
-  na.omit() %>% 
-  mutate(adj.p = p.adjust(p.value, 
-                          method = "BH"),
-         test_id = paste(Family, day_post_inf, sep = "_")) %>% 
-  filter(adj.p <= 0.05) -> family_abun_lm_full
-
-long_abun_filt %>%
-  na.omit() %>% 
-  group_by(Family, day_post_inf) %>% 
-  mutate(test_id = paste(Family, day_post_inf, sep = "_")) %>% 
-  filter(test_id %in% family_abun_lm_full$test_id) %>% 
-  do(tidy(lm(rel_abund ~ (purified_diet * seq_depth) + high_fat * high_fiber,
-             data =.))) %>% 
-  na.omit() %>% 
-  filter(term != '(Intercept)') -> family_abun_lm
-
-## this is how you add a p-value significance level column to your linear modeling results!!
-family_abun_lm['signif'] <- symnum(family_abun_lm$p.value,
-                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                   symbols = c("****", "***", "**", "*", "+", "ns"),
-                                   abbr.colnames = FALSE,
-                                   na = "")
-
-## kruskal-wallis and dunn's post hoc test
-long_abun_filt %>% 
-  na.omit() %>% 
-  group_by(Family, day_post_inf) %>% 
-  do(tidy(kruskal.test(rel_abund ~ diet,
-             data = .))) %>% 
-  ungroup() %>% 
-  arrange(p.value) %>% 
-  mutate(p.adj = p.adjust(p.value,
-                          method = "BH"),
-         test_id = paste(Family, day_post_inf, sep = "_")) %>% 
-  filter(p.adj <= 0.05) -> long_kruskal
-
-long_abun_filt %>% 
-  na.omit() %>% 
-  group_by(Family, day_post_inf) %>%
-  mutate(test_id = paste(Family, day_post_inf, sep = "_")) %>% 
-  filter(test_id %in% long_kruskal$test_id) %>% 
-  dunn_test(rel_abund ~ diet,
-            p.adjust.method = 'BH',
-            data = .) -> long_dunn
-
-## editing my dunn's post hoc test to include the difference in means between groups 
-long_abun_filt %>% 
-  group_by(diet, Family, day_post_inf) %>% 
-  summarise(mean_rel_abund = mean(rel_abund)) -> mean_family_abun_long
-
-long_dunn %>% 
-  merge(mean_family_abun_long, 
-        by.x = c('group1',
-                 'day_post_inf',
-                 'Family'),
-        by.y = c('diet',
-                 'day_post_inf',
-                 'Family')) %>% 
-  rename('group1_rel_abun' = 'mean_rel_abund') %>% 
-  merge(mean_family_abun_long,
-        by.x = c('group2',
-                 'day_post_inf',
-                 'Family'),
-        by.y = c('diet',
-                 'day_post_inf',
-                 'Family')) %>% 
-  rename('group2_rel_abun' = 'mean_rel_abund') %>% 
-  mutate(diff_means = (group1_rel_abun - group2_rel_abun),
-         stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_long_dunn
-```
-
-**Statistical Visualization**
+**Statistical Analysis for Wanted Family Abundances**
+stats run include, a linear model, a kruskal-wallis test, and a dunn's post hoc test. the dunn's post hoc test is used for the statistical visualization shown. 
 ```{r, fig.height=15, fig.width=17}
-new_long_dunn %>% 
-  filter(day_post_inf != -15) %>% 
-  ggplot(aes(x = group1, y = group2)) +
-  geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
-  # scale_fill_viridis(option = "H", name = 'Difference\nin Means') +
-  scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
-  geom_text(aes(label = p.adj.signif)) +
-  scale_x_discrete(labels = c('Chow',
-                              'HFt/\nHFb',
-                              'HFt/\nLFb',
-                              'LFt/\nHFb')) +
-  scale_y_discrete(labels = c('HFt / HFb',
-                              'HFt / LFb',
-                              'LFt / HFb',
-                              'LFt / LFb')) +
-  facet_grid(Family~day_post_inf,
-             scales = 'free_x') +
-  theme_bw(base_size = 20) +
-  theme(strip.text.y = element_text(angle = 0)) +
-  xlab('Group 1') +
-  ylab('Group 2') -> long_stat_plot
+long_abun_stats <- abun_stats(long_abun_filt,
+                              wanted_level)
+long_kruskal <- long_abun_stats$KruskalTest
+new_long_dunn <- long_abun_stats$DunnPostHoc
+family_abun_lm <- long_abun_stats$LinearModel
 
+long_stat_plot <- stat_plot(new_long_dunn,
+                            wanted_level)
 long_stat_plot
 ```
 
@@ -287,120 +308,21 @@ plot_grid(long_abun1, long_stat_plot,
 long_plots_together
 ```
 
-
-
 **Poster Presentation Stats**
 these stats are for the shortened figure that I am putting on my poster presentation!
-```{r}
-## for poster presentation plot linear model
-short_abun_filt %>%
-  na.omit() %>% 
-  filter(day_post_inf > -15) %>% 
-  group_by(Family, day_post_inf) %>% 
-  do(glance(lm(rel_abund ~ (purified_diet * seq_depth) + high_fat * high_fiber,
-             data =.))) %>% 
-  ungroup() %>% 
-  na.omit() %>% 
-  mutate(adj.p = p.adjust(p.value, 
-                          method = "BH"),
-         test_id = paste(Family, day_post_inf, sep = "_")) %>% 
-  filter(adj.p <= 0.05) -> poster_family_abun_lm_full
+```{r, fig.height=7.5, fig.width=17}
+poster_abun_stats <- abun_stats(short_abun_filt,
+                                wanted_level)
+poster_kruskal <- poster_abun_stats$KruskalTest
+new_poster_dunn <- poster_abun_stats$DunnPostHoc
+poster_family_abun_lm <- poster_abun_stats$LinearModel
 
-short_abun_filt %>%
-  na.omit() %>% 
-  group_by(Family, day_post_inf) %>% 
-  mutate(test_id = paste(Family, day_post_inf, sep = "_")) %>% 
-  filter(test_id %in% poster_family_abun_lm_full$test_id) %>% 
-  do(tidy(lm(rel_abund ~ (purified_diet * seq_depth) + high_fat * high_fiber,
-             data =.))) %>% 
-  na.omit() %>% 
-  filter(term != '(Intercept)') -> poster_family_abun_lm
-
-## this is how you add a p-value significance level column to your linear modeling results!!
-poster_family_abun_lm['signif'] <- symnum(poster_family_abun_lm$p.value,
-                                          cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                          symbols = c("****", "***", "**", "*", "+", "ns"),
-                                          abbr.colnames = FALSE,
-                                          na = "")
-
-## kruskal-wallis and dunn's post hoc test
-short_abun_filt %>% 
-  na.omit() %>% 
-  group_by(Family, day_post_inf) %>% 
-  do(tidy(kruskal.test(rel_abund ~ diet,
-             data = .))) %>% 
-  ungroup() %>% 
-  arrange(p.value) %>% 
-  mutate(p.adj = p.adjust(p.value,
-                          method = "BH"),
-         test_id = paste(Family, day_post_inf, sep = "_")) %>% 
-  filter(p.adj <= 0.05) -> poster_kruskal
-
-short_abun_filt %>% 
-  na.omit() %>% 
-  group_by(Family, day_post_inf) %>%
-  mutate(test_id = paste(Family, day_post_inf, sep = "_")) %>% 
-  filter(test_id %in% poster_kruskal$test_id) %>% 
-  dunn_test(rel_abund ~ diet,
-            p.adjust.method = 'BH',
-            data = .) -> poster_dunn
-
-## editing my dunn's post hoc test to include the difference in means between groups 
-short_abun_filt %>% 
-  group_by(diet, Family, day_post_inf) %>% 
-  summarise(mean_rel_abund = mean(rel_abund)) -> mean_family_abun
-
-poster_dunn %>% 
-  merge(mean_family_abun, 
-        by.x = c('group1',
-                 'day_post_inf',
-                 'Family'),
-        by.y = c('diet',
-                 'day_post_inf',
-                 'Family')) %>% 
-  rename('group1_rel_abun' = 'mean_rel_abund') %>% 
-  merge(mean_family_abun,
-        by.x = c('group2',
-                 'day_post_inf',
-                 'Family'),
-        by.y = c('diet',
-                 'day_post_inf',
-                 'Family')) %>% 
-  rename('group2_rel_abun' = 'mean_rel_abund') %>% 
-  mutate(diff_means = (group1_rel_abun - group2_rel_abun),
-         stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_poster_dunn
-  
-```
-
-**Statistical Figure Visualizations**
-possible heat map for statistical results for my poster presentation. this is option #1. 
-```{r, fig.height=7.5, fig.width=14.5}
-## option #1 based on dunns post hoc test 
-new_poster_dunn %>% 
-  filter(day_post_inf != -15) %>% 
-  ggplot(aes(x = group1, y = group2)) +
-  geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
-  # scale_fill_viridis(option = "H", name = 'Difference\nin Means') +
-  scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
-  geom_text(aes(label = p.adj.signif)) +
-  scale_x_discrete(labels = c('Chow',
-                              'HFt/\nHFb',
-                              'HFt/\nLFb',
-                              'LFt/\nHFb')) +
-  scale_y_discrete(labels = c('HFt / HFb',
-                              'HFt / LFb',
-                              'LFt / HFb',
-                              'LFt / LFb')) +
-  facet_grid(Family~day_post_inf,
-             scales = 'free_x') +
-  theme_bw(base_size = 20) +
-  theme(strip.text.y = element_text(angle = 0)) +
-  xlab('Group 1') +
-  ylab('Group 2') -> stat_plot1
-
+stat_plot1 <- stat_plot(new_poster_dunn,
+                        wanted_level)
 stat_plot1
 ```
 
+**Statistical Figure Visualization**
 this is option #2. 
 ```{r, fig.height=7, fig.width=9}
 ## option #2 based on the linear model
@@ -434,6 +356,25 @@ plot_grid(short_abun1, stat_plot1,
           rel_widths = c(1, 0.8)) -> plots_together
 
 plots_together
+```
+
+**Plotting the Relative Abundance of C. diff Specifically**
+could go to the genus level because all species under the genus level were c. diff
+```{r, warning=FALSE, fig.height=5, fig.width=15}
+cdiff_files <- family_abun_file_prep(metadata_FP,
+                                     tax_FP,
+                                     otu_table_FP,
+                                     cdiff_level,
+                                     wanted_genus)
+
+cdiff_abun_filt <- cdiff_files$AbundanceTable
+
+cdiff_plots <- abun_plots(cdiff_abun_filt,
+                         cdiff_level)
+
+cdiff_plot1 <- cdiff_plots$FamilyAbundance1
+
+cdiff_plot1
 ```
 
 
@@ -482,6 +423,12 @@ ggsave("poster_famAbun_together.pdf",
        plot = plots_together, 
        width = 35, 
        height = 10, 
+       path = '../plots')
+
+ggsave("cdiff_rel_abun.pdf",
+       plot = cdiff_plot1, 
+       width = 15, 
+       height = 5, 
        path = '../plots')
 
 ## linear modeling results

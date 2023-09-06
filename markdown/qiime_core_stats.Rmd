@@ -293,6 +293,22 @@ adonis_test <- function(dist_matrix,
   return(adonis_results)
 }
 
+## to run an adonis test by day relative to infection
+adonis_per_day <- function(metadata_file,
+                           day_filter,
+                           dist_fp,
+                           sample_filter){
+  metadata_file %>% 
+    filter(day_post_inf == day_filter) -> day_metadata
+  dist_files <- dist_matrix_prep(day_metadata,
+                                 dist_fp,
+                                 sample_filter)
+  dist <- dist_files$DistanceMatrix
+  filt_meta <- dist_files$Metadata
+  adonis_results <- adonis_test(dist,
+                                filt_meta)
+  return(adonis_results)
+}
 ```
 
 **Statistical Visualization Functions**
@@ -449,6 +465,45 @@ uw_adonis <- adonis_test(uw_dist,
                          filt_stat_meta)
 ```
 
+**Adonis Test by Days Relative to Mouse Infection**
+running Adonis tests based on the days relative to mouse infection to get a better idea of what is going on in our beta diversity.
+```{r}
+## unweighted unifrac 
+uu_day8_adonis <- adonis_per_day(filt_stat_meta,
+                                 -8,
+                                 uw_dist_fp,
+                                 unwanted_samples)
+uu_dayneg3_adonis <- adonis_per_day(filt_stat_meta,
+                                    -3,
+                                    uw_dist_fp,
+                                    unwanted_samples)
+uu_day0_adonis <- adonis_per_day(filt_stat_meta,
+                                 0,
+                                 uw_dist_fp,
+                                 unwanted_samples)
+uu_day3_adonis <- adonis_per_day(filt_stat_meta,
+                                 3,
+                                 uw_dist_fp,
+                                 unwanted_samples)
+
+## weighted unifrac
+w_day8_adonis <- adonis_per_day(filt_stat_meta,
+                                 -8,
+                                 w_dist_fp,
+                                 unwanted_samples)
+w_dayneg3_adonis <- adonis_per_day(filt_stat_meta,
+                                    -3,
+                                    w_dist_fp,
+                                    unwanted_samples)
+w_day0_adonis <- adonis_per_day(filt_stat_meta,
+                                 0,
+                                 w_dist_fp,
+                                 unwanted_samples)
+w_day3_adonis <- adonis_per_day(filt_stat_meta,
+                                 3,
+                                 w_dist_fp,
+                                 unwanted_samples)
+```
 
 **Saving my Outputs**
 ```{r}
@@ -471,6 +526,14 @@ write_tsv(new_faith_dunn, '../stats/faith_dunn.tsv')
 write_tsv(sectioned_faith_lm, '../stats/faith_total_results.tsv')
 write_tsv(new_shannon_dunn, '../stats/shannon_dunn.tsv')
 write_tsv(sectioned_shannon_lm, '../stats/shannon_total_results.tsv')
+write_tsv(uu_day8_adonis, '../stats/uw_adonis_dayNeg8.tsv')
+write_tsv(uu_dayneg3_adonis, '../stats/uw_adonis_dayNeg3.tsv')
+write_tsv(uu_day0_adonis, '../stats/uw_adonis_day0.tsv')
+write_tsv(uu_day3_adonis, '../stats/uw_adonis_day3.tsv')
+write_tsv(w_day8_adonis, '../stats/w_adonis_dayNeg8.tsv')
+write_tsv(w_dayneg3_adonis, '../stats/w_adonis_dayNeg3.tsv')
+write_tsv(w_day0_adonis, '../stats/w_adonis_day0.tsv')
+write_tsv(w_day3_adonis, '../stats/w_adonis_day3.tsv')
 ```
 
 

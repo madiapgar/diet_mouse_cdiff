@@ -494,6 +494,9 @@ uw_adonis <- adonis_test(uw_dist,
 
 **Adonis Test by Days Relative to Mouse Infection**
 running Adonis tests based on the days relative to mouse infection to get a better idea of what is going on in our beta diversity.
+TO DO: 
+- take out sequencing depth - at least for one run
+- take chow/purified diet out and run based on high fat/high fiber
 ```{r}
 unweighted_by_day <- adonis_for_loop(filt_stat_meta,
                                      uw_dist_fp,

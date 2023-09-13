@@ -5,6 +5,6 @@ channels:
   - anaconda
 dependencies:
   - pip
-  - picrust2=2.5.1
+  - picrust2=2.5.2
   - pip:
     - snakemake

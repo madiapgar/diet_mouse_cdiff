@@ -5,7 +5,7 @@ This repository includes all files produced/required to run Qiime2 core diversit
 ## To Do: 
 
   - upload pred_metagenome_contrib.tsv.gz at some point
-  - analysis and comparisons of histopathology, toxin, metabolomics, hypoxia, mouse weight, and bile acid data
+  - analysis and pairwise comparisons of histopathology, toxin, metabolomics, hypoxia, mouse weight, and bile acid data
   - clean up workflow scripts
   - start writing results section
 

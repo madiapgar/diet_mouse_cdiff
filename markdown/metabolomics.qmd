@@ -15,15 +15,6 @@ library(ggpubr)
 library(rstatix)
 ```
 
-```{r}
-# change to scripts directory if not there already
-# curr_dir <- getwd()
-# curr_dir <- str_split(curr_dir, '\\/')
-# if (curr_dir[length(curr_dir)] != 'scripts'){
-#   setwd('./scripts')
-# }
-```
-
 **Basic Functions**
 
 ```{r}

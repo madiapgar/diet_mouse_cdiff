@@ -8,6 +8,10 @@ library(tidyverse)
 library(broom)
 library(argparse)
 
+TO DO:
+  - change study to batch in the metadata file!!!
+  
+  
 ## using argparse for my file paths
 ## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
 parser <- ArgumentParser()

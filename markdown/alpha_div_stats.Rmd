@@ -1,5 +1,5 @@
 ---
-title: "tss_core_stats"
+title: "alpha_div_stats"
 author: "Madi"
 date: "2023-05-25"
 output: html_document
@@ -24,83 +24,27 @@ library(rstatix)
 library(dunn.test)
 ```
 
-**General Functions**
-```{r}
-## initial metadata fixer 
-metadata_fixer <- function(metadata_fp) {
-  tmpMeta <- read_tsv(metadata_fp, n_max = 2)
-  mycols <- colnames(tmpMeta)
-  metadata <- read_tsv(metadata_fp, skip = 2, col_names = mycols)
-  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
-  metadata %>% 
-    filter(!is.na(diet)) %>% 
-    mutate(day_post_inf = if_else(day_post_inf == 2, 3, day_post_inf)) %>% 
-    mutate(diet = as.factor(diet)) -> metadata
-  return(metadata)
-}
-
-## for editing my metadata file post metadata fixer 
-meta_diet_fixer <- function(metadata_file,
-                            seq_depth_fp){
-  seq_depths <- read_tsv(seq_depth_fp)
-  metadata_file %>% 
-    select(sampleid, diet, day_post_inf, mouse_id, study) %>% 
-    mutate(diet_true = diet,
-    diet_true = if_else(day_post_inf == -15, "Chow", diet_true),
-    high_fat = case_when(
-      diet_true == 'HF/HF' ~ 1,
-      diet_true == 'HF/LF' ~ 1,
-      .default = 0
-      ), 
-      high_fiber = case_when(
-      diet_true == 'HF/HF' ~ 1,
-      diet_true == 'LF/HF' ~ 1,
-      diet_true == 'Chow' ~ 1,
-      .default = 0
-      ), 
-      purified_diet = case_when(
-      diet_true == 'Chow' ~ 0,
-      .default = 1
-      )
-    ) %>% 
-    left_join(seq_depths) -> metadata
-  return(metadata)
-}
-```
-
 **Alpha Diversity Functions**
 ```{r}
 ## alpha diversity file prep 
 alpha_div_prep <- function(file_path1,
                            file_path2,
-                           sample_filter,
-                           metadata_fp,
-                           seq_depth_fp){
+                           metadata_fp){
   ## faith's pd 
-  alpha_faith <- read_tsv(file_path1)
-  names(alpha_faith)[names(alpha_faith) == '#SampleID'] <- 'sampleid'
-  alpha_faith %>% 
-    filter(!(sampleid %in% sample_filter)) -> faith_pd
+  faith_pd <- read_tsv(file_path1)
+  names(faith_pd)[names(faith_pd) == '#SampleID'] <- 'sampleid'
   ## metadata file for both
-  stat_meta <- metadata_fixer(metadata_fp)
-  stat_meta %>% 
-    filter(!(sampleid %in% sample_filter)) -> stat_meta
+  stat_meta <- read_tsv(metadata_fp)
   ## joining faith's pd and metadata file together into one table
-  faith_stat_meta <- meta_diet_fixer(stat_meta,
-                                     seq_depth_fp)
-  faith_stat_meta %>% 
+  stat_meta %>% 
     filter(sampleid %in% faith_pd$sampleid) %>% 
     left_join(faith_pd, by = 'sampleid') %>% 
     filter(!is.na(diet)) -> faith_biom
   ## shannon entropy
-  alpha_shannon <- read_tsv(file_path2)
-  names(alpha_shannon)[names(alpha_shannon) == '...1'] <- 'sampleid'
-  alpha_shannon %>% 
-    filter(!(sampleid %in% sample_filter)) -> shannon
+  shannon <- read_tsv(file_path2)
+  names(shannon)[names(shannon) == '...1'] <- 'sampleid'
   ## joining shannon and metadata file together into one table 
-  shannon_stat_meta <- meta_diet_fixer(stat_meta,
-                                       seq_depth_fp)
-  shannon_stat_meta %>% 
+  stat_meta %>% 
     filter(sampleid %in% shannon$sampleid) %>% 
     left_join(shannon, by = 'sampleid') %>% 
     filter(!is.na(diet)) -> shannon_biom
@@ -241,101 +185,6 @@ shannon_div_stats <- function(biom_table){
 }
 ```
 
-**Beta Diversity Functions**
-```{r}
-## for distance matrix processing
-## for beta diversity statistical analysis 
-dist_matrix_prep <- function(metadata_file,
-                             dist_matrix_fp,
-                             sample_filter){ 
-  ## metadata filtering
-  metadata_file %>% 
-    filter(!(sampleid %in% sample_filter)) -> metadata
-  ## distance matrix
-  dist <- read_tsv(dist_matrix_fp)
-  names(dist)[names(dist) == '...1'] <- 'sampleid'
-  dist %>% 
-    gather(-sampleid, key = sample_col, value = dist) %>% 
-    filter(sampleid %in% metadata$sampleid) %>% 
-    filter(sample_col %in% metadata$sampleid) %>% 
-    spread(sample_col, dist) -> dist_long
-  dist_long %>% 
-    select(-sampleid) -> dist_proc
-  metadata %>% 
-    arrange(sampleid) -> metadata
-  metadata %>% 
-    filter(sampleid %in% dist_long$sampleid) -> filt_meta
-  dist_proc <- as.matrix(dist_proc)
-  row.names(dist_proc) <- colnames(dist_proc)
-  filt_meta <- filt_meta[order(filt_meta$sampleid),]
-  ## list of outputs
-  my_list <- list(Metadata = filt_meta,
-                  DistanceMatrix = dist_proc)
-  return(my_list)
-}
-
-
-
-## beta diversity adonis2 testing function
-adonis_test <- function(dist_matrix,
-                        metadata_file){
-  adonis_results <- adonis2(as.dist(dist_matrix) ~ (purified_diet * seq_depth)
-                            + (high_fat * high_fiber) + study,
-                            data = metadata_file,
-                            permutations = 999, 
-                            parallel = 4)
-  adonis_results <- tidy(adonis_results)
-  adonis_results['signif'] <- symnum(adonis_results$p.value,
-                                     cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                     symbols = c("****", "***", "**", "*", "+", "ns"),
-                                     abbr.colnames = FALSE,
-                                     na = "")
-  return(adonis_results)
-}
-
-## to run an adonis test by day relative to infection
-adonis_per_day <- function(metadata_file,
-                           day_filter,
-                           dist_fp,
-                           sample_filter){
-  metadata_file %>% 
-    filter(day_post_inf == day_filter) -> day_metadata
-  dist_files <- dist_matrix_prep(day_metadata,
-                                 dist_fp,
-                                 sample_filter)
-  dist <- dist_files$DistanceMatrix
-  filt_meta <- dist_files$Metadata
-  adonis_results <- adonis_test(dist,
-                                filt_meta)
-  adonis_results$day_post_inf <- day_filter
-  return(adonis_results)
-}
-
-## function that will run a for loop to stratify the adonis test by a certain variable
-adonis_for_loop <- function(metadata_file,
-                            dist_matrix_fp,
-                            sample_filter,
-                            strat_column){
-  output <- list()
-  for (i in unique(unlist(metadata_file[strat_column]))) {
-    tmp_output <- adonis_per_day(metadata_file,
-                                 i,
-                                 dist_matrix_fp,
-                                 sample_filter)
-    tmp_output[strat_column] <- i
-    # when saving something as a named list in R, 
-    # we need to use the double brackets
-    # output[[as.character(i)]] <- tmp_output
-    
-    # if we're appending a higher dimensional object (df, matrix, vector,) 
-    # to a list, we need to wrap it in a list() within the append function.
-    output <- append(output, list(tmp_output))
-  }
-  output <- bind_rows(output)
-  return(output)
-}
-```
-
 **Statistical Visualization Functions**
 Note: this may need to be edited based on the statistical tests used and column names of the dataset, could make these more easiy accessible for other types of data but I was being lazy when I created them. 
 ```{r}
@@ -392,32 +241,18 @@ stat_plot <- function(new_dunn){
 **File paths for all needed files**
 Doing this so that I don't have to worry about re-entering entire file paths all the time, they'll just be at the beginning
 ```{r}
-metadata_FP <- '../data/misc/updated_metadata.tsv'
-seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
-uw_dist_fp <- '../data/qiime/core_outputs/uw_dist_matrix.tsv'
-w_dist_fp <- '../data/qiime/core_outputs/w_dist_matrix.tsv'
+metadata_FP <- '../data/misc/processed_metadata.tsv'
 faith_pd_fp <- '../data/qiime/core_outputs/faith_pd.tsv'
 shannon_fp <- '../data/qiime/core_outputs/shannon_entropy.tsv'
-unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A',
-                      'Mock_3A', 'Mock_4A', 'Mock_5A', 'Mock_6A',
-                      'Mock_7A', 'PCR Blank0',
-                      'PCR Blank1', 'Mock_7', 'Mock_6',
-                      'Mock_5', 'Mock_4', 'PCR blank')
-## for adonis for loop function
-day_strat <- 'day_post_inf'
 ```
 
-
-**Stats on my total sum scaled core metrics**
 
 **Alpha Diversity Statistical Analysis**
 ```{r}
 ## alpha diversity analysis  
 alpha_files <- alpha_div_prep(faith_pd_fp,
                               shannon_fp,
-                              unwanted_samples,
-                              metadata_FP,
-                              seq_depth_FP)
+                              metadata_FP)
 
 faith <- alpha_files$FaithPD
 shannon <- alpha_files$Shannon
@@ -457,59 +292,6 @@ faith_stat_vis
 shannon_stat_vis
 ```
 
-**Beta Diversity Statistical Analysis**
-```{r}
-## weighted unifrac 
-stat_meta <- metadata_fixer(metadata_FP)
-w_dist_files <- dist_matrix_prep(stat_meta,
-                               w_dist_fp,
-                               unwanted_samples)
-
-w_dist <- w_dist_files$DistanceMatrix
-stat_meta <- w_dist_files$Metadata
-
-
-filt_stat_meta <- meta_diet_fixer(stat_meta,
-                                  seq_depth_FP)
- 
-w_adonis <- adonis_test(w_dist,
-                         filt_stat_meta)
-
-
-## unweighted unifrac
-uw_dist_files <- dist_matrix_prep(stat_meta,
-                               uw_dist_fp,
-                               unwanted_samples)
-
-uw_dist <- uw_dist_files$DistanceMatrix
-stat_meta <- uw_dist_files$Metadata
-
-
-filt_stat_meta <- meta_diet_fixer(stat_meta,
-                                  seq_depth_FP)
- 
-uw_adonis <- adonis_test(uw_dist,
-                         filt_stat_meta)
-```
-
-**Adonis Test by Days Relative to Mouse Infection**
-running Adonis tests based on the days relative to mouse infection to get a better idea of what is going on in our beta diversity.
-TO DO: 
-- take out sequencing depth - at least for one run
-- take chow/purified diet out and run based on high fat/high fiber
-```{r}
-unweighted_by_day <- adonis_for_loop(filt_stat_meta,
-                                     uw_dist_fp,
-                                     unwanted_samples,
-                                     day_strat)
-
-
-
-weighted_by_day <- adonis_for_loop(filt_stat_meta,
-                                   w_dist_fp,
-                                   unwanted_samples,
-                                   day_strat)
-```
 
 **Saving my Outputs**
 ```{r}
@@ -526,14 +308,10 @@ ggsave("shannon_stats.pdf",
        path = '../plots')
 
 ## example of how to write results out as a .tsv 
-write_tsv(w_adonis, '../stats/w_adonis_results.tsv')
-write_tsv(uw_adonis, '../stats/uw_adonis_results.tsv')
 write_tsv(new_faith_dunn, '../stats/faith_dunn.tsv')
 write_tsv(sectioned_faith_lm, '../stats/faith_total_results.tsv')
 write_tsv(new_shannon_dunn, '../stats/shannon_dunn.tsv')
 write_tsv(sectioned_shannon_lm, '../stats/shannon_total_results.tsv')
-write_tsv(unweighted_by_day, '../stats/uw_adonis_by_day.tsv')
-write_tsv(weighted_by_day, '../stats/w_adonis_by_day.tsv')
 ```
 
 

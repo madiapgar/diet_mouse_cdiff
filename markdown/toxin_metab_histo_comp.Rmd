@@ -19,7 +19,7 @@ library(ggpubr)
 library(rstatix)
 ```
 
-**File Prep Functions**
+**Functions**
 ```{r}
 file_prep <- function(metadata_fp,
                       metab_fp,
@@ -93,6 +93,43 @@ file_prep <- function(metadata_fp,
                   DilToxin = dil_toxin)
   return(my_list)
 }
+
+## histo plot comparison function 
+comp_plot <- function(histo_table,
+                      ## toxin or metabolomics?
+                       wanted_table,
+                       ## this is what you want your x axiss to be (neat, diluted, or concentration)? 
+                       wanted_x,
+                       ## this is toxin/metabolite column you want to filter by (neat or diluted)?
+                       wanted_y,
+                       ## what is the toxin/metabolite you want to filter by called in the table?
+                       wanted_y_name,
+                       diet_labels,
+                       tissue_labels,
+                       title){
+  ## putting tables together
+  histo_table %>% 
+    select(mouse_id, tissue, score) %>% 
+    left_join(wanted_table, by = 'mouse_id') -> compiled_table
+  ## constructing plot
+  compiled_table %>% 
+    filter(.data[[wanted_y]] == wanted_y_name) %>% 
+    na.omit() %>% 
+    ggplot(aes(x = .data[[wanted_x]], y = score)) +
+    scale_x_continuous(trans = 'log10') +
+    geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
+    geom_smooth(method = 'lm', se = FALSE) +
+    facet_grid(tissue~diet,
+               labeller = labeller(tissue = tissue_labels,
+                                   diet = diet_labels),
+               scales = 'free_y') +
+    theme_bw() +
+    theme(strip.text.y = element_text(angle = 0)) +
+    xlab('Concentration') +
+    ylab('Score') +
+    ggtitle(title) -> plot
+  return(plot)
+}
 ```
 
 
@@ -165,6 +202,7 @@ neat_toxin <- comp_files$NeatToxin
 - toxin and metab concentrations by diet (to each other)
 
 **Toxin to Histopathology Scores Comparisons**
+
 **Neat Toxin Concentration Comparison**
 overall neat plot!
 ```{r, warning=FALSE, fig.height=4, fig.width=8}
@@ -190,55 +228,36 @@ histo_neat_toxin %>%
              scales = 'free_y') +
   theme_bw() +
   theme(strip.text.y = element_text(angle = 0)) +
-  xlab('Neat Toxin Concentration') +
-  ylab('Histopathology Score') +
+  xlab('Concentration') +
+  ylab('Score') +
   ggtitle('Neat C. difficile Toxin Concentration to Histopathology Score') -> neat_histo_plot
 
 neat_histo_plot
 ```
 
-neat tcda plot 
+**Neat TcdA and TcdB Plot Construction**
 ```{r, warning=FALSE, fig.height=4, fig.width=9}
-histo_neat_toxin %>% 
-  filter(neat_toxin == 'Total TcA Neat') %>% 
-  na.omit() %>% 
-  ggplot(aes(x = neat_conc, y = score)) +
-  scale_x_continuous(trans = 'log10') +
-  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-  geom_smooth(method = 'lm', se = FALSE) +
-  facet_grid(tissue~diet,
-             labeller = labeller(tissue = tissue_labs,
-                                 diet = diet_labs),
-             scales = 'free_y') +
-  theme_bw() +
-  theme(strip.text.y = element_text(angle = 0)) +
-  xlab('Concentration') +
-  ylab('Score') +
-  ggtitle('Neat TcdA') -> neat_histo_tca_plot
-
-neat_histo_tca_plot
-```
-neat tcdb plot
-```{r, warning=FALSE, fig.height=4, fig.width=9}
-histo_neat_toxin %>% 
-  filter(neat_toxin == 'Total TcB Neat') %>% 
-  na.omit() %>% 
-  ggplot(aes(x = neat_conc, y = score)) +
-  scale_x_continuous(trans = 'log10') +
-  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-  geom_smooth(method = 'lm', se = FALSE) +
-  facet_grid(tissue~diet,
-             labeller = labeller(tissue = tissue_labs,
-                                 diet = diet_labs),
-             scales = 'free_y') +
-  theme_bw() +
-  theme(strip.text.y = element_text(angle = 0)) +
-  xlab('Concentration') +
-  ylab('Score') +
-  ggtitle('Neat TcdB') -> neat_histo_tcb_plot
-
+## neat tcdA
+neat_histo_tca_plot <- comp_plot(histo,
+                                 neat_toxin,
+                                 'neat_conc',
+                                 'neat_toxin',
+                                 'Total TcA Neat',
+                                 diet_labs,
+                                 tissue_labs,
+                                 'Neat TcdA')
+## neat tcdB
+neat_histo_tcb_plot <- comp_plot(histo,
+                                 neat_toxin,
+                                 'neat_conc',
+                                 'neat_toxin',
+                                 'Total TcB Neat',
+                                 diet_labs,
+                                 tissue_labs,
+                                 'Neat TcdB')
 neat_histo_tcb_plot
 ```
+
 
 **Diluted Toxin Concentration Comparison**
 ```{r, warning=FALSE, fig.height=4, fig.width=8}
@@ -270,48 +289,27 @@ histo_dil_toxin %>%
 dil_histo_plot
 ```
 
-diluted tcda plot
+
+**Diluted TcdA and TcdB Plot Construction**
 ```{r, warning=FALSE, fig.height=4, fig.width=9}
-histo_dil_toxin %>% 
-  filter(dil_toxin == 'Total TcA 1:10') %>% 
-  na.omit() %>% 
-  ggplot(aes(x = dil_conc, y = score)) +
-  scale_x_continuous(trans = 'log10') +
-  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-  geom_smooth(method = 'lm', se = FALSE) +
-  facet_grid(tissue~diet,
-             labeller = labeller(tissue = tissue_labs,
-                                 diet = diet_labs),
-             scales = 'free_y') +
-  theme_bw() +
-  theme(strip.text.y = element_text(angle = 0)) +
-  xlab('Concentration') +
-  ylab('Score') +
-  ggtitle('Diluted TcdA') -> dil_histo_tca_plot
-
-dil_histo_tca_plot
-```
-
-
-diluted tcdb plot
-```{r, warning=FALSE, fig.height=4, fig.width=9}
-histo_dil_toxin %>% 
-  filter(dil_toxin == 'Total TcB 1:10') %>% 
-  na.omit() %>% 
-  ggplot(aes(x = dil_conc, y = score)) +
-  scale_x_continuous(trans = 'log10') +
-  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-  geom_smooth(method = 'lm', se = FALSE) +
-  facet_grid(tissue~diet,
-             labeller = labeller(tissue = tissue_labs,
-                                 diet = diet_labs),
-             scales = 'free_y') +
-  theme_bw() +
-  theme(strip.text.y = element_text(angle = 0)) +
-  xlab('Concentration') +
-  ylab('Score') +
-  ggtitle('Diluted TcdB') -> dil_histo_tcb_plot
-
+## diluted tcdA
+dil_histo_tca_plot <- comp_plot(histo,
+                                dil_toxin,
+                                'dil_conc',
+                                'dil_toxin',
+                                'Total TcA 1:10',
+                                 diet_labs,
+                                 tissue_labs,
+                                 'Diluted TcdA')
+## diluted tcdB
+dil_histo_tcb_plot <- comp_plot(histo,
+                                dil_toxin,
+                                'dil_conc',
+                                'dil_toxin',
+                                'Total TcB 1:10',
+                                 diet_labs,
+                                 tissue_labs,
+                                 'Diluted TcdB')
 dil_histo_tcb_plot
 ```
 
@@ -324,7 +322,6 @@ plot_grid(neat_histo_tca_plot, neat_histo_tcb_plot,
 
 toxin_histo_plots
 ```
-
 
 **Metaboloite Concentration Comparisons to Histopathology Score**
 overall plot!
@@ -358,70 +355,39 @@ histo_metab %>%
 histo_metab_overall
 ```
 
-acetic acid plot!
+
+**Metabolomics Plots (faceted by diet)**
 ```{r, warning=FALSE, fig.height=5, fig.width=10}
-histo_metab %>% 
-  filter(metabolite == 'Acetic Acid (ug/g)') %>% 
-  na.omit() %>% 
-  ggplot(aes(x = concentration, y = score)) +
-    scale_x_continuous(trans = 'log10') +
-    geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-    geom_smooth(method = 'lm', se = FALSE) +
-    facet_grid(tissue~diet,
-               labeller = labeller(tissue = tissue_labs,
-                                   diet = diet_labs),
-               scales = 'free_y') +
-    theme_bw() +
-    theme(strip.text.y = element_text(angle = 0)) +
-    xlab('Concentration (ug/g)') +
-    ylab('Score') +
-    ggtitle('Acetic Acid') -> histo_acetic_plot
+## acetic acid
+histo_acetic_plot <- comp_plot(histo,
+                               metab,
+                               'concentration',
+                               'metabolite',
+                               'Acetic Acid (ug/g)',
+                               diet_labs,
+                               tissue_labs,
+                               'Acetic Acid')
+
+## n-butanoic acid
+histo_butanoic_plot <- comp_plot(histo,
+                                 metab,
+                                 'concentration',
+                                 'metabolite',
+                                 'n-Butanoic Acid (ug/g)',
+                                 diet_labs,
+                                 tissue_labs,
+                                 'n-Butanoic Acid')
+## propanoic acid
+histo_propanoic_plot <- comp_plot(histo,
+                                 metab,
+                                 'concentration',
+                                 'metabolite',
+                                 'Propanoic Acid (ug/g)',
+                                 diet_labs,
+                                 tissue_labs,
+                                 'Propanoic Acid')
 
 histo_acetic_plot
-```
-
-butanoic acid!!
-```{r, warning=FALSE, fig.height=5, fig.width=10}
-histo_metab %>% 
-  filter(metabolite == 'n-Butanoic Acid (ug/g)') %>% 
-  na.omit() %>% 
-  ggplot(aes(x = concentration, y = score)) +
-    scale_x_continuous(trans = 'log10') +
-    geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-    geom_smooth(method = 'lm', se = FALSE) +
-    facet_grid(tissue~diet,
-               labeller = labeller(tissue = tissue_labs,
-                                   diet = diet_labs),
-               scales = 'free_y') +
-    theme_bw() +
-    theme(strip.text.y = element_text(angle = 0)) +
-    xlab('Concentration (ug/g)') +
-    ylab('Score') +
-    ggtitle('n-Butanoic Acid') -> histo_butanoic_plot
-
-histo_butanoic_plot
-```
-
-propanoic acid!
-```{r, warning=FALSE, fig.height=5, fig.width=10}
-histo_metab %>% 
-  filter(metabolite == 'Propanoic Acid (ug/g)') %>% 
-  na.omit() %>% 
-  ggplot(aes(x = concentration, y = score)) +
-    scale_x_continuous(trans = 'log10') +
-    geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-    geom_smooth(method = 'lm', se = FALSE) +
-    facet_grid(tissue~diet,
-               labeller = labeller(tissue = tissue_labs,
-                                   diet = diet_labs),
-               scales = 'free_y') +
-    theme_bw() +
-    theme(strip.text.y = element_text(angle = 0)) +
-    xlab('Concentration (ug/g)') +
-    ylab('Score') +
-    ggtitle('Propanoic Acid') -> histo_propanoic_plot
-
-histo_propanoic_plot
 ```
 
 **Metabolite Plots Together!!**

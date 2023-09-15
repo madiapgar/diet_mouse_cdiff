@@ -94,7 +94,7 @@ file_prep <- function(metadata_fp,
   return(my_list)
 }
 
-## histo plot comparison function 
+## histo plot comparison function
 comp_plot <- function(histo_table,
                       ## toxin or metabolomics?
                        wanted_table,
@@ -132,6 +132,60 @@ comp_plot <- function(histo_table,
 }
 ```
 
+**Statisitical Analysis Functions**
+```{r}
+## creating a function for this so I don't have to keep doing each one by hand 
+stat_plot_prep <- function(biom_table,
+                           dunn_test,
+                           value){
+  biom_table %>% 
+    group_by(diet, neat_toxin, tissue) %>% 
+    summarise(means = mean(.data[[value]])) -> mean_table
+  dunn_test %>% 
+    merge(mean_table, 
+          by.x = c('group1',
+                   'neat_toxin',
+                   'tissue'),
+          by.y = c('diet',
+                   'neat_toxin',
+                   'tissue')) %>% 
+    rename('group1_means' = 'means') %>% 
+    merge(mean_table,
+          by.x = c('group2',
+                   'neat_toxin',
+                   'tissue'),
+          by.y = c('diet',
+                   'neat_toxin',
+                   'tissue')) %>% 
+    rename('group2_means' = 'means') %>% 
+    mutate(diff_means = (group1_means - group2_means),
+           stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
+  return(new_dunn)
+}
+
+stat_plot <- function(new_dunn){
+  new_dunn %>% 
+    ggplot(aes(x = group1, y = group2)) +
+    geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
+    scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
+    geom_text(aes(label = p.adj.signif)) +
+    scale_x_discrete(labels = c('Chow',
+                                'HFt/\nHFb',
+                                'HFt/\nLFb',
+                                'LFt/\nHFb')) +
+    scale_y_discrete(labels = c('HFt / HFb',
+                                'HFt / LFb',
+                                'LFt / HFb',
+                                'LFt / LFb')) +
+    facet_grid(tissue~neat_toxin,
+              scales = 'free') +
+    theme_bw(base_size = 20) +
+    theme(strip.text.y = element_text(angle = 0)) +
+    xlab('Group 1') +
+    ylab('Group 2') -> stat_vis
+  return(stat_vis)
+}
+```
 
 **File Paths**
 ```{r}
@@ -222,9 +276,8 @@ histo_neat_toxin %>%
                                'LFt/HFb',
                                'LFt/LFb')) +
   geom_smooth(method = 'lm', se = FALSE) +
-  facet_grid(tissue~neat_toxin,
-             labeller = labeller(tissue = tissue_labs,
-                                 neat_toxin = neat_labs),
+  facet_grid(~neat_toxin,
+             labeller = labeller(neat_toxin = neat_labs),
              scales = 'free_y') +
   theme_bw() +
   theme(strip.text.y = element_text(angle = 0)) +
@@ -257,7 +310,6 @@ neat_histo_tcb_plot <- comp_plot(histo,
                                  'Neat TcdB')
 neat_histo_tcb_plot
 ```
-
 
 **Diluted Toxin Concentration Comparison**
 ```{r, warning=FALSE, fig.height=4, fig.width=8}
@@ -323,7 +375,26 @@ plot_grid(neat_histo_tca_plot, neat_histo_tcb_plot,
 toxin_histo_plots
 ```
 
-**Metaboloite Concentration Comparisons to Histopathology Score**
+**Toxin Stats Attempt**
+linear modeling: 
+- to get r2 values for each facet block (above) filter out the parameters you need (diet, tissue, toxin, etc) and run your linear model on that filtered table 
+- save r2 value to a list and overlay it on your plots
+```{r, fig.height=4, fig.width=10}
+as.factor(histo_neat_toxin$diet) %>% 
+  contrasts()
+  
+
+
+histo_neat_toxin %>% 
+  do(tidy(lm(score ~ (neat_conc * diet),
+               data = .))) -> test_lm
+
+test_lm %>% 
+  ggplot(aes(x = 1, y = term)) +
+  geom_tile(aes(fill = estimate))
+```
+
+**Metabolite Concentration Comparisons to Histopathology Score**
 overall plot!
 ```{r, warning=FALSE, fig.height=4, fig.width=8}
 histo %>% 

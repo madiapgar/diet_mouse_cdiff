@@ -17,6 +17,7 @@ library(tidyverse)
 library(naniar)
 library(ggpubr)
 library(rstatix)
+library(viridis)
 ```
 
 **Functions**
@@ -110,7 +111,8 @@ comp_plot <- function(histo_table,
   ## putting tables together
   histo_table %>% 
     select(mouse_id, tissue, score) %>% 
-    left_join(wanted_table, by = 'mouse_id') -> compiled_table
+    left_join(wanted_table, by = 'mouse_id') %>% 
+    na.omit() -> compiled_table
   ## constructing plot
   compiled_table %>% 
     filter(.data[[wanted_y]] == wanted_y_name) %>% 
@@ -134,57 +136,79 @@ comp_plot <- function(histo_table,
 
 **Statisitical Analysis Functions**
 ```{r}
-## creating a function for this so I don't have to keep doing each one by hand 
-stat_plot_prep <- function(biom_table,
-                           dunn_test,
-                           value){
+## runs linear modeling on the table, diet, location, and toxin/metabolite wanted and returns full results 
+## along with a table containing the r2 and p-value 
+## this goes into the following function with a for loop 
+r2_value <- function(biom_table,
+                     wanted_diet,
+                     wanted_tissue,
+                     tox_metab_col,
+                     wanted_tox_metab,
+                     wanted_conc_value){
   biom_table %>% 
-    group_by(diet, neat_toxin, tissue) %>% 
-    summarise(means = mean(.data[[value]])) -> mean_table
-  dunn_test %>% 
-    merge(mean_table, 
-          by.x = c('group1',
-                   'neat_toxin',
-                   'tissue'),
-          by.y = c('diet',
-                   'neat_toxin',
-                   'tissue')) %>% 
-    rename('group1_means' = 'means') %>% 
-    merge(mean_table,
-          by.x = c('group2',
-                   'neat_toxin',
-                   'tissue'),
-          by.y = c('diet',
-                   'neat_toxin',
-                   'tissue')) %>% 
-    rename('group2_means' = 'means') %>% 
-    mutate(diff_means = (group1_means - group2_means),
-           stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
-  return(new_dunn)
+    filter(diet == wanted_diet,
+           tissue == wanted_tissue,
+           .data[[tox_metab_col]] == wanted_tox_metab) %>% 
+    do(glance(lm(score ~ .data[[wanted_conc_value]],
+                 data = .))) -> lm_results
+  output <- list(r_squared = lm_results$r.squared,
+                 p_value = lm_results$p.value)
+  output <- as_tibble(output) %>%
+            mutate(diet = paste(wanted_diet),
+                   tissue = paste(wanted_tissue),
+                   tox_metab = paste(wanted_tox_metab),
+                   just_r = sqrt(r_squared))
+  my_list <- list(LinearModel = lm_results,
+                  WantedStats = output)
+  return(my_list)
 }
 
-stat_plot <- function(new_dunn){
-  new_dunn %>% 
-    ggplot(aes(x = group1, y = group2)) +
-    geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
-    scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
-    geom_text(aes(label = p.adj.signif)) +
-    scale_x_discrete(labels = c('Chow',
-                                'HFt/\nHFb',
-                                'HFt/\nLFb',
-                                'LFt/\nHFb')) +
-    scale_y_discrete(labels = c('HFt / HFb',
-                                'HFt / LFb',
-                                'LFt / HFb',
-                                'LFt / LFb')) +
-    facet_grid(tissue~neat_toxin,
-              scales = 'free') +
-    theme_bw(base_size = 20) +
-    theme(strip.text.y = element_text(angle = 0)) +
-    xlab('Group 1') +
-    ylab('Group 2') -> stat_vis
-  return(stat_vis)
+## creating a nested for loop since running this function individually is a nightmare
+r2_value_for_loop <- function(biom_table,
+                              wanted_col,
+                              wanted_conc) {
+  ## nested for loop for the r squared and p values 
+  output <- tibble()
+  for(i in unique(unlist(biom_table$diet))) {
+    for(j in unique(unlist(biom_table$tissue))) {
+      for(k in unique(unlist(biom_table[wanted_col]))) {
+        tmp_output <- r2_value(biom_table,
+                               i,
+                               j,
+                               wanted_col,
+                               k,
+                               wanted_conc)$WantedStats
+        output <- bind_rows(output, tmp_output)
+      }
+    }
+  }
+  return(output)
 }
+
+## statistical visualization plot function
+stat_plot <- function(stat_table,
+                      wanted_labels,
+                      title){
+  stat_table %>% 
+    ggplot(aes(x = tissue, y = diet)) +
+    geom_tile(aes(fill = just_r), color = 'black', alpha = 0.6) +
+    geom_text(aes(label = signif)) +
+    scale_fill_viridis(option = "H", name = "Correlation\nCoefficient") +
+    scale_x_discrete(labels = c("Cecum",
+                                "Colon")) +
+    scale_y_discrete(labels = c("Chow",
+                                "HFt/HFb",
+                                "HFt/LFb",
+                                "LFt/HFb",
+                                "LFt/LFb")) +
+    facet_wrap(~tox_metab,
+               labeller = labeller(tox_metab = wanted_labels)) +
+    theme_bw() +
+    xlab("Tissue") +
+    ylab("Diet") +
+    ggtitle(title) -> plot
+  return(plot)
+  }
 ```
 
 **File Paths**
@@ -262,7 +286,8 @@ overall neat plot!
 ```{r, warning=FALSE, fig.height=4, fig.width=8}
 histo %>% 
   select(mouse_id, tissue, score) %>% 
-  left_join(neat_toxin, by = 'mouse_id') -> histo_neat_toxin
+  left_join(neat_toxin, by = 'mouse_id') %>% 
+  na.omit() -> histo_neat_toxin
 
 histo_neat_toxin %>% 
   na.omit() %>% 
@@ -315,7 +340,8 @@ neat_histo_tcb_plot
 ```{r, warning=FALSE, fig.height=4, fig.width=8}
 histo %>% 
   select(mouse_id, tissue, score) %>% 
-  left_join(dil_toxin, by = 'mouse_id') -> histo_dil_toxin
+  left_join(dil_toxin, by = 'mouse_id') %>% 
+  na.omit() -> histo_dil_toxin
 
 histo_dil_toxin %>% 
   na.omit() %>% 
@@ -375,23 +401,36 @@ plot_grid(neat_histo_tca_plot, neat_histo_tcb_plot,
 toxin_histo_plots
 ```
 
-**Toxin Stats Attempt**
+**Toxin Stats (to put on plots)**
 linear modeling: 
 - to get r2 values for each facet block (above) filter out the parameters you need (diet, tissue, toxin, etc) and run your linear model on that filtered table 
 - save r2 value to a list and overlay it on your plots
 ```{r, fig.height=4, fig.width=10}
-as.factor(histo_neat_toxin$diet) %>% 
-  contrasts()
-  
+## neat toxin stats
+neatTox_stat_table <- r2_value_for_loop(histo_neat_toxin,
+                                        "neat_toxin",
+                                        "neat_conc")
+## assigning p value significance
+neatTox_stat_table['signif'] <- symnum(neatTox_stat_table$p_value,
+                                       cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                       symbols = c("****", "***", "**", "*", "+", "ns"),
+                                       abbr.colnames = FALSE,
+                                       na = "")
+
+## diluted toxin stats
+dilTox_stat_table <- r2_value_for_loop(histo_dil_toxin,
+                                        "dil_toxin",
+                                        "dil_conc")
+```
 
 
-histo_neat_toxin %>% 
-  do(tidy(lm(score ~ (neat_conc * diet),
-               data = .))) -> test_lm
+**Neat Toxin Statistical Visualization**
+```{r, warning=FALSE, fig.height=4, fig.width=6}
+tox_stat_vis <- stat_plot(neatTox_stat_table,
+                          neat_labs,
+                          "Histopathology Score and Toxin Concentration Comparisons")
 
-test_lm %>% 
-  ggplot(aes(x = 1, y = term)) +
-  geom_tile(aes(fill = estimate))
+tox_stat_vis
 ```
 
 **Metabolite Concentration Comparisons to Histopathology Score**
@@ -399,7 +438,8 @@ overall plot!
 ```{r, warning=FALSE, fig.height=4, fig.width=8}
 histo %>% 
   select(mouse_id, tissue, score) %>% 
-  left_join(metab, by = 'mouse_id') -> histo_metab
+  left_join(metab, by = 'mouse_id') %>% 
+  na.omit() -> histo_metab
 
 histo_metab %>% 
   na.omit() %>% 
@@ -458,7 +498,7 @@ histo_propanoic_plot <- comp_plot(histo,
                                  tissue_labs,
                                  'Propanoic Acid')
 
-histo_acetic_plot
+histo_butanoic_plot
 ```
 
 **Metabolite Plots Together!!**
@@ -471,6 +511,29 @@ plot_grid(histo_acetic_plot, histo_butanoic_plot,
 metab_histo_plot
 ```
 
+**Metabolite Stats (to put on my plots)**
+```{r}
+## metabolite stats
+metab_stat_table <- r2_value_for_loop(histo_metab,
+                                      "metabolite",
+                                      "concentration")
+## assigning p value significance 
+metab_stat_table['signif'] <- symnum(metab_stat_table$p_value,
+                                     cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                     symbols = c("****", "***", "**", "*", "+", "ns"),
+                                     abbr.colnames = FALSE,
+                                     na = "")
+```
+
+
+**Metabolite Stat Plot Visualization**
+```{r, warning=FALSE, fig.height=4, fig.width=8}
+metab_stat_vis <- stat_plot(metab_stat_table,
+                            metab_labs,
+                            "Histopathology Score and Metabolite Concentration Comparisons")
+metab_stat_vis
+```
+
 **Saving my Outputs**
 ```{r}
 ggsave('histo_toxin_comp.pdf',
@@ -478,10 +541,20 @@ ggsave('histo_toxin_comp.pdf',
        width = 15,
        height = 7,
        path = '../plots')
+ggsave('histo_toxin_stats.pdf',
+       plot = tox_stat_vis,
+       width = 6,
+       height = 4,
+       path = '../plots')
 ggsave('histo_metab_comp.pdf',
        plot = metab_histo_plot,
        width = 19.5,
        height = 8.5,
+       path = '../plots')
+ggsave('histo_metab_stats.pdf',
+       plot = metab_stat_vis,
+       width = 8,
+       height = 4,
        path = '../plots')
 ```
 

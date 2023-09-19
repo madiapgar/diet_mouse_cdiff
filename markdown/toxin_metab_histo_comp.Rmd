@@ -276,8 +276,9 @@ neat_toxin <- comp_files$NeatToxin
 ```
 
 **Comparisons To Do:**
-- toxin and metab concentration to cecal and colon histo scores (on a plot, faceted by diet, x = toxin, y = histo score)
+- toxin and metab concentration to cecal and colon histo scores (on a plot, faceted by diet, x = toxin, y = histo score): DONE
 - toxin and metab concentrations by diet (to each other)
+- correlate above results to overall mouse survival 
 
 **Toxin to Histopathology Scores Comparisons**
 
@@ -533,6 +534,7 @@ metab_stat_vis <- stat_plot(metab_stat_table,
                             "Histopathology Score and Metabolite Concentration Comparisons")
 metab_stat_vis
 ```
+
 
 **Saving my Outputs**
 ```{r}

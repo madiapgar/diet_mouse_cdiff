@@ -135,6 +135,11 @@ comp_plot <- function(histo_table,
 ```
 
 **Statisitical Analysis Functions**
+- to get negative r values - multiply the result by the estimate (given by the full linear model results) (estimate is greater than zero - multiply by one, if not, mulitply by negative one)
+- possibly putting my estimate values on x-axis 
+- have r value equal to size of the point in geom point 
+- need to factor directionality into the stat plots 
+- mediation v. confounder statistical tests? (butyrate and maybe microbiome as a mediator)
 ```{r}
 ## runs linear modeling on the table, diet, location, and toxin/metabolite wanted and returns full results 
 ## along with a table containing the r2 and p-value 
@@ -145,20 +150,31 @@ r2_value <- function(biom_table,
                      tox_metab_col,
                      wanted_tox_metab,
                      wanted_conc_value){
+  ## to get r squared value and p value
   biom_table %>% 
     filter(diet == wanted_diet,
            tissue == wanted_tissue,
            .data[[tox_metab_col]] == wanted_tox_metab) %>% 
     do(glance(lm(score ~ .data[[wanted_conc_value]],
-                 data = .))) -> lm_results
-  output <- list(r_squared = lm_results$r.squared,
-                 p_value = lm_results$p.value)
+                 data = .))) -> lm_glance
+  output <- list(r_squared = lm_glance$r.squared,
+                 p_value = lm_glance$p.value)
+  ## to get estimate and place it with the overall output table
+  biom_table %>% 
+    filter(diet == wanted_diet,
+           tissue == wanted_tissue,
+           .data[[tox_metab_col]] == wanted_tox_metab) %>% 
+    do(tidy(lm(score ~ .data[[wanted_conc_value]],
+                 data = .))) %>% 
+    filter(term != '(Intercept)') -> lm_full
   output <- as_tibble(output) %>%
             mutate(diet = paste(wanted_diet),
                    tissue = paste(wanted_tissue),
                    tox_metab = paste(wanted_tox_metab),
-                   just_r = sqrt(r_squared))
-  my_list <- list(LinearModel = lm_results,
+                   just_r = sqrt(r_squared),
+                   estimate = lm_full$estimate,
+                   r_direct = if_else(estimate < 0, just_r * -1, just_r))
+  my_list <- list(LinearModel = lm_full,
                   WantedStats = output)
   return(my_list)
 }
@@ -191,9 +207,9 @@ stat_plot <- function(stat_table,
                       title){
   stat_table %>% 
     ggplot(aes(x = tissue, y = diet)) +
-    geom_tile(aes(fill = just_r), color = 'black', alpha = 0.6) +
+    geom_tile(aes(fill = r_direct), color = 'black', alpha = 0.6) +
     geom_text(aes(label = signif)) +
-    scale_fill_viridis(option = "H", name = "Correlation\nCoefficient") +
+    scale_fill_gradient2(low = 'blue', high = 'green', name = "Correlation\nCoefficient") +
     scale_x_discrete(labels = c("Cecum",
                                 "Colon")) +
     scale_y_discrete(labels = c("Chow",
@@ -392,16 +408,6 @@ dil_histo_tcb_plot <- comp_plot(histo,
 dil_histo_tcb_plot
 ```
 
-**Toxin Plots Together!**
-```{r, warning=FALSE, fig.height=7, fig.width=15}
-plot_grid(neat_histo_tca_plot, neat_histo_tcb_plot,
-          dil_histo_tca_plot, dil_histo_tcb_plot,
-          nrow = 2,
-          labels = c('a)', 'b)', 'c)', 'd)')) -> toxin_histo_plots
-
-toxin_histo_plots
-```
-
 **Toxin Stats (to put on plots)**
 linear modeling: 
 - to get r2 values for each facet block (above) filter out the parameters you need (diet, tissue, toxin, etc) and run your linear model on that filtered table 
@@ -422,17 +428,54 @@ neatTox_stat_table['signif'] <- symnum(neatTox_stat_table$p_value,
 dilTox_stat_table <- r2_value_for_loop(histo_dil_toxin,
                                         "dil_toxin",
                                         "dil_conc")
+## assigning p value significance
+dilTox_stat_table['signif'] <- symnum(dilTox_stat_table$p_value,
+                                       cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                       symbols = c("****", "***", "**", "*", "+", "ns"),
+                                       abbr.colnames = FALSE,
+                                       na = "")
 ```
 
 
 **Neat Toxin Statistical Visualization**
-```{r, warning=FALSE, fig.height=4, fig.width=6}
-tox_stat_vis <- stat_plot(neatTox_stat_table,
+```{r, warning=FALSE, fig.height=4, fig.width=7}
+neat_tox_stat_vis <- stat_plot(neatTox_stat_table,
                           neat_labs,
-                          "Histopathology Score and Toxin Concentration Comparisons")
+                          "Histopathology Score and Toxin Concentration Comparisons (neat)")
 
-tox_stat_vis
+neat_tox_stat_vis
 ```
+
+**Diluted Toxin Statistical Visualization**
+```{r, warning=FALSE, fig.height=4, fig.width=7}
+dil_tox_stat_vis <- stat_plot(dilTox_stat_table,
+                          dil_labs,
+                          "Histopathology Score and Toxin Concentration Comparisons (diluted)")
+
+dil_tox_stat_vis
+```
+
+**Toxin Plots Together!**
+```{r, warning=FALSE, fig.height=7, fig.width=15.5}
+## neat
+plot_grid(neat_histo_tca_plot, neat_tox_stat_vis,
+          neat_histo_tcb_plot,
+          ncol = 2,
+          rel_widths = c(1, 0.7),
+          labels = c('a)', 'c)', 'b)')) -> neat_toxin_histo_plots
+
+## diluted
+plot_grid(dil_histo_tca_plot, dil_tox_stat_vis,
+          dil_histo_tcb_plot,
+          ncol = 2,
+          rel_widths = c(1, 0.8),
+          labels = c('a)', 'c)', 'b)')) -> dil_toxin_histo_plots
+
+dil_toxin_histo_plots
+```
+
+
+
 
 **Metabolite Concentration Comparisons to Histopathology Score**
 overall plot!
@@ -502,16 +545,6 @@ histo_propanoic_plot <- comp_plot(histo,
 histo_butanoic_plot
 ```
 
-**Metabolite Plots Together!!**
-```{r, warning=FALSE, fig.height=8, fig.width=19}
-plot_grid(histo_acetic_plot, histo_butanoic_plot,
-          histo_propanoic_plot, histo_metab_overall,
-          nrow = 2,
-          labels = c('a)', 'b)', 'c)', 'd)')) -> metab_histo_plot
-
-metab_histo_plot
-```
-
 **Metabolite Stats (to put on my plots)**
 ```{r}
 ## metabolite stats
@@ -535,16 +568,35 @@ metab_stat_vis <- stat_plot(metab_stat_table,
 metab_stat_vis
 ```
 
+**Metabolite Plots Together!!**
+```{r, warning=FALSE, fig.height=8, fig.width=19}
+plot_grid(histo_acetic_plot, histo_butanoic_plot,
+          histo_propanoic_plot, metab_stat_vis,
+          nrow = 2,
+          labels = c('a)', 'b)', 'c)', 'd)')) -> metab_histo_plot
+
+metab_histo_plot
+```
 
 **Saving my Outputs**
 ```{r}
-ggsave('histo_toxin_comp.pdf',
-       plot = toxin_histo_plots,
-       width = 15,
+ggsave('neat_histo_toxin_comp.pdf',
+       plot = neat_toxin_histo_plots,
+       width = 15.5,
        height = 7,
        path = '../plots')
-ggsave('histo_toxin_stats.pdf',
-       plot = tox_stat_vis,
+ggsave('dil_histo_toxin_comp.pdf',
+       plot = dil_toxin_histo_plots,
+       width = 15.5,
+       height = 7,
+       path = '../plots')
+ggsave('neat_histo_toxin_stats.pdf',
+       plot = neat_tox_stat_vis,
+       width = 6,
+       height = 4,
+       path = '../plots')
+ggsave('dil_histo_toxin_stats.pdf',
+       plot = dil_tox_stat_vis,
        width = 6,
        height = 4,
        path = '../plots')

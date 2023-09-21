@@ -133,20 +133,31 @@ r2_value <- function(biom_table,
                      tox_col,
                      wanted_tox,
                      wanted_conc_value){
+  ## to get r squared value and p value
   biom_table %>% 
     filter(diet == wanted_diet,
            metabolite == wanted_metab,
            .data[[tox_col]] == wanted_tox) %>% 
     do(glance(lm(concentration ~ .data[[wanted_conc_value]],
-                 data = .))) -> lm_results
-  output <- list(r_squared = lm_results$r.squared,
-                 p_value = lm_results$p.value)
+                 data = .))) -> lm_glance
+  output <- list(r_squared = lm_glance$r.squared,
+                 p_value = lm_glance$p.value)
+  ## to get estimate and place it with the overall output table
+  biom_table %>% 
+    filter(diet == wanted_diet,
+           metabolite == wanted_metab,
+           .data[[tox_col]] == wanted_tox) %>% 
+    do(tidy(lm(concentration ~ .data[[wanted_conc_value]],
+                 data = .))) %>% 
+    filter(term != '(Intercept)') -> lm_full
   output <- as_tibble(output) %>%
             mutate(diet = paste(wanted_diet),
-                   metab = paste(wanted_metab),
+                   metabolite = paste(wanted_metab),
                    toxin = paste(wanted_tox),
-                   just_r = sqrt(r_squared))
-  my_list <- list(LinearModel = lm_results,
+                   just_r = sqrt(r_squared),
+                   estimate = lm_full$estimate,
+                   r_direct = if_else(estimate < 0, just_r * -1, just_r))
+  my_list <- list(LinearModel = lm_full,
                   WantedStats = output)
   return(my_list)
 }
@@ -179,9 +190,9 @@ stat_plot <- function(stat_table,
                       title){
   stat_table %>% 
     ggplot(aes(x = toxin, y = diet)) +
-    geom_tile(aes(fill = just_r), color = 'black', alpha = 0.6) +
+    geom_tile(aes(fill = r_direct), color = 'black', alpha = 0.6) +
     geom_text(aes(label = signif)) +
-    scale_fill_viridis(option = "H", name = "Correlation\nCoefficient") +
+    scale_fill_gradient2(low = 'blue', high = 'green', name = "Correlation\nCoefficient") +
     scale_x_discrete(labels = c("TcdA",
                                 "TcdB")) +
     scale_y_discrete(labels = c("Chow",
@@ -189,8 +200,8 @@ stat_plot <- function(stat_table,
                                 "HFt/LFb",
                                 "LFt/HFb",
                                 "LFt/LFb")) +
-    facet_wrap(~metab,
-               labeller = labeller(metab = wanted_labels)) +
+    facet_wrap(~metabolite,
+               labeller = labeller(metabolite = wanted_labels)) +
     theme_bw() +
     xlab("Toxin") +
     ylab("Diet") +

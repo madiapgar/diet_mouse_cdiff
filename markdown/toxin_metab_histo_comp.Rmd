@@ -154,7 +154,7 @@ r2_value <- function(biom_table,
   biom_table %>% 
     filter(diet == wanted_diet,
            tissue == wanted_tissue,
-           .data[[tox_metab_col]] == wanted_tox_metab) %>% 
+           .data[[tox_metab_col]] == wanted_tox_metab) %>%
     do(glance(lm(score ~ .data[[wanted_conc_value]],
                  data = .))) -> lm_glance
   output <- list(r_squared = lm_glance$r.squared,
@@ -163,7 +163,7 @@ r2_value <- function(biom_table,
   biom_table %>% 
     filter(diet == wanted_diet,
            tissue == wanted_tissue,
-           .data[[tox_metab_col]] == wanted_tox_metab) %>% 
+           .data[[tox_metab_col]] == wanted_tox_metab) %>%
     do(tidy(lm(score ~ .data[[wanted_conc_value]],
                  data = .))) %>% 
     filter(term != '(Intercept)') -> lm_full
@@ -204,6 +204,7 @@ r2_value_for_loop <- function(biom_table,
 ## statistical visualization plot function
 stat_plot <- function(stat_table,
                       wanted_labels,
+                      y_lab_list,
                       title){
   stat_table %>% 
     ggplot(aes(x = tissue, y = diet)) +
@@ -212,11 +213,7 @@ stat_plot <- function(stat_table,
     scale_fill_gradient2(low = 'blue', high = 'green', name = "Correlation\nCoefficient") +
     scale_x_discrete(labels = c("Cecum",
                                 "Colon")) +
-    scale_y_discrete(labels = c("Chow",
-                                "HFt/HFb",
-                                "HFt/LFb",
-                                "LFt/HFb",
-                                "LFt/LFb")) +
+    scale_y_discrete(labels = y_lab_list) +
     facet_wrap(~tox_metab,
                labeller = labeller(tox_metab = wanted_labels)) +
     theme_bw() +
@@ -439,18 +436,31 @@ dilTox_stat_table['signif'] <- symnum(dilTox_stat_table$p_value,
 
 **Neat Toxin Statistical Visualization**
 ```{r, warning=FALSE, fig.height=4, fig.width=7}
+neat_y_labs <- c("Chow",
+                 "HFt/HFb",
+                 "HFt/LFb",
+                 "LFt/HFb",
+                 "LFt/LFb")
+
 neat_tox_stat_vis <- stat_plot(neatTox_stat_table,
-                          neat_labs,
-                          "Histopathology Score and Toxin Concentration Comparisons (neat)")
+                               neat_labs,
+                               neat_y_labs,
+                               "Histopathology Score and Toxin Concentration Comparisons (neat)")
 
 neat_tox_stat_vis
 ```
 
 **Diluted Toxin Statistical Visualization**
 ```{r, warning=FALSE, fig.height=4, fig.width=7}
+dil_y_labs <- c("HFt/HFb",
+                 "HFt/LFb",
+                 "LFt/HFb",
+                 "LFt/LFb")
+
 dil_tox_stat_vis <- stat_plot(dilTox_stat_table,
-                          dil_labs,
-                          "Histopathology Score and Toxin Concentration Comparisons (diluted)")
+                              dil_labs,
+                              dil_y_labs,
+                              "Histopathology Score and Toxin Concentration Comparisons (diluted)")
 
 dil_tox_stat_vis
 ```

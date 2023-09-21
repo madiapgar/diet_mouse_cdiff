@@ -69,38 +69,28 @@ args <- parser$parse_args()
 # metadata_FP <- './data/misc/processed_metadata.tsv'
 # faith_pd_FP <- './data/qiime/core_outputs/faith_pd.tsv'
 # shannon_FP <- './data/qiime/core_outputs/shannon_entropy.tsv'
-unwanted_samples <- c('Mock20220615A', 'Mock_1A', 'Mock_2A',
-                      'Mock_3A', 'Mock_4A', 'Mock_5A', 'Mock_6A',
-                      'Mock_7A', 'PCR Blank0',
-                      'PCR Blank1', 'Mock_7', 'Mock_6',
-                      'Mock_5', 'Mock_4', 'PCR blank')
+
 
 ## functions in order that they're used
 ## 1
 ## alpha diversity file prep 
+## alpha diversity file prep 
 alpha_div_prep <- function(file_path1,
                            file_path2,
-                           sample_filter,
                            metadata_fp){
   ## faith's pd 
-  alpha_faith <- read_tsv(file_path1)
-  names(alpha_faith)[names(alpha_faith) == '#SampleID'] <- 'sampleid'
-  alpha_faith %>% 
-    filter(!(sampleid %in% sample_filter)) -> faith_pd
+  faith_pd <- read_tsv(file_path1)
+  names(faith_pd)[names(faith_pd) == '#SampleID'] <- 'sampleid'
   ## metadata file for both
   stat_meta <- read_tsv(metadata_fp)
-  stat_meta %>% 
-    filter(!(sampleid %in% sample_filter)) -> stat_meta
   ## joining faith's pd and metadata file together into one table
   stat_meta %>% 
     filter(sampleid %in% faith_pd$sampleid) %>% 
     left_join(faith_pd, by = 'sampleid') %>% 
     filter(!is.na(diet)) -> faith_biom
   ## shannon entropy
-  alpha_shannon <- read_tsv(file_path2)
-  names(alpha_shannon)[names(alpha_shannon) == '...1'] <- 'sampleid'
-  alpha_shannon %>% 
-    filter(!(sampleid %in% sample_filter)) -> shannon
+  shannon <- read_tsv(file_path2)
+  names(shannon)[names(shannon) == '...1'] <- 'sampleid'
   ## joining shannon and metadata file together into one table 
   stat_meta %>% 
     filter(sampleid %in% shannon$sampleid) %>% 
@@ -117,16 +107,32 @@ alpha_div_prep <- function(file_path1,
 ## stats calculations
 ## faith's pd 
 faith_div_stats <- function(biom_table){
-  ## alpha_cat is what the alpha div column is called (faith_pd or shannon_entropy)
   ## sectioned out by diet 
   biom_table %>% 
+    filter(day_post_inf != -15) %>%
     group_by(day_post_inf) %>% 
-    do(tidy(lm(faith_pd ~ (purified_diet * seq_depth) + high_fat + high_fiber + study,
-               data = .))) -> sectioned_lm
-  sectioned_lm %>% 
-    filter(day_post_inf != -15) %>% 
-    filter(p.value <= 0.05) -> sectioned_lm
+    do(glance(lm(faith_pd ~ (purified_diet * seq_depth) + high_fat * high_fiber + study,
+                 data = .))) %>% 
+    ungroup() %>% 
+    na.omit() %>% 
+    mutate(adj.p = p.adjust(p.value, 
+                            method = "BH"),
+           test_id = paste(day_post_inf)) %>% 
+    filter(adj.p <= 0.05) -> lm_full
+  biom_table %>% 
+    group_by(day_post_inf) %>% 
+    mutate(test_id = paste(day_post_inf)) %>% 
+    filter(test_id %in% lm_full$test_id) %>% 
+    do(tidy(lm(faith_pd ~ (purified_diet * seq_depth) + high_fat * high_fiber + study,
+               data = .))) %>%
+    filter(term != '(Intercept)') -> sectioned_lm
+  sectioned_lm['signif'] <- symnum(sectioned_lm$p.value,
+                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                   symbols = c("****", "***", "**", "*", "+", "ns"),
+                                   abbr.colnames = FALSE,
+                                   na = "")
   ## not sectioned out by diet 
+  ## haven't used these results much so decided not to do anything to this
   biom_table %>%
     group_by(day_post_inf) %>% 
     do(tidy(lm(faith_pd ~ diet * seq_depth,
@@ -139,10 +145,18 @@ faith_div_stats <- function(biom_table){
     na.omit() %>% 
     group_by(day_post_inf) %>% 
     do(tidy(kruskal.test(faith_pd ~ diet,
-                         data = .))) -> kruskal
+                         data = .))) %>% 
+    ungroup() %>% 
+    arrange(p.value) %>% 
+    mutate(p.adj = p.adjust(p.value,
+                            method = "BH"),
+           test_id = paste(day_post_inf)) %>%
+    filter(p.adj <= 0.05) -> kruskal
   biom_table %>% 
     na.omit() %>% 
     group_by(day_post_inf) %>% 
+    mutate(test_id = paste(day_post_inf)) %>% 
+    filter(test_id %in% kruskal$test_id) %>% 
     dunn_test(faith_pd ~ diet,
               p.adjust.method = 'BH',
               data = .) -> dunn
@@ -160,12 +174,28 @@ shannon_div_stats <- function(biom_table){
   ## alpha_cat is what the alpha div column is called (faith_pd or shannon_entropy)
   ## sectioned out by diet 
   biom_table %>% 
-    group_by(day_post_inf) %>% 
-    do(tidy(lm(shannon_entropy ~ (purified_diet * seq_depth) + high_fat + high_fiber + study,
-               data = .))) -> sectioned_lm
-  sectioned_lm %>% 
     filter(day_post_inf != -15) %>% 
-    filter(p.value <= 0.05) -> sectioned_lm
+    group_by(day_post_inf) %>% 
+    do(glance(lm(shannon_entropy ~ (purified_diet * seq_depth) + high_fat * high_fiber + study,
+                 data = .))) %>% 
+    ungroup() %>% 
+    na.omit() %>% 
+    mutate(adj.p = p.adjust(p.value, 
+                            method = "BH"),
+           test_id = paste(day_post_inf)) %>% 
+    filter(adj.p <= 0.05) -> lm_full
+  biom_table %>% 
+    group_by(day_post_inf) %>% 
+    mutate(test_id = paste(day_post_inf)) %>% 
+    filter(test_id %in% lm_full$test_id) %>% 
+    do(tidy(lm(shannon_entropy ~ (purified_diet * seq_depth) + high_fat * high_fiber + study,
+               data = .))) %>%
+    filter(term != '(Intercept)') -> sectioned_lm
+  sectioned_lm['signif'] <- symnum(sectioned_lm$p.value,
+                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                   symbols = c("****", "***", "**", "*", "+", "ns"),
+                                   abbr.colnames = FALSE,
+                                   na = "")
   ## not sectioned out by diet 
   biom_table %>%
     group_by(day_post_inf) %>% 
@@ -179,10 +209,18 @@ shannon_div_stats <- function(biom_table){
     na.omit() %>% 
     group_by(day_post_inf) %>% 
     do(tidy(kruskal.test(shannon_entropy ~ diet,
-                         data = .))) -> kruskal
+                         data = .))) %>% 
+    ungroup() %>% 
+    arrange(p.value) %>% 
+    mutate(p.adj = p.adjust(p.value,
+                            method = "BH"),
+           test_id = paste(day_post_inf)) %>%
+    filter(p.adj <= 0.05) -> kruskal
   biom_table %>% 
     na.omit() %>% 
     group_by(day_post_inf) %>% 
+    mutate(test_id = paste(day_post_inf)) %>% 
+    filter(test_id %in% kruskal$test_id) %>% 
     dunn_test(shannon_entropy ~ diet,
               p.adjust.method = 'BH',
               data = .) -> dunn
@@ -233,10 +271,10 @@ stat_plot <- function(new_dunn){
                                 'HFt/\nHFb',
                                 'HFt/\nLFb',
                                 'LFt/\nHFb')) +
-    scale_y_discrete(labels = c('LFt / LFb',
-                                'LFt / HFb',
+    scale_y_discrete(labels = c('HFt / HFb',
                                 'HFt / LFb',
-                                'HFt / HFb')) +
+                                'LFt / HFb',
+                                'LFt / LFb')) +
     facet_grid(~day_post_inf,
                scales = 'free_x') +
     theme_bw(base_size = 16) +
@@ -250,7 +288,6 @@ stat_plot <- function(new_dunn){
 ## alpha diversity analysis  
 alpha_files <- alpha_div_prep(args$faith_pd_FP,
                               args$shannon_FP,
-                              unwanted_samples,
                               args$metadata_FP)
 
 faith <- alpha_files$FaithPD

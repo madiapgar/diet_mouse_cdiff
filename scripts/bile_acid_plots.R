@@ -146,7 +146,7 @@ bile_plot <- function(processed_ko_biom,
     geom_smooth(se = FALSE, color = 'blue') +
     facet_grid(genus~diet, 
                labeller = labeller(diet = labs)) +
-    theme_bw(base_size = 14) +
+    theme_bw(base_size = 16) +
     theme(legend.text = element_text(size = 8.5),
           strip.text.y = element_text(angle = 0)) +
     guides(fill = guide_legend(override.aes = list(size = 2.5))) + 

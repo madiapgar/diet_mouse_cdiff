@@ -81,7 +81,7 @@ family_abun_file_prep <- function(metadata_fp,
     gather(-asv, key = sampleid, value = abun) %>% 
     group_by(sampleid) %>% 
     mutate(rel_abun = abun/sum(abun)) %>% 
-    mutate(p_abun = rel_abun + 0.000001) -> otu_table
+    mutate(rel_abun = rel_abun + 0.000001) -> otu_table
   ## joining all tables together 
   otu_table %>% 
     left_join(metadata, by = 'sampleid') %>% 

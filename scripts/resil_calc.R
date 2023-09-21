@@ -244,16 +244,17 @@ stat_plot <- function(new_dunn){
     filter(day_post_inf.y != -15) %>%
     ggplot(aes(x = group1, y = group2)) +
     geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
-    scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
+    scale_fill_gradient2(low = 'green', high = 'blue', name = 'Group 1 -\nGroup 2',
+                         trans = 'reverse') +
     geom_text(aes(label = p.adj.signif)) +
     scale_x_discrete(labels = c('Chow',
                                 'HFt/\nHFb',
                                 'HFt/\nLFb',
                                 'LFt/\nHFb')) +
-    scale_y_discrete(labels = c('LFt / LFb',
-                                'LFt / HFb',
+    scale_y_discrete(labels = c('HFt / HFb',
                                 'HFt / LFb',
-                                'HFt / HFb')) +
+                                'LFt / HFb',
+                                'LFt / LFb')) +
     facet_grid(~day_post_inf.y) +
     theme_bw(base_size = 16) +
     theme(strip.text.y = element_text(angle = 0)) +

@@ -160,7 +160,7 @@ butyrate_plot <- function(processed_ko_biom,
     geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
     geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
     facet_grid(class~diet, labeller = labeller(diet = labs)) +
-    theme_bw(base_size = 14) +
+    theme_bw(base_size = 16) +
     theme(legend.text = element_text(size = 8.5),
           strip.text.y = element_text(angle = 0)) +
     guides(color = guide_legend(override.aes = list(size = 0.9))) +

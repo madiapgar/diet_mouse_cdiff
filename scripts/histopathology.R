@@ -68,15 +68,24 @@ histo_file_prep <- function(metadata_fp,
 }
 
 ## 2
+## statistical analysis
 histo_stats <- function(big_histo){
   ## kruskal-wallis test
   big_histo %>% 
     group_by(tissue) %>% 
     do(tidy(kruskal.test(score ~ diet,
-                         data = .))) -> kruskal
+                         data = .))) %>% 
+    ungroup() %>%
+    arrange(p.value) %>%
+    mutate(p.adj = p.adjust(p.value,
+                            method = "BH"),
+           test_id = paste(tissue)) %>% 
+    filter(p.adj <= 0.05) -> kruskal
   ## dunn's post hoc test
   big_histo %>% 
     group_by(tissue) %>% 
+    mutate(test_id = paste(tissue)) %>% 
+    filter(test_id %in% kruskal$test_id) %>% 
     dunn_test(score ~ diet,
               p.adjust.method = 'BH',
               data =.) %>% 
@@ -84,11 +93,29 @@ histo_stats <- function(big_histo){
   ## linear model
   big_histo %>% 
     group_by(tissue) %>% 
-    do(tidy(lm(score ~ purified_diet + high_fat * high_fiber,
-               data =.))) %>% 
-    na.omit() %>% 
+    do(glance(lm(score ~ (purified_diet * seq_depth) + high_fat * high_fiber,
+                 data =.))) %>% 
+    ungroup() %>%
+    na.omit() %>%
+    mutate(adj.p = p.adjust(p.value,
+                            method = "BH"),
+           test_id = paste(tissue)) %>% 
+    filter(adj.p <= 0.05) -> lm_full
+  
+  big_histo %>% 
+    group_by(tissue) %>% 
+    mutate(test_id = paste(tissue)) %>% 
+    filter(test_id %in% lm_full$test_id) %>% 
+    do(tidy(lm(score ~ (purified_diet * seq_depth) + high_fat * high_fiber,
+               data =.))) %>%
     filter(term != '(Intercept)') %>% 
-    arrange(p.value) -> linear_model
+    na.omit() -> linear_model
+  
+  linear_model['signif'] <- symnum(linear_model$p.value,
+                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                   symbols = c("****", "***", "**", "*", "+", "ns"),
+                                   abbr.colnames = FALSE,
+                                   na = "")
   ## creating a list of my outputs
   my_list <- list(KruskalWallis = kruskal,
                   DunnsPostHoc = dunn,
@@ -104,8 +131,11 @@ histo_plot <- function(big_histo,
     ggplot(aes(x = diet, y = score)) +
     geom_violin(aes(group = diet),  draw_quantiles = c(0.5)) +
     geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-    scale_x_discrete(labels = c('Chow', 'High Fat/\nHigh Fiber', 'High Fat/\nLow Fiber',
-                                'Low Fat/\nHigh Fiber', 'Low Fat/\nLow Fiber')) +
+    scale_x_discrete(labels = c('Chow', 
+                                'High Fat/\nHigh Fiber', 
+                                'High Fat/\nLow Fiber',
+                                'Low Fat/\nHigh Fiber', 
+                                'Low Fat/\nLow Fiber')) +
     facet_wrap(~tissue, labeller = labeller(tissue = tissue_labs),
                scales = "free_y") +
     stat_pvalue_manual(histo_dunn,

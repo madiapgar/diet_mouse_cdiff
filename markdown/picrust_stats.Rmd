@@ -45,7 +45,8 @@ stat_file_prep <- function(metadata_fp,
 }
 
 ## function for running statisical analysis on picrust kos of interest 
-stat_calc <- function(biom_table){
+## butyrate stats
+buty_stat_calc <- function(biom_table){
   ## linear modeling
   biom_table %>% 
     na.omit() %>% 
@@ -98,6 +99,38 @@ stat_calc <- function(biom_table){
                   KruskalTest = kruskal,
                   DunnPostHoc = dunn)
   return(my_list)
+}
+
+## bile acid stats
+bile_stat_calc <- function(biom_table){
+  ## linear modeling
+  biom_table %>% 
+    na.omit() %>% 
+    filter(day_post_inf != -15) %>% 
+    group_by(ko, day_post_inf) %>% 
+    do(glance(lm(taxon_function_abun ~ (purified_diet * seq_depth) + high_fat * high_fiber,
+               data = .))) %>% 
+    ungroup() %>% 
+    na.omit() %>% 
+    mutate(adj.p = p.adjust(p.value, 
+                            method = "BH"),
+          test_id = paste(ko, day_post_inf, sep = "_")) %>% 
+    filter(adj.p <= 0.05) -> lm_full
+  biom_table %>% 
+    na.omit() %>% 
+    group_by(ko, day_post_inf) %>% 
+    mutate(test_id = paste(ko, day_post_inf, sep = "_")) %>% 
+    filter(test_id %in% lm_full$test_id) %>% 
+    do(tidy(lm(taxon_function_abun ~ (purified_diet * seq_depth) + high_fat * high_fiber,
+               data = .))) %>%
+    na.omit() %>% 
+    filter(term != '(Intercept)') -> lm
+  lm['signif'] <- symnum(lm$p.value,
+                         cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                         symbols = c("****", "***", "**", "*", "+", "ns"),
+                         abbr.colnames = FALSE,
+                         na = "")
+  return(lm)
 }
 
 ## creating a function for this so I don't have to keep doing each one by hand 
@@ -176,7 +209,7 @@ bile_long <- stat_file_prep(metadata_FP,
 **Butyrate Enzyme Statistical Analysis**
 Should I filter day -15 out of these results as well? 
 ```{r, fig.height=4, fig.width=14}
-buty_stats <- stat_calc(but_long)
+buty_stats <- buty_stat_calc(but_long)
 
 buty_lm <- buty_stats$LinearModel
 buty_kruskal <- buty_stats$KruskalTest
@@ -193,7 +226,9 @@ buty_plot
 
 **Secondary Bile Acid Linear Modeling**
 ```{r}
-bile_stats <- stat_calc(bile_long)
+bile_lm <- bile_stat_calc(bile_long)
+
+bile_lm
 ```
 
 **Saving my Outputs**

@@ -73,7 +73,7 @@ family_abun_file_prep <- function(metadata_fp,
     gather(-asv, key = sampleid, value = abun) %>% 
     group_by(sampleid) %>% 
     mutate(rel_abun = abun/sum(abun)) %>% 
-    mutate(p_abun = rel_abun + 0.000001) -> otu_table
+    mutate(rel_abun = rel_abun + 0.000001) -> otu_table
   ## joining all tables together 
   otu_table %>% 
     left_join(metadata, by = 'sampleid') %>% 
@@ -95,39 +95,94 @@ family_abun_file_prep <- function(metadata_fp,
 }
 
 ## 2 
-## preps dunns post hoc results for statistical visualization
-stat_plot_prep <- function(biom_table,
-                           dunn_test){
-  biom_table %>% 
-    group_by(diet, Family, day_post_inf) %>% 
-    summarise(mean_abund = mean(rel_abund)) -> mean_table
-  dunn_test %>% 
-    merge(mean_table, 
+## runs statistics on the large assembled data table for stat visualization
+abun_stats <- function(filtered_table,
+                       tax_level){
+  ## linear modeling 
+  filtered_table %>%
+    na.omit() %>% 
+    filter(day_post_inf > -15) %>% 
+    group_by(.data[[tax_level]], day_post_inf) %>% 
+    do(glance(lm(rel_abund ~ (purified_diet * seq_depth) + high_fat * high_fiber,
+                 data =.))) %>% 
+    ungroup() %>% 
+    na.omit() %>% 
+    mutate(adj.p = p.adjust(p.value, 
+                            method = "BH"),
+           test_id = paste(.data[[tax_level]], day_post_inf, sep = "_")) %>% 
+    filter(adj.p <= 0.05) -> lm_full
+  filtered_table %>%
+    na.omit() %>% 
+    group_by(.data[[tax_level]], day_post_inf) %>% 
+    mutate(test_id = paste(.data[[tax_level]], day_post_inf, sep = "_")) %>% 
+    filter(test_id %in% lm_full$test_id) %>% 
+    do(tidy(lm(rel_abund ~ (purified_diet * seq_depth) + high_fat * high_fiber,
+               data =.))) %>% 
+    na.omit() %>% 
+    filter(term != '(Intercept)') -> linear_model
+  linear_model['signif'] <- symnum(linear_model$p.value,
+                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                   symbols = c("****", "***", "**", "*", "+", "ns"),
+                                   abbr.colnames = FALSE,
+                                   na = "")
+  ## kruskal wallis test 
+  filtered_table %>% 
+    na.omit() %>% 
+    group_by(.data[[tax_level]], day_post_inf) %>% 
+    do(tidy(kruskal.test(rel_abund ~ diet,
+                         data = .))) %>% 
+    ungroup() %>% 
+    arrange(p.value) %>% 
+    mutate(p.adj = p.adjust(p.value,
+                            method = "BH"),
+           test_id = paste(.data[[tax_level]], day_post_inf, sep = "_")) %>% 
+    filter(p.adj <= 0.05) -> kruskal
+  ## dunn's post hoc test
+  filtered_table %>% 
+    na.omit() %>% 
+    group_by(.data[[tax_level]], day_post_inf) %>%
+    mutate(test_id = paste(.data[[tax_level]], day_post_inf, sep = "_")) %>% 
+    filter(test_id %in% kruskal$test_id) %>% 
+    dunn_test(rel_abund ~ diet,
+              p.adjust.method = 'BH',
+              data = .) -> dunn
+  ## editing my dunn's post hoc test to include the difference in means between groups 
+  filtered_table %>% 
+    group_by(diet, .data[[tax_level]], day_post_inf) %>% 
+    summarise(mean_rel_abund = mean(rel_abund)) -> mean_abun
+  dunn %>% 
+    merge(mean_abun, 
           by.x = c('group1',
                    'day_post_inf',
                    'Family'),
           by.y = c('diet',
                    'day_post_inf',
                    'Family')) %>% 
-    rename('group1_mean' = 'mean_abund') %>% 
-    merge(mean_table,
+    rename('group1_rel_abun' = 'mean_rel_abund') %>% 
+    merge(mean_abun,
           by.x = c('group2',
                    'day_post_inf',
                    'Family'),
           by.y = c('diet',
                    'day_post_inf',
                    'Family')) %>% 
-    rename('group2_mean' = 'mean_abund') %>% 
-    mutate(diff_means = (group1_mean - group2_mean),
+    rename('group2_rel_abun' = 'mean_rel_abund') %>% 
+    mutate(diff_means = (group1_rel_abun - group2_rel_abun),
            stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
-  return(new_dunn)
+  ## creating a list of my outputs
+  my_list <- list(LinearModel = linear_model,
+                  KruskalTest = kruskal,
+                  DunnPostHoc = new_dunn)
+  return(my_list)
 }
+
 
 ## 3 
 ## statistical visualization 
-stat_plot <- function(new_dunn){
+stat_plot <- function(new_dunn,
+                      tax_level){
   new_dunn %>% 
-    filter(day_post_inf != -15) %>%
+    filter(day_post_inf != -15) %>% 
     ggplot(aes(x = group1, y = group2)) +
     geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
     scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
@@ -136,17 +191,17 @@ stat_plot <- function(new_dunn){
                                 'HFt/\nHFb',
                                 'HFt/\nLFb',
                                 'LFt/\nHFb')) +
-    scale_y_discrete(labels = c('LFt / LFb',
-                                'LFt / HFb',
+    scale_y_discrete(labels = c('HFt / HFb',
                                 'HFt / LFb',
-                                'HFt / HFb')) +
-    facet_grid(Family~day_post_inf,
+                                'LFt / HFb',
+                                'LFt / LFb')) +
+    facet_grid(.data[[tax_level]]~day_post_inf,
                scales = 'free_x') +
-    theme_bw(base_size = 16) +
+    theme_bw(base_size = 20) +
     theme(strip.text.y = element_text(angle = 0)) +
     xlab('Group 1') +
-    ylab('Group 2') -> stat_vis
-  return(stat_vis)
+    ylab('Group 2') -> stat_plot
+  return(stat_plot)
 }
 
 ## prepping the file needed to run the linear model
@@ -159,47 +214,27 @@ abun_files <- family_abun_file_prep(args$metadata_FP,
 ## can still pull out the metadata, taxonomy, and otu table as well
 abun_filt <- abun_files$AbundanceTable
 
-## performing the linear model
-## looking at each microbe family by days relative to infection and the different diets
-## takes out the intercept term and only shows significant p values 
-abun_filt %>%
-  na.omit() %>% 
-  group_by(Family, day_post_inf) %>% 
-  do(tidy(lm(rel_abund ~ (purified_diet * seq_depth) + high_fat + high_fiber,
-             data =.))) %>% 
-  adjust_pvalue(method = 'BH') %>% 
-  na.omit() %>% 
-  filter(term != '(Intercept)',
-         p.value <= 0.05) -> family_abun_lm
+## performing statistical analysis
+abun_stats <- abun_stats(abun_filt,
+                         wanted_level)
 
-## performing Kruskal-Wallis and Dunn's Post Hoc test
-abun_filt %>% 
-  na.omit() %>% 
-  group_by(Family, day_post_inf) %>% 
-  do(tidy(kruskal.test(rel_abund ~ diet,
-                       data = .))) -> kruskal_test
+kruskal_test <- abun_stats$KruskalTest
+new_dunn_test <- abun_stats$DunnPostHoc
+family_abun_lm <- abun_stats$LinearModel
 
-abun_filt %>% 
-  na.omit() %>% 
-  group_by(Family, day_post_inf) %>% 
-  dunn_test(rel_abund ~ diet,
-            p.adjust.method = 'BH',
-            data = .) -> abun_dunn_test
 
-## prepping for and putting together the statistical visualization based on dunns post hoc test
-new_dunn_test <- stat_plot_prep(abun_filt,
-                                abun_dunn_test)
-
-abun_stat_vis <- stat_plot(new_dunn_test)
+## putting together the statistical visualization based on dunns post hoc test
+abun_stat_vis <- stat_plot(new_dunn_test,
+                           wanted_level)
 
 ## saving my outputs as a .tsv
 write_tsv(family_abun_lm,
           args$lm_FP)
-write_tsv(abun_dunn_test,
+write_tsv(new_dunn_test,
           args$dunn_FP)
 
 ## saving statistical visualization
 ggsave(args$stat_plot_FP,
        plot = abun_stat_vis, 
-       width = 18, 
-       height = 8)
+       width = 17, 
+       height = 15)

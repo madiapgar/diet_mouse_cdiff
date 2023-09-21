@@ -4,6 +4,8 @@ rule target:
         "plots/weighted_unifrac_pcoa.pdf",
         "stats/w_adonis_results.tsv",
         "stats/uw_adonis_results.tsv",
+        "stats/w_adonis_by_day.tsv",
+        "stats/uw_adonis_by_day.tsv",
         "plots/faith_pd.pdf",
         "plots/shannon_entropy.pdf",
         "stats/faith_total_results.tsv",
@@ -44,7 +46,9 @@ rule target:
         "plots/baiH.pdf",
         "plots/baiI.pdf",
         "stats/buty_enzyme_lm.tsv",
-        "stats/bile_enzyme_lm.tsv"
+        "stats/buty_enzyme_dunn.tsv",
+        "stats/bile_enzyme_lm.tsv",
+        "plots/buty_stat_vis.pdf"
 
 
 rule total_sum_scaling:
@@ -480,7 +484,9 @@ rule beta_diversity_stats:
         w_dist = "data/qiime/core_outputs/w_dist_matrix.tsv"
     output:
         w_adonis = "stats/w_adonis_results.tsv",
-        uw_adonis = "stats/uw_adonis_results.tsv"
+        uw_adonis = "stats/uw_adonis_results.tsv",
+        w_adonis_day = "stats/w_adonis_by_day.tsv",
+        uw_adonis_day = "stats/uw_adonis_by_day.tsv"
     conda:
         "r_env"
     shell:
@@ -489,7 +495,9 @@ rule beta_diversity_stats:
                                          --uu_dist {input.uw_dist} \
                                          --wu_dist {input.w_dist} \
                                          --uu_adonis {output.uw_adonis} \
-                                         --wu_adonis {output.w_adonis}
+                                         --wu_adonis {output.w_adonis} \
+                                         --uu_adonis_day {output.uw_adonis_day} \
+                                         --wu_adonis_day {output.w_adonis_day}
         """
 
 
@@ -700,14 +708,18 @@ rule butyrate_bile_stats:
        metadata = "data/misc/processed_metadata.tsv",
        ko_contrib = "data/picrust/tss3_meta_contrib.tsv"
     output:
-        butyrate = "stats/buty_enzyme_lm.tsv",
-        bile = "stats/bile_enzyme_lm.tsv"
+        buty_lm = "stats/buty_enzyme_lm.tsv",
+        buty_dunn = "stats/buty_enzyme_dunn.tsv",
+        bile_lm = "stats/bile_enzyme_lm.tsv",
+        buty_stat_vis = "plots/buty_stat_vis.pdf"
     conda:
         "r_env"
     shell:
         """
         Rscript scripts/butyrate_bile_stats.R --metadata {input.metadata} \
                                               --ko {input.ko_contrib} \
-                                              --buty {output.butyrate} \
-                                              --bile {output.bile}
+                                              --buty_lm {output.buty_lm} \
+                                              --buty_dunn {output.buty_dunn} \
+                                              --bile {output.bile_lm} \
+                                              --buty_stat_vis {output.buty_stat_vis}
         """

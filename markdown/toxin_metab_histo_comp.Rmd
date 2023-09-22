@@ -127,7 +127,7 @@ comp_plot <- function(histo_table,
                scales = 'free_y') +
     theme_bw() +
     theme(strip.text.y = element_text(angle = 0)) +
-    xlab('Concentration') +
+    xlab('Concentration (log10)') +
     ylab('Score') +
     ggtitle(title) -> plot
   return(plot)

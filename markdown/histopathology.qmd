@@ -75,7 +75,7 @@ meta_diet_fixer <- function(metadata_file,
 **File Paths**
 
 ```{r}
-metadata_FP <- '../data/misc/updated_metadata.tsv'
+metadata_FP <- '../data/misc/processed_metadata.tsv'
 seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
 histo_FP <- '../data/misc/histo_data.csv'
 ```
@@ -85,10 +85,7 @@ histo_FP <- '../data/misc/histo_data.csv'
 the bulk of the histopathology scores are from mice that died before day 3
 
 ```{r}
-metadata <- metadata_fixer(metadata_FP)
-
-meta_filt <- meta_diet_fixer(metadata,
-                            seq_depth_FP)
+metadata <- read_tsv(metadata_FP)
 
 histo <- read_csv(histo_FP) %>% 
   filter(!is.na(mouse_id))
@@ -96,7 +93,7 @@ histo <- read_csv(histo_FP) %>%
 wanted_ids <- histo$mouse_id
 
 ## joining them all together for ggplot rendering 
-meta_filt %>% 
+metadata %>% 
   merge(histo, by = 'mouse_id') %>% 
   group_by(mouse_id) %>% 
   filter(day_post_inf == max(day_post_inf)) %>% 
@@ -111,26 +108,39 @@ All mice and days are included in the below statistical analysis and ggplot.
 
 ```{r}
 big_histo %>% 
-  group_by(tissue) %>% 
-  do(tidy(kruskal.test(score ~ diet,
+  group_by(tissue, diet) %>% 
+  do(tidy(kruskal.test(score ~ facility,
                        data = .))) %>% 
   ungroup() %>%
   arrange(p.value) %>%
   mutate(p.adj = p.adjust(p.value,
                           method = "BH"),
-        test_id = paste(tissue)) %>% 
-  filter(p.adj <= 0.05) -> all_day_kruskal
+        test_id = paste(tissue, diet)) -> all_day_kruskal
 
 big_histo %>% 
-  group_by(tissue) %>% 
-  mutate(test_id = paste(tissue)) %>% 
+  group_by(tissue, diet) %>% 
+  mutate(test_id = paste(tissue, diet)) %>% 
   filter(test_id %in% all_day_kruskal$test_id) %>% 
-  dunn_test(score ~ diet,
+  dunn_test(score ~ facility,
             p.adjust.method = 'BH',
             data =.) %>% 
   add_y_position(scales = 'free_y', step.increase = 0) -> all_day_dunn
 
 all_day_dunn
+```
+
+**Running a t test on histopathology score by barrier facility**
+
+```{r}
+## this is a t test
+big_histo %>% 
+  group_by(tissue, diet) %>% 
+  do(tidy(t.test(score ~ facility,
+                 data =.))) %>% 
+  mutate(adj.p.value = p.adjust(p.value)) %>% 
+  filter(adj.p.value <= 0.05) -> t_test
+
+t_test
 ```
 
 **Histopathology Plot with Significance Levels**
@@ -141,15 +151,15 @@ big_histo %>%
   ggplot(aes(x = diet, y = score)) +
   geom_violin(aes(group = diet),  draw_quantiles = c(0.5)) +
   geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-  scale_x_discrete(labels = c('Chow', 'High Fat/\nHigh Fiber', 'High Fat/\nLow Fiber',
-                              'Low Fat/\nHigh Fiber', 'Low Fat/\nLow Fiber')) +
-  facet_wrap(~tissue, labeller = labeller(tissue = tissue_labs),
+  scale_x_discrete(labels = c('Chow', 'HFt/\nHFb', 'HFt/\nLFb',
+                              'LFt/\nHFb', 'LFt/\nLFb')) +
+  facet_grid(tissue~facility, labeller = labeller(tissue = tissue_labs),
              scales = "free_y") +
-  stat_pvalue_manual(all_day_dunn,
-                     tip.length = 0.01,
-                     label = 'p.adj.signif',
-                     hide.ns = TRUE,
-                     step.increase = 0.1) +
+  # stat_pvalue_manual(all_day_dunn,
+  #                    tip.length = 0.01,
+  #                    label = 'p.adj.signif',
+  #                    hide.ns = TRUE,
+  #                    step.increase = 0.1) +
   theme_bw(base_size = 20) +
   xlab('Diet') +
   ylab('Histopathology Score') +

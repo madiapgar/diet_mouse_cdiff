@@ -8,10 +8,7 @@ library(tidyverse)
 library(broom)
 library(argparse)
 
-TO DO:
-  - change study to batch in the metadata file!!!
-  
-  
+
 ## using argparse for my file paths
 ## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
 parser <- ArgumentParser()
@@ -73,7 +70,8 @@ meta_diet_fixer <- function(metadata_file,
            purified_diet = case_when(
              diet_true == 'Chow' ~ 0,
              .default = 1
-           )
+           ),
+           facility = if_else(study == 3 | study == 7, "barrier_1", "barrier_2")
     ) %>% 
     left_join(seq_depths) -> metadata
   return(metadata)

@@ -15,6 +15,62 @@ library(tidyverse)
 **Basic Functions**
 
 ```{r}
+## creating a function for this so I don't have to keep doing each one by hand 
+stat_plot_prep <- function(biom_table,
+                           dunn_test,
+                           value){
+  biom_table %>% 
+    group_by(tissue, diet, facility) %>% 
+    summarise(means = mean(.data[[value]])) -> mean_table
+  dunn_test %>% 
+    merge(mean_table, 
+          by.x = c('group1',
+                   'diet'),
+          by.y = c('tissue',
+                   'diet')) %>% 
+    rename('group1_means' = 'means') %>% 
+    merge(mean_table,
+          by.x = c('group2',
+                   'diet'),
+          by.y = c('tissue',
+                   'diet')) %>% 
+    rename('group2_means' = 'means') %>% 
+    mutate(diff_means = (group1_means - group2_means)) -> new_dunn
+           # stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
+  return(new_dunn)
+}
+
+stat_plot <- function(new_dunn){
+  new_dunn %>% 
+    ggplot(aes(x = group1, y = group2)) +
+    geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
+    scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
+    geom_text(aes(label = p.adj.signif)) +
+    # scale_x_discrete(labels = c('Chow',
+    #                             'HFt/\nHFb',
+    #                             'HFt/\nLFb',
+    #                             'LFt/\nHFb')) +
+    # scale_y_discrete(labels = c('HFt / HFb',
+    #                             'HFt / LFb',
+    #                             'LFt / HFb',
+    #                             'LFt / LFb')) +
+    facet_grid(tissue~diet,
+              scales = 'free_x') +
+    theme_bw(base_size = 20) +
+    theme(strip.text.y = element_text(angle = 0)) +
+    xlab('Group 1') +
+    ylab('Group 2') -> stat_vis
+  return(stat_vis)
+}
+```
+
+**File Paths**
+
+```{r}
+metadata_FP <- '../data/misc/processed_metadata.tsv'
+seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
+histo_FP <- '../data/misc/histo_data.csv'
+
 ## lists to redo the diet names on the facet labels of the ggplot created below 
 diet_labs <- 
     c('Chow', 
@@ -29,55 +85,6 @@ tissue_labs <- c('Cecum',
                  'Colon')
 names(tissue_labs) <- c('cecum',
                         'colon')
-
-## general function to prep the metadata file for further data analyses 
-metadata_fixer <- function(metadata_fp) {
-  tmpMeta <- read_tsv(metadata_fp, n_max = 2)
-  mycols <- colnames(tmpMeta)
-  metadata <- read_tsv(metadata_fp, skip = 2, col_names = mycols)
-  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
-  metadata %>% 
-    filter(!is.na(diet)) %>% 
-    mutate(day_post_inf = if_else(day_post_inf == 2, 3, day_post_inf)) %>% 
-    mutate(diet = as.factor(diet)) -> metadata
-  return(metadata)
-}
-
-## for editing my metadata file post metadata fixer 
-meta_diet_fixer <- function(metadata_file,
-                            seq_depth_fp){
-  seq_depths <- read_tsv(seq_depth_fp)
-  metadata_file %>% 
-    select(sampleid, diet, day_post_inf, mouse_id, study) %>% 
-    mutate(diet_true = diet,
-    diet_true = if_else(day_post_inf == -15, "Chow", diet_true),
-    high_fat = case_when(
-      diet_true == 'HF/HF' ~ 1,
-      diet_true == 'HF/LF' ~ 1,
-      .default = 0
-      ), 
-      high_fiber = case_when(
-      diet_true == 'HF/HF' ~ 1,
-      diet_true == 'LF/HF' ~ 1,
-      diet_true == 'Chow' ~ 1,
-      .default = 0
-      ), 
-      purified_diet = case_when(
-      diet_true == 'Chow' ~ 0,
-      .default = 1
-      )
-    ) %>% 
-    left_join(seq_depths) -> metadata
-  return(metadata)
-}
-```
-
-**File Paths**
-
-```{r}
-metadata_FP <- '../data/misc/processed_metadata.tsv'
-seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
-histo_FP <- '../data/misc/histo_data.csv'
 ```
 
 **Reading in Metadata and Histopathology Files**
@@ -115,11 +122,11 @@ big_histo %>%
   arrange(p.value) %>%
   mutate(p.adj = p.adjust(p.value,
                           method = "BH"),
-        test_id = paste(tissue, diet)) -> all_day_kruskal
+        test_id = paste(tissue, diet, sep = "_")) -> all_day_kruskal
 
 big_histo %>% 
   group_by(tissue, diet) %>% 
-  mutate(test_id = paste(tissue, diet)) %>% 
+  mutate(test_id = paste(tissue, diet, sep = "_")) %>% 
   filter(test_id %in% all_day_kruskal$test_id) %>% 
   dunn_test(score ~ facility,
             p.adjust.method = 'BH',
@@ -129,10 +136,16 @@ big_histo %>%
 all_day_dunn
 ```
 
+```{r}
+stat_plot_prep(big_histo,
+               all_day_dunn,
+               "score") -> test_dunn
+```
+
 **Running a t test on histopathology score by barrier facility**
 
 ```{r}
-## this is a t test
+## this is a t test based on histopathology score of tissue site per diet based on the barrier facility the mice came from 
 big_histo %>% 
   group_by(tissue, diet) %>% 
   do(tidy(t.test(score ~ facility,
@@ -145,14 +158,17 @@ t_test
 
 **Histopathology Plot with Significance Levels**
 
-```{r, fig.height=6, fig.width=13}
+```{r, fig.height=8, fig.width=10}
 big_histo %>% 
   mutate(day_post_inf = as.numeric(day_post_inf)) %>% 
   ggplot(aes(x = diet, y = score)) +
   geom_violin(aes(group = diet),  draw_quantiles = c(0.5)) +
   geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-  scale_x_discrete(labels = c('Chow', 'HFt/\nHFb', 'HFt/\nLFb',
-                              'LFt/\nHFb', 'LFt/\nLFb')) +
+  scale_x_discrete(labels = c('Chow', 
+                              'HFt/\nHFb', 
+                              'HFt/\nLFb',
+                              'LFt/\nHFb', 
+                              'LFt/\nLFb')) +
   facet_grid(tissue~facility, labeller = labeller(tissue = tissue_labs),
              scales = "free_y") +
   # stat_pvalue_manual(all_day_dunn,
@@ -161,6 +177,7 @@ big_histo %>%
   #                    hide.ns = TRUE,
   #                    step.increase = 0.1) +
   theme_bw(base_size = 20) +
+  theme(strip.text.y = element_text(angle = 0)) +
   xlab('Diet') +
   ylab('Histopathology Score') +
   ggtitle("Histopathology Score by Diet") -> all_day_plot

@@ -17,30 +17,58 @@ parser$add_argument("-m",
                     "--metadata",
                     dest = "metadata_FP",
                     help = "Filepath to metadata file in .tsv format.")
+parser$add_argument("-t",
+                    "--toxin",
+                    dest = "toxin_FP",
+                    help = "Filepath to toxin data file in .tsv format.")
+parser$add_argument("-n",
+                    "--neat_plot",
+                    dest = "neat_plot_FP",
+                    help = "Filepath to where the neat toxin concentration plot will go in .pdf format.")
+parser$add_argument("-d",
+                    "--diluted_plot",
+                    dest = "dil_plot_FP",
+                    help = "Filepath to where the diluted toxin concentration plot will go in .pdf format.")
+parser$add_argument("-nk",
+                    "--neat_kruskal",
+                    dest = "neat_kruskal_FP",
+                    help = "Filepath to where the neat toxin concentration Kruskal Wallis test results will go in .tsv format.")
+parser$add_argument("-nd",
+                    "--neat_dunn",
+                    dest = "neat_dunn_FP",
+                    help = "Filepath to where the neat toxin concentration Dunn's Post Hoc test results will go in .tsv format.")
+parser$add_argument("-dk",
+                    "--diluted_kruskal",
+                    dest = "dil_kruskal_FP",
+                    help = "Filepath to where the diluted toxin concentration Kruskal Wallis test results will go in .tsv format.")
+parser$add_argument("-dd",
+                    "--diluted_dunn",
+                    dest = "dil_dunn_FP",
+                    help = "Filepath to where the diluted toxin concentration Dunn's Post Hoc test results will go in .tsv format.")
 
 args <- parser$parse_args()
 
 
 ## needed input file paths
-metadata_FP <- './data/misc/processed_metadata.tsv'
-toxin_FP <- './data/misc/toxin_final_data.tsv'
+# metadata_FP <- './data/misc/processed_metadata.tsv'
+# toxin_FP <- './data/misc/toxin_final_data.tsv'
 
 ## labeling lists
 neat_labs <- c('TcdA', 'TcdB')
 names(neat_labs) <- c('Total TcA Neat', 'Total TcB Neat')
 neat_x_labs <- c('Chow', 
-                 'High-Fat/\nHigh-Fiber', 
-                 'High-Fat/\nLow-Fiber',
-                 'Low-Fat/\nHigh-Fiber', 
-                 'Low-Fat/\nLow-Fiber')
+                 'HFt/\nHFb', 
+                 'HFt/\nLFb',
+                 'LFt/\nHFb', 
+                 'LFt/\nLFb')
 neat_title <- 'Toxin Neat Concentration by Mouse Diet'
 
 dil_labs <- c('TcdA', 'TcdB')
 names(dil_labs) <- c('Total TcA 1:10', 'Total TcB 1:10')
-dil_x_labs <- c('High-Fat/\nHigh-Fiber', 
-                 'High-Fat/\nLow-Fiber',
-                 'Low-Fat/\nHigh-Fiber', 
-                 'Low-Fat/\nLow-Fiber')
+dil_x_labs <- c('HFt/\nHFb', 
+                'HFt/\nLFb',
+                'LFt/\nHFb', 
+                'LFt/\nLFb')
 dil_title <- 'Toxin Diluted Concentration (1:10) by Mouse Diet'
 
 ## needed functions (in order)
@@ -163,7 +191,7 @@ tox_plot <- function(biom_table,
     geom_jitter(alpha = 0.4, width = 0.1, height = 0)+
     scale_x_discrete(labels = x_labels) +
     facet_wrap(~.data[[tox_col]],
-               labeller = labeller(.data[[tox_col]] = facet_labs),
+               labeller = labeller(.cols = facet_labs),
                scales = 'free_y') +
     stat_pvalue_manual(dunn,
                        tip.length = 0.01,
@@ -177,8 +205,8 @@ tox_plot <- function(biom_table,
 }
 
 ## file prep
-toxin_files <- file_prep(metadata_FP,
-                        toxin_FP)
+toxin_files <- file_prep(args$metadata_FP,
+                         args$toxin_FP)
 
 metadata <- toxin_files$Metadata
 neat_tox_table <- toxin_files$NeatToxin
@@ -220,3 +248,24 @@ dil_plot <- tox_plot(dil_tox_table,
                       dil_labs,
                       dil_dunn,
                       dil_title)
+## saving my outputs
+## plots
+ggsave(args$neat_plot_FP,
+       plot = neat_plot,
+       width = 10,
+       height = 5)
+
+ggsave(args$dil_plot_FP,
+       plot = dil_plot,
+       width = 10,
+       height = 5)
+
+## stats
+write_tsv(neat_kruskal,
+          args$neat_kruskal_FP)
+write_tsv(neat_dunn,
+          args$neat_dunn_FP)
+write_tsv(dil_kruskal,
+          args$dil_kruskal_FP)
+write_tsv(dil_dunn,
+          args$dil_dunn_FP)

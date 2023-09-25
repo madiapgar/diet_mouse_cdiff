@@ -109,26 +109,26 @@ metadata %>%
   gather(cecum, colon, key = tissue, value = score) -> big_histo
 ```
 
-**Histopathology Score Kruskal-Wallis and Dunn's Post Hoc Tests**
+**Histopathology Score Kruskal-Wallis and Dunn's Post Hoc Tests by Diet**
 
 All mice and days are included in the below statistical analysis and ggplot.
 
 ```{r}
 big_histo %>% 
-  group_by(tissue, diet) %>% 
-  do(tidy(kruskal.test(score ~ facility,
+  group_by(tissue) %>% 
+  do(tidy(kruskal.test(score ~ diet,
                        data = .))) %>% 
   ungroup() %>%
   arrange(p.value) %>%
   mutate(p.adj = p.adjust(p.value,
                           method = "BH"),
-        test_id = paste(tissue, diet, sep = "_")) -> all_day_kruskal
+        test_id = paste(tissue)) -> all_day_kruskal
 
 big_histo %>% 
-  group_by(tissue, diet) %>% 
-  mutate(test_id = paste(tissue, diet, sep = "_")) %>% 
+  group_by(tissue) %>% 
+  mutate(test_id = paste(tissue)) %>% 
   filter(test_id %in% all_day_kruskal$test_id) %>% 
-  dunn_test(score ~ facility,
+  dunn_test(score ~ diet,
             p.adjust.method = 'BH',
             data =.) %>% 
   add_y_position(scales = 'free_y', step.increase = 0) -> all_day_dunn
@@ -136,56 +136,7 @@ big_histo %>%
 all_day_dunn
 ```
 
-```{r}
-stat_plot_prep(big_histo,
-               all_day_dunn,
-               "score") -> test_dunn
-```
-
-**Running a t test on histopathology score by barrier facility**
-
-```{r}
-## this is a t test based on histopathology score of tissue site per diet based on the barrier facility the mice came from 
-big_histo %>% 
-  group_by(tissue, diet) %>% 
-  do(tidy(t.test(score ~ facility,
-                 data =.))) %>% 
-  mutate(adj.p.value = p.adjust(p.value)) %>% 
-  filter(adj.p.value <= 0.05) -> t_test
-
-t_test
-```
-
-**Histopathology Plot with Significance Levels**
-
-```{r, fig.height=8, fig.width=10}
-big_histo %>% 
-  mutate(day_post_inf = as.numeric(day_post_inf)) %>% 
-  ggplot(aes(x = diet, y = score)) +
-  geom_violin(aes(group = diet),  draw_quantiles = c(0.5)) +
-  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-  scale_x_discrete(labels = c('Chow', 
-                              'HFt/\nHFb', 
-                              'HFt/\nLFb',
-                              'LFt/\nHFb', 
-                              'LFt/\nLFb')) +
-  facet_grid(tissue~facility, labeller = labeller(tissue = tissue_labs),
-             scales = "free_y") +
-  # stat_pvalue_manual(all_day_dunn,
-  #                    tip.length = 0.01,
-  #                    label = 'p.adj.signif',
-  #                    hide.ns = TRUE,
-  #                    step.increase = 0.1) +
-  theme_bw(base_size = 20) +
-  theme(strip.text.y = element_text(angle = 0)) +
-  xlab('Diet') +
-  ylab('Histopathology Score') +
-  ggtitle("Histopathology Score by Diet") -> all_day_plot
-
-all_day_plot
-```
-
-**Histopathology Score Linear Modeling**\
+**Histopathology Score by Diet Linear Modeling**\
 running a linear model on the histopathology of all mice, regardless of day of death and cecal removal.
 
 ```{r}
@@ -217,37 +168,116 @@ big_histo_lm['signif'] <- symnum(big_histo_lm$p.value,
 big_histo_lm
 ```
 
-**Plotting the Cecum and Colon Histopathology Scores**
+**Histopathology Score by Diet Plot**
 
-comparing the histopathology scores between the cecum and colon, can see a positive correlation between the two.
+```{r, fig.height=6, fig.width=10}
+big_histo %>% 
+  mutate(day_post_inf = as.numeric(day_post_inf)) %>% 
+  ggplot(aes(x = diet, y = score)) +
+  geom_violin(aes(group = diet),  draw_quantiles = c(0.5)) +
+  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
+  scale_x_discrete(labels = c('Chow', 
+                              'HFt/\nHFb', 
+                              'HFt/\nLFb',
+                              'LFt/\nHFb', 
+                              'LFt/\nLFb')) +
+  facet_wrap(~tissue, labeller = labeller(tissue = tissue_labs),
+             scales = "free_y") +
+  stat_pvalue_manual(all_day_dunn,
+                     tip.length = 0.01,
+                     label = 'p.adj.signif',
+                     hide.ns = TRUE,
+                     step.increase = 0.1) +
+  theme_bw(base_size = 20) +
+  theme(strip.text.y = element_text(angle = 0)) +
+  xlab('Diet') +
+  ylab('Histopathology Score') +
+  ggtitle("Histopathology Score by Diet") -> all_day_plot
 
-```{r}
-histo %>% 
-  ggplot(aes(x = colon, y = cecum)) +
-    geom_point() +
-    geom_smooth(method = 'lm') +
-    theme_bw(base_size = 14) -> histo_compare
-
-histo_compare
+all_day_plot
 ```
 
-**Linear Modeling for Cecum and Colon Histopathology Scores**
+**Running Kruskal Wallis, Dunn's Post Hoc, and T-Tests on histopathology score by barrier facility**
 
 ```{r}
-histo %>% 
-  do(tidy(lm(colon ~ cecum,
-            data =.))) %>% 
-  adjust_pvalue(method = 'BH')
+## kruskal wallis test by barrier facility
+big_histo %>% 
+  group_by(tissue, diet) %>% 
+  do(tidy(kruskal.test(score ~ facility,
+                       data = .))) %>% 
+  ungroup() %>%
+  arrange(p.value) %>%
+  mutate(p.adj = p.adjust(p.value,
+                          method = "BH"),
+        test_id = paste(tissue, diet, sep = "_")) -> barrier_kruskal
+
+## dunn's post hoc test
+big_histo %>% 
+  group_by(tissue, diet) %>% 
+  mutate(test_id = paste(tissue, diet, sep = "_")) %>% 
+  filter(test_id %in% barrier_kruskal$test_id) %>% 
+  dunn_test(score ~ facility,
+            p.adjust.method = 'BH',
+            data =.) %>% 
+  add_xy_position(scales = 'free', step.increase = 0) -> barrier_dunn
+
+## this is a t test based on histopathology score of tissue site per diet based on the barrier facility the mice came from 
+big_histo %>% 
+  group_by(tissue, diet) %>% 
+  do(tidy(t.test(score ~ facility,
+                 data =.))) %>% 
+  mutate(adj.p.value = p.adjust(p.value)) %>% 
+  filter(adj.p.value <= 0.05) -> barrier_t_test
+
+barrier_t_test
+```
+
+**Histopathology Score by Barrier Facility Plot**
+
+```{r, fig.height=6.5, fig.width=12}
+big_histo %>% 
+  mutate(day_post_inf = as.numeric(day_post_inf)) %>% 
+  ggplot(aes(x = facility, y = score)) +
+  geom_violin(aes(group = facility),  draw_quantiles = c(0.5)) +
+  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
+  scale_x_discrete(labels = c(1, 2)) +
+  facet_grid(tissue~diet, labeller = labeller(tissue = tissue_labs,
+                                              diet = diet_labs),
+             scales = "free_y") +
+  stat_pvalue_manual(barrier_dunn,
+                     tip.length = 0.01,
+                     label = 'p.adj.signif',
+                     hide.ns = TRUE,
+                     step.increase = 0.5) +
+  theme_bw(base_size = 16) +
+  theme(strip.text.y = element_text(angle = 0)) +
+  xlab('Facility') +
+  ylab('Score') +
+  ggtitle("Histopathology Score by Diet per Barrier Facility") -> barrier_plot
+
+barrier_plot
 ```
 
 **Saving Plot and Stats**
 
 ```{r}
+## regular plots
 ggsave("histopathology_all.pdf", 
        plot = all_day_plot,
-       width = 13, 
+       width = 10, 
        height = 6,
        path = '../plots')
 write_tsv(big_histo_lm,
           '../stats/histopathology_all.tsv')
+
+## by barrier facility plots
+ggsave("histo_facility_comp.pdf", 
+       plot = barrier_plot,
+       width = 12, 
+       height = 6.5,
+       path = '../plots')
+write_tsv(barrier_dunn,
+          '../stats/histo_facil_dunn.tsv')
+write_tsv(barrier_t_test,
+          '../stats/histo_facil_tTest.tsv')
 ```

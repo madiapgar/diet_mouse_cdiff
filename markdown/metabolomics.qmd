@@ -15,57 +15,11 @@ library(ggpubr)
 library(rstatix)
 ```
 
-**Basic Functions**
-
-```{r}
-## general function to prep the metadata file for further data analyses 
-metadata_fixer <- function(metadata_fp) {
-  tmpMeta <- read_tsv(metadata_fp, n_max = 2)
-  mycols <- colnames(tmpMeta)
-  metadata <- read_tsv(metadata_fp, skip = 2, col_names = mycols)
-  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
-  metadata %>% 
-    filter(!is.na(diet)) %>% 
-    mutate(day_post_inf = if_else(day_post_inf == 2, 3, day_post_inf)) %>% 
-    mutate(diet = as.factor(diet)) -> metadata
-  return(metadata)
-}
-
-## for editing my metadata file post metadata fixer 
-meta_diet_fixer <- function(metadata_file,
-                            seq_depth_fp){
-  seq_depths <- read_tsv(seq_depth_fp)
-  metadata_file %>% 
-    select(sampleid, diet, day_post_inf, mouse_id, study) %>% 
-    mutate(diet_true = diet,
-    diet_true = if_else(day_post_inf == -15, "Chow", diet_true),
-    high_fat = case_when(
-      diet_true == 'HF/HF' ~ 1,
-      diet_true == 'HF/LF' ~ 1,
-      .default = 0
-      ), 
-      high_fiber = case_when(
-      diet_true == 'HF/HF' ~ 1,
-      diet_true == 'LF/HF' ~ 1,
-      diet_true == 'Chow' ~ 1,
-      .default = 0
-      ), 
-      purified_diet = case_when(
-      diet_true == 'Chow' ~ 0,
-      .default = 1
-      )
-    ) %>% 
-    left_join(seq_depths) -> metadata
-  return(metadata)
-}
-```
-
 **File Paths**
 
 ```{r}
-metadata_FP <- '../data/misc/updated_metadata.tsv'
+metadata_FP <- '../data/misc/processed_metadata.tsv'
 metab_FP <- '../data/misc/metabolomics.csv'
-seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
 wanted_metabs <- c('Acetic Acid (ug/g)',
                    'Propanoic Acid (ug/g)',
                    'n-Butanoic Acid (ug/g)')
@@ -81,6 +35,10 @@ unwanted_columns <- c('2-methyl-propanoic acid (ug/g)',
                      'Sample_Type',
                      'Collection Date',
                      'Dil.')
+metab_labs <- c('Acetic Acid',
+                'Propanoic Acid',
+                'n-Butanoic Acid')
+names(metab_labs) <- wanted_metabs
 ```
 
 **Prepping Metadata and Metabolomics Files**
@@ -91,9 +49,8 @@ metab <- read_csv(metab_FP)
 wanted_ids <- metab$mouse_id
 
 ## metadta file prep 
-metadata <- metadata_fixer(metadata_FP)
-metadata <- meta_diet_fixer(metadata,
-                            seq_depth_FP)
+metadata <- read_tsv(metadata_FP)
+
 metadata %>% 
   group_by(mouse_id) %>% 
   filter(mouse_id %in% wanted_ids) -> meta_filt
@@ -139,18 +96,15 @@ big_metab %>%
             p.adjust.method = 'BH',
             data = .) %>% 
   add_y_position(scales = 'free_y') -> metab_dunn
+
+metab_dunn
 ```
 
 **Ggplot Construction for Metabolites**
 
 Very rough draft of the plot for the metabolite data - I know that I will probably need to edit this.
 
-```{r, fig.width=16, fig.height=5}
-metab_labs <- c('Acetic Acid',
-                'Propanoic Acid',
-                'n-Butanoic Acid')
-names(metab_labs) <- wanted_metabs
-
+```{r, fig.width=15, fig.height=5}
 big_metab %>% 
   ggplot(aes(x = diet, y = concentration)) +
   geom_violin(aes(group = diet)) +
@@ -211,7 +165,7 @@ metab_results
 ## plot
 ggsave("metabolomics.pdf",
        plot = metab_plot,
-       width = 16,
+       width = 15,
        height = 5,
        path = '../plots')
 

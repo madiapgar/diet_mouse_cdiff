@@ -268,6 +268,8 @@ dil_toxin <- comp_files$DilToxin
 neat_toxin <- comp_files$NeatToxin
 ```
 
+YOURE PLOTTING/DOING STATS ON THE LOG10 TRANSFORMATION IN THE ACTUAL BIOM TABLE RATHER THAN TRANSFORMING THE AXES!!
+This is inconsistent with what you've done so far with all of the other plots - you may want to change this back. Need further thought/information into what exactly you're doing and whether you should change things or not. 
 ```{r}
 metab %>% 
   mutate(log_conc = log(concentration + 0.01)) -> metab

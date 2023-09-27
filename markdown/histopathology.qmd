@@ -14,6 +14,12 @@ library(rstatix)
 library(ggpubr)
 ```
 
+TO DO:
+
+-   look at histopathology scores between batches - studies (look at each one separately) to see if there's a batch effect, especially in the high-fat/low-fiber diet.
+
+-   combined analyses with data from previous study published
+
 **File Paths**
 
 ```{r}
@@ -149,6 +155,8 @@ all_day_plot
 
 **Running Kruskal Wallis, Dunn's Post Hoc, and T-Tests on histopathology score by barrier facility**
 
+You only need a t-test for this analysis since you're only doing two comparisons. I'm keeping the Dunn's Post Hoc test on here because I can't get the t-test to show up on the plot below.
+
 ```{r}
 ## kruskal wallis test by barrier facility
 big_histo %>% 
@@ -214,6 +222,68 @@ big_histo %>%
 barrier_plot
 ```
 
+**Histopathology Score by Batch (aka study in the metadata file)**\
+Statistical analysis! I chose to run a Kruskal-Wallis followed by a Dunn's Post Hoc test for this plot since there are multiple comparisons between mouse batches.
+
+```{r}
+## kruskal wallis test by barrier facility
+big_histo %>% 
+  group_by(tissue, diet) %>% 
+  do(tidy(kruskal.test(score ~ study,
+                       data = .))) %>% 
+  ungroup() %>%
+  arrange(p.value) %>%
+  mutate(p.adj = p.adjust(p.value,
+                          method = "BH"),
+        test_id = paste(tissue, diet, sep = "_")) %>% 
+  filter(p.adj <= 0.05) -> batch_kruskal
+
+## dunn's post hoc test
+big_histo %>% 
+  group_by(tissue, diet) %>% 
+  mutate(test_id = paste(tissue, diet, sep = "_")) %>% 
+  filter(test_id %in% batch_kruskal$test_id) %>% 
+  dunn_test(score ~ study,
+            p.adjust.method = 'BH',
+            data =.) %>% 
+  add_xy_position(scales = 'free', step.increase = 0) -> batch_dunn
+
+batch_dunn
+```
+
+Plot!
+
+Bad news, the mice on each diet are not evenly distributed between batches (or "studies") so each batch is not equally represented between each diet. Some diets have more batches than others but no diet has every batch represented in it. I assume this is because we didn't account for mouse batch in the study design? Each batch also does not have an equal number of mice/samples in it.
+
+```{r, fig.height=6.5, fig.width=12, warning=FALSE}
+big_histo %>% 
+  mutate(day_post_inf = as.numeric(day_post_inf)) %>% 
+  ggplot(aes(x = study, y = score)) +
+  geom_violin(aes(group = study),  draw_quantiles = c(0.5)) +
+  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7)) +
+  facet_grid(tissue~diet, labeller = labeller(tissue = tissue_labs,
+                                              diet = diet_labs),
+             scales = "free_y") +
+  stat_pvalue_manual(batch_dunn,
+                     tip.length = 0.01,
+                     label = 'p.adj.signif',
+                     hide.ns = TRUE,
+                     step.increase = 0.1) +
+  theme_bw(base_size = 16) +
+  theme(strip.text.y = element_text(angle = 0)) +
+  xlab('Batch') +
+  ylab('Score') +
+  ggtitle("Histopathology Score by Diet per Mouse Batch") -> batch_plot
+
+batch_plot
+```
+
+```{r}
+big_histo %>% 
+  count(study)
+```
+
 **Saving Plot and Stats**
 
 ```{r}
@@ -236,4 +306,14 @@ write_tsv(barrier_dunn,
           '../stats/histo_facil_dunn.tsv')
 write_tsv(barrier_t_test,
           '../stats/histo_facil_tTest.tsv')
+
+## by mouse batch (aka study)
+ggsave("histo_batch_comp.pdf", 
+       plot = batch_plot,
+       width = 12, 
+       height = 6.5,
+       path = '../plots')
+write_tsv(batch_dunn,
+          '../stats/histo_batch_dunn.tsv')
+
 ```

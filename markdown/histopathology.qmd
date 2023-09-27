@@ -14,12 +14,6 @@ library(rstatix)
 library(ggpubr)
 ```
 
-TO DO:
-
--   look at histopathology scores between batches - studies (look at each one separately) to see if there's a batch effect, especially in the high-fat/low-fiber diet.
-
--   combined analyses with data from previous study published
-
 **File Paths**
 
 ```{r}

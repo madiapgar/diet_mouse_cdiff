@@ -10,6 +10,8 @@ library(cowplot)
 library(magrittr)
 library(qiime2R)
 library(tidyverse)
+library(rstatix)
+library(ggpubr)
 ```
 
 **File Paths**
@@ -90,7 +92,7 @@ running a linear model on the histopathology of all mice, regardless of day of d
 ```{r}
 big_histo %>% 
   group_by(tissue) %>% 
-  do(glance(lm(score ~ (purified_diet * seq_depth) + high_fat * high_fiber,
+  do(glance(lm(score ~ (purified_diet * seq_depth) + high_fat * high_fiber + study,
              data =.))) %>% 
   ungroup() %>%
   na.omit() %>%
@@ -103,7 +105,7 @@ big_histo %>%
   group_by(tissue) %>% 
   mutate(test_id = paste(tissue)) %>% 
   filter(test_id %in% big_histo_lm_full$test_id) %>% 
-  do(tidy(lm(score ~ (purified_diet * seq_depth) + high_fat * high_fiber,
+  do(tidy(lm(score ~ (purified_diet * seq_depth) + high_fat * high_fiber + study,
              data =.))) %>%
   filter(term != '(Intercept)') %>% 
   na.omit() -> big_histo_lm
@@ -176,6 +178,12 @@ big_histo %>%
                  data =.))) %>% 
   mutate(adj.p.value = p.adjust(p.value)) %>% 
   filter(adj.p.value <= 0.05) -> barrier_t_test
+
+barrier_t_test['p.adj.signif'] <- symnum(barrier_t_test$adj.p.value,
+                                         cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                         symbols = c("****", "***", "**", "*", "+", "ns"),
+                                         abbr.colnames = FALSE,
+                                         na = "")
 
 barrier_t_test
 ```

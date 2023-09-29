@@ -330,7 +330,7 @@ beta_plots
 **Saving my plot outputs**
 These go to the plots directory. 
 ```{r}
-## this is an example of how to save my plot outputs
+## this is an example of how to save my plot outputs as a pdf
 ggsave("faith_pd.pdf",
        plot = faith_plot,
        width = 14,
@@ -361,6 +361,16 @@ ggsave("beta_plots.pdf",
        width = 30,
        height = 8,
        path = '../plots')
+
+## as an rdata object
+save(faith_plot,
+     file = '../figures/faith_pd.rdata')
+save(shannon_entropy_plot,
+     file = '../figures/shannon.rdata')
+save(weighted_pcoa,
+     file = '../figures/weighted_pcoa.rdata')
+save(unweighted_pcoa,
+     file = '../figures/unweighted_pcoa.rdata')
 
 ## composed faith plot and stat figures for poster
 # ggsave("poster_faith.pdf",

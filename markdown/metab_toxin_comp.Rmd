@@ -281,7 +281,7 @@ neat_toxin %>%
 
 **Comparison Plots**
 Acetic Acid
-```{r, warning=FALSE, fig.height=4, fig.width=8}
+```{r, warning=FALSE, fig.height=4, fig.width=10}
 tox_acetic <- comp_plot(metab,
                         neat_toxin,
                         "neat_conc",
@@ -294,7 +294,7 @@ tox_acetic
 ```
 
 n-Butanoic Acid
-```{r, warning=FALSE, fig.height=4, fig.width=8}
+```{r, warning=FALSE, fig.height=4, fig.width=10}
 tox_butanoic <- comp_plot(metab,
                         neat_toxin,
                         "neat_conc",
@@ -307,15 +307,15 @@ tox_butanoic
 ```
 
 Propanoic Acid 
-```{r, warning=FALSE, fig.height=4, fig.width=8}
+```{r, warning=FALSE, fig.height=4, fig.width=10}
 tox_propanoic <- comp_plot(metab,
-                          neat_toxin,
-                          "neat_conc",
-                          "metabolite",
-                          "Propanoic Acid (ug/g)",
-                          diet_labs,
-                          neat_labs,
-                          "Propanoic Acid")
+                            neat_toxin,
+                            "neat_conc",
+                            "metabolite",
+                            "Propanoic Acid (ug/g)",
+                            diet_labs,
+                            neat_labs,
+                            "Propanoic Acid")
 tox_propanoic
 ```
 
@@ -340,7 +340,7 @@ stat_table['signif'] <- symnum(stat_table$p_value,
 
 
 **Statistical Visualization**
-```{r}
+```{r, fig.height=3, fig.width=5.5}
 stat_plot(stat_table,
           metab_labs,
           "Metabolite and Toxin Concentration Comparisons") -> tox_metab_stat_vis
@@ -360,10 +360,21 @@ metab_tox_plots
 
 **Saving my Outputs**
 ```{r}
+## as a pdf
 ggsave('metab_tox_comp.pdf',
        plot = metab_tox_plots,
        width = 16,
        height = 7,
        path = '../plots')
+
+## as an rdata object
+save(tox_acetic,
+     file = '../figures/tox_metab_acetic.rdata')
+save(tox_butanoic,
+     file = '../figures/tox_metab_butanoic.rdata')
+save(tox_propanoic,
+     file = '../figures/tox_metab_propanoic.rdata')
+save(tox_metab_stat_vis,
+     file = '../figures/tox_metab_stats.rdata')
 ```
 

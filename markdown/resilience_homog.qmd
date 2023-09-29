@@ -575,6 +575,7 @@ write_tsv(wu_resil_lm,
 **Saving all Plots**
 
 ```{r}
+## as a pdf
 ggsave("../plots/wu_resiliency.pdf",
        plot = wu_resil_plot,
        width = 14, 
@@ -614,4 +615,22 @@ ggsave("uu_resil_homog_stat_vis.pdf",
        width = 28, 
        height = 9,
        path = '../plots')
+
+## as an rdata object
+save(wu_resil_plot,
+     file = '../figures/wu_resil.rdata')
+save(uu_resil_plot,
+     file = '../figures/uu_resil.rdata')
+save(wu_homog_plot,
+     file = '../figures/wu_homog.rdata')
+save(uu_homog_plot,
+     file = '../figures/uu_homog.rdata')
+save(w_resil_stat_vis,
+     file = '../figures/wu_resil_stats.rdata')
+save(uu_resil_stat_vis,
+     file = '../figures/uu_resil_stats.rdata')
+save(w_homog_stat_vis,
+     file = '../figures/wu_homog_stats.rdata')
+save(uu_homog_stat_vis,
+     file = '../figures/uu_homog_stats.rdata')
 ```

@@ -295,7 +295,7 @@ shannon_stat_vis
 
 **Saving my Outputs**
 ```{r}
-## plot
+## plot as a pdf
 ggsave("faith_stats.pdf",
        plot = faith_stat_vis, 
        width = 14, 
@@ -306,6 +306,12 @@ ggsave("shannon_stats.pdf",
        width = 14, 
        height = 4, 
        path = '../plots')
+
+## as an rdata object
+save(faith_stat_vis,
+     file = '../figures/faith_stats.rdata')
+save(shannon_stat_vis,
+     file = '../figures/shannon_stats.rdata')
 
 ## example of how to write results out as a .tsv 
 write_tsv(new_faith_dunn, '../stats/faith_dunn.tsv')

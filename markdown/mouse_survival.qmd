@@ -333,6 +333,7 @@ need to have plot = print() to save ggsurvplot plots! regular ggsave doesn't wor
 # fib_surv <- fiber_plot$plot
 # fat_surv <- fat_plot$plot
 
+## as a pdf
 ggsave('survival_curve_all.pdf',
        plot = diet_plot_final,
        width = 15,
@@ -353,4 +354,10 @@ ggsave('survival_curve_stats.pdf',
        width = 4.5,
        height = 3,
        path = '../plots')
+
+## as an rdata object
+save(diet_plot_final,
+     file = '../figures/survival.rdata')
+save(surv_stat_vis,
+     file = '../figures/survival_stats.rdata')
 ```

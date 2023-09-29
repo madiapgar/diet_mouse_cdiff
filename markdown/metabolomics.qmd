@@ -104,7 +104,7 @@ metab_dunn
 
 Very rough draft of the plot for the metabolite data - I know that I will probably need to edit this.
 
-```{r, fig.width=15, fig.height=5}
+```{r, fig.width=15, fig.height=7}
 big_metab %>% 
   ggplot(aes(x = diet, y = concentration)) +
   geom_violin(aes(group = diet)) +
@@ -122,7 +122,7 @@ big_metab %>%
                      hide.ns = TRUE) +
   xlab('Diet') +
   ylab('Concentration (ug/g)') +
-  ggtitle('Metabolite Concentration by Mouse Diet') -> metab_plot
+  ggtitle('Metabolite Concentration by Diet') -> metab_plot
 
 metab_plot
 ```
@@ -162,12 +162,16 @@ metab_results
 **Saving my Outputs**
 
 ```{r}
-## plot
+## plot as a pdf
 ggsave("metabolomics.pdf",
        plot = metab_plot,
        width = 15,
-       height = 5,
+       height = 7,
        path = '../plots')
+
+## as an rdata object
+save(metab_plot,
+     file = '../figures/metab.rdata')
 
 ## statistical tests 
 write_tsv(metab_results,

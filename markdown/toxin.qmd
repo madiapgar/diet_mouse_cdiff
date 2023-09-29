@@ -174,14 +174,17 @@ TcdA and TcdB concentrations by diet without any kind of dilution factor.
 
 So, I was actually using the wrong table to calculate the stats above for the ggplot and when I re-ran the stats with the correct table, none of the relationships came out as statistically significant according to p-value (rip).
 
-```{r, fig.height=5, fig.width=10}
+```{r, fig.height=5, fig.width=8}
 neat_toxin %>% 
   na.omit() %>% 
   ggplot(aes(x = diet, y = neat_conc)) +
   geom_violin(aes(group = diet), draw_quantiles = c(0.5)) +
   geom_jitter(alpha = 0.4, width = 0.1, height = 0)+
-  scale_x_discrete(labels = c('Chow', 'High-Fat/\nHigh-Fiber', 'High-Fat/\nLow-Fiber',
-                              'Low-Fat/\nHigh-Fiber', 'Low-Fat/\nLow-Fiber')) +
+  scale_x_discrete(labels = c('Chow', 
+                              'HFt/\nHFb', 
+                              'HFt/\nLFb',
+                              'LFt/\nHFb', 
+                              'LFt/\nLFb')) +
   facet_wrap(~neat_toxin,
              labeller = labeller(neat_toxin = neat_labs), 
              scales = 'free_y') +
@@ -192,7 +195,7 @@ neat_toxin %>%
   theme_bw(base_size = 14) +
   xlab('Diet') +
   ylab('Concentration') +
-  ggtitle('Toxin Neat Concentration by Mouse Diet') -> neat_plot
+  ggtitle('Toxin Neat Concentration by Diet') -> neat_plot
 
 neat_plot
 ```
@@ -201,14 +204,16 @@ TcA and TcB concentrations by diet with a 1:10 dilution factor.
 
 You're looking at the plot and you're like, "there must be an issue, there are no significance bars according to p-value, there must be a mistake!", no, there's not a mistake, none of them are significant (unfortunately). This plot also currently doesn't have any points representing the Chow diet on it because the Chow diets weren't diluted to re-run the toxin ELISA and the other diets were.
 
-```{r, fig.height=5, fig.width=10}
+```{r, fig.height=5, fig.width=8}
 dil_toxin %>% 
   na.omit() %>% 
   ggplot(aes(x = diet, y = dil_conc)) +
   geom_violin(aes(group = diet), draw_quantiles = c(0.5)) +
   geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-  scale_x_discrete(labels = c('High-Fat/\nHigh-Fiber', 'High-Fat/\nLow-Fiber',
-                              'Low-Fat/\nHigh-Fiber', 'Low-Fat/\nLow-Fiber')) +
+  scale_x_discrete(labels = c('HFt/\nHFb', 
+                              'HFt/\nLFb',
+                              'LFt/\nHFb', 
+                              'LFt/\nLFb')) +
   facet_wrap(~dil_toxin,
              labeller = labeller(dil_toxin = dil_labs),
              scales = 'free_y') +
@@ -219,7 +224,7 @@ dil_toxin %>%
   theme_bw(base_size = 14) +
   xlab('Diet') +
   ylab('Concentration') +
-  ggtitle('Toxin Diluted (1:10) Concentration by Mouse Diet')-> dil_plot
+  ggtitle('Toxin Diluted (1:10) Concentration by Diet')-> dil_plot
 
 dil_plot
 ```
@@ -227,17 +232,24 @@ dil_plot
 **Saving Plot Outputs**
 
 ```{r}
+## as a pdf
 ggsave("neat_toxin.pdf",
        plot = neat_plot,
-       width = 10,
+       width = 8,
        height = 5,
        path = '../plots')
 
 ggsave("dil_toxin.pdf",
        plot = dil_plot,
-       width = 10,
+       width = 8,
        height = 5,
        path = '../plots')
+
+## as an Rdata object for manuscript figures
+save(neat_plot,
+     file = '../figures/neat_toxin.rdata')
+save(dil_plot,
+     file = '../figures/dil_toxin.rdata')
 ```
 
 **Linear Modeling on Toxin Data**

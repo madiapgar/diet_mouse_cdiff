@@ -57,6 +57,13 @@ metadata %>%
   ungroup() %>% 
   mutate(day_post_inf = as.factor(day_post_inf)) %>% 
   gather(cecum, colon, key = tissue, value = score) -> big_histo
+
+## test histo without days relative to infection
+metadata %>% 
+  merge(histo, by = 'mouse_id') %>% 
+  group_by(mouse_id) %>% 
+  filter(day_post_inf == max(day_post_inf)) %>% 
+  ungroup() -> test_histo
 ```
 
 **Histopathology Score Kruskal-Wallis and Dunn's Post Hoc Tests by Diet**
@@ -274,8 +281,8 @@ batch_plot
 ```
 
 ```{r}
-big_histo %>% 
-  count(study)
+test_histo %>% 
+  count(diet)
 ```
 
 **Saving Plot and Stats**
@@ -310,4 +317,11 @@ ggsave("histo_batch_comp.pdf",
 write_tsv(batch_dunn,
           '../stats/histo_batch_dunn.tsv')
 
+```
+
+How to save plots as an R object that can be pulled into any environment. This will be helpful for putting overall figures for the manuscript together via cowplot!
+
+```{r}
+save(all_day_plot,
+     file = '../figures/histo.rdata')
 ```

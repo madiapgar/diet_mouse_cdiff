@@ -1,0 +1,174 @@
+---
+title: "manuscript_figures"
+output: html_document
+date: "2023-10-02"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(cowplot)
+```
+
+**Putting Together Figures for Paper Manuscript**
+These are, of course, subject to change but I mine as well start somewhere. The order of the figures will probably change as well as I figure out the story I want to tell with this manuscript (possibly starting with day -15 to day 0 stool results and then the second part including the day 3 cecal results). 
+
+CHANGE FONT SIZE ON ALL PLOTS TO 20!!!!
+
+
+**Figure One**
+Plots to go in figure:
+- experimental timeline diagram (need to redo this)
+- mouse survival curve plot and stats
+```{r, warning=FALSE, fig.height=12, fig.width=15}
+fig1_bottom_row <- plot_grid(surv_stat_vis, NULL,
+                             rel_widths = c(0.6, 1),
+                             labels = c('b)', ' '))
+
+plot_grid(diet_plot_final,
+          fig1_bottom_row,
+          rel_heights = c(1, 0.5),
+          nrow = 2,
+          labels = c('a)', ' '),
+          align = 'h') -> fig1
+
+fig1
+```
+
+**Figure Two**
+Plots to go in figure:
+- toxin plot (neat)
+- histopathology plot
+- toxin and histopathology comparison plot and stats
+```{r, warning=FALSE, fig.height=12, fig.width=20}
+fig2_top_row <- plot_grid(neat_plot, all_day_plot,
+                          labels = c('a)', 'b)'),
+                          rel_widths = c(0.9, 1),
+                          align = 'h')
+
+fig2_middle_row <- plot_grid(neat_histo_tca_plot, neat_histo_tcb_plot,
+                             labels = c('c)', 'd)'),
+                             align = 'h')
+
+fig2_bottom_row <- plot_grid(neat_tox_stat_vis, NULL,
+                             nrow = 1,
+                             rel_widths = c(0.5, 1),
+                             labels = c('e)', ' '))
+
+plot_grid(fig2_top_row,
+          fig2_middle_row,
+          fig2_bottom_row,
+          rel_heights = c(1, 0.8, 0.6),
+          ncol = 1) -> fig2
+
+fig2
+```
+
+**Figure Three**
+Plots to go in figure:
+- bile acid concentration plots (we don't have these yet)
+```{r}
+
+```
+
+**Figure Four**
+Plots to go in figure:
+- metabolomics plot
+- metab and histo comparison plot and stats
+```{r, warning=FALSE, fig.height=13, fig.width=18}
+fig4_bottom_row <- plot_grid(histo_acetic_plot, histo_butanoic_plot,
+                             histo_propanoic_plot, metab_stat_vis,
+                             labels = c('b)', 'c)', 'd)', 'e)'),
+                             align = 'h')
+plot_grid(metab_plot,
+          fig4_bottom_row,
+          ncol = 1,
+          rel_heights = c(1, 0.9),
+          labels = c('a)', ' ')) -> fig4
+
+fig4
+```
+
+**Figure Five**
+Plots to go in figure:
+- weighted unifrac pcoa plot (what are we going to do with the adonis results for this??)
+- weighted homogeneity and resiliency and stats
+```{r, warning=FALSE, fig.width=26, fig.height=16}
+## use NULL to create a ghost plot to alter your rows
+fig5_bottom_row <- plot_grid(wu_resil_plot, wu_homog_plot,
+                             w_resil_stat_vis, w_homog_stat_vis,
+                             nrow = 2,
+                             rel_heights = c(1, 0.6),
+                             rel_widths = c(0.95, 1),
+                             labels = c('b)', 'c)', 'd)', 'e)'))
+
+fig5_top_row <- plot_grid(weighted_pcoa, NULL,
+                          nrow = 1,
+                          rel_widths = c(1, 0.5),
+                          labels = c('a)', ' '))
+
+plot_grid(fig5_top_row,
+          fig5_bottom_row,
+          nrow = 2,
+          rel_heights = c(0.9, 1)) -> fig5
+
+fig5
+```
+
+**Figure Six**
+Plots to go in figure:
+- faith's pd and stats
+```{r, warning=FALSE, fig.height=10, fig.width=15}
+plot_grid(faith_plot, faith_stat_vis,
+          ncol = 1,
+          rel_heights = c(1, 0.6),
+          labels = c('a)', 'b)'),
+          align = 'h') -> fig6
+
+fig6
+```
+
+**Figure Seven**
+Plots to go in figure:
+- family abundance plot and stats (long or short??)
+- want to eventually have the plot that goes with 16S for stool and cecal samples 
+```{r}
+
+```
+
+**Figure Eight**
+Plots to go in figure:
+- PICRUSt result plots and stats
+- do we want to actually include these??
+```{r}
+
+```
+
+**Saving my Outputs**
+as a .pdf and not an rdata object (just to clarify)
+```{r}
+ggsave('../plots/fig1.pdf',
+       plot = fig1,
+       width = 15,
+       height = 12)
+ggsave('../plots/fig2.pdf',
+       plot = fig2,
+       width = 20,
+       height = 12)
+ggsave('../plots/fig4.pdf',
+       plot = fig4,
+       width = 18,
+       height = 13)
+ggsave('../plots/fig5.pdf',
+       plot = fig5,
+       width = 26,
+       height = 16)
+ggsave('../plots/fig6.pdf',
+       plot = fig6,
+       width = 15,
+       height = 10)
+```
+

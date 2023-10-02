@@ -353,9 +353,9 @@ plot_grid(short_abun1, stat_plot1,
           nrow = 1,
           labels = c('a)', 'b)'),
           label_size = 22,
-          rel_widths = c(1, 0.8)) -> plots_together
+          rel_widths = c(1, 0.8)) -> short_plots_together
 
-plots_together
+short_plots_together
 ```
 
 **Plotting the Relative Abundance of C. diff Specifically**
@@ -381,7 +381,7 @@ cdiff_plot1
 **Saving my Outputs**
 These go to the plots and stats directories. 
 ```{r}
-## microbe family relative abundance plots
+## microbe family relative abundance plots as a .pdf
 ## option #1
 ggsave("family_abun1.pdf",
        plot = long_abun1, 
@@ -430,6 +430,16 @@ ggsave("cdiff_rel_abun.pdf",
        width = 15, 
        height = 5, 
        path = '../plots')
+
+## plots as an rdata object
+save(long_abun1,
+     file = '../figures/long_fam_abun.rdata')
+save(long_stat_plot,
+     file = '../figures/long_fam_abun_stats.rdata')
+save(short_abun1,
+     file = '../figures/short_fam_abun.rdata')
+save(stat_plot1,
+     file = '../figures/short_fam_abun_stats.rdata')
 
 ## linear modeling results
 write_tsv(family_abun_lm,

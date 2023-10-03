@@ -18,7 +18,6 @@ library(ggpubr)
 
 ```{r}
 metadata_FP <- '../data/misc/processed_metadata.tsv'
-seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
 histo_FP <- '../data/misc/histo_data.csv'
 
 ## lists to redo the diet names on the facet labels of the ggplot created below 

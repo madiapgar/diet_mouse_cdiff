@@ -8,7 +8,6 @@ library(tidyverse)
 library(broom)
 library(argparse)
 
-
 ## using argparse for my file paths
 ## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
 parser <- ArgumentParser()
@@ -43,7 +42,8 @@ metadata_fixer <- function(metadata_fp) {
   metadata %>% 
     filter(!is.na(diet)) %>% 
     mutate(day_post_inf = if_else(day_post_inf == 2, 3, day_post_inf)) %>% 
-    mutate(diet = as.factor(diet)) -> metadata
+    mutate(diet = as.factor(diet),
+           study = as.factor(study)) -> metadata
   return(metadata)
 }
 

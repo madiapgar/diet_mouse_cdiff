@@ -233,11 +233,16 @@ bile_lm
 
 **Saving my Outputs**
 ```{r}
+## as a .pdf
 ggsave("buty_stat_vis.pdf",
        plot = buty_plot, 
        width = 14, 
        height = 4, 
        path = '../plots')
+
+## as an rdata object
+save(buty_plot,
+     file = '../figures/buty_stats.rdata')
 
 
 write_tsv(buty_lm,

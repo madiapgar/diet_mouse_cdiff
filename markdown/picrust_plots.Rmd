@@ -158,7 +158,7 @@ butyrate_plot <- function(processed_ko_biom,
       geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
       geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
       facet_grid(class~diet, labeller = labeller(diet = labs)) +
-      theme_bw(base_size = 16) +
+      theme_bw(base_size = 20) +
       theme(legend.text = element_text(size = 8.5),
             strip.text.y = element_text(angle = 0)) +
       guides(color = guide_legend(override.aes = list(size = 0.9))) +
@@ -247,7 +247,7 @@ bile_plot <- function(processed_ko_biom,
       geom_smooth(se = FALSE, color = 'blue') +
       facet_grid(genus~diet, 
                  labeller = labeller(diet = labs)) +
-      theme_bw(base_size = 16) +
+      theme_bw(base_size = 20) +
       theme(legend.text = element_text(size = 8.5),
         strip.text.y = element_text(angle = 0)) +
       guides(fill = guide_legend(override.aes = list(size = 2.5))) + 
@@ -259,7 +259,7 @@ bile_plot <- function(processed_ko_biom,
 ```
 
 **Butyrate Kinase Plot**
-```{r, fig.height=7, fig.width=11, warning=FALSE}
+```{r, fig.height=9, fig.width=15, warning=FALSE}
 buk_files <- buty_file_prep(tax_FP,
                             ko_contrib_FP,
                             metadata_FP,
@@ -279,7 +279,7 @@ butyrate_kinase
 ```
 
 **Butyryl-CoA Transferase**
-```{r, fig.height=7, fig.width=11, warning=FALSE}
+```{r, fig.height=9, fig.width=15, warning=FALSE}
 but_files <- buty_file_prep(tax_FP,
                             ko_contrib_FP,
                             metadata_FP,
@@ -306,7 +306,7 @@ all_butyrate
 ```
 
 **baiH Plot**
-```{r, fig.height=5, fig.width=12, warning=FALSE}
+```{r, fig.height=5, fig.width=16, warning=FALSE}
 baiH_files <- bile_file_prep(tax_FP,
                              ko_contrib_FP,
                              metadata_FP,
@@ -323,7 +323,7 @@ baiH
 ```
 
 **baiI Plot**
-```{r, fig.height=4, fig.width=7, warning=FALSE}
+```{r, fig.height=5, fig.width=9, warning=FALSE}
 baiI_files <- bile_file_prep(tax_FP,
                              ko_contrib_FP,
                              metadata_FP,
@@ -365,6 +365,7 @@ all_plots
 
 **Saving my outputs as a pdf file**
 ```{r}
+## as a .pdf
 ggsave("butyrate_kinase.pdf", 
        plot = butyrate_kinase,
        width = 11, 
@@ -400,4 +401,14 @@ ggsave("all_bile_plots.pdf",
        width = 17.5, 
        height = 5, 
        path = '../plots/')
+
+## as an rdata object 
+save(butyrate_kinase,
+     file = '../figures/buty_kinase.rdata')
+save(butyryl_coa_transferase,
+     file = '../figures/buty_coa_transferase.rdata')
+save(baiH,
+     file = '../figures/baiH.rdata')
+save(baiI,
+     file = '../figures/baiI.rdata')
 ```

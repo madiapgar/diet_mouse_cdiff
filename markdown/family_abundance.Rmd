@@ -317,13 +317,13 @@ long_plots_together
 **Poster Presentation Stats**
 these stats are for the shortened figure that I am putting on my poster presentation!
 ```{r, fig.height=11, fig.width=17}
-poster_abun_stats <- abun_stats(short_abun_filt,
+short_abun_stats <- abun_stats(short_abun_filt,
                                 wanted_level)
-poster_kruskal <- poster_abun_stats$KruskalTest
-new_poster_dunn <- poster_abun_stats$DunnPostHoc
-poster_family_abun_lm <- poster_abun_stats$LinearModel
+short_kruskal <- short_abun_stats$KruskalTest
+new_short_dunn <- short_abun_stats$DunnPostHoc
+short_family_abun_lm <- short_abun_stats$LinearModel
 
-stat_plot1 <- stat_plot(new_poster_dunn,
+stat_plot1 <- stat_plot(new_short_dunn,
                         wanted_level)
 stat_plot1
 ```
@@ -332,7 +332,7 @@ stat_plot1
 this is option #2. 
 ```{r, fig.height=7, fig.width=9}
 ## option #2 based on the linear model
-poster_family_abun_lm %>% 
+short_family_abun_lm %>% 
   filter(term != 'seq_depth',
          term != 'purified_diet:seq_depth') %>% 
   mutate(day_fact = as.factor(day_post_inf)) %>% 

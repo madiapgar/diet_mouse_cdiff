@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(tidyverse)
 library(cowplot)
+library(dmcdmfigs)
 ```
 
 # **Putting Together Figures for Paper Manuscript**

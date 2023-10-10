@@ -184,10 +184,11 @@ Plots to go in figure:
 
 *Caption*:
 *a) Relative abundances of key gut bacterial families by the five tested diets throughout the experimental timeline. The dashed red line at day negative three indicates the day the mice received oral antibiotics and the purple dashed line at day zero indicates with the mice were infected with C. difficile. b) Pairwise comparisons by days relative to infection (columns) and bacterial family (rows) per diet as determined by a Kruskal-Wallis test followed by a Dunn's Post Hoc test with the color gradient indicating the difference in means.*P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, +p<0.1, ns<1).*
-```{r, warning=FALSE, fig.height=10, fig.width=35}
+```{r, warning=FALSE, fig.height=12, fig.width=35}
 plot_grid(short_abun1, stat_plot1,
           labels = c('a)', 'b)'),
-          label_size = 20) -> fig7
+          label_size = 20,
+          rel_widths = c(1, 0.9)) -> fig7
 
 fig7
 ```

@@ -238,6 +238,9 @@ short_wanted_family <- c('Enterobacteriaceae',
                          'Enterococcaceae', 
                          'Staphylococcaceae',
                          'Lachnospiraceae',
+                         'Ruminococcaceae',
+                         'Bacteroidaceae',
+                         'Marinifilaceae',
                          'Peptostreptococcaceae')
 cdiff_level <- 'Genus'
 wanted_genus <- 'Clostridioides'
@@ -253,6 +256,7 @@ long_abun_files <- family_abun_file_prep(metadata_FP,
                                          long_wanted_family)
 
 long_abun_filt <- long_abun_files$AbundanceTable
+long_otu <- long_abun_files$OTUTable
 
 ## shortened table for poster presentation
 short_abun_files <- family_abun_file_prep(metadata_FP,
@@ -281,6 +285,8 @@ short_family_abun_plots <- abun_plots(short_abun_filt,
 
 short_abun1 <- short_family_abun_plots$FamilyAbundance1
 short_abun2 <- short_family_abun_plots$FamilyAbundance2
+
+short_abun1
 ```
 
 **Statistical Analysis for Wanted Family Abundances**
@@ -310,7 +316,7 @@ long_plots_together
 
 **Poster Presentation Stats**
 these stats are for the shortened figure that I am putting on my poster presentation!
-```{r, fig.height=7.5, fig.width=17}
+```{r, fig.height=11, fig.width=17}
 poster_abun_stats <- abun_stats(short_abun_filt,
                                 wanted_level)
 poster_kruskal <- poster_abun_stats$KruskalTest
@@ -348,7 +354,7 @@ stat_plot2
 
 **Putting my Plots Together**
 I'm doing this for my poster presentation!
-```{r, fig.height = 10, fig.width = 35}
+```{r, fig.height = 15, fig.width = 35}
 plot_grid(short_abun1, stat_plot1,
           nrow = 1,
           labels = c('a)', 'b)'),
@@ -374,7 +380,8 @@ cdiff_plots <- abun_plots(cdiff_abun_filt,
 
 cdiff_plot1 <- cdiff_plots$FamilyAbundance1
 
-cdiff_plot1
+cdiff_stats <- abun_stats(cdiff_abun_filt,
+                          cdiff_level)
 ```
 
 

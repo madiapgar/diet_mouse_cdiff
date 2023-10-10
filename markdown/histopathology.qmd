@@ -253,7 +253,7 @@ batch_dunn
 
 Plot!
 
-Bad news, the mice on each diet are not evenly distributed between batches (or "studies") so each batch is not equally represented between each diet. Some diets have more batches than others but no diet has every batch represented in it. I assume this is because we didn't account for mouse batch in the study design? Each batch also does not have an equal number of mice/samples in it.
+Bad news, the mice on each diet are not evenly distributed between batches (or "studies") so each batch is not equally represented between each diet. Some diets have more batches than others but no diet has every batch represented in it. I assume this is because we didn't account for mouse batch in the study design? Each batch also does not have an equal number of mice/samples in it. We also don't have histopathology scores for 29 mice (125 overall, scores for 96) - these are probably the mice that died? Histopathology scoring wasn't done on all mice?
 
 ```{r, fig.height=6.5, fig.width=12, warning=FALSE}
 big_histo %>% 
@@ -281,7 +281,9 @@ batch_plot
 
 ```{r}
 test_histo %>% 
-  count(diet)
+  filter(study == 1) -> test_histo1
+
+length(unique(metadata$mouse_id))
 ```
 
 **Saving Plot and Stats**

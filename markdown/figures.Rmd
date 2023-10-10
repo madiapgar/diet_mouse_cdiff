@@ -173,7 +173,13 @@ fig6
 ## **Figure Seven**
 Plots to go in figure:
 - family abundance plot and stats (long or short??)
+- longer version of the plot! make sure bacteroidaceae and marinfilaceae and ruminococcaceae
 - want to eventually have the plot that goes with 16S for stool and cecal samples 
+- need an unbiased differential abundance test? 
+- for the stat plot, facet by group 1 and put the days relative to infection on the x-axis 
+- asv level of what things are influenced by diets 
+- look for microbes that correlate with inflammation - use an ANCOMBC 
+**- have a distance matrix for every single mouse by their taxonomic information via qiime or r (which taxa are showing more related patterns by diet in mice). then, run an adonis test on it.**
 
 *Caption*:
 *a) Relative abundances of key gut bacterial families by the five tested diets throughout the experimental timeline. The dashed red line at day negative three indicates the day the mice received oral antibiotics and the purple dashed line at day zero indicates with the mice were infected with C. difficile. b) Pairwise comparisons by days relative to infection (columns) and bacterial family (rows) per diet as determined by a Kruskal-Wallis test followed by a Dunn's Post Hoc test with the color gradient indicating the difference in means.*P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, +p<0.1, ns<1).*
@@ -189,7 +195,10 @@ fig7
 Plots to go in figure:
 - PICRUSt result plots and stats
 - will need to include bile acid statistical results at some point (currently can't get kruskal wallis and dunn's post hoc test to work - possibly because of low abundances??)
-- do we want to actually include these??
+- redo the butyrate stats to include the bacterial classes!!
+
+*Caption*:
+*All results come from PICRUSt2 analysis based on the fecal sample 16S sequences. The dashed red line at day negative three indicates the day the mice received oral antibiotics and the purple dashed line at day zero indicates with the mice were infected with C. difficile. a) Abundance of butyrate-kinase coding capacity genes by bacterial class and the tested diets across time points. b) Abundance of butyryl-coa-transferase coding capacity genes by bacterial class and the tested diets across time points. Abundance of c) baiH and d) baiI (secondary bile acid producing enzymes) by bacterial species and the tested diets across time points. e) Pairwise comparisons by days relative to infection (columns) and butyrate producing enzyme (rows) per diet as determined by a Kruskal-Wallis test followed by a Dunn's Post Hoc test with the color gradient indicating the difference in means.*P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, +p<0.1, ns<1).**
 ```{r, warning=FALSE, fig.height=20, fig.width=31}
 fig8_top_row <- plot_grid(butyrate_kinase, butyryl_coa_transferase,
                           labels = c('a)', 'b)'),

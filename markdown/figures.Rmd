@@ -174,12 +174,11 @@ fig6
 ## **Figure Seven**
 Plots to go in figure:
 - family abundance plot and stats (long or short??)
-- longer version of the plot! make sure bacteroidaceae and marinfilaceae and ruminococcaceae
 - want to eventually have the plot that goes with 16S for stool and cecal samples 
 - need an unbiased differential abundance test? 
-- for the stat plot, facet by group 1 and put the days relative to infection on the x-axis 
 - asv level of what things are influenced by diets 
 - look for microbes that correlate with inflammation - use an ANCOMBC 
+- filter low abundance asvs (anything that's in less than 20% of the samples)
 **- have a distance matrix for every single mouse by their taxonomic information via qiime or r (which taxa are showing more related patterns by diet in mice). then, run an adonis test on it.**
 
 *Caption*:

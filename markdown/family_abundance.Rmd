@@ -50,7 +50,7 @@ family_abun_file_prep <- function(metadata_fp,
   abun_table %>% 
     group_by(sampleid, day_post_inf, diet, mouse_id, 
              purified_diet, high_fat, high_fiber, 
-             seq_depth, .data[[tax_level]]) %>% 
+             seq_depth, .data[[tax_level]], asv) %>% 
     summarise(rel_abund = sum(rel_abun)) %>% 
     filter(.data[[tax_level]] %in% wanted_tax) %>% 
     mutate(mouse_fact = as.factor(mouse_id),
@@ -191,23 +191,21 @@ stat_plot <- function(new_dunn,
                       tax_level){
   new_dunn %>% 
     filter(day_post_inf != -15) %>% 
-    ggplot(aes(x = group1, y = group2)) +
+    ggplot(aes(x = day_post_inf, y = group2)) +
     geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
     scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
     geom_text(aes(label = p.adj.signif)) +
-    scale_x_discrete(labels = c('Chow',
-                                'HFt/\nHFb',
-                                'HFt/\nLFb',
-                                'LFt/\nHFb')) +
+    scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
     scale_y_discrete(labels = c('HFt / HFb',
                                 'HFt / LFb',
                                 'LFt / HFb',
                                 'LFt / LFb')) +
-    facet_grid(.data[[tax_level]]~day_post_inf,
-               scales = 'free_x') +
+    facet_grid(.data[[tax_level]]~group1,
+               scales = 'free_x',
+               labeller = labeller(group1 = diet_stat_labs)) +
     theme_bw(base_size = 20) +
     theme(strip.text.y = element_text(angle = 0)) +
-    xlab('Group 1') +
+    xlab('Days Relative to Infection') +
     ylab('Group 2') -> stat_plot
   return(stat_plot)
 }
@@ -219,6 +217,7 @@ stat_plot <- function(new_dunn,
 otu_table_FP <- '../data/qiime/taxonomy_filtered.qza'
 tax_FP <- '../data/qiime/taxonomy.qza'
 metadata_FP <- '../data/misc/processed_metadata.tsv'
+## for regular abundance plots
 diet_labs <- 
   c('Chow', 
     'High Fat / High Fiber', 
@@ -230,6 +229,17 @@ names(diet_labs) <- c('Chow',
                       'HF/LF', 
                       'LF/HF', 
                       'LF/LF')
+
+## for stat plots
+diet_stat_labs <- c('Chow', 
+                    'High Fat / High Fiber', 
+                    'High Fat / Low Fiber', 
+                    'Low Fat / High Fiber')
+names(diet_stat_labs) <- c('Chow', 
+                            'HF/HF', 
+                            'HF/LF', 
+                            'LF/HF')
+
 wanted_level <- 'Family'
 long_wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
                         'Staphylococcaceae', 'Tannerellaceae', 'Muribaculaceae', 'Bacteroidaceae', 
@@ -427,11 +437,12 @@ ggsave("poster_famAbun_stats2.pdf",
        path = '../plots')
 
 ggsave("poster_famAbun_together.pdf",
-       plot = plots_together, 
+       plot = short_plots_together, 
        width = 35, 
-       height = 10, 
+       height = 15, 
        path = '../plots')
 
+## c diff rel abun
 ggsave("cdiff_rel_abun.pdf",
        plot = cdiff_plot1, 
        width = 15, 

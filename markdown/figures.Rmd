@@ -173,7 +173,6 @@ fig6
 
 ## **Figure Seven**
 Plots to go in figure:
-- family abundance plot and stats (long or short??)
 - want to eventually have the plot that goes with 16S for stool and cecal samples 
 - need an unbiased differential abundance test? 
 - asv level of what things are influenced by diets 

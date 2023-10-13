@@ -13,8 +13,9 @@ library(tidyverse)
 library(qiime2R)
 library(cowplot)
 library(magrittr)
-library(BiocManager)
-library(ANCOMBC)
+library(rstatix)
+library(vegan)
+library(broom)
 ```
 
 **Functions**
@@ -101,5 +102,17 @@ abun_files <- abun_file_prep(metadata_FP,
 abun_filt <- abun_files$AbundanceTable
 tax <- abun_files$Taxonomy
 otu <- abun_files$OTUTable
+```
+
+```{r}
+abun_filt %>% 
+  na.omit() %>% 
+  group_by(diet, tissue, Family) %>% 
+  do(glance(lm(score ~ rel_abund,
+             data = .)))
+  # mutate(adj.p = p.adjust(p.value,
+  #                         method = 'BH')) %>% 
+  # filter(p.value <= 0.05,
+  #        term != '(Intercept)')
 ```
 

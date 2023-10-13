@@ -50,7 +50,7 @@ family_abun_file_prep <- function(metadata_fp,
   abun_table %>% 
     group_by(sampleid, day_post_inf, diet, mouse_id, 
              purified_diet, high_fat, high_fiber, 
-             seq_depth, .data[[tax_level]], asv) %>% 
+             seq_depth, .data[[tax_level]]) %>% 
     summarise(rel_abund = sum(rel_abun)) %>% 
     filter(.data[[tax_level]] %in% wanted_tax) %>% 
     mutate(mouse_fact = as.factor(mouse_id),
@@ -75,7 +75,7 @@ abun_plots <- function(abundance_table,
       geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
       geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
       geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
-      geom_line(aes(group = mouse_id), alpha = 0.1) +
+      geom_line(aes(group = mouse_fact), alpha = 0.1) +
       geom_smooth(se = FALSE) +
       geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
       theme_bw(base_size = 20) +
@@ -214,7 +214,7 @@ stat_plot <- function(new_dunn,
 
 **Needed File Paths**
 ```{r}
-otu_table_FP <- '../data/qiime/taxonomy_filtered.qza'
+otu_table_FP <- '../data/qiime/tax_filt_actual.qza'
 tax_FP <- '../data/qiime/taxonomy.qza'
 metadata_FP <- '../data/misc/processed_metadata.tsv'
 ## for regular abundance plots

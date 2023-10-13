@@ -18,5 +18,5 @@ pip install snakemake
 echo "--------creating R envrionment"
 conda env create -f r_env.yml
 
-#echo "--------creating picrust environment"
-#conda env create -f picrust2.yml
+echo "--------creating picrust environment"
+conda env create -f picrust2.yml

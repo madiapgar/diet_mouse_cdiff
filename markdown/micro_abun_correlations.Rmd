@@ -16,6 +16,8 @@ library(magrittr)
 library(rstatix)
 library(vegan)
 library(broom)
+library(ANCOMBC)
+library(microViz)
 ```
 
 **Functions**
@@ -74,11 +76,14 @@ abun_file_prep <- function(metadata_fp,
 
 **Input File Paths**
 ```{r}
-otu_table_FP <- '../data/qiime/taxonomy_filtered.qza'
+otu_table_FP <- '../data/qiime/tax_filt_actual.qza'
 tax_FP <- '../data/qiime/taxonomy.qza'
 metadata_FP <- '../data/misc/processed_metadata.tsv'
 histo_FP <- '../data/misc/histo_data.csv'
 tmp_meta_fp <- '../data/misc/updated_metadata.tsv'
+
+histo_otu_fp <- '../data/qiime/histo_tax_filt.qza'
+histo_meta_fp <- '../data/misc/histo_updated_metadata.tsv'
 
 ## diet only file paths
 ancombc_pVal_fp <- '../data/qiime/ancombc_diet_only/p_val_slice.csv'
@@ -116,14 +121,14 @@ otu <- abun_files$OTUTable
 abun_filt %>% 
   na.omit() %>% 
   group_by(diet, tissue, Family) %>% 
-  do(glance(lm(score ~ rel_abund,
-             data = .)))
-  # mutate(adj.p = p.adjust(p.value,
-  #                         method = 'BH')) %>% 
-  # filter(p.value <= 0.05,
-  #        term != '(Intercept)')
+  do(tidy(lm(score ~ rel_abund,
+             data = .))) %>% 
+  mutate(adj.p = p.adjust(p.value,
+                          method = 'BH')) %>%
+  filter(p.value <= 0.05,
+         term != '(Intercept)')
 ```
-## **ANCOMBC results for ASV by Diet Only**
+## **ANCOMBC results for ASV by Diet Only - These were Run in Qiime2**
 **Reading in ANCOMBC results for ASV by Diet**
 these are all calculated relative to chow as the baseline diet (I'm not sure how to turn the reference level off)
 ```{r}
@@ -169,7 +174,7 @@ lfc %>%
 lfc_w_tax %>% 
   filter(Family %in% wanted_family) %>% 
   ggplot(aes(x = asv, y = Family)) +
-  geom_tile(aes(fill = lfc)) +
+  geom_tile(aes(fill = lfc), color = 'black') +
   scale_fill_gradient2(low = 'blue', high = 'red', name = 'Log Fold Change') +
   # geom_text(aes(label = lfc)) +
   facet_wrap(~diet) +
@@ -180,26 +185,191 @@ lfc_w_tax %>%
 lfc_tax_plot
 ```
 
-
-**Editing my updated_metadata.tsv to include the histopathology scoring**
+## **ANCOMBC results for ASV by Histo Score - These were Run in R**
+**Creating a pseq object for ANCOMBC and running it**
 ```{r}
-tmp_meta <- read_tsv(tmp_meta_fp)
-histo <- read_csv(histo_FP)
+histo_pseq <- qiime2R::qza_to_phyloseq(features = histo_otu_fp,
+                                       taxonomy = tax_FP,
+                                       metadata = histo_meta_fp)
+```
 
-histo %>%
-  mutate(mouse_id = as.character(mouse_id),
-         cecum = as.character(cecum),
-         colon = as.character(colon)) %>%
-  add_row(mouse_id = 'numeric',
-          cecum = 'numeric',
-          colon = 'numeric',
-          .before = 1) -> histo
+```{r}
+histo_ancom <- ancombc2(data = histo_pseq,
+                        tax_level = 'Family',
+                        fix_formula = 'cecum + colon',
+                        p_adj_method = 'BH')
+```
 
-tmp_meta %>%
-  left_join(histo, by = 'mouse_id') %>% 
-  na.omit() -> histo_meta
+**Getting results out**
+```{r}
+histo_res <- histo_ancom$res
+```
 
-write_tsv(histo_meta,
-          '../data/misc/histo_updated_metadata.tsv')
+**Log-fold-change Visualization**
+```{r}
+histo_col_names <- c('taxon',
+                   'intercept',
+                   'cecum',
+                   'colon')
+histo_res %>% 
+  select(taxon, contains('lfc')) -> histo_lfc
+colnames(histo_lfc) <- histo_col_names
+
+histo_lfc %>% 
+  gather(!c(taxon, intercept), key = tissue, value = lfc) %>% 
+  mutate(lfc = round(lfc, 2))-> histo_lfc
+```
+
+```{r, fig.width=10, fig.height=10}
+histo_lfc %>% 
+  ggplot(aes(x = tissue, y = taxon)) +
+  geom_tile(aes(fill = lfc), color = 'black') +
+  scale_fill_gradient2(low = 'blue', high = 'red', name = 'log fold\nchanges') +
+  geom_text(aes(label = lfc), size = 3) +
+  theme_bw() -> histo_lfc_plot
+
+histo_lfc_plot
+```
+
+## **ANCOMBC results for ASV by Diet - These were Run in R**
+**Creating a pseq object**
+```{r}
+diet_pseq <- qiime2R::qza_to_phyloseq(features = otu_table_FP,
+                                      taxonomy = tax_FP,
+                                      metadata = tmp_meta_fp)
+```
+
+**Running ANCOMBC**
+```{r}
+diet_ancom <- ancombc2(data = diet_pseq,
+                       tax_level = 'Family',
+                       fix_formula = 'diet',
+                       p_adj_method = 'BH')
+
+diet_res <- diet_ancom$res
+```
+
+**File prep for Log Fold Change plot**
+```{r}
+## how I've been doing it
+diet_col_names <- c('taxon',
+                    'intercept',
+                    'HF/HF',
+                    'HF/LF',
+                    'LF/HF',
+                    'LF/LF')
+diet_res %>% 
+  select(taxon, contains('lfc')) -> diet_lfc
+colnames(diet_lfc) <- diet_col_names
+
+diet_lfc %>% 
+  gather(!c(taxon, intercept), key = diet, value = lfc) %>% 
+  mutate(lfc = round(lfc, 2)) -> diet_lfc
+```
+
+**The plot!!**
+```{r, fig.width=10, fig.height=10}
+diet_lfc %>% 
+  ggplot(aes(x = diet, y = taxon)) +
+  geom_tile(aes(fill = lfc), color = 'black') +
+  scale_fill_gradient2(low = 'blue', high = 'red') +
+  geom_text(aes(label = lfc), size = 3) +
+  theme_bw() +
+  scale_x_discrete(labels = c('HFt/HFb',
+                              'HFt/LFb',
+                              'LFt/HFb',
+                              'LFt/LFb')) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.title = element_blank()) +
+  ggtitle('Log Fold Changes Compared to Mice on the Chow Diet') -> diet_lfc_plot
+
+diet_lfc_plot
+```
+
+## **ANCOMBC results for ASV by Dietary Content - These were Run in R**
+**Prepping phyloseq object**
+```{r}
+ft_fb_pseq <- qiime2R::qza_to_phyloseq(features = otu_table_FP,
+                                       taxonomy = tax_FP,
+                                       metadata = metadata_FP)
+```
+
+**Running ANCOMBC**
+```{r}
+ft_fb_res <- ancombc2(data = ft_fb_pseq,
+                      tax_level = 'Family',
+                      fix_formula = 'high_fat + high_fiber + purified_diet',
+                      p_adj_method = 'BH')
+ft_fb_actualRes <- ft_fb_res$res
+```
+
+**File prep for Log Fold Change plot**
+```{r}
+ftFb_col_names <- c('taxon',
+                    'intercept',
+                    'high_fat',
+                    'high_fiber',
+                    'purified_diet')
+ft_fb_actualRes %>% 
+  select(taxon, contains('lfc')) -> ft_fb_lfc
+colnames(ft_fb_lfc) <- ftFb_col_names
+
+ft_fb_lfc %>% 
+  gather(!c(taxon, intercept), key = component, value = lfc) %>% 
+  mutate(lfc = round(lfc, 2)) -> ft_fb_lfc
+```
+
+**another plot**
+```{r, fig.width=10, fig.height=10}
+ft_fb_lfc %>% 
+  ggplot(aes(x = component, y = taxon)) +
+  geom_tile(aes(fill = lfc), color = 'black') +
+  scale_fill_gradient2(low = 'blue', high = 'red') +
+  geom_text(aes(label = lfc), size = 3) +
+  theme_bw() +
+  scale_x_discrete(labels = c('High Fat',
+                              'High Fiber',
+                              'Purified Diet')) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.title = element_blank()) +
+  ggtitle('Log Fold Changes by Diet Composition') -> ftFb_lfc_plot
+
+ftFb_lfc_plot
+```
+
+## **ANCOMBC results for ASV by Diet and Histo Score - These were Run in R**
+**Prepping phyloseq object**
+```{r}
+histo_diet_pseq <- qiime2R::qza_to_phyloseq(features = histo_otu_fp,
+                                             taxonomy = tax_FP,
+                                             metadata = histo_meta_fp)
+```
+
+**Running ANCOMBC - pairwise between diets?**
+```{r}
+histo_diet_ancom <- ancombc2(data = histo_diet_pseq,
+                             tax_level = 'Family',
+                             fix_formula = 'diet + cecum + colon',
+                             group = 'diet',
+                             pairwise = TRUE,
+                             p_adj_method = 'BH')
+histo_diet_res <- histo_diet_ancom$res
+```
+
+
+**Saving my Outputs**
+```{r}
+ggsave('diet_lfc.pdf',
+       plot = diet_lfc_plot,
+       width = 10, 
+       height = 10, 
+       path = '../plots')
+ggsave('diet_comp_lfc.pdf',
+       plot = ftFb_lfc_plot,
+       width = 10, 
+       height = 10, 
+       path = '../plots')
 ```
 

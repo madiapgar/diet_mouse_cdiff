@@ -78,6 +78,14 @@ otu_table_FP <- '../data/qiime/taxonomy_filtered.qza'
 tax_FP <- '../data/qiime/taxonomy.qza'
 metadata_FP <- '../data/misc/processed_metadata.tsv'
 histo_FP <- '../data/misc/histo_data.csv'
+tmp_meta_fp <- '../data/misc/updated_metadata.tsv'
+
+## diet only file paths
+ancombc_pVal_fp <- '../data/qiime/ancombc_diet_only/p_val_slice.csv'
+ancombc_qVal_fp <- '../data/qiime/ancombc_diet_only/q_val_slice.csv'
+ancombc_wSlice_fp <- '../data/qiime/ancombc_diet_only/w_slice.csv'
+ancombc_seSlice_fp <- '../data/qiime/ancombc_diet_only/se_slice.csv'
+ancombc_lfcSlice_fp <- '../data/qiime/ancombc_diet_only/lfc_slice.csv'
 
 wanted_family <- c('Enterobacteriaceae', 
                          'Enterococcaceae', 
@@ -114,5 +122,84 @@ abun_filt %>%
   #                         method = 'BH')) %>% 
   # filter(p.value <= 0.05,
   #        term != '(Intercept)')
+```
+## **ANCOMBC results for ASV by Diet Only**
+**Reading in ANCOMBC results for ASV by Diet**
+these are all calculated relative to chow as the baseline diet (I'm not sure how to turn the reference level off)
+```{r}
+new_col_names <- c('asv',
+                   'intercept',
+                   'HF/HF',
+                   'HF/LF',
+                   'LF/HF',
+                   'LF/LF')
+## p-values
+p_val <- read_csv(ancombc_pVal_fp,
+                  skip = 1,
+                  col_names = new_col_names)
+
+## adjusted p-values
+q_val <- read_csv(ancombc_qVal_fp,
+                  skip = 1,
+                  col_names = new_col_names)
+
+## test statistic
+w_slice <- read_csv(ancombc_wSlice_fp,
+                    skip = 1,
+                    col_names = new_col_names)
+
+## standard errors
+se_slice <- read_csv(ancombc_seSlice_fp,
+                     skip = 1,
+                     col_names = new_col_names)
+
+## log fold changes
+lfc <- read_csv(ancombc_lfcSlice_fp,
+                skip = 1,
+                col_names = new_col_names)
+```
+**Log-fold-change Visualization**
+```{r, fig.width=20, fig.height=8}
+## putting log fold change data with taxonomic information
+lfc %>% 
+  select(-intercept) %>% 
+  gather(-asv, key = diet, value = lfc) %>% 
+  inner_join(tax, by = 'asv') -> lfc_w_tax
+
+lfc_w_tax %>% 
+  filter(Family %in% wanted_family) %>% 
+  ggplot(aes(x = asv, y = Family)) +
+  geom_tile(aes(fill = lfc)) +
+  scale_fill_gradient2(low = 'blue', high = 'red', name = 'Log Fold Change') +
+  # geom_text(aes(label = lfc)) +
+  facet_wrap(~diet) +
+  theme_bw() +
+  theme(axis.text.x = element_blank()) +
+  xlab('ASV') -> lfc_tax_plot
+
+lfc_tax_plot
+```
+
+
+**Editing my updated_metadata.tsv to include the histopathology scoring**
+```{r}
+tmp_meta <- read_tsv(tmp_meta_fp)
+histo <- read_csv(histo_FP)
+
+histo %>%
+  mutate(mouse_id = as.character(mouse_id),
+         cecum = as.character(cecum),
+         colon = as.character(colon)) %>%
+  add_row(mouse_id = 'numeric',
+          cecum = 'numeric',
+          colon = 'numeric',
+          .before = 1) -> histo
+
+tmp_meta %>%
+  left_join(histo, by = 'mouse_id') %>% 
+  na.omit() -> histo_meta
+
+write_tsv(histo_meta,
+          '../data/misc/histo_updated_metadata.tsv')
 ```
 

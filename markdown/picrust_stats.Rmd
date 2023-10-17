@@ -43,16 +43,16 @@ stat_file_prep <- function(metadata_fp,
   ## messing with biom table format so that the zeroes are represented
   stat_biom %>% 
     select(sample, ko, taxon_function_abun, study, diet, day_post_inf, 
-         any_of(taxonomy_level), purified_diet, high_fat, high_fiber, mouse_id, seq_depth) %>% 
+         .data[[taxonomy_level]], purified_diet, high_fat, high_fiber, mouse_id, seq_depth) %>% 
     filter(ko %in% ko_list) %>% 
     group_by(ko, sample, diet, day_post_inf, purified_diet, 
              high_fat, high_fiber, mouse_id, seq_depth, .data[[taxonomy_level]], study) %>% 
     summarise(taxon_function_abun = sum(taxon_function_abun)) %>% 
-    ungroup() %>% 
     filter(!is.na(day_post_inf)) %>% 
-    spread(day_post_inf, taxon_function_abun, fill = 0) %>% 
-    gather(-ko, -sample, -diet, -purified_diet, -high_fat, -high_fiber, -mouse_id, -seq_depth,
-           -.data[[taxonomy_level]], -study, key = day_post_inf, value = taxon_function_abun) -> biom_long
+    # spread(day_post_inf, taxon_function_abun, fill = 0) %>% 
+    # gather(-ko, -sample, -diet, -purified_diet, -high_fat, -high_fiber, -mouse_id, -seq_depth,
+    #        -.data[[taxonomy_level]], -study, key = day_post_inf, value = taxon_function_abun) %>% 
+    ungroup() -> biom_long
   return(biom_long)
 }
 
@@ -212,7 +212,7 @@ but_kin_ko <- 'K00929'
 but_coa_ko <- 'K01034'
 baiH_ko <- 'K15873'
 baiI_ko <- 'K15874'
-buty_level <- 'class'
+buty_level <- 'family'
 bile_level <- 'genus'
 ```
 
@@ -249,9 +249,26 @@ figuring out why my stats won't work
 ```{r}
 buk_long %>% 
   na.omit() %>% 
-  group_by(class) %>% 
-  do(tidy(kruskal.test(taxon_function_abun ~ diet,
-                       data = .)))
+  group_by(family, diet) %>%
+  do(tidy(kruskal.test(taxon_function_abun ~ day_post_inf,
+                       data = .))) %>% 
+  ungroup() %>% 
+    arrange(p.value) %>% 
+    mutate(p.adj = p.adjust(p.value,
+                            method = "BH"),
+          test_id = paste(family, diet, sep = "_")) %>% 
+  filter(p.adj <= 0.05) -> kruskal
+
+buk_long %>% 
+    na.omit() %>% 
+    group_by(family, diet) %>%
+    mutate(test_id = paste(family, diet, sep = "_")) %>% 
+    filter(test_id %in% kruskal$test_id) %>%
+    dunn_test(taxon_function_abun ~ day_post_inf,
+              p.adjust.method = 'BH',
+              data = .) -> dunn
+
+unique(buk_long$diet)
 ```
 
 

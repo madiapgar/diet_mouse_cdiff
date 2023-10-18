@@ -164,7 +164,16 @@ lfc <- read_csv(ancombc_lfcSlice_fp,
                 col_names = new_col_names)
 ```
 **Log-fold-change Visualization**
-```{r, fig.width=20, fig.height=8}
+```{r, fig.width=20, fig.height=5}
+asv_diet_labs <- c('High Fat / High Fiber',
+                   'High Fat / Low Fiber',
+                   'Low Fat / High Fiber',
+                   'Low Fat / Low Fiber')
+names(asv_diet_labs) <- c('HF/HF',
+                          'HF/LF',
+                          'LF/HF',
+                          'LF/LF')
+
 ## putting log fold change data with taxonomic information
 lfc %>% 
   select(-intercept) %>% 
@@ -177,7 +186,9 @@ lfc_w_tax %>%
   geom_tile(aes(fill = lfc), color = 'black') +
   scale_fill_gradient2(low = 'blue', high = 'red', name = 'Log Fold Change') +
   # geom_text(aes(label = lfc)) +
-  facet_wrap(~diet) +
+  facet_wrap(~diet,
+             nrow = 1,
+             labeller = labeller(diet = asv_diet_labs)) +
   theme_bw() +
   theme(axis.text.x = element_blank()) +
   xlab('ASV') -> lfc_tax_plot
@@ -224,9 +235,15 @@ histo_lfc %>%
 histo_lfc %>% 
   ggplot(aes(x = tissue, y = taxon)) +
   geom_tile(aes(fill = lfc), color = 'black') +
-  scale_fill_gradient2(low = 'blue', high = 'red', name = 'log fold\nchanges') +
+  scale_fill_gradient2(low = 'blue', high = 'red') +
   geom_text(aes(label = lfc), size = 3) +
-  theme_bw() -> histo_lfc_plot
+  scale_x_discrete(labels = c('Cecum',
+                              'Colon')) +
+  theme_bw() +
+  labs(x = NULL,
+       y = NULL,
+       title = 'Log Fold Changes of Inflammation by Tissue') +
+  theme(legend.title = element_blank()) -> histo_lfc_plot
 
 histo_lfc_plot
 ```
@@ -368,6 +385,16 @@ ggsave('diet_lfc.pdf',
        path = '../plots')
 ggsave('diet_comp_lfc.pdf',
        plot = ftFb_lfc_plot,
+       width = 10, 
+       height = 10, 
+       path = '../plots')
+ggsave('diet_asv_lfc.pdf',
+       plot = lfc_tax_plot,
+       width = 20, 
+       height = 5, 
+       path = '../plots')
+ggsave('histo_lfc.pdf',
+       plot = histo_lfc_plot,
        width = 10, 
        height = 10, 
        path = '../plots')

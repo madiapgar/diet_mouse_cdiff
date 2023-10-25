@@ -302,8 +302,7 @@ rule create_lacto_table:
     input:
         "data/cecal_qiime/filt_cecal_table.qza",
         "data/cecal_qiime/taxonomy.qza",
-        "data/cecal_qiime/all_cecal_rep_seqs.qza",
-        "data/cecal_qiime/lacto_cecal_table.qza"
+        "data/cecal_qiime/all_cecal_rep_seqs.qza"
     output:
         "data/cecal_qiime/lacto_cecal_table.qza",
         "data/cecal_qiime/lacto_rep_seqs.qza" 

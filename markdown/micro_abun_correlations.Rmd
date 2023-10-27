@@ -31,7 +31,7 @@ run_ancombc <- function(otu_fp,
                         formula,
                         adj_method){
   ## metadata table 
-  metadata <- as.data.frame(metadata)
+  metadata <- as.data.frame(metadata_table)
   rownames(metadata) <- metadata$sampleid
   ## otu table
   otu_table <- read_qza(otu_fp)$data
@@ -45,6 +45,8 @@ run_ancombc <- function(otu_fp,
   rownames(otu_table) <- otu_table$taxon
   proc_otu <- subset(otu_table,
                      select = -taxon)
+  metadata %>% 
+    filter(metadata$sampleid %in% colnames(proc_otu)) -> metadata
   ## taxonomy table
   tax_table <- read_qza(tax_fp)$data %>% 
     parse_taxonomy()
@@ -59,9 +61,12 @@ run_ancombc <- function(otu_fp,
   ancombc_res <- ancombc2(data = pseq,
                           tax_level = wanted_tax_level,
                           fix_formula = formula,
-                          p_adj_method = adj_method)
+                          p_adj_method = adj_method,
+                          group = "diet",
+                          pairwise = TRUE,
+                          dunnet = TRUE)
   ## pulling wanted results out
-  results <- ancombc_res$res
+  results <- ancombc_res$res_pair
   ## creating a list of outputs
   my_list <- list(ANCOMBCResults = results,
                   Metadata = metadata,
@@ -240,14 +245,29 @@ diet_lfc_plot
 ```
 
 ## **ANCOMBC results for ASV by Dietary Content - These were Run in R**
+
+```{r}
+metadata %>% 
+  filter(day_post_inf == -8) -> test_meta
+
+run_ancombc(otu_table_FP,
+            tax_FP,
+            test_meta,
+            'Family',
+            'diet + seq_depth',
+            'BH') -> test_res
+test_res$ANCOMBCResults
+```
+
 **Running ANCOMBC**
 ```{r}
 ft_fb_res <- run_ancombc(otu_table_FP,
-                         tax_FP,
-                         metadata,
-                         'Family',
-                         'high_fat + high_fiber + purified_diet',
-                         'BH')
+                                   tax_FP,
+                                   metadata,
+                                   'Family',
+                                   'high_fat + high_fiber + purified_diet + diet',
+                                   'BH',
+                                   day_strat)
 
 ft_fb_actualRes <- ft_fb_res$ANCOMBCResults
 ```
@@ -269,6 +289,17 @@ ft_fb_lfc %>%
 ```
 
 **Log Fold Change Plot!**
+- go in and change zeros to 'ns' so that's more clear 
+- interaction term manually: combine the purified column to the other column you want to see the interaction with (paste two binary terms with a sep as "_")
+ - high fat pasted with purified diet
+ - high fiber pasted with purified diet
+ - include regular diet column 
+ - put these in the formula
+- ancombc formula 
+  -pairwise = TRUE
+  -dunnet = TRUE
+  -group = "diet"
+- run this on subsetted data by days relative to infection instead of the previous plot 
 ```{r, fig.width=6.5, fig.height=9.5}
 ft_fb_lfc %>% 
   ggplot(aes(x = component, y = taxon)) +

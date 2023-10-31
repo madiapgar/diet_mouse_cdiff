@@ -1,0 +1,3 @@
+neat_toxin	statistic	p.value	parameter	method	p.adj	test_id
+Total TcA Neat	6.902664506726596	0.14112223924087472	4	Kruskal-Wallis rank sum test	0.22384180444466023	Total TcA Neat
+Total TcB Neat	5.6861865891287025	0.22384180444466023	4	Kruskal-Wallis rank sum test	0.22384180444466023	Total TcB Neat

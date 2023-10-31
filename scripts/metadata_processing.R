@@ -43,7 +43,8 @@ metadata_fixer <- function(metadata_fp) {
     filter(!is.na(diet)) %>% 
     mutate(day_post_inf = if_else(day_post_inf == 2, 3, day_post_inf)) %>% 
     mutate(diet = as.factor(diet),
-           study = as.factor(study)) -> metadata
+           study = as.factor(study),
+           sample_type = "colon") -> metadata
   return(metadata)
 }
 
@@ -53,7 +54,7 @@ meta_diet_fixer <- function(metadata_file,
                             seq_depth_fp){
   seq_depths <- read_tsv(seq_depth_fp)
   metadata_file %>% 
-    select(sampleid, diet, day_post_inf, mouse_id, study) %>% 
+    select(sampleid, diet, day_post_inf, mouse_id, study, sample_type) %>% 
     mutate(diet_true = diet,
            diet_true = if_else(day_post_inf == -15, "Chow", diet_true),
            high_fat = case_when(

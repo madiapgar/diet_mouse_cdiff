@@ -39,16 +39,14 @@ args <- parser$parse_args()
 # cecal_key_FP <- '~/projects/diet_mouse_cdiff_background/cecal_key.txt'
 # seq_depth_FP <- './cecum/data/misc/seq_depth.tsv'
 # id_facil_FP <- './cecum/data/misc/mouseID_facil.tsv'
-# output_fp <- './cecum/data/misc/cecal_processed_meta.tsv'
+# output_fp <- './cecum/data/misc/cecal_processed_metadata.tsv'
 
 ## needed functions 
 ## 1 
 ## general function to prep the metadata file for further data analyses 
 metadata_fixer <- function(metadata_fp,
                            cecal_key_fp) {
-  tmpMeta <- read_tsv(metadata_fp, n_max = 2)
-  mycols <- colnames(tmpMeta)
-  metadata <- read_tsv(metadata_fp, skip = 2, col_names = mycols)
+  metadata <- read_tsv(metadata_fp)
   names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
   metadata %>% 
     separate_wider_delim(cols = 'corr_sample_num',
@@ -64,8 +62,8 @@ metadata_fixer <- function(metadata_fp,
            day_post_inf = 3,
            sample_type = 'cecum') %>% 
     select(diet, tube_num, date, sampleid, day_post_inf, sample_type, corr_sample_num) -> metadata
-  metadata[[1]][[10]] <- 'LF/LF'
-  metadata[[1]][[9]] <- 'LF/HF'
+  metadata[[1]][[11]] <- 'LF/LF'
+  metadata[[1]][[10]] <- 'LF/HF'
   ## cecal key
   cecal_key <- read_tsv(cecal_key_fp)
   cecal_key %>% 
@@ -101,7 +99,6 @@ meta_diet_fixer <- function(metadata_file,
            high_fiber = case_when(
              diet == 'HF/HF' ~ 1,
              diet == 'LF/HF' ~ 1,
-             diet == 'Chow' ~ 1,
              .default = 0
            ), 
            purified_diet = case_when(

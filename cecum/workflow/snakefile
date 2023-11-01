@@ -479,6 +479,7 @@ rule filter_taxonomy_vis2:
             --o-visualization ./data/cecal_qiime2/taxonomy_filtered.qzv
         """
 
+## RERUN FROM NOW ON WITH REPLICATE ONE FILTERED OUT OF THE METADATA
 rule pre_core_metrics_filter:
     input:
         "data/cecal_qiime2/taxonomy_filtered.qza",

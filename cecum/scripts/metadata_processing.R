@@ -35,11 +35,11 @@ parser$add_argument("-o",
 args <- parser$parse_args()
 
 ## input file paths
-# metadata_FP <- './cecum/data/misc/updated_cecal_metadata.tsv'
+# metadata_FP <- './cecum/data/misc/filt_updated_cecal_metadata.tsv'
 # cecal_key_FP <- '~/projects/diet_mouse_cdiff_background/cecal_key.txt'
 # seq_depth_FP <- './cecum/data/misc/seq_depth.tsv'
 # id_facil_FP <- './cecum/data/misc/mouseID_facil.tsv'
-# output_fp <- './cecum/data/misc/cecal_processed_metadata.tsv'
+# output_fp <- './cecum/data/misc/filt_cecal_processed_metadata.tsv'
 
 ## needed functions 
 ## 1 

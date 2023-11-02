@@ -20,6 +20,7 @@ library(qiime2R)
 colon_meta_fp <- '../data/misc/processed_metadata.tsv'
 cecum_meta_fp <- '../cecum/data/misc/cecal_processed_metadata.tsv'
 preProc_cecum_fp <- '../cecum/data/misc/cecal_metadata.tsv'
+updated_meta_fp <- '../cecum/data/misc/updated_cecal_metadata.tsv'
 ```
 
 **Reading in Files**
@@ -27,6 +28,7 @@ preProc_cecum_fp <- '../cecum/data/misc/cecal_metadata.tsv'
 colon_meta <- read_tsv(colon_meta_fp)
 cecum_meta <- read_tsv(cecum_meta_fp)
 preProc_cecum <- read_tsv(preProc_cecum_fp)
+updated_meta <- read_tsv(updated_meta_fp)
 ```
 
 **Putting together cecum and colon metadata files**
@@ -56,11 +58,21 @@ preProc_cecum %>%
   filter(study != 1) -> new_preProc_cecum
 ```
 
+**Adding study (batch/replicates) to updated cecal metadata**
+This one is needed for metadata processing
+```{r}
+updated_meta %>% 
+  left_join(to_join_preProc) %>% 
+  filter(study != 1) -> new_updated_meta
+```
+
 **Saving my outputs**
 ```{r}
 write_tsv(combined_metadata,
           '../data/misc/combined_metadata.tsv')
 write_tsv(new_preProc_cecum,
-          '../cecum/data/misc/cecal_metadata.tsv')
+          '../cecum/data/misc/filt_cecal_metadata.tsv')
+write_tsv(new_updated_meta,
+          '../cecum/data/misc/filt_updated_cecal_metadata.tsv')
 ```
 

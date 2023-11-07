@@ -1,0 +1,784 @@
+rule target:
+    input:
+        "plots/unweighted_unifrac_pcoa.pdf",
+        "plots/weighted_unifrac_pcoa.pdf",
+        "stats/w_adonis_results.tsv",
+        "stats/uw_adonis_results.tsv",
+        "stats/w_adonis_by_day.tsv",
+        "stats/uw_adonis_by_day.tsv",
+        "plots/faith_pd.pdf",
+        "plots/shannon_entropy.pdf",
+        "stats/faith_total_results.tsv",
+        "stats/faith_diet_results.tsv",
+        "stats/faith_dunn.tsv",
+        "stats/shannon_total_results.tsv",
+        "stats/shannon_diet_results.tsv",
+        "stats/shannon_dunn.tsv",
+        "plots/faith_stat_vis.pdf",
+        "plots/shannon_stat_vis.pdf",
+        "stats/wu_homogeneity.tsv",
+        "stats/wu_homog_dunn.tsv",
+        "stats/uu_homogeneity.tsv",
+        "stats/uu_homog_dunn.tsv",
+        "plots/wu_homogeneity.pdf",
+        "plots/wu_homog_stats.pdf",
+        "plots/uu_homogeneity.pdf",
+        "plots/uu_homog_stats.pdf",
+        "stats/uu_resiliency.tsv",
+        "stats/uu_resil_dunn.tsv",
+        "stats/wu_resiliency.tsv",
+        "stats/wu_resil_dunn.tsv",
+        "plots/wu_resiliency.pdf",
+        "plots/wu_resil_stats.pdf",
+        "plots/uu_resiliency.pdf",
+        "plots/uu_resil_stats.pdf",
+        "plots/family_abun1.pdf",
+        "plots/family_abun2.pdf",
+        "stats/family_abun_lm.tsv",
+        "stats/family_abun_dunn.tsv",
+        "plots/famAbun_stat_vis.pdf",
+        "plots/histopathology.pdf",
+        "stats/histopathology_lm.tsv",
+        "stats/histopathology_dunn.tsv",
+        "plots/neat_toxin.pdf",
+        "plots/dil_toxin.pdf",
+        "stats/neatToxin_kruskal_test.tsv",
+        "stats/neatToxin_dunn_test.tsv",
+        "stats/dilToxin_kruskal_test.tsv",
+        "stats/dilToxin_dunn_test.tsv",
+        "plots/metabolomics.pdf",
+        "stats/metab_linear_model.tsv",
+        "stats/metab_dunn_test.tsv",
+        "stats/metab_kruskal_test.tsv",
+        "data/picrust/out_pipeline/KO_metagenome_out/pred_metagenome_contrib.tsv.gz",
+        "plots/butyrate_kinase.pdf",
+        "plots/butyryl_coa_transferase.pdf",
+        "plots/baiH.pdf",
+        "plots/baiI.pdf",
+        "stats/buty_enzyme_lm.tsv",
+        "stats/buty_enzyme_dunn.tsv",
+        "stats/bile_enzyme_lm.tsv",
+        "plots/buty_stat_vis.pdf"
+
+
+rule total_sum_scaling:
+    input:
+        biom = "data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza",
+        asvs = "data/misc/lactoOnlydna-sequences.fasta"
+    output:
+        table = "data/qiime/total_sum_scaling.tsv"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/total_sum_scaling.R --biom {input.biom} \
+                                            --sequence {input.asvs} \
+                                            --output {output.table}
+        """
+
+
+rule tss_tsv2biom:
+    input:
+       "data/qiime/total_sum_scaling.tsv" 
+    output:
+        "data/qiime/total_sum_scaling.biom"
+    conda:
+        "qiime2-2023.5"
+    shell:
+        """
+        biom convert \
+            -i ./data/qiime/total_sum_scaling.tsv \
+            -o ./data/qiime/total_sum_scaling.biom \
+            --table-type "Table" \
+            --to-hdf5
+        """
+
+
+rule tss_biom2qza:
+    input:
+        "data/qiime/total_sum_scaling.biom"
+    output:
+        "data/qiime/total_sum_scaling.qza"
+    conda:
+        "qiime2-2023.5"
+    shell:
+        """
+        qiime tools import \
+            --input-path ./data/qiime/total_sum_scaling.biom \
+            --type 'FeatureTable[Frequency]' \
+            --output-path ./data/qiime/total_sum_scaling.qza
+        """
+
+
+rule rep_seqs2fasta:
+    input:
+        "data/misc/euk_filt-mergedDietAim1rep-seqs_051523-Copy1.qza"
+    output:
+        "data/misc/dna-sequences.fasta"
+    conda:
+        "qiime2-2023.5"
+    shell:
+        """
+        qiime tools export \
+            --input-path ./data/misc/euk_filt-mergedDietAim1rep-seqs_051523-Copy1.qza \
+            --output-path ./data/misc
+        """
+
+
+rule get_reference_databases:
+    output:
+        "databases/sepp-refs-silva-128.qza",
+        "databases/silva-138-99-515-806-nb-classifier.qza"
+    shell:
+        """
+        wget https://data.qiime2.org/2023.5/common/sepp-refs-silva-128.qza -P ./databases/
+        wget https://data.qiime2.org/2023.5/common/silva-138-99-515-806-nb-classifier.qza -P ./databases/
+        """
+
+
+rule sepp_phylo_tree:
+    input:
+        "data/misc/euk_filt-mergedDietAim1rep-seqs_051523-Copy1.qza",
+        "databases/sepp-refs-silva-128.qza"
+    output:
+        "data/qiime/tree.qza",
+        "data/qiime/placements.qza"
+    conda:
+        "qiime2-2023.5"
+    shell:
+        """
+        qiime fragment-insertion sepp \
+            --i-representative-sequences ./data/misc/euk_filt-mergedDietAim1rep-seqs_051523-Copy1.qza \
+            --i-reference-database ./databases/sepp-refs-silva-128.qza \
+            --o-tree ./data/qiime/tree.qza \
+            --o-placements ./data/qiime/placements.qza
+        """
+
+
+rule sepp_ASV_filtering:
+    input:
+        "data/qiime/total_sum_scaling.qza",
+        "data/qiime/tree.qza"
+    output:
+        "data/qiime/total_sum_filt_table.qza",
+        "data/qiime/total_sum_rem_table.qza"
+    conda:
+        "qiime2-2023.5"
+    shell:
+        """
+        qiime fragment-insertion filter-features \
+            --i-table ./data/qiime/total_sum_scaling.qza \
+            --i-tree ./data/qiime/tree.qza \
+            --o-filtered-table ./data/qiime/total_sum_filt_table.qza \
+            --o-removed-table ./data/qiime/total_sum_rem_table.qza
+        """
+
+
+rule taxonomic_classification:
+    input:
+        "databases/silva-138-99-515-806-nb-classifier.qza",
+        "data/misc/euk_filt-mergedDietAim1rep-seqs_051523-Copy1.qza"
+    output:
+        "data/qiime/taxonomy.qza"
+    conda:
+        "qiime2-2023.5"
+    shell:
+        """
+        qiime feature-classifier classify-sklearn \
+            --i-classifier ./databases/silva-138-99-515-806-nb-classifier.qza \
+            --i-reads ./data/misc/euk_filt-mergedDietAim1rep-seqs_051523-Copy1.qza \
+            --o-classification ./data/qiime/taxonomy.qza
+        """
+
+
+rule filter_taxonomy:
+    input:
+        "data/qiime/total_sum_scaling.qza",
+        "data/qiime/taxonomy.qza"
+    output:
+        "data/qiime/taxonomy_filtered.qza"
+    conda:
+        "qiime2-2023.5"
+    shell:
+        """
+        qiime taxa filter-table \
+            --i-table ./data/qiime/total_sum_scaling.qza \
+            --i-taxonomy ./data/qiime/taxonomy.qza \
+            --p-include p_ \
+            --p-exclude mitochondria,chloroplast \
+            --o-filtered-table ./data/qiime/taxonomy_filtered.qza
+        """
+
+
+rule filter_taxonomy_vis:
+    input:
+        "data/qiime/taxonomy_filtered.qza"
+    output:
+        "data/qiime/taxonomy_filtered.qzv"
+    conda:
+        "qiime2-2023.5"
+    shell:
+        """
+        qiime feature-table summarize \
+            --i-table ./data/qiime/taxonomy_filtered.qza \
+            --o-visualization ./data/qiime/taxonomy_filtered.qzv
+        """
+
+
+rule pre_core_metrics_filter:
+    input:
+        "data/qiime/taxonomy_filtered.qza",
+        "data/misc/updated_metadata.tsv"
+    output:
+        "data/qiime/tax_filt_actual.qza"
+    conda:
+        "qiime2-2023.5"
+    shell:
+        """
+        qiime feature-table filter-samples \
+            --i-table ./data/qiime/taxonomy_filtered.qza \
+            --m-metadata-file ./data/misc/updated_metadata.tsv \
+            --o-filtered-table ./data/qiime/tax_filt_actual.qza
+        """
+
+
+rule core_metrics_analysis:
+##  NEED TO CHECK THE SAMPLING DEPTH BEFORE YOU RUN THIS STEP
+    input:
+        "data/qiime/tree.qza",
+        "data/qiime/tax_filt_actual.qza",
+        "data/misc/updated_metadata.tsv"
+    output:
+        "data/qiime/core_outputs/bray_curtis_distance_matrix.qza",
+        "data/qiime/core_outputs/bray_curtis_emperor.qzv",
+        "data/qiime/core_outputs/bray_curtis_pcoa_results.qza",
+        "data/qiime/core_outputs/evenness_vector.qza",
+        "data/qiime/core_outputs/faith_pd_vector.qza",
+        "data/qiime/core_outputs/jaccard_distance_matrix.qza",
+        "data/qiime/core_outputs/jaccard_emperor.qzv",
+        "data/qiime/core_outputs/jaccard_pcoa_results.qza",
+        "data/qiime/core_outputs/observed_features_vector.qza",
+        "data/qiime/core_outputs/rarefied_table.qza",
+        "data/qiime/core_outputs/shannon_vector.qza",
+        "data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza",
+        "data/qiime/core_outputs/unweighted_unifrac_emperor.qzv",
+        "data/qiime/core_outputs/unweighted_unifrac_pcoa_results.qza",
+        "data/qiime/core_outputs/weighted_unifrac_distance_matrix.qza",
+        "data/qiime/core_outputs/weighted_unifrac_emperor.qzv",
+        "data/qiime/core_outputs/weighted_unifrac_pcoa_results.qza"
+    conda:
+        "qiime2-2023.5"
+    shell:
+        """
+        qiime diversity core-metrics-phylogenetic \
+            --i-phylogeny ./data/qiime/tree.qza \
+            --i-table ./data/qiime/tax_filt_actual.qza \
+            --p-sampling-depth  99976 \
+            --m-metadata-file ./data/misc/updated_metadata.tsv \
+            --o-rarefied-table ./data/qiime/core_outputs/rarefied_table.qza \
+            --o-faith-pd-vector ./data/qiime/core_outputs/faith_pd_vector.qza \
+            --o-observed-features-vector ./data/qiime/core_outputs/observed_features_vector.qza \
+            --o-shannon-vector ./data/qiime/core_outputs/shannon_vector.qza \
+            --o-evenness-vector ./data/qiime/core_outputs/evenness_vector.qza \
+            --o-unweighted-unifrac-distance-matrix ./data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza \
+            --o-weighted-unifrac-distance-matrix ./data/qiime/core_outputs/weighted_unifrac_distance_matrix.qza \
+            --o-jaccard-distance-matrix ./data/qiime/core_outputs/jaccard_distance_matrix.qza \
+            --o-bray-curtis-distance-matrix ./data/qiime/core_outputs/bray_curtis_distance_matrix.qza \
+            --o-unweighted-unifrac-pcoa-results ./data/qiime/core_outputs/unweighted_unifrac_pcoa_results.qza \
+            --o-weighted-unifrac-pcoa-results ./data/qiime/core_outputs/weighted_unifrac_pcoa_results.qza \
+            --o-jaccard-pcoa-results ./data/qiime/core_outputs/jaccard_pcoa_results.qza \
+            --o-bray-curtis-pcoa-results ./data/qiime/core_outputs/bray_curtis_pcoa_results.qza \
+            --o-unweighted-unifrac-emperor ./data/qiime/core_outputs/unweighted_unifrac_emperor.qzv \
+            --o-weighted-unifrac-emperor ./data/qiime/core_outputs/weighted_unifrac_emperor.qzv \
+            --o-jaccard-emperor ./data/qiime/core_outputs/jaccard_emperor.qzv \
+            --o-bray-curtis-emperor ./data/qiime/core_outputs/bray_curtis_emperor.qzv
+        """
+
+
+rule unzip_uw_distance_matrix:
+    input:
+       "data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza" 
+    output:
+        "data/qiime/core_outputs/uw_dist_matrix.tsv"
+    conda:
+        "qiime2-2023.5"
+    shell:
+        """
+        qiime tools export \
+            --input-path ./data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza \
+            --output-path ./data/qiime/core_outputs/uw_dist_matrix
+        
+        mv ./data/qiime/core_outputs/uw_dist_matrix/distance-matrix.tsv \
+        ./data/qiime/core_outputs/uw_dist_matrix/uw_dist_matrix.tsv
+
+        mv ./data/qiime/core_outputs/uw_dist_matrix/uw_dist_matrix.tsv \
+        ./data/qiime/core_outputs/
+        """
+
+
+rule unzip_w_distance_matrix:
+    input:
+       "data/qiime/core_outputs/weighted_unifrac_distance_matrix.qza"
+    output:
+        "data/qiime/core_outputs/w_dist_matrix.tsv"
+    conda:
+        "qiime2-2023.5"
+    shell:
+        """
+        qiime tools export \
+            --input-path ./data/qiime/core_outputs/weighted_unifrac_distance_matrix.qza \
+            --output-path ./data/qiime/core_outputs/w_dist_matrix
+        
+        mv ./data/qiime/core_outputs/w_dist_matrix/distance-matrix.tsv \
+        ./data/qiime/core_outputs/w_dist_matrix/w_dist_matrix.tsv
+
+        mv ./data/qiime/core_outputs/w_dist_matrix/w_dist_matrix.tsv \
+        ./data/qiime/core_outputs/ 
+        """
+
+
+rule unzip_shannon:
+    input:
+        "data/qiime/core_outputs/shannon_vector.qza"
+    output:
+        "data/qiime/core_outputs/shannon_entropy.tsv"
+    conda:
+        "qiime2-2023.5"
+    shell:
+        """
+        qiime tools export \
+            --input-path ./data/qiime/core_outputs/shannon_vector.qza \
+            --output-path ./data/qiime/core_outputs/shannon_entropy
+        
+        mv ./data/qiime/core_outputs/shannon_entropy/alpha-diversity.tsv \
+        ./data/qiime/core_outputs/shannon_entropy/shannon_entropy.tsv
+
+        mv ./data/qiime/core_outputs/shannon_entropy/shannon_entropy.tsv \
+        ./data/qiime/core_outputs/
+        """
+
+
+rule unzip_faith_pd:
+    input:
+        "data/qiime/core_outputs/faith_pd_vector.qza"
+    output:
+        "data/qiime/core_outputs/faith_pd.tsv"
+    conda:
+        "qiime2-2023.5"
+    shell:
+        """
+        qiime tools export \
+            --input-path ./data/qiime/core_outputs/faith_pd_vector.qza \
+            --output-path ./data/qiime/core_outputs/faith_pd
+        
+        mv ./data/qiime/core_outputs/faith_pd/alpha-diversity.tsv \
+        ./data/qiime/core_outputs/faith_pd/faith_pd.tsv
+
+        mv ./data/qiime/core_outputs/faith_pd/faith_pd.tsv \
+        ./data/qiime/core_outputs/
+        """
+
+
+rule sequencing_depth_calculation:
+    input:
+        biom = "data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza",
+        asvs = "data/misc/lactoOnlydna-sequences.fasta"
+    output:
+        table = "data/misc/tss_seq_depth.tsv"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/seq_depth.R --biom {input.biom} \
+                                    --sequence {input.asvs} \
+                                    --output {output.table}
+        """
+
+
+rule metadata_processing:
+    input:
+        metadata = "data/misc/updated_metadata.csv",
+        seq_depth = "data/misc/tss_seq_depth.tsv"
+    output:
+        table = "data/misc/processed_metadata.tsv"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/metadata_processing.R --metadata {input.metadata} \
+                                              --seq_depth {input.seq_depth} \
+                                              --output {output.table}
+        """
+
+
+rule alpha_diversity_plots:
+    input:
+        metadata = "data/misc/processed_metadata.tsv",
+        faith_pd = "data/qiime/core_outputs/faith_pd.tsv",
+        shannon = "data/qiime/core_outputs/shannon_entropy.tsv"
+    output:
+        faith_plot = "plots/faith_pd.pdf",
+        shannon_plot = "plots/shannon_entropy.pdf"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/alpha_div_plots.R --metadata {input.metadata} \
+                                          --faith_pd {input.faith_pd} \
+                                          --shannon {input.shannon} \
+                                          --output_faith {output.faith_plot} \
+                                          --output_shannon {output.shannon_plot}
+        """
+
+
+rule alpha_diversity_stats:
+    input:
+        metadata = "data/misc/processed_metadata.tsv",
+        faith_pd = "data/qiime/core_outputs/faith_pd.tsv",
+        shannon = "data/qiime/core_outputs/shannon_entropy.tsv"
+    output:
+        faith_lm = "stats/faith_total_results.tsv",
+        faith_lm_sec = "stats/faith_diet_results.tsv",
+        faith_dunn = "stats/faith_dunn.tsv",
+        shannon_lm = "stats/shannon_total_results.tsv",
+        shannon_lm_sec = "stats/shannon_diet_results.tsv",
+        shannon_dunn = "stats/shannon_dunn.tsv",
+        faith_plot = "plots/faith_stat_vis.pdf",
+        shannon_plot = "plots/shannon_stat_vis.pdf"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/alpha_div_stats.R --metadata {input.metadata} \
+                                          --faith_pd {input.faith_pd} \
+                                          --shannon {input.shannon} \
+                                          --faith_lm {output.faith_lm} \
+                                          --faith_lm_sec {output.faith_lm_sec} \
+                                          --faith_dunn {output.faith_dunn} \
+                                          --shannon_lm {output.shannon_lm} \
+                                          --shannon_lm_sec {output.shannon_lm_sec} \
+                                          --shannon_dunn {output.shannon_dunn} \
+                                          --faith_plot {output.faith_plot} \
+                                          --shannon_plot {output.shannon_plot}
+        """
+
+
+rule beta_diversity_plots:
+    input:
+        metadata = "data/misc/processed_metadata.tsv",
+        unweighted_uni = "data/qiime/core_outputs/unweighted_unifrac_pcoa_results.qza",
+        weighted_uni = "data/qiime/core_outputs/weighted_unifrac_pcoa_results.qza",
+        faith_pd = "data/qiime/core_outputs/faith_pd.tsv",
+        shannon = "data/qiime/core_outputs/shannon_entropy.tsv"
+    output:
+        unweighted_plot = "plots/unweighted_unifrac_pcoa.pdf",
+        weighted_plot = "plots/weighted_unifrac_pcoa.pdf"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/beta_div_plots.R --metadata {input.metadata} \
+                                         --unweighted_unifrac {input.unweighted_uni} \
+                                         --weighted_unifrac {input.weighted_uni} \
+                                         --faith_pd {input.faith_pd} \
+                                         --shannon {input.shannon} \
+                                         --output_uu {output.unweighted_plot} \
+                                         --output_wu {output.weighted_plot}
+        """
+
+
+rule beta_diversity_stats:
+    input:
+        metadata = "data/misc/processed_metadata.tsv",
+        uw_dist = "data/qiime/core_outputs/uw_dist_matrix.tsv",
+        w_dist = "data/qiime/core_outputs/w_dist_matrix.tsv"
+    output:
+        w_adonis = "stats/w_adonis_results.tsv",
+        uw_adonis = "stats/uw_adonis_results.tsv",
+        w_adonis_day = "stats/w_adonis_by_day.tsv",
+        uw_adonis_day = "stats/uw_adonis_by_day.tsv"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/beta_div_stats.R --metadata {input.metadata} \
+                                         --uu_dist {input.uw_dist} \
+                                         --wu_dist {input.w_dist} \
+                                         --uu_adonis {output.uw_adonis} \
+                                         --wu_adonis {output.w_adonis} \
+                                         --uu_adonis_day {output.uw_adonis_day} \
+                                         --wu_adonis_day {output.w_adonis_day}
+        """
+
+
+rule homogeneity:
+    input:
+        metadata = "data/misc/processed_metadata.tsv",
+        uu_dist = "data/qiime/core_outputs/uw_dist_matrix.tsv",
+        wu_dist = "data/qiime/core_outputs/w_dist_matrix.tsv"
+    output:
+        wu_lm = "stats/wu_homogeneity.tsv",
+        wu_dunn = "stats/wu_homog_dunn.tsv",
+        uu_lm = "stats/uu_homogeneity.tsv",
+        uu_dunn = "stats/uu_homog_dunn.tsv",
+        wu_plot = "plots/wu_homogeneity.pdf",
+        wu_stat_plot = "plots/wu_homog_stats.pdf",
+        uu_plot = "plots/uu_homogeneity.pdf",
+        uu_stat_plot = "plots/uu_homog_stats.pdf"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/homog_calc.R --metadata {input.metadata} \
+                                     --uu_dist {input.uu_dist} \
+                                     --wu_dist {input.wu_dist} \
+                                     --weighted_lm {output.wu_lm} \
+                                     --weighted_dunn {output.wu_dunn} \
+                                     --unweighted_lm {output.uu_lm} \
+                                     --unweighted_dunn {output.uu_dunn} \
+                                     --weighted_plot {output.wu_plot} \
+                                     --weighted_stat_plot {output.wu_stat_plot} \
+                                     --unweighted_plot {output.uu_plot} \
+                                     --unweighted_stat_plot {output.uu_stat_plot}
+        """
+
+
+rule resiliency:
+    input:
+       metadata = "data/misc/processed_metadata.tsv",
+       uu_dist = "data/qiime/core_outputs/uw_dist_matrix.tsv",
+       wu_dist = "data/qiime/core_outputs/w_dist_matrix.tsv"
+    output:
+        uu_lm = "stats/uu_resiliency.tsv",
+        uu_dunn = "stats/uu_resil_dunn.tsv",
+        wu_lm = "stats/wu_resiliency.tsv",
+        wu_dunn = "stats/wu_resil_dunn.tsv",
+        wu_plot = "plots/wu_resiliency.pdf",
+        wu_stat_plot = "plots/wu_resil_stats.pdf",
+        uu_plot = "plots/uu_resiliency.pdf",
+        uu_stat_plot = "plots/uu_resil_stats.pdf"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/resil_calc.R --metadata {input.metadata} \
+                                     --uu_dist {input.uu_dist} \
+                                     --wu_dist {input.wu_dist} \
+                                     --weighted_lm {output.wu_lm} \
+                                     --weighted_dunn {output.wu_dunn} \
+                                     --unweighted_lm {output.uu_lm} \
+                                     --unweighted_dunn {output.uu_dunn} \
+                                     --weighted_plot {output.wu_plot} \
+                                     --weighted_stat_plot {output.wu_stat_plot} \
+                                     --unweighted_plot {output.uu_plot} \
+                                     --unweighted_stat_plot {output.uu_stat_plot}
+        """
+
+
+rule family_abundance_plots:
+    input:
+        otu_table = "data/qiime/taxonomy_filtered.qza",
+        taxonomy = "data/qiime/taxonomy.qza",
+        metadata = "data/misc/processed_metadata.tsv"
+    output:
+        plot1 = "plots/family_abun1.pdf",
+        plot2 = "plots/family_abun2.pdf"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/family_abun_plots.R --metadata {input.metadata} \
+                                            --otu {input.otu_table} \
+                                            --taxonomy {input.taxonomy} \
+                                            --plot1 {output.plot1} \
+                                            --plot2 {output.plot2}
+        """
+
+
+rule family_abundance_stats:
+    input:
+       otu_table = "data/qiime/taxonomy_filtered.qza",
+       taxonomy = "data/qiime/taxonomy.qza",
+       metadata = "data/misc/processed_metadata.tsv"
+    output:
+        lm = "stats/family_abun_lm.tsv",
+        dunn = "stats/family_abun_dunn.tsv",
+        stat_plot = "plots/famAbun_stat_vis.pdf"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/family_abun_stats.R --metadata {input.metadata} \
+                                            --otu {input.otu_table} \
+                                            --taxonomy {input.taxonomy} \
+                                            --stat_plot {output.stat_plot} \
+                                            --linear_model {output.lm} \
+                                            --dunn {output.dunn}
+        """
+
+
+rule histopathology:
+    input:
+        metadata = "data/misc/processed_metadata.tsv",
+        histo = "data/misc/histo_data.csv"
+    output:
+        plot = "plots/histopathology.pdf",
+        lm = "stats/histopathology_lm.tsv",
+        dunn = "stats/histopathology_dunn.tsv"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/histopathology.R --metadata {input.metadata} \
+                                         --histo {input.histo} \
+                                         --histo_plot {output.plot} \
+                                         --linear_model {output.lm} \
+                                         --dunn {output.dunn}
+        """
+
+
+rule toxin:
+    input:
+        metadata = "data/misc/processed_metadata.tsv",
+        toxin = "data/misc/toxin_final_data.tsv"
+    output:
+        neat_plot = "plots/neat_toxin.pdf",
+        diluted_plot = "plots/dil_toxin.pdf",
+        neat_kruskal = "stats/neatToxin_kruskal_test.tsv",
+        neat_dunn = "stats/neatToxin_dunn_test.tsv",
+        dil_kruskal = "stats/dilToxin_kruskal_test.tsv",
+        dil_dunn = "stats/dilToxin_dunn_test.tsv"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/toxin.R --metadata {input.metadata} \
+                                --toxin {input.toxin} \
+                                --neat_plot {output.neat_plot} \
+                                --diluted_plot {output.diluted_plot} \
+                                --neat_kruskal {output.neat_kruskal} \
+                                --neat_dunn {output.neat_dunn} \
+                                --diluted_kruskal {output.dil_kruskal} \
+                                --diluted_dunn {output.dil_dunn}
+        """
+
+
+rule metabolomics:
+    input:
+        metadata = "data/misc/processed_metadata.tsv",
+        metab = "data/misc/metabolomics.csv"
+    output:
+        metab_plot = "plots/metabolomics.pdf",
+        metab_lm = "stats/metab_linear_model.tsv",
+        metab_dunn = "stats/metab_dunn_test.tsv",
+        metab_kruskal = "stats/metab_kruskal_test.tsv"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/metab.R --metadata {input.metadata} \
+                                --metab {input.metab} \
+                                --metab_plot {output.metab_plot} \
+                                --metab_lm {output.metab_lm} \
+                                --metab_dunn {output.metab_dunn} \
+                                --metab_kruskal {output.metab_kruskal}
+        """
+
+
+## need to be able to change the name of the temporary output directory to the actual output directory in the code so that it will 
+## run the following rules for plots/stats
+## figure out which error code picrust is exiting out on
+rule picrust2:
+    input:
+       "data/misc/dna-sequences.fasta",
+       "data/qiime/total_sum_scaling.biom"
+    output:
+       "data/picrust/out_pipeline/KO_metagenome_out/pred_metagenome_contrib.tsv.gz"
+    conda:
+        "picrust2_testing"
+    shell:
+        """
+        picrust2_pipeline.py \
+            -s ./data/misc/dna-sequences.fasta \
+            -i ./data/qiime/total_sum_scaling.biom \
+            -o ./data/picrust/tmp_out_pipeline \
+            --stratified \
+            --per_sequence_contrib \
+            -p 32
+        """
+
+
+rule ko_contrib_filter:
+    input:
+        ko_in = "data/picrust/out_pipeline/KO_metagenome_out/pred_metagenome_contrib.tsv.gz"
+    output:
+        ko_out = "data/picrust/tss3_meta_contrib.tsv"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/ko_contrib_filter.R --ko_in {input.ko_in} \
+                                            --ko_out {output.ko_out}
+        """
+
+
+rule butyrate_plots:
+    input:
+        metadata = "data/misc/processed_metadata.tsv",
+        taxonomy = "data/qiime/taxonomy.qza",
+        ko_contrib = "data/picrust/tss3_meta_contrib.tsv"
+    output:
+        buk = "plots/butyrate_kinase.pdf",
+        but = "plots/butyryl_coa_transferase.pdf"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/butyrate_plots.R --metadata {input.metadata} \
+                                         --taxonomy {input.taxonomy} \
+                                         --ko {input.ko_contrib} \
+                                         --buk_plot {output.buk} \
+                                         --but_plot {output.but}
+        """
+
+
+rule bile_acid_plots:
+    input:
+       metadata = "data/misc/processed_metadata.tsv",
+       taxonomy = "data/qiime/taxonomy.qza",
+       ko_contrib = "data/picrust/tss3_meta_contrib.tsv"
+    output:
+        baiH = "plots/baiH.pdf",
+        baiI = "plots/baiI.pdf"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/bile_acid_plots.R --metadata {input.metadata} \
+                                          --taxonomy {input.taxonomy} \
+                                          --ko {input.ko_contrib} \
+                                          --baiH_plot {output.baiH} \
+                                          --baiI_plot {output.baiI}
+        """
+
+
+rule butyrate_bile_stats:
+    input:
+       metadata = "data/misc/processed_metadata.tsv",
+       ko_contrib = "data/picrust/tss3_meta_contrib.tsv"
+    output:
+        buty_lm = "stats/buty_enzyme_lm.tsv",
+        buty_dunn = "stats/buty_enzyme_dunn.tsv",
+        bile_lm = "stats/bile_enzyme_lm.tsv",
+        buty_stat_vis = "plots/buty_stat_vis.pdf"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/butyrate_bile_stats.R --metadata {input.metadata} \
+                                              --ko {input.ko_contrib} \
+                                              --buty_lm {output.buty_lm} \
+                                              --buty_dunn {output.buty_dunn} \
+                                              --bile {output.bile_lm} \
+                                              --buty_stat_vis {output.buty_stat_vis}
+        """

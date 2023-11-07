@@ -1,9 +1,0 @@
-sampleid	diet	study	sample_date	day_post_inf	mouse_id	exp_#	mouse_tag	DNA_conc	amplified_conc	extraction_date	ext_#	plate	well
-3_0516_9848	HF/LF	3	5/16/2022	-15	9848	9848	5/16/2022	24.1	141.49	6/20/2022	7	1	G04
-3_0516_9898	NA	3	5/16/2022	NA	9898	9898	5/16/2022	24.1	141.49	6/20/2022	7	1	G04
-Mock_1A	NA	NA	NA	NA	NA	NA	NA	NA	7.21	NA	1	2	E03
-Mock_2A	NA	NA	NA	NA	NA	NA	NA	NA	7.63	NA	2	2	E04
-Mock_3A	NA	NA	NA	NA	NA	NA	NA	NA	10.16	NA	3	2	E05
-Mock_6A	NA	NA	NA	NA	NA	NA	NA	NA	8.22	NA	6	2	E08
-Mock_7A	NA	NA	NA	NA	NA	NA	NA	NA	10.56	NA	7	2	E09
-52.9943.0620	Chow	5	6/20/2022	-8	9943	NA	NA	26.8	137.8	NA	7	1	D12

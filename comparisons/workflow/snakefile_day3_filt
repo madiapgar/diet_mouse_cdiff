@@ -1,0 +1,179 @@
+rule all:
+    input:
+        "data/comp_qiime/tax_day3_filt.qza",
+        "data/day3_filt_core/bray_curtis_distance_matrix.qza",
+        "data/day3_filt_core/bray_curtis_emperor.qzv",
+        "data/day3_filt_core/bray_curtis_pcoa_results.qza",
+        "data/day3_filt_core/evenness_vector.qza",
+        "data/day3_filt_core/faith_pd_vector.qza",
+        "data/day3_filt_core/jaccard_distance_matrix.qza",
+        "data/day3_filt_core/jaccard_emperor.qzv",
+        "data/day3_filt_core/jaccard_pcoa_results.qza",
+        "data/day3_filt_core/observed_features_vector.qza",
+        "data/day3_filt_core/rarefied_table.qza",
+        "data/day3_filt_core/shannon_vector.qza",
+        "data/day3_filt_core/unweighted_unifrac_distance_matrix.qza",
+        "data/day3_filt_core/unweighted_unifrac_emperor.qzv",
+        "data/day3_filt_core/unweighted_unifrac_pcoa_results.qza",
+        "data/day3_filt_core/weighted_unifrac_distance_matrix.qza",
+        "data/day3_filt_core/weighted_unifrac_emperor.qzv",
+        "data/day3_filt_core/weighted_unifrac_pcoa_results.qza",
+        "data/day3_filt_core/uw_dist_matrix.tsv",
+        "data/day3_filt_core/w_dist_matrix.tsv",
+        "data/day3_filt_core/shannon_entropy.tsv",
+        "data/day3_filt_core/faith_pd.tsv"
+
+
+
+rule pre_core_metrics_filter:
+    input:
+        tss_tax_filt = "data/comp_qiime/tss_tax_filt.qza",
+        metadata = "data/misc/filt_comp_metadata.tsv"
+    output:
+        meta_filt_tax = "data/comp_qiime/tax_day3_filt.qza"
+    conda:
+        "qiime2-2023.5"
+    shell:
+        """
+        qiime feature-table filter-samples \
+            --i-table {input.tss_tax_filt} \
+            --m-metadata-file {input.metadata} \
+            --o-filtered-table {output.meta_filt_tax}
+        """
+
+
+rule core_metrics_analysis:
+##  NEED TO CHECK THE SAMPLING DEPTH BEFORE YOU RUN THIS STEP
+    input:
+        tree = "data/comp_qiime/tree.qza",
+        meta_filt_tax = "data/comp_qiime/tax_day3_filt.qza",
+        metadata = "data/misc/filt_comp_metadata.tsv"
+    output:
+        bray_curtis_distance_matrix = "data/day3_filt_core/bray_curtis_distance_matrix.qza",
+        bray_curtis_emperor = "data/day3_filt_core/bray_curtis_emperor.qzv",
+        bray_curtis_pcoa_results = "data/day3_filt_core/bray_curtis_pcoa_results.qza",
+        evenness = "data/day3_filt_core/evenness_vector.qza",
+        faith_pd = "data/day3_filt_core/faith_pd_vector.qza",
+        jaccard_distance_matrix = "data/day3_filt_core/jaccard_distance_matrix.qza",
+        jaccard_emperor = "data/day3_filt_core/jaccard_emperor.qzv",
+        jaccard_pcoa_results = "data/day3_filt_core/jaccard_pcoa_results.qza",
+        observed = "data/day3_filt_core/observed_features_vector.qza",
+        rarefied = "data/day3_filt_core/rarefied_table.qza",
+        shannon = "data/day3_filt_core/shannon_vector.qza",
+        unweighted_unifrac_distance_matrix = "data/day3_filt_core/unweighted_unifrac_distance_matrix.qza",
+        unweighted_unifrac_emperor = "data/day3_filt_core/unweighted_unifrac_emperor.qzv",
+        unweighted_unifrac_pcoa_results = "data/day3_filt_core/unweighted_unifrac_pcoa_results.qza",
+        weighted_unifrac_distance_matrix = "data/day3_filt_core/weighted_unifrac_distance_matrix.qza",
+        weighted_unifrac_emperor = "data/day3_filt_core/weighted_unifrac_emperor.qzv",
+        weighted_unifrac_pcoa_results = "data/day3_filt_core/weighted_unifrac_pcoa_results.qza"
+    conda:
+        "qiime2-2023.5"
+    shell:
+        """
+        qiime diversity core-metrics-phylogenetic \
+            --i-phylogeny {input.tree} \
+            --i-table {input.meta_filt_tax} \
+            --p-sampling-depth  99631 \
+            --m-metadata-file {input.metadata} \
+            --o-rarefied-table {output.rarefied} \
+            --o-faith-pd-vector {output.faith_pd} \
+            --o-observed-features-vector {output.observed} \
+            --o-shannon-vector {output.shannon} \
+            --o-evenness-vector {output.evenness} \
+            --o-unweighted-unifrac-distance-matrix {output.unweighted_unifrac_distance_matrix} \
+            --o-weighted-unifrac-distance-matrix {output.weighted_unifrac_distance_matrix} \
+            --o-jaccard-distance-matrix {output.jaccard_distance_matrix} \
+            --o-bray-curtis-distance-matrix {output.bray_curtis_distance_matrix} \
+            --o-unweighted-unifrac-pcoa-results {output.unweighted_unifrac_pcoa_results} \
+            --o-weighted-unifrac-pcoa-results {output.weighted_unifrac_pcoa_results} \
+            --o-jaccard-pcoa-results {output.jaccard_pcoa_results} \
+            --o-bray-curtis-pcoa-results {output.bray_curtis_pcoa_results} \
+            --o-unweighted-unifrac-emperor {output.unweighted_unifrac_emperor} \
+            --o-weighted-unifrac-emperor {output.weighted_unifrac_emperor} \
+            --o-jaccard-emperor {output.jaccard_emperor} \
+            --o-bray-curtis-emperor {output.bray_curtis_emperor}
+        """
+
+
+rule unzip_uw_distance_matrix:
+    input:
+        "data/day3_filt_core/unweighted_unifrac_distance_matrix.qza" 
+    output:
+        "data/day3_filt_core/uw_dist_matrix.tsv"
+    conda:
+        "qiime2-2023.5"
+    shell:
+        """
+        qiime tools export \
+            --input-path ./data/day3_filt_core/unweighted_unifrac_distance_matrix.qza \
+            --output-path ./data/day3_filt_core/uw_dist_matrix
+        
+        mv ./data/day3_filt_core/uw_dist_matrix/distance-matrix.tsv \
+        ./data/day3_filt_core/uw_dist_matrix/uw_dist_matrix.tsv
+
+        mv ./data/day3_filt_core/uw_dist_matrix/uw_dist_matrix.tsv \
+        ./data/day3_filt_core/
+        """
+
+
+rule unzip_w_distance_matrix:
+    input:
+        "data/day3_filt_core/weighted_unifrac_distance_matrix.qza"
+    output:
+        "data/day3_filt_core/w_dist_matrix.tsv"
+    conda:
+        "qiime2-2023.5"
+    shell:
+        """
+        qiime tools export \
+            --input-path ./data/day3_filt_core/weighted_unifrac_distance_matrix.qza \
+            --output-path ./data/day3_filt_core/w_dist_matrix
+        
+        mv ./data/day3_filt_core/w_dist_matrix/distance-matrix.tsv \
+        ./data/day3_filt_core/w_dist_matrix/w_dist_matrix.tsv
+
+        mv ./data/day3_filt_core/w_dist_matrix/w_dist_matrix.tsv \
+        ./data/day3_filt_core/ 
+        """
+
+
+rule unzip_shannon:
+    input:
+        "data/day3_filt_core/shannon_vector.qza"
+    output:
+        "data/day3_filt_core/shannon_entropy.tsv"
+    conda:
+        "qiime2-2023.5"
+    shell:
+        """
+        qiime tools export \
+            --input-path ./data/day3_filt_core/shannon_vector.qza \
+            --output-path ./data/day3_filt_core/shannon_entropy
+        
+        mv ./data/day3_filt_core/shannon_entropy/alpha-diversity.tsv \
+        ./data/day3_filt_core/shannon_entropy/shannon_entropy.tsv
+
+        mv ./data/day3_filt_core/shannon_entropy/shannon_entropy.tsv \
+        ./data/day3_filt_core/
+        """
+
+
+rule unzip_faith_pd:
+    input:
+        "data/day3_filt_core/faith_pd_vector.qza"
+    output:
+        "data/day3_filt_core/faith_pd.tsv"
+    conda:
+        "qiime2-2023.5"
+    shell:
+        """
+        qiime tools export \
+            --input-path ./data/day3_filt_core/faith_pd_vector.qza \
+            --output-path ./data/day3_filt_core/faith_pd
+        
+        mv ./data/day3_filt_core/faith_pd/alpha-diversity.tsv \
+        ./data/day3_filt_core/faith_pd/faith_pd.tsv
+
+        mv ./data/day3_filt_core/faith_pd/faith_pd.tsv \
+        ./data/day3_filt_core/
+        """

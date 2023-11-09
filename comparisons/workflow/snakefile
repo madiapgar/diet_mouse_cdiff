@@ -1,73 +1,68 @@
 rule all:
     input:
-        "data/misc/comp_table.qza",
-        "data/misc/comp_rep_seqs.qza",
-        "databases/sepp-refs-silva-128.qza",
-        "databases/silva-138-99-515-806-nb-classifier.qza",
-        "data/comp_qiime/tree.qza",
-        "data/comp_qiime/placements.qza",
-        "data/comp_qiime/filt_comp_table.qza",
-        "data/comp_qiime/rem_comp_table.qza",
-        "data/comp_qiime/taxonomy.qza",
-        "data/comp_qiime/taxonomy_filtered.qza",
-        "data/comp_qiime/taxonomy_filtered.qzv",
-        "data/comp_qiime/lacto_table.qza",
-        "data/comp_qiime/lacto_rep_seqs.qza",
-        "data/comp_qiime/lactoOnly_rep_seqs.fasta",
-        "data/misc/comp_tss_table.tsv",
-        "data/misc/comp_tss_table.biom",
-        "data/misc/comp_tss_table.qza",
-        "data/comp_qiime/comp_tss_filt_table.qza",
-        "data/comp_qiime/comp_tss_rem_table.qza",
-        "data/comp_qiime/tss_tax_filt.qza",
-        "data/comp_qiime/tss_tax_filt.qzv",
-        "data/comp_qiime/tax_filt_actual.qza",
-        "data/core_outputs/bray_curtis_distance_matrix.qza",
-        "data/core_outputs/bray_curtis_emperor.qzv",
-        "data/core_outputs/bray_curtis_pcoa_results.qza",
-        "data/core_outputs/evenness_vector.qza",
-        "data/core_outputs/faith_pd_vector.qza",
-        "data/core_outputs/jaccard_distance_matrix.qza",
-        "data/core_outputs/jaccard_emperor.qzv",
-        "data/core_outputs/jaccard_pcoa_results.qza",
-        "data/core_outputs/observed_features_vector.qza",
-        "data/core_outputs/rarefied_table.qza",
-        "data/core_outputs/shannon_vector.qza",
-        "data/core_outputs/unweighted_unifrac_distance_matrix.qza",
-        "data/core_outputs/unweighted_unifrac_emperor.qzv",
-        "data/core_outputs/unweighted_unifrac_pcoa_results.qza",
-        "data/core_outputs/weighted_unifrac_distance_matrix.qza",
-        "data/core_outputs/weighted_unifrac_emperor.qzv",
-        "data/core_outputs/weighted_unifrac_pcoa_results.qza",
-        "data/core_outputs/uw_dist_matrix.tsv",
-        "data/core_outputs/w_dist_matrix.tsv",
-        "data/core_outputs/shannon_entropy.tsv",
-        "data/core_outputs/faith_pd.tsv"
+        "plots/faith_pd.pdf",
+        "plots/shannon_entropy.pdf",
+        "stats/faith_total_results.tsv",
+        "stats/faith_diet_results.tsv",
+        "stats/faith_dunn.tsv",
+        "stats/shannon_total_results.tsv",
+        "stats/shannon_diet_results.tsv",
+        "stats/shannon_dunn.tsv",
+        "plots/faith_stat_vis.pdf",
+        "plots/shannon_stat_vis.pdf",
+        "plots/unweighted_unifrac_pcoa.pdf",
+        "plots/weighted_unifrac_pcoa.pdf",
+        "stats/w_adonis_results.tsv",
+        "stats/uw_adonis_results.tsv",
+        "stats/w_adonis_by_day.tsv",
+        "stats/uw_adonis_by_day.tsv",
+        "stats/wu_homogeneity.tsv",
+        "stats/wu_homog_dunn.tsv",
+        "stats/uu_homogeneity.tsv",
+        "stats/uu_homog_dunn.tsv",
+        "plots/wu_homogeneity.pdf",
+        "plots/wu_homog_stats.pdf",
+        "plots/uu_homogeneity.pdf",
+        "plots/uu_homog_stats.pdf",
+        "stats/uu_resiliency.tsv",
+        "stats/uu_resil_dunn.tsv",
+        "stats/wu_resiliency.tsv",
+        "stats/wu_resil_dunn.tsv",
+        "plots/wu_resiliency.pdf",
+        "plots/wu_resil_stats.pdf",
+        "plots/uu_resiliency.pdf",
+        "plots/uu_resil_stats.pdf",
+        "plots/family_abun1.pdf",
+        "plots/family_abun2.pdf",
+        "stats/family_abun_lm.tsv",
+        "stats/family_abun_dunn.tsv",
+        "plots/famAbun_stat_vis.pdf"
+
 
 
 
 rule merge_tables:
     input:
-        "data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza",
-        "data/misc/euk_filt-mergedDietAim1rep-seqs_051523-Copy1.qza",
-        "data/misc/filt_cecal_table.qza",
-        "data/misc/all_cecal_rep_seqs.qza"
+        colon_table = "data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza",
+        colon_seqs = "data/misc/euk_filt-mergedDietAim1rep-seqs_051523-Copy1.qza",
+        cecal_table = "data/misc/filt_cecal_table.qza",
+        cecal_seqs = "data/misc/all_cecal_rep_seqs.qza"
     output:
-        "data/misc/comp_table.qza",
-        "data/misc/comp_rep_seqs.qza"
+        comp_table = "data/misc/comp_table.qza",
+        comp_seqs = "data/misc/comp_rep_seqs.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime feature-table merge \
-            --i-tables ./data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza \
-            --i-tables ./data/misc/filt_cecal_table.qza \
-            --o-merged-table ./data/misc/comp_table.qza
+            --i-tables {input.colon_table} \
+            --i-tables {input.cecal_table} \
+            --o-merged-table {output.comp_table}
         
         qiime feature-table merge-seqs \
-            --i-data ./data/misc/euk_filt-mergedDietAim1rep-seqs_051523-Copy1.qza \
-            --i-data ./data/misc/all_cecal_rep_seqs.qza \
-            --o-merged-data ./data/misc/comp_rep_seqs.qza
+            --i-data {input.colon_seqs} \
+            --i-data {input.cecal_seqs} \
+            --o-merged-data {output.comp_seqs}
         """
 
 
@@ -84,122 +79,124 @@ rule get_reference_databases:
 
 rule sepp_phylo_tree:
     input:
-        "data/misc/comp_rep_seqs.qza",
-        "databases/sepp-refs-silva-128.qza"
+        comp_seqs = "data/misc/comp_rep_seqs.qza",
+        silva_ref = "databases/sepp-refs-silva-128.qza"
     output:
-        "data/comp_qiime/tree.qza",
-        "data/comp_qiime/placements.qza"
+        tree = "data/comp_qiime/tree.qza",
+        placements = "data/comp_qiime/placements.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime fragment-insertion sepp \
-            --i-representative-sequences ./data/misc/comp_rep_seqs.qza \
-            --i-reference-database ./databases/sepp-refs-silva-128.qza \
-            --o-tree ./data/comp_qiime/tree.qza \
-            --o-placements ./data/comp_qiime/placements.qza
+            --i-representative-sequences {input.comp_seqs} \
+            --i-reference-database {input.silva_ref} \
+            --o-tree {output.tree} \
+            --o-placements {output.placements}
         """
 
 
 rule sepp_ASV_filtering:
     input:
-        "data/misc/comp_table.qza",
-        "data/comp_qiime/tree.qza"
+        comp_table = "data/misc/comp_table.qza",
+        tree = "data/comp_qiime/tree.qza"
     output:
-        "data/comp_qiime/filt_comp_table.qza",
-        "data/comp_qiime/rem_comp_table.qza"
+        filt_comp_table = "data/comp_qiime/filt_comp_table.qza",
+        rem_comp_table = "data/comp_qiime/rem_comp_table.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime fragment-insertion filter-features \
-            --i-table ./data/misc/comp_table.qza \
-            --i-tree ./data/comp_qiime/tree.qza \
-            --o-filtered-table ./data/comp_qiime/filt_comp_table.qza \
-            --o-removed-table ./data/comp_qiime/rem_comp_table.qza
+            --i-table {input.comp_table} \
+            --i-tree {input.tree} \
+            --o-filtered-table {output.filt_comp_table} \
+            --o-removed-table {output.rem_comp_table}
         """
 
 
 rule taxonomic_classification:
     input:
-        "databases/silva-138-99-515-806-nb-classifier.qza",
-        "data/misc/comp_rep_seqs.qza"
+        silva_class = "databases/silva-138-99-515-806-nb-classifier.qza",
+        comp_rep_seqs = "data/misc/comp_rep_seqs.qza"
     output:
-        "data/comp_qiime/taxonomy.qza"
+        taxonomy = "data/comp_qiime/taxonomy.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime feature-classifier classify-sklearn \
-            --i-classifier ./databases/silva-138-99-515-806-nb-classifier.qza \
-            --i-reads ./data/misc/comp_rep_seqs.qza \
-            --o-classification ./data/comp_qiime/taxonomy.qza
+            --i-classifier {input.silva_class} \
+            --i-reads {input.comp_rep_seqs} \
+            --o-classification {output.taxonomy}
         """
 
 ## rerun after total sum scaling
+## hopefully the second qiime command works 
 rule filter_taxonomy:
     input:
-        "data/comp_qiime/filt_comp_table.qza",
-        "data/comp_qiime/taxonomy.qza"
+        filt_comp_table = "data/comp_qiime/filt_comp_table.qza",
+        taxonomy = "data/comp_qiime/taxonomy.qza"
     output:
-        "data/comp_qiime/taxonomy_filtered.qza",
-        "data/comp_qiime/taxonomy_filtered.qzv"
+        tax_filt_table = "data/comp_qiime/taxonomy_filtered.qza",
+        tax_filt_vis = "data/comp_qiime/taxonomy_filtered.qzv"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime taxa filter-table \
-            --i-table ./data/comp_qiime/filt_comp_table.qza \
-            --i-taxonomy ./data/comp_qiime/taxonomy.qza \
+            --i-table {input.filt_comp_table} \
+            --i-taxonomy {input.taxonomy} \
             --p-include p_ \
             --p-exclude mitochondria,chloroplast \
-            --o-filtered-table ./data/comp_qiime/taxonomy_filtered.qza
+            --o-filtered-table {output.tax_filt_table}
         
         qiime feature-table summarize \
-            --i-table ./data/comp_qiime/taxonomy_filtered.qza \
-            --o-visualization ./data/comp_qiime/taxonomy_filtered.qzv
+            --i-table {output.tax_filt_table} \
+            --o-visualization {output.tax_filt_vis}
         """
 
 
 rule create_lacto_table:
     input:
-        "data/comp_qiime/filt_comp_table.qza",
-        "data/comp_qiime/taxonomy.qza",
-        "data/misc/comp_rep_seqs.qza"
+        filt_comp_table = "data/comp_qiime/filt_comp_table.qza",
+        taxonomy = "data/comp_qiime/taxonomy.qza",
+        comp_rep_seqs = "data/misc/comp_rep_seqs.qza"
     output:
-        "data/comp_qiime/lacto_table.qza",
-        "data/comp_qiime/lacto_rep_seqs.qza" 
+        lacto_table = "data/comp_qiime/lacto_table.qza",
+        lacto_rep_seqs = "data/comp_qiime/lacto_rep_seqs.qza" 
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime taxa filter-table \
-            --i-table ./data/comp_qiime/filt_comp_table.qza \
-            --i-taxonomy ./data/comp_qiime/taxonomy.qza \
+            --i-table {input.filt_comp_table} \
+            --i-taxonomy {input.taxonomy} \
             --p-include Lactococcus \
-            --o-filtered-table ./data/comp_qiime/lacto_table.qza
+            --o-filtered-table {output.lacto_table}
         
         qiime feature-table filter-seqs \
-            --i-data ./data/misc/comp_rep_seqs.qza \
-            --i-table ./data/comp_qiime/lacto_table.qza \
-            --o-filtered-data ./data/comp_qiime/lacto_rep_seqs.qza
+            --i-data {input.comp_rep_seqs} \
+            --i-table {output.lacto_table} \
+            --o-filtered-data {output.lacto_rep_seqs}
         """
 
 
 rule convert_to_fasta:
     input:
-        "data/comp_qiime/lacto_rep_seqs.qza"
+        lacto_rep_seqs = "data/comp_qiime/lacto_rep_seqs.qza"
     output:
-        "data/comp_qiime/lactoOnly_rep_seqs.fasta"
+        output_path = "data/comp_qiime/dna-sequences.fasta",
+        lacto_fasta = "data/comp_qiime/lactoOnly_rep_seqs.fasta"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime tools export \
-            --input-path ./data/comp_qiime/lacto_rep_seqs.qza \
-            --output-path ./data/comp_qiime
+            --input-path {input.lacto_rep_seqs} \
+            --output-path {output.output_path}
         
-        mv ./data/comp_qiime/dna-sequences.fasta ./data/comp_qiime/lactoOnly_rep_seqs.fasta
+        mv {output.output_path} {output.lacto_fasta}
         """
 
 
@@ -229,8 +226,8 @@ rule tss_tsv2biom:
     shell:
         """
         biom convert \
-            -i ./data/misc/comp_tss_table.tsv \
-            -o ./data/misc/comp_tss_table.biom \
+            -i {input} \
+            -o {output} \
             --table-type "Table" \
             --to-hdf5
         """
@@ -246,122 +243,122 @@ rule tss_biom2qza:
     shell:
         """
         qiime tools import \
-            --input-path ./data/misc/comp_tss_table.biom \
+            --input-path {input} \
             --type 'FeatureTable[Frequency]' \
-            --output-path ./data/misc/comp_tss_table.qza
+            --output-path {output}
         """
 
 
 rule sepp_ASV_filtering2:
     input:
-        "data/misc/comp_tss_table.qza",
-        "data/comp_qiime/tree.qza"
+        tss_table = "data/misc/comp_tss_table.qza",
+        tree = "data/comp_qiime/tree.qza"
     output:
-        "data/comp_qiime/comp_tss_filt_table.qza",
-        "data/comp_qiime/comp_tss_rem_table.qza"
+        tss_filt_table = "data/comp_qiime/comp_tss_filt_table.qza",
+        tss_rem_table = "data/comp_qiime/comp_tss_rem_table.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime fragment-insertion filter-features \
-            --i-table ./data/misc/comp_tss_table.qza \
-            --i-tree ./data/comp_qiime/tree.qza \
-            --o-filtered-table ./data/comp_qiime/comp_tss_filt_table.qza \
-            --o-removed-table ./data/comp_qiime/comp_tss_rem_table.qza
+            --i-table {input.tss_table} \
+            --i-tree {input.tree} \
+            --o-filtered-table {output.tss_filt_table} \
+            --o-removed-table {output.tss_rem_table}
         """
 
 
 rule filter_taxonomy2:
     input:
-        "data/misc/comp_tss_table.qza",
-        "data/comp_qiime/taxonomy.qza"
+        tss_table = "data/misc/comp_tss_table.qza",
+        taxonomy = "data/comp_qiime/taxonomy.qza"
     output:
-        "data/comp_qiime/tss_tax_filt.qza",
-        "data/comp_qiime/tss_tax_filt.qzv"
+        tss_tax_filt = "data/comp_qiime/tss_tax_filt.qza",
+        tss_tax_filt_vis = "data/comp_qiime/tss_tax_filt.qzv"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime taxa filter-table \
-            --i-table ./data/misc/comp_tss_table.qza \
-            --i-taxonomy ./data/comp_qiime/taxonomy.qza \
+            --i-table {input.tss_table} \
+            --i-taxonomy {input.taxonomy} \
             --p-include p_ \
             --p-exclude mitochondria,chloroplast \
-            --o-filtered-table ./data/comp_qiime/tss_tax_filt.qza
+            --o-filtered-table {output.tss_tax_filt}
         
         qiime feature-table summarize \
-            --i-table ./data/comp_qiime/tss_tax_filt.qza \
-            --o-visualization ./data/comp_qiime/tss_tax_filt.qzv
+            --i-table {output.tss_tax_filt} \
+            --o-visualization {output.tss_tax_filt_vis}
         """
 
 
 rule pre_core_metrics_filter:
     input:
-        "data/comp_qiime/tss_tax_filt.qza",
-        "data/misc/comp_metadata.tsv"
+        tss_tax_filt = "data/comp_qiime/tss_tax_filt.qza",
+        metadata = "data/misc/comp_metadata.tsv"
     output:
-        "data/comp_qiime/tax_filt_actual.qza"
+        meta_filt_tax = "data/comp_qiime/tax_filt_actual.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime feature-table filter-samples \
-            --i-table ./data/comp_qiime/tss_tax_filt.qza \
-            --m-metadata-file ./data/misc/comp_metadata.tsv \
-            --o-filtered-table ./data/comp_qiime/tax_filt_actual.qza
+            --i-table {input.tss_tax_filt} \
+            --m-metadata-file {input.metadata} \
+            --o-filtered-table {output.meta_filt_tax}
         """
 
 
 rule core_metrics_analysis:
 ##  NEED TO CHECK THE SAMPLING DEPTH BEFORE YOU RUN THIS STEP
     input:
-        "data/comp_qiime/tree.qza",
-        "data/comp_qiime/tax_filt_actual.qza",
-        "data/misc/comp_metadata.tsv"
+        tree = "data/comp_qiime/tree.qza",
+        meta_filt_tax = "data/comp_qiime/tax_filt_actual.qza",
+        metadata = "data/misc/comp_metadata.tsv"
     output:
-        "data/core_outputs/bray_curtis_distance_matrix.qza",
-        "data/core_outputs/bray_curtis_emperor.qzv",
-        "data/core_outputs/bray_curtis_pcoa_results.qza",
-        "data/core_outputs/evenness_vector.qza",
-        "data/core_outputs/faith_pd_vector.qza",
-        "data/core_outputs/jaccard_distance_matrix.qza",
-        "data/core_outputs/jaccard_emperor.qzv",
-        "data/core_outputs/jaccard_pcoa_results.qza",
-        "data/core_outputs/observed_features_vector.qza",
-        "data/core_outputs/rarefied_table.qza",
-        "data/core_outputs/shannon_vector.qza",
-        "data/core_outputs/unweighted_unifrac_distance_matrix.qza",
-        "data/core_outputs/unweighted_unifrac_emperor.qzv",
-        "data/core_outputs/unweighted_unifrac_pcoa_results.qza",
-        "data/core_outputs/weighted_unifrac_distance_matrix.qza",
-        "data/core_outputs/weighted_unifrac_emperor.qzv",
-        "data/core_outputs/weighted_unifrac_pcoa_results.qza"
+        bray_curtis_distance_matrix = "data/core_outputs/bray_curtis_distance_matrix.qza",
+        bray_curtis_emperor = "data/core_outputs/bray_curtis_emperor.qzv",
+        bray_curtis_pcoa_results = "data/core_outputs/bray_curtis_pcoa_results.qza",
+        evenness = "data/core_outputs/evenness_vector.qza",
+        faith_pd = "data/core_outputs/faith_pd_vector.qza",
+        jaccard_distance_matrix = "data/core_outputs/jaccard_distance_matrix.qza",
+        jaccard_emperor = "data/core_outputs/jaccard_emperor.qzv",
+        jaccard_pcoa_results = "data/core_outputs/jaccard_pcoa_results.qza",
+        observed = "data/core_outputs/observed_features_vector.qza",
+        rarefied = "data/core_outputs/rarefied_table.qza",
+        shannon = "data/core_outputs/shannon_vector.qza",
+        unweighted_unifrac_distance_matrix = "data/core_outputs/unweighted_unifrac_distance_matrix.qza",
+        unweighted_unifrac_emperor = "data/core_outputs/unweighted_unifrac_emperor.qzv",
+        unweighted_unifrac_pcoa_results = "data/core_outputs/unweighted_unifrac_pcoa_results.qza",
+        weighted_unifrac_distance_matrix = "data/core_outputs/weighted_unifrac_distance_matrix.qza",
+        weighted_unifrac_emperor = "data/core_outputs/weighted_unifrac_emperor.qzv",
+        weighted_unifrac_pcoa_results = "data/core_outputs/weighted_unifrac_pcoa_results.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime diversity core-metrics-phylogenetic \
-            --i-phylogeny ./data/comp_qiime/tree.qza \
-            --i-table ./data/comp_qiime/tax_filt_actual.qza \
+            --i-phylogeny {input.tree} \
+            --i-table {input.meta_filt_tax} \
             --p-sampling-depth  99631 \
-            --m-metadata-file ./data/misc/comp_metadata.tsv \
-            --o-rarefied-table ./data/core_outputs/rarefied_table.qza \
-            --o-faith-pd-vector ./data/core_outputs/faith_pd_vector.qza \
-            --o-observed-features-vector ./data/core_outputs/observed_features_vector.qza \
-            --o-shannon-vector ./data/core_outputs/shannon_vector.qza \
-            --o-evenness-vector ./data/core_outputs/evenness_vector.qza \
-            --o-unweighted-unifrac-distance-matrix ./data/core_outputs/unweighted_unifrac_distance_matrix.qza \
-            --o-weighted-unifrac-distance-matrix ./data/core_outputs/weighted_unifrac_distance_matrix.qza \
-            --o-jaccard-distance-matrix ./data/core_outputs/jaccard_distance_matrix.qza \
-            --o-bray-curtis-distance-matrix ./data/core_outputs/bray_curtis_distance_matrix.qza \
-            --o-unweighted-unifrac-pcoa-results ./data/core_outputs/unweighted_unifrac_pcoa_results.qza \
-            --o-weighted-unifrac-pcoa-results ./data/core_outputs/weighted_unifrac_pcoa_results.qza \
-            --o-jaccard-pcoa-results ./data/core_outputs/jaccard_pcoa_results.qza \
-            --o-bray-curtis-pcoa-results ./data/core_outputs/bray_curtis_pcoa_results.qza \
-            --o-unweighted-unifrac-emperor ./data/core_outputs/unweighted_unifrac_emperor.qzv \
-            --o-weighted-unifrac-emperor ./data/core_outputs/weighted_unifrac_emperor.qzv \
-            --o-jaccard-emperor ./data/core_outputs/jaccard_emperor.qzv \
-            --o-bray-curtis-emperor ./data/core_outputs/bray_curtis_emperor.qzv
+            --m-metadata-file {input.metadata} \
+            --o-rarefied-table {output.rarefied} \
+            --o-faith-pd-vector {output.faith_pd} \
+            --o-observed-features-vector {output.observed} \
+            --o-shannon-vector {output.shannon} \
+            --o-evenness-vector {output.evenness} \
+            --o-unweighted-unifrac-distance-matrix {output.unweighted_unifrac_distance_matrix} \
+            --o-weighted-unifrac-distance-matrix {output.weighted_unifrac_distance_matrix} \
+            --o-jaccard-distance-matrix {output.jaccard_distance_matrix} \
+            --o-bray-curtis-distance-matrix {output.bray_curtis_distance_matrix} \
+            --o-unweighted-unifrac-pcoa-results {output.unweighted_unifrac_pcoa_results} \
+            --o-weighted-unifrac-pcoa-results {output.weighted_unifrac_pcoa_results} \
+            --o-jaccard-pcoa-results {output.jaccard_pcoa_results} \
+            --o-bray-curtis-pcoa-results {output.bray_curtis_pcoa_results} \
+            --o-unweighted-unifrac-emperor {output.unweighted_unifrac_emperor} \
+            --o-weighted-unifrac-emperor {output.weighted_unifrac_emperor} \
+            --o-jaccard-emperor {output.jaccard_emperor} \
+            --o-bray-curtis-emperor {output.bray_curtis_emperor}
         """
 
 
@@ -446,5 +443,211 @@ rule unzip_faith_pd:
 
         mv ./data/core_outputs/faith_pd/faith_pd.tsv \
         ./data/core_outputs/
+        """
+
+
+rule alpha_diversity_plots:
+    input:
+        metadata = "data/misc/comp_metadata.tsv",
+        faith_pd = "data/core_outputs/faith_pd.tsv",
+        shannon = "data/core_outputs/shannon_entropy.tsv"
+    output:
+        faith_plot = "plots/faith_pd.pdf",
+        shannon_plot = "plots/shannon_entropy.pdf"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/alpha_div_plots.R --metadata {input.metadata} \
+                                          --faith_pd {input.faith_pd} \
+                                          --shannon {input.shannon} \
+                                          --output_faith {output.faith_plot} \
+                                          --output_shannon {output.shannon_plot}
+        """
+
+
+rule alpha_diversity_stats:
+    input:
+        metadata = "data/misc/comp_metadata.tsv",
+        faith_pd = "data/core_outputs/faith_pd.tsv",
+        shannon = "data/core_outputs/shannon_entropy.tsv"
+    output:
+        faith_lm = "stats/faith_total_results.tsv",
+        faith_lm_sec = "stats/faith_diet_results.tsv",
+        faith_dunn = "stats/faith_dunn.tsv",
+        shannon_lm = "stats/shannon_total_results.tsv",
+        shannon_lm_sec = "stats/shannon_diet_results.tsv",
+        shannon_dunn = "stats/shannon_dunn.tsv",
+        faith_plot = "plots/faith_stat_vis.pdf",
+        shannon_plot = "plots/shannon_stat_vis.pdf"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/alpha_div_stats.R --metadata {input.metadata} \
+                                          --faith_pd {input.faith_pd} \
+                                          --shannon {input.shannon} \
+                                          --faith_lm {output.faith_lm} \
+                                          --faith_lm_sec {output.faith_lm_sec} \
+                                          --faith_dunn {output.faith_dunn} \
+                                          --shannon_lm {output.shannon_lm} \
+                                          --shannon_lm_sec {output.shannon_lm_sec} \
+                                          --shannon_dunn {output.shannon_dunn} \
+                                          --faith_plot {output.faith_plot} \
+                                          --shannon_plot {output.shannon_plot}
+        """
+
+
+rule beta_diversity_plots:
+    input:
+        metadata = "data/misc/comp_metadata.tsv",
+        unweighted_uni = "data/core_outputs/unweighted_unifrac_pcoa_results.qza",
+        weighted_uni = "data/core_outputs/weighted_unifrac_pcoa_results.qza",
+        faith_pd = "data/core_outputs/faith_pd.tsv",
+        shannon = "data/core_outputs/shannon_entropy.tsv"
+    output:
+        unweighted_plot = "plots/unweighted_unifrac_pcoa.pdf",
+        weighted_plot = "plots/weighted_unifrac_pcoa.pdf"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/beta_div_plots.R --metadata {input.metadata} \
+                                         --unweighted_unifrac {input.unweighted_uni} \
+                                         --weighted_unifrac {input.weighted_uni} \
+                                         --faith_pd {input.faith_pd} \
+                                         --shannon {input.shannon} \
+                                         --output_uu {output.unweighted_plot} \
+                                         --output_wu {output.weighted_plot}
+        """
+
+
+rule beta_diversity_stats:
+    input:
+        metadata = "data/misc/comp_metadata.tsv",
+        uw_dist = "data/core_outputs/uw_dist_matrix.tsv",
+        w_dist = "data/core_outputs/w_dist_matrix.tsv"
+    output:
+        w_adonis = "stats/w_adonis_results.tsv",
+        uw_adonis = "stats/uw_adonis_results.tsv",
+        w_adonis_day = "stats/w_adonis_by_day.tsv",
+        uw_adonis_day = "stats/uw_adonis_by_day.tsv"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/beta_div_stats.R --metadata {input.metadata} \
+                                         --uu_dist {input.uw_dist} \
+                                         --wu_dist {input.w_dist} \
+                                         --uu_adonis {output.uw_adonis} \
+                                         --wu_adonis {output.w_adonis} \
+                                         --uu_adonis_day {output.uw_adonis_day} \
+                                         --wu_adonis_day {output.w_adonis_day}
+        """
+
+
+rule homogeneity:
+    input:
+        metadata = "data/misc/comp_metadata.tsv",
+        uu_dist = "data/core_outputs/uw_dist_matrix.tsv",
+        wu_dist = "data/core_outputs/w_dist_matrix.tsv"
+    output:
+        wu_lm = "stats/wu_homogeneity.tsv",
+        wu_dunn = "stats/wu_homog_dunn.tsv",
+        uu_lm = "stats/uu_homogeneity.tsv",
+        uu_dunn = "stats/uu_homog_dunn.tsv",
+        wu_plot = "plots/wu_homogeneity.pdf",
+        wu_stat_plot = "plots/wu_homog_stats.pdf",
+        uu_plot = "plots/uu_homogeneity.pdf",
+        uu_stat_plot = "plots/uu_homog_stats.pdf"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/homog_calc.R --metadata {input.metadata} \
+                                     --uu_dist {input.uu_dist} \
+                                     --wu_dist {input.wu_dist} \
+                                     --weighted_lm {output.wu_lm} \
+                                     --weighted_dunn {output.wu_dunn} \
+                                     --unweighted_lm {output.uu_lm} \
+                                     --unweighted_dunn {output.uu_dunn} \
+                                     --weighted_plot {output.wu_plot} \
+                                     --weighted_stat_plot {output.wu_stat_plot} \
+                                     --unweighted_plot {output.uu_plot} \
+                                     --unweighted_stat_plot {output.uu_stat_plot}
+        """
+
+
+rule resiliency:
+    input:
+       metadata = "data/misc/comp_metadata.tsv",
+       uu_dist = "data/core_outputs/uw_dist_matrix.tsv",
+       wu_dist = "data/core_outputs/w_dist_matrix.tsv"
+    output:
+        uu_lm = "stats/uu_resiliency.tsv",
+        uu_dunn = "stats/uu_resil_dunn.tsv",
+        wu_lm = "stats/wu_resiliency.tsv",
+        wu_dunn = "stats/wu_resil_dunn.tsv",
+        wu_plot = "plots/wu_resiliency.pdf",
+        wu_stat_plot = "plots/wu_resil_stats.pdf",
+        uu_plot = "plots/uu_resiliency.pdf",
+        uu_stat_plot = "plots/uu_resil_stats.pdf"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/resil_calc.R --metadata {input.metadata} \
+                                     --uu_dist {input.uu_dist} \
+                                     --wu_dist {input.wu_dist} \
+                                     --weighted_lm {output.wu_lm} \
+                                     --weighted_dunn {output.wu_dunn} \
+                                     --unweighted_lm {output.uu_lm} \
+                                     --unweighted_dunn {output.uu_dunn} \
+                                     --weighted_plot {output.wu_plot} \
+                                     --weighted_stat_plot {output.wu_stat_plot} \
+                                     --unweighted_plot {output.uu_plot} \
+                                     --unweighted_stat_plot {output.uu_stat_plot}
+        """
+
+
+rule family_abundance_plots:
+    input:
+        otu_table = "data/comp_qiime/tax_filt_actual.qza",
+        taxonomy = "data/comp_qiime/taxonomy.qza",
+        metadata = "data/misc/comp_metadata.tsv"
+    output:
+        plot1 = "plots/family_abun1.pdf",
+        plot2 = "plots/family_abun2.pdf"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/family_abun_plots.R --metadata {input.metadata} \
+                                            --otu {input.otu_table} \
+                                            --taxonomy {input.taxonomy} \
+                                            --plot1 {output.plot1} \
+                                            --plot2 {output.plot2}
+        """
+
+
+rule family_abundance_stats:
+    input:
+       otu_table = "data/comp_qiime/tax_filt_actual.qza",
+       taxonomy = "data/comp_qiime/taxonomy.qza",
+       metadata = "data/misc/comp_metadata.tsv"
+    output:
+        lm = "stats/family_abun_lm.tsv",
+        dunn = "stats/family_abun_dunn.tsv",
+        stat_plot = "plots/famAbun_stat_vis.pdf"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/family_abun_stats.R --metadata {input.metadata} \
+                                            --otu {input.otu_table} \
+                                            --taxonomy {input.taxonomy} \
+                                            --stat_plot {output.stat_plot} \
+                                            --linear_model {output.lm} \
+                                            --dunn {output.dunn}
         """
 

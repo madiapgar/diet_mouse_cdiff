@@ -25,14 +25,11 @@ rule target:
         "data/cecal_qiime/total_sum_scaling.biom",
         "data/cecal_qiime/total_sum_scaling.qza",
         "data/cecal_qiime/fasta_files/dna-sequences.fasta",
-        "data/cecal_qiime2/tree.qza",
-        "data/cecal_qiime2/placements.qza",
-        "data/cecal_qiime2/total_sum_filt_table.qza",
-        "data/cecal_qiime2/total_sum_rem_table.qza",
-        "data/cecal_qiime2/taxonomy.qza",
-        "data/cecal_qiime2/taxonomy_filtered.qza",
-        "data/cecal_qiime2/taxonomy_filtered.qzv",
-        "data/cecal_qiime2/tax_filt_actual.qza",
+        "data/cecal_qiime/total_sum_filt_table.qza",
+        "data/cecal_qiime/total_sum_rem_table.qza",
+        "data/cecal_qiime/tss_tax_filt.qza",
+        "data/cecal_qiime/tss_tax_filt.qzv",
+        "data/cecal_qiime/tax_filt_actual.qza",
         "data/core_outputs/bray_curtis_distance_matrix.qza",
         "data/core_outputs/bray_curtis_emperor.qzv",
         "data/core_outputs/bray_curtis_pcoa_results.qza",
@@ -94,177 +91,177 @@ rule target:
 
 rule seq069_demultiplex:
     input:
-        "data/cecal_qiime/SEQ069/cecal_s69_barcodes.txt",
-        "data/cecal_qiime/SEQ069/s69_paired_end_seqs.qza"
+        barcodes = "data/cecal_qiime/SEQ069/cecal_s69_barcodes.txt",
+        seqs = "data/cecal_qiime/SEQ069/s69_paired_end_seqs.qza"
     output:
-        "data/cecal_qiime/SEQ069/s69_demux.qza",
-        "data/cecal_qiime/SEQ069/s69_demux_details.qza",
-        "data/cecal_qiime/SEQ069/s69_demux.qzv"
+        demux = "data/cecal_qiime/SEQ069/s69_demux.qza",
+        demux_details = "data/cecal_qiime/SEQ069/s69_demux_details.qza",
+        demux_vis = "data/cecal_qiime/SEQ069/s69_demux.qzv"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime demux emp-paired \
-            --m-barcodes-file ./data/cecal_qiime/SEQ069/cecal_s69_barcodes.txt \
+            --m-barcodes-file {input.barcodes} \
             --m-barcodes-column BarcodeSequence \
-            --i-seqs ./data/cecal_qiime/SEQ069/s69_paired_end_seqs.qza \
-            --o-per-sample-sequences ./data/cecal_qiime/SEQ069/s69_demux.qza \
-            --o-error-correction-details ./data/cecal_qiime/SEQ069/s69_demux_details.qza \
+            --i-seqs {input.seqs} \
+            --o-per-sample-sequences {output.demux} \
+            --o-error-correction-details {output.demux_details} \
             --p-no-golay-error-correction
         
         qiime demux summarize \
-            --i-data ./data/cecal_qiime/SEQ069/s69_demux.qza \
-            --o-visualization ./data/cecal_qiime/SEQ069/s69_demux.qzv
+            --i-data {output.demux} \
+            --o-visualization {output.demux_vis}
         """
 
 
 rule seq070_demultiplex:
     input:
-        "data/cecal_qiime/SEQ070/cecal_s70_barcodes.txt",
-        "data/cecal_qiime/SEQ070/s70_paired_end_seqs.qza"
+        barcodes = "data/cecal_qiime/SEQ070/cecal_s70_barcodes.txt",
+        seqs = "data/cecal_qiime/SEQ070/s70_paired_end_seqs.qza"
     output:
-        "data/cecal_qiime/SEQ070/s70_demux.qza",
-        "data/cecal_qiime/SEQ070/s70_demux_details.qza",
-        "data/cecal_qiime/SEQ070/s70_demux.qzv"
+        demux = "data/cecal_qiime/SEQ070/s70_demux.qza",
+        demux_details = "data/cecal_qiime/SEQ070/s70_demux_details.qza",
+        demux_vis = "data/cecal_qiime/SEQ070/s70_demux.qzv"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime demux emp-paired \
-            --m-barcodes-file ./data/cecal_qiime/SEQ070/cecal_s70_barcodes.txt \
+            --m-barcodes-file {input.barcodes} \
             --m-barcodes-column BarcodeSequence \
-            --i-seqs ./data/cecal_qiime/SEQ070/s70_paired_end_seqs.qza \
-            --o-per-sample-sequences ./data/cecal_qiime/SEQ070/s70_demux.qza \
-            --o-error-correction-details ./data/cecal_qiime/SEQ070/s70_demux_details.qza \
+            --i-seqs {input.seqs} \
+            --o-per-sample-sequences {output.demux} \
+            --o-error-correction-details {output.demux_details} \
             --p-no-golay-error-correction
         
         qiime demux summarize \
-            --i-data ./data/cecal_qiime/SEQ070/s70_demux.qza \
-            --o-visualization ./data/cecal_qiime/SEQ070/s70_demux.qzv
+            --i-data {output.demux} \
+            --o-visualization {output.demux_vis}
         """
 
 
 rule seq071_demultiplex:
     input:
-        "data/cecal_qiime/SEQ071/cecal_s71_barcodes.txt",
-        "data/cecal_qiime/SEQ071/s71_paired_end_seqs.qza"
+        barcodes = "data/cecal_qiime/SEQ071/cecal_s71_barcodes.txt",
+        seqs = "data/cecal_qiime/SEQ071/s71_paired_end_seqs.qza"
     output:
-        "data/cecal_qiime/SEQ071/s71_demux.qza",
-        "data/cecal_qiime/SEQ071/s71_demux_details.qza",
-        "data/cecal_qiime/SEQ071/s71_demux.qzv"
+        demux = "data/cecal_qiime/SEQ071/s71_demux.qza",
+        demux_details = "data/cecal_qiime/SEQ071/s71_demux_details.qza",
+        demux_vis = "data/cecal_qiime/SEQ071/s71_demux.qzv"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime demux emp-paired \
-            --m-barcodes-file ./data/cecal_qiime/SEQ071/cecal_s71_barcodes.txt \
+            --m-barcodes-file {input.barcodes} \
             --m-barcodes-column BarcodeSequence \
-            --i-seqs ./data/cecal_qiime/SEQ071/s71_paired_end_seqs.qza \
-            --o-per-sample-sequences ./data/cecal_qiime/SEQ071/s71_demux.qza \
-            --o-error-correction-details ./data/cecal_qiime/SEQ071/s71_demux_details.qza \
+            --i-seqs {input.seqs} \
+            --o-per-sample-sequences {output.demux} \
+            --o-error-correction-details {output.demux_details} \
             --p-no-golay-error-correction
-
+        
         qiime demux summarize \
-            --i-data ./data/cecal_qiime/SEQ071/s71_demux.qza \
-            --o-visualization ./data/cecal_qiime/SEQ071/s71_demux.qzv
+            --i-data {output.demux} \
+            --o-visualization {output.demux_vis}
         """
 
 ## do all three runs need to be trimmed/truncated at the same place bc they will be joined together later? - yes!
 rule seq069_dada2:
     input:
-        "data/cecal_qiime/SEQ069/s69_demux.qza"
+        demux = "data/cecal_qiime/SEQ069/s69_demux.qza"
     output:
-        "data/cecal_qiime/SEQ069/s69_table.qza",
-        "data/cecal_qiime/SEQ069/s69_rep_seqs.qza",
-        "data/cecal_qiime/SEQ069/s69_denoise_stats.qza"
+        table = "data/cecal_qiime/SEQ069/s69_table.qza",
+        rep_seqs = "data/cecal_qiime/SEQ069/s69_rep_seqs.qza",
+        denoise_stats = "data/cecal_qiime/SEQ069/s69_denoise_stats.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime dada2 denoise-paired \
-            --i-demultiplexed-seqs ./data/cecal_qiime/SEQ069/s69_demux.qza \
+            --i-demultiplexed-seqs {input.demux} \
             --p-trim-left-f 13 \
             --p-trim-left-r 13 \
             --p-trunc-len-f 230 \
             --p-trunc-len-r 160 \
-            --o-table ./data/cecal_qiime/SEQ069/s69_table.qza \
-            --o-representative-sequences ./data/cecal_qiime/SEQ069/s69_rep_seqs.qza \
-            --o-denoising-stats ./data/cecal_qiime/SEQ069/s69_denoise_stats.qza
+            --o-table {output.table} \
+            --o-representative-sequences {output.rep_seqs} \
+            --o-denoising-stats {output.denoise_stats}
         """
 
 
 rule seq070_dada2:
     input:
-        "data/cecal_qiime/SEQ070/s70_demux.qza"
+        demux = "data/cecal_qiime/SEQ070/s70_demux.qza"
     output:
-        "data/cecal_qiime/SEQ070/s70_table.qza",
-        "data/cecal_qiime/SEQ070/s70_rep_seqs.qza",
-        "data/cecal_qiime/SEQ070/s70_denoise_stats.qza"
+        table = "data/cecal_qiime/SEQ070/s70_table.qza",
+        rep_seqs = "data/cecal_qiime/SEQ070/s70_rep_seqs.qza",
+        denoise_stats = "data/cecal_qiime/SEQ070/s70_denoise_stats.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime dada2 denoise-paired \
-            --i-demultiplexed-seqs ./data/cecal_qiime/SEQ070/s70_demux.qza \
+            --i-demultiplexed-seqs {input.demux} \
             --p-trim-left-f 13 \
             --p-trim-left-r 13 \
             --p-trunc-len-f 230 \
             --p-trunc-len-r 160 \
-            --o-table ./data/cecal_qiime/SEQ070/s70_table.qza \
-            --o-representative-sequences ./data/cecal_qiime/SEQ070/s70_rep_seqs.qza \
-            --o-denoising-stats ./data/cecal_qiime/SEQ070/s70_denoise_stats.qza
+            --o-table {output.table} \
+            --o-representative-sequences {output.rep_seqs} \
+            --o-denoising-stats {output.denoise_stats}
         """
 
 
 rule seq071_dada2:
     input:
-        "data/cecal_qiime/SEQ071/s71_demux.qza"
+        demux = "data/cecal_qiime/SEQ071/s71_demux.qza"
     output:
-        "data/cecal_qiime/SEQ071/s71_table.qza",
-        "data/cecal_qiime/SEQ071/s71_rep_seqs.qza",
-        "data/cecal_qiime/SEQ071/s71_denoise_stats.qza"
+        table = "data/cecal_qiime/SEQ071/s71_table.qza",
+        rep_seqs = "data/cecal_qiime/SEQ071/s71_rep_seqs.qza",
+        denoise_stats = "data/cecal_qiime/SEQ071/s71_denoise_stats.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime dada2 denoise-paired \
-            --i-demultiplexed-seqs ./data/cecal_qiime/SEQ071/s71_demux.qza \
+            --i-demultiplexed-seqs {input.demux} \
             --p-trim-left-f 13 \
             --p-trim-left-r 13 \
             --p-trunc-len-f 230 \
             --p-trunc-len-r 160 \
-            --o-table ./data/cecal_qiime/SEQ071/s71_table.qza \
-            --o-representative-sequences ./data/cecal_qiime/SEQ071/s71_rep_seqs.qza \
-            --o-denoising-stats ./data/cecal_qiime/SEQ071/s71_denoise_stats.qza
+            --o-table {output.table} \
+            --o-representative-sequences {output.rep_seqs} \
+            --o-denoising-stats {output.denoise_stats}
         """
 
 
 rule merge_run_tables:
     input:
-        "data/cecal_qiime/SEQ069/s69_table.qza",
-        "data/cecal_qiime/SEQ070/s70_table.qza",
-        "data/cecal_qiime/SEQ071/s71_table.qza",
-        "data/cecal_qiime/SEQ069/s69_rep_seqs.qza",
-        "data/cecal_qiime/SEQ070/s70_rep_seqs.qza",
-        "data/cecal_qiime/SEQ071/s71_rep_seqs.qza"
+        table1 = "data/cecal_qiime/SEQ069/s69_table.qza",
+        table2 = "data/cecal_qiime/SEQ070/s70_table.qza",
+        table3 = "data/cecal_qiime/SEQ071/s71_table.qza",
+        seqs1 = "data/cecal_qiime/SEQ069/s69_rep_seqs.qza",
+        seqs2 = "data/cecal_qiime/SEQ070/s70_rep_seqs.qza",
+        seqs3 = "data/cecal_qiime/SEQ071/s71_rep_seqs.qza"
     output:
-        "data/cecal_qiime/all_cecal_table.qza",
-        "data/cecal_qiime/all_cecal_rep_seqs.qza"
+        merged_table = "data/cecal_qiime/all_cecal_table.qza",
+        merged_seqs = "data/cecal_qiime/all_cecal_rep_seqs.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime feature-table merge \
-            --i-tables ./data/cecal_qiime/SEQ069/s69_table.qza \
-            --i-tables ./data/cecal_qiime/SEQ070/s70_table.qza \
-            --i-tables ./data/cecal_qiime/SEQ071/s71_table.qza \
-            --o-merged-table ./data/cecal_qiime/all_cecal_table.qza
+            --i-tables {input.table1} \
+            --i-tables {input.table2} \
+            --i-tables {input.table3} \
+            --o-merged-table {output.merged_table}
 
         qiime feature-table merge-seqs \
-            --i-data ./data/cecal_qiime/SEQ069/s69_rep_seqs.qza \
-            --i-data ./data/cecal_qiime/SEQ070/s70_rep_seqs.qza \
-            --i-data ./data/cecal_qiime/SEQ071/s71_rep_seqs.qza \
-            --o-merged-data ./data/cecal_qiime/all_cecal_rep_seqs.qza
+            --i-data {input.seqs1} \
+            --i-data {input.seqs2} \
+            --i-data {input.seqs3} \
+            --o-merged-data {output.merged_seqs}
         """
 
 
@@ -281,123 +278,124 @@ rule get_reference_databases:
 
 rule sepp_phylo_tree:
     input:
-        "data/cecal_qiime/all_cecal_rep_seqs.qza",
-        "databases/sepp-refs-silva-128.qza"
+        seqs = "data/cecal_qiime/all_cecal_rep_seqs.qza",
+        silva_ref = "databases/sepp-refs-silva-128.qza"
     output:
-        "data/cecal_qiime/tree.qza",
-        "data/cecal_qiime/placements.qza"
+        tree = "data/cecal_qiime/tree.qza",
+        placements = "data/cecal_qiime/placements.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime fragment-insertion sepp \
-            --i-representative-sequences ./data/cecal_qiime/all_cecal_rep_seqs.qza \
-            --i-reference-database ./databases/sepp-refs-silva-128.qza \
-            --o-tree ./data/cecal_qiime/tree.qza \
-            --o-placements ./data/cecal_qiime/placements.qza
+            --i-representative-sequences {input.seqs} \
+            --i-reference-database {input.silva_ref} \
+            --o-tree {output.tree} \
+            --o-placements {output.placements}
         """
 
 
 rule sepp_ASV_filtering:
     input:
-        "data/cecal_qiime/all_cecal_table.qza",
-        "data/cecal_qiime/tree.qza"
+        table = "data/cecal_qiime/all_cecal_table.qza",
+        tree = "data/cecal_qiime/tree.qza"
     output:
-        "data/cecal_qiime/filt_cecal_table.qza",
-        "data/cecal_qiime/rem_cecal_table.qza"
+        filt_table = "data/cecal_qiime/filt_cecal_table.qza",
+        rem_table = "data/cecal_qiime/rem_cecal_table.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime fragment-insertion filter-features \
-            --i-table ./data/cecal_qiime/all_cecal_table.qza \
-            --i-tree ./data/cecal_qiime/tree.qza \
-            --o-filtered-table ./data/cecal_qiime/filt_cecal_table.qza \
-            --o-removed-table ./data/cecal_qiime/rem_cecal_table.qza
+            --i-table {input.table} \
+            --i-tree {input.tree} \
+            --o-filtered-table {output.filt_table} \
+            --o-removed-table {output.rem_table}
         """
 
 
 rule taxonomic_classification:
     input:
-        "databases/silva-138-99-515-806-nb-classifier.qza",
-        "data/cecal_qiime/all_cecal_rep_seqs.qza"
+        silva_class = "databases/silva-138-99-515-806-nb-classifier.qza",
+        seqs = "data/cecal_qiime/all_cecal_rep_seqs.qza"
     output:
-        "data/cecal_qiime/taxonomy.qza"
+        taxonomy = "data/cecal_qiime/taxonomy.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime feature-classifier classify-sklearn \
-            --i-classifier ./databases/silva-138-99-515-806-nb-classifier.qza \
-            --i-reads ./data/cecal_qiime/all_cecal_rep_seqs.qza \
-            --o-classification ./data/cecal_qiime/taxonomy.qza
+            --i-classifier {input.silva_class} \
+            --i-reads {input.seqs} \
+            --o-classification {output.taxonomy}
         """
 
 
 rule filter_taxonomy:
     input:
-        "data/cecal_qiime/filt_cecal_table.qza",
-        "data/cecal_qiime/taxonomy.qza"
+        filt_table = "data/cecal_qiime/filt_cecal_table.qza",
+        taxonomy = "data/cecal_qiime/taxonomy.qza"
     output:
-        "data/cecal_qiime/taxonomy_filtered.qza",
-        "data/cecal_qiime/taxonomy_filtered.qzv"
+        tax_filt = "data/cecal_qiime/taxonomy_filtered.qza",
+        tax_filt_vis = "data/cecal_qiime/taxonomy_filtered.qzv"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime taxa filter-table \
-            --i-table ./data/cecal_qiime/filt_cecal_table.qza \
-            --i-taxonomy ./data/cecal_qiime/taxonomy.qza \
+            --i-table {input.filt_table} \
+            --i-taxonomy {input.taxonomy} \
             --p-include p_ \
             --p-exclude mitochondria,chloroplast \
-            --o-filtered-table ./data/cecal_qiime/taxonomy_filtered.qza
+            --o-filtered-table {output.tax_filt}
         
         qiime feature-table summarize \
-            --i-table ./data/cecal_qiime/taxonomy_filtered.qza \
-            --o-visualization ./data/cecal_qiime/taxonomy_filtered.qzv
+            --i-table {output.tax_filt} \
+            --o-visualization {output.tax_filt_vis}
         """
 
 ## from here on, this will follow the same steps as the colon pipeline (depending on the lactococccus contam)
 ## convert rep-seqs to a fasta file for total sum scaling?? - yes, do this
 rule create_lacto_table:
     input:
-        "data/cecal_qiime/filt_cecal_table.qza",
-        "data/cecal_qiime/taxonomy.qza",
-        "data/cecal_qiime/all_cecal_rep_seqs.qza"
+        filt_table = "data/cecal_qiime/filt_cecal_table.qza",
+        taxonomy = "data/cecal_qiime/taxonomy.qza",
+        seqs = "data/cecal_qiime/all_cecal_rep_seqs.qza"
     output:
-        "data/cecal_qiime/lacto_cecal_table.qza",
-        "data/cecal_qiime/lacto_rep_seqs.qza" 
+        lacto_table = "data/cecal_qiime/lacto_cecal_table.qza",
+        lacto_rep_seqs = "data/cecal_qiime/lacto_rep_seqs.qza" 
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime taxa filter-table \
-            --i-table ./data/cecal_qiime/filt_cecal_table.qza \
-            --i-taxonomy ./data/cecal_qiime/taxonomy.qza \
+            --i-table {input.filt_table} \
+            --i-taxonomy {input.taxonomy} \
             --p-include Lactococcus \
-            --o-filtered-table ./data/cecal_qiime/lacto_cecal_table.qza
+            --o-filtered-table {output.lacto_table}
         
         qiime feature-table filter-seqs \
-            --i-data ./data/cecal_qiime/all_cecal_rep_seqs.qza \
-            --i-table ./data/cecal_qiime/lacto_cecal_table.qza \
-            --o-filtered-data ./data/cecal_qiime/lacto_rep_seqs.qza
+            --i-data {input.seqs} \
+            --i-table {output.lacto_table} \
+            --o-filtered-data {output.lacto_rep_seqs}
         """
 
 
 rule convert_to_fasta:
     input:
-        "data/cecal_qiime/lacto_rep_seqs.qza"
+        lacto_rep_seqs = "data/cecal_qiime/lacto_rep_seqs.qza"
     output:
-        "data/cecal_qiime/lactoOnly_rep_seqs.fasta"
+        output_path = "data/cecal_qiime/dna-sequences.fasta",
+        lacto_fasta = "data/cecal_qiime/lactoOnly_rep_seqs.fasta"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime tools export \
-            --input-path ./data/cecal_qiime/lacto_rep_seqs.qza \
-            --output-path ./data/cecal_qiime
+            --input-path {input.lacto_rep_seqs} \
+            --output-path {output.output_path}
         
-        mv ./data/cecal_qiime/dna-sequences.fasta ./data/cecal_qiime/lactoOnly_rep_seqs.fasta
+        mv {output.output_path} {output.lacto_fasta}
         """
 
 
@@ -419,7 +417,7 @@ rule total_sum_scaling:
 
 rule tss_tsv2biom:
     input:
-       "data/cecal_qiime/total_sum_scaling.tsv" 
+        "data/cecal_qiime/total_sum_scaling.tsv" 
     output:
         "data/cecal_qiime/total_sum_scaling.biom"
     conda:
@@ -427,8 +425,8 @@ rule tss_tsv2biom:
     shell:
         """
         biom convert \
-            -i ./data/cecal_qiime/total_sum_scaling.tsv \
-            -o ./data/cecal_qiime/total_sum_scaling.biom \
+            -i {input} \
+            -o {output} \
             --table-type "Table" \
             --to-hdf5
         """
@@ -443,9 +441,9 @@ rule tss_biom2qza:
     shell:
         """
         qiime tools import \
-            --input-path ./data/cecal_qiime/total_sum_scaling.biom \
+            --input-path {input} \
             --type 'FeatureTable[Frequency]' \
-            --output-path ./data/cecal_qiime/total_sum_scaling.qza
+            --output-path {output}
         """
 
 
@@ -459,164 +457,129 @@ rule rep_seqs2fasta:
     shell:
         """
         qiime tools export \
-            --input-path ./data/cecal_qiime/all_cecal_rep_seqs.qza \
-            --output-path ./data/cecal_qiime/fasta_files
-        """
-
-
-rule sepp_phylo_tree2:
-    input:
-        "data/cecal_qiime/all_cecal_rep_seqs.qza",
-        "databases/sepp-refs-silva-128.qza"
-    output:
-        "data/cecal_qiime2/tree.qza",
-        "data/cecal_qiime2/placements.qza"
-    conda:
-        "qiime2-2023.5"
-    shell:
-        """
-        qiime fragment-insertion sepp \
-            --i-representative-sequences ./data/cecal_qiime/all_cecal_rep_seqs.qza \
-            --i-reference-database ./databases/sepp-refs-silva-128.qza \
-            --o-tree ./data/cecal_qiime2/tree.qza \
-            --o-placements ./data/cecal_qiime2/placements.qza
+            --input-path {input} \
+            --output-path {output}
         """
 
 
 rule sepp_ASV_filtering2:
     input:
-        "data/cecal_qiime/total_sum_scaling.qza",
-        "data/cecal_qiime2/tree.qza"
+        table = "data/cecal_qiime/total_sum_scaling.qza",
+        tree = "data/cecal_qiime/tree.qza"
     output:
-        "data/cecal_qiime2/total_sum_filt_table.qza",
-        "data/cecal_qiime2/total_sum_rem_table.qza"
+        filt_table = "data/cecal_qiime/total_sum_filt_table.qza",
+        rem_table = "data/cecal_qiime/total_sum_rem_table.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime fragment-insertion filter-features \
-            --i-table ./data/cecal_qiime/total_sum_scaling.qza \
-            --i-tree ./data/cecal_qiime2/tree.qza \
-            --o-filtered-table ./data/cecal_qiime2/total_sum_filt_table.qza \
-            --o-removed-table ./data/cecal_qiime2/total_sum_rem_table.qza
+            --i-table {input.table} \
+            --i-tree {input.tree} \
+            --o-filtered-table {output.filt_table} \
+            --o-removed-table {output.rem_table}
         """
 
-
-rule taxonomic_classification2:
-    input:
-        "databases/silva-138-99-515-806-nb-classifier.qza",
-        "data/cecal_qiime/all_cecal_rep_seqs.qza"
-    output:
-        "data/cecal_qiime2/taxonomy.qza"
-    conda:
-        "qiime2-2023.5"
-    shell:
-        """
-        qiime feature-classifier classify-sklearn \
-            --i-classifier ./databases/silva-138-99-515-806-nb-classifier.qza \
-            --i-reads ./data/cecal_qiime/all_cecal_rep_seqs.qza \
-            --o-classification ./data/cecal_qiime2/taxonomy.qza
-        """
 
 rule filter_taxonomy2:
     input:
-        "data/cecal_qiime/total_sum_scaling.qza",
-        "data/cecal_qiime2/taxonomy.qza"
+        table = "data/cecal_qiime/total_sum_scaling.qza",
+        taxonomy = "data/cecal_qiime/taxonomy.qza"
     output:
-        "data/cecal_qiime2/taxonomy_filtered.qza"
+        tss_tax_filt = "data/cecal_qiime/tss_tax_filt.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime taxa filter-table \
-            --i-table ./data/cecal_qiime/total_sum_scaling.qza \
-            --i-taxonomy ./data/cecal_qiime2/taxonomy.qza \
+            --i-table {input.table} \
+            --i-taxonomy {input.taxonomy} \
             --p-include p_ \
             --p-exclude mitochondria,chloroplast \
-            --o-filtered-table ./data/cecal_qiime2/taxonomy_filtered.qza
+            --o-filtered-table {output.tss_tax_filt}
         """
 
 rule filter_taxonomy_vis2:
     input:
-        "data/cecal_qiime2/taxonomy_filtered.qza"
+        "data/cecal_qiime/tss_tax_filt.qza"
     output:
-        "data/cecal_qiime2/taxonomy_filtered.qzv"
+        "data/cecal_qiime/tss_tax_filt.qzv"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime feature-table summarize \
-            --i-table ./data/cecal_qiime2/taxonomy_filtered.qza \
-            --o-visualization ./data/cecal_qiime2/taxonomy_filtered.qzv
+            --i-table {input} \
+            --o-visualization {output}
         """
 
 ## RERUN FROM NOW ON WITH REPLICATE ONE FILTERED OUT OF THE METADATA
 rule pre_core_metrics_filter:
     input:
-        "data/cecal_qiime2/taxonomy_filtered.qza",
-        "data/misc/cecal_metadata.tsv"
+        tss_tax_filt = "data/cecal_qiime/tss_tax_filt.qza",
+        metadata = "data/misc/filt_cecal_metadata.tsv"
     output:
-        "data/cecal_qiime2/tax_filt_actual.qza"
+        meta_filt_tax = "data/cecal_qiime/tax_filt_actual.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime feature-table filter-samples \
-            --i-table ./data/cecal_qiime2/taxonomy_filtered.qza \
-            --m-metadata-file ./data/misc/cecal_metadata.tsv \
-            --o-filtered-table ./data/cecal_qiime2/tax_filt_actual.qza
+            --i-table {input.tss_tax_filt} \
+            --m-metadata-file {input.metadata} \
+            --o-filtered-table {output.meta_filt_tax}
         """
 
 rule core_metrics_analysis:
 ##  NEED TO CHECK THE SAMPLING DEPTH BEFORE YOU RUN THIS STEP
     input:
-        "data/cecal_qiime2/tree.qza",
-        "data/cecal_qiime2/tax_filt_actual.qza",
-        "data/misc/cecal_metadata.tsv"
+        tree = "data/cecal_qiime/tree.qza",
+        meta_filt_tax = "data/cecal_qiime/tax_filt_actual.qza",
+        metadata = "data/misc/filt_cecal_metadata.tsv"
     output:
-        "data/core_outputs/bray_curtis_distance_matrix.qza",
-        "data/core_outputs/bray_curtis_emperor.qzv",
-        "data/core_outputs/bray_curtis_pcoa_results.qza",
-        "data/core_outputs/evenness_vector.qza",
-        "data/core_outputs/faith_pd_vector.qza",
-        "data/core_outputs/jaccard_distance_matrix.qza",
-        "data/core_outputs/jaccard_emperor.qzv",
-        "data/core_outputs/jaccard_pcoa_results.qza",
-        "data/core_outputs/observed_features_vector.qza",
-        "data/core_outputs/rarefied_table.qza",
-        "data/core_outputs/shannon_vector.qza",
-        "data/core_outputs/unweighted_unifrac_distance_matrix.qza",
-        "data/core_outputs/unweighted_unifrac_emperor.qzv",
-        "data/core_outputs/unweighted_unifrac_pcoa_results.qza",
-        "data/core_outputs/weighted_unifrac_distance_matrix.qza",
-        "data/core_outputs/weighted_unifrac_emperor.qzv",
-        "data/core_outputs/weighted_unifrac_pcoa_results.qza"
+        bray_curtis_distance_matrix = "data/core_outputs/bray_curtis_distance_matrix.qza",
+        bray_curtis_emperor = "data/core_outputs/bray_curtis_emperor.qzv",
+        bray_curtis_pcoa_results = "data/core_outputs/bray_curtis_pcoa_results.qza",
+        evenness = "data/core_outputs/evenness_vector.qza",
+        faith_pd = "data/core_outputs/faith_pd_vector.qza",
+        jaccard_distance_matrix = "data/core_outputs/jaccard_distance_matrix.qza",
+        jaccard_emperor = "data/core_outputs/jaccard_emperor.qzv",
+        jaccard_pcoa_results = "data/core_outputs/jaccard_pcoa_results.qza",
+        observed = "data/core_outputs/observed_features_vector.qza",
+        rarefied = "data/core_outputs/rarefied_table.qza",
+        shannon = "data/core_outputs/shannon_vector.qza",
+        unweighted_unifrac_distance_matrix = "data/core_outputs/unweighted_unifrac_distance_matrix.qza",
+        unweighted_unifrac_emperor = "data/core_outputs/unweighted_unifrac_emperor.qzv",
+        unweighted_unifrac_pcoa_results = "data/core_outputs/unweighted_unifrac_pcoa_results.qza",
+        weighted_unifrac_distance_matrix = "data/core_outputs/weighted_unifrac_distance_matrix.qza",
+        weighted_unifrac_emperor = "data/core_outputs/weighted_unifrac_emperor.qzv",
+        weighted_unifrac_pcoa_results = "data/core_outputs/weighted_unifrac_pcoa_results.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime diversity core-metrics-phylogenetic \
-            --i-phylogeny ./data/cecal_qiime2/tree.qza \
-            --i-table ./data/cecal_qiime2/tax_filt_actual.qza \
+            --i-phylogeny {input.tree} \
+            --i-table {input.meta_filt_tax} \
             --p-sampling-depth  99631 \
-            --m-metadata-file ./data/misc/cecal_metadata.tsv \
-            --o-rarefied-table ./data/core_outputs/rarefied_table.qza \
-            --o-faith-pd-vector ./data/core_outputs/faith_pd_vector.qza \
-            --o-observed-features-vector ./data/core_outputs/observed_features_vector.qza \
-            --o-shannon-vector ./data/core_outputs/shannon_vector.qza \
-            --o-evenness-vector ./data/core_outputs/evenness_vector.qza \
-            --o-unweighted-unifrac-distance-matrix ./data/core_outputs/unweighted_unifrac_distance_matrix.qza \
-            --o-weighted-unifrac-distance-matrix ./data/core_outputs/weighted_unifrac_distance_matrix.qza \
-            --o-jaccard-distance-matrix ./data/core_outputs/jaccard_distance_matrix.qza \
-            --o-bray-curtis-distance-matrix ./data/core_outputs/bray_curtis_distance_matrix.qza \
-            --o-unweighted-unifrac-pcoa-results ./data/core_outputs/unweighted_unifrac_pcoa_results.qza \
-            --o-weighted-unifrac-pcoa-results ./data/core_outputs/weighted_unifrac_pcoa_results.qza \
-            --o-jaccard-pcoa-results ./data/core_outputs/jaccard_pcoa_results.qza \
-            --o-bray-curtis-pcoa-results ./data/core_outputs/bray_curtis_pcoa_results.qza \
-            --o-unweighted-unifrac-emperor ./data/core_outputs/unweighted_unifrac_emperor.qzv \
-            --o-weighted-unifrac-emperor ./data/core_outputs/weighted_unifrac_emperor.qzv \
-            --o-jaccard-emperor ./data/core_outputs/jaccard_emperor.qzv \
-            --o-bray-curtis-emperor ./data/core_outputs/bray_curtis_emperor.qzv
+            --m-metadata-file {input.metadata} \
+            --o-rarefied-table {output.rarefied} \
+            --o-faith-pd-vector {output.faith_pd} \
+            --o-observed-features-vector {output.observed} \
+            --o-shannon-vector {output.shannon} \
+            --o-evenness-vector {output.evenness} \
+            --o-unweighted-unifrac-distance-matrix {output.unweighted_unifrac_distance_matrix} \
+            --o-weighted-unifrac-distance-matrix {output.weighted_unifrac_distance_matrix} \
+            --o-jaccard-distance-matrix {output.jaccard_distance_matrix} \
+            --o-bray-curtis-distance-matrix {output.bray_curtis_distance_matrix} \
+            --o-unweighted-unifrac-pcoa-results {output.unweighted_unifrac_pcoa_results} \
+            --o-weighted-unifrac-pcoa-results {output.weighted_unifrac_pcoa_results} \
+            --o-jaccard-pcoa-results {output.jaccard_pcoa_results} \
+            --o-bray-curtis-pcoa-results {output.bray_curtis_pcoa_results} \
+            --o-unweighted-unifrac-emperor {output.unweighted_unifrac_emperor} \
+            --o-weighted-unifrac-emperor {output.weighted_unifrac_emperor} \
+            --o-jaccard-emperor {output.jaccard_emperor} \
+            --o-bray-curtis-emperor {output.bray_curtis_emperor}
         """
 
 rule unzip_uw_distance_matrix:

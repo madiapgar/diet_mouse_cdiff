@@ -15,7 +15,7 @@ pip install snakemake
 conda deactivate
 
 echo "--------creating R envrionment"
-conda env create -f r_env.yml
+mamba env create -f r_env.yml
 
 echo "--------creating picrust environment"
-conda env create -f picrust2.yml
+mamba env create -f picrust2.yml

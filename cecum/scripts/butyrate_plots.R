@@ -40,9 +40,9 @@ parser$add_argument("-bt",
 args <- parser$parse_args()
 
 ## input file paths 
-# metadata_FP <- './data/misc/processed_metadata.tsv'
-# tax_FP <- './data/qiime/taxonomy.qza'
-# ko_contrib_FP <- './data/picrust/tss3_meta_contrib.tsv'
+# metadata_FP <- './cecum/data/misc/cecal_processed_metadata.tsv'
+# tax_FP <- './cecum/data/cecal_qiime/taxonomy.qza'
+# ko_contrib_FP <- './cecum/data/picrust/meta_contrib.tsv'
 
 ## other needed inputs 
 diet_labs <- 
@@ -60,12 +60,12 @@ diet_names_labs <- c('Chow',
 buk_tax_level <- 'class'
 buk_thresh_level <- 200
 buk_ko <- 'K00929'
-buk_title <- 'Butyrate Kinase Potential Over Time'
+buk_title <- 'Cecal Butyrate Kinase Potential at Day 3'
 ## butyryl coa transferase specs
 but_tax_level <- 'class'
 but_thresh_level <- 50
 but_ko <- 'K01034'
-but_title <- 'Butyryl-CoA Transferase Potential Over Time'
+but_title <- 'Cecal Butyryl-CoA Transferase Potential at Day 3'
 
 ## functions in order of usage 
 ## 1 
@@ -93,44 +93,41 @@ buty_file_prep <- function(tax_fp,
     left_join(metadata, by = 'sample') -> kometa_contrib_big
   ## filtering for wanted kos and taxonomic level
   kometa_contrib_big %>% 
-    select(sample, ko, taxon_function_abun, study, diet, day_post_inf, 
+    select(sample, ko, taxon_function_abun, study, diet, facility, 
            any_of(taxonomy_level)) %>% 
     filter(ko %in% ko_list) -> filtered_biom
   ## summing the wanted taxonomic level's abundance for a particular ko
   filtered_biom %>% 
-    group_by(sample, ko, study, diet, day_post_inf, .data[[taxonomy_level]]) %>% 
+    group_by(sample, ko, study, diet, facility, .data[[taxonomy_level]]) %>% 
     summarize(taxon_function_abun = sum(taxon_function_abun)) %>% 
     ungroup() -> filtered_biom_sum
   ## creating a facet that will contain the total plot to reference
   ## fill is set at 0.01 since its less than the lowest abundance which is 0.88
   THRESHOLD = threshold
-  filtered_biom_sum %>% 
-    group_by(sample, day_post_inf, ko, diet, study) %>% 
-    summarize(taxon_function_abun = sum(taxon_function_abun)) %>% 
-    mutate(class = 'Total') %>% 
-    filter(!is.na(day_post_inf)) %>%
-    spread(day_post_inf, taxon_function_abun, fill = 0.01) %>% 
-    gather(-sample, -ko, -diet, -study, -class,
-           key = day_post_inf, value = taxon_function_abun) %>% 
-    mutate(day_post_inf = as.numeric(day_post_inf)) %>% 
-    group_by(class) %>% 
+  filtered_biom_sum %>%
+    group_by(sample, facility, ko, diet, study) %>%
+    summarize(taxon_function_abun = sum(taxon_function_abun)) %>%
+    mutate(class = 'Total') %>%
+    spread(diet, taxon_function_abun, fill = 0.01) %>%
+    gather(-sample, -ko, -facility, -study, -class,
+           key = diet, value = taxon_function_abun) %>%
+    # mutate(day_post_inf = as.numeric(day_post_inf)) %>%
+    group_by(class) %>%
     mutate(other_col = mean(taxon_function_abun),
-           class = if_else(other_col < THRESHOLD, 'Other', class)) %>% 
+           class = if_else(other_col < THRESHOLD, 'Other', class)) %>%
     arrange(other_col) -> filtered_sample_abun
   ## classifying all taxonomic level abundances below determined threshold as 'Other'
   ## needs to be processed the exact same way as above so rbind() will work
-  filtered_biom_sum %>% 
-    filter(!is.na(day_post_inf)) %>%
-    spread(day_post_inf, taxon_function_abun, fill = 0.01) %>% 
-    gather(-sample, -ko, -diet, -study, -class,
-           key = day_post_inf, value = taxon_function_abun) %>% 
-    mutate(day_post_inf = as.numeric(day_post_inf)) %>% 
-    group_by(class) %>% 
+  filtered_biom_sum %>%
+    spread(diet, taxon_function_abun, fill = 0.01) %>%
+    gather(-sample, -ko, -facility, -study, -class,
+           key = diet, value = taxon_function_abun) %>%
+    group_by(class) %>%
     mutate(other_col = mean(taxon_function_abun),
-           class = if_else(other_col < THRESHOLD, 'Other', class)) %>% 
+           class = if_else(other_col < THRESHOLD, 'Other', class)) %>%
     arrange(other_col) -> filtered_sum_other
   ## rbinding filtered_sample_abun and filtered_sum_other together into the same table
-  filtered_sum_other %>% 
+  filtered_sum_other %>%
     rbind(filtered_sample_abun) -> big_filtered_sum
   ## creating a list of my outputs
   my_list <- list(Taxonomy = taxonomy,
@@ -149,23 +146,26 @@ butyrate_plot <- function(processed_ko_biom,
   labs <- labels
   names(labs) <- names_labels
   processed_ko_biom %>% 
-    filter(!is.na(diet)) %>% 
-    ggplot(aes(x = day_post_inf, y = taxon_function_abun)) +
+    filter(!is.na(diet),
+           !is.na(class)) %>% 
+    ggplot(aes(x = diet, y = taxon_function_abun)) +
     scale_y_continuous(trans = 'log10') +
-    scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
-    geom_violin(aes(group = day_post_inf), outlier.shape = NA) +
+    scale_x_discrete(labels = c('Chow',
+                                'HFt/\nHFb',
+                                'HFt/\nLFb',
+                                'LFt/\nHFb',
+                                'LFt/\nLFb')) +
+    geom_violin(aes(group = diet)) +
     geom_smooth(se = FALSE, size = 0.5) +
     geom_jitter(width = 0.1, height = 0, 
                 alpha = 0.4) +
-    geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
-    geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
-    facet_grid(class~diet, labeller = labeller(diet = labs)) +
+    facet_grid(~class) +
     theme_bw(base_size = 16) +
     theme(legend.text = element_text(size = 8.5),
           strip.text.y = element_text(angle = 0)) +
     guides(color = guide_legend(override.aes = list(size = 0.9))) +
     ggtitle(title) +
-    xlab('Days Relative to Infection') +
+    xlab('Diet') +
     ylab('KO Counts') -> butyrate
   return(butyrate)
 }
@@ -210,10 +210,10 @@ butyryl_coa_transferase <- butyrate_plot(for_but_plot,
 ## saving my plot outputs
 ggsave(args$buk_plot_FP, 
        plot = butyrate_kinase,
-       width = 11, 
-       height = 7)
+       width = 12, 
+       height = 4.5)
 
 ggsave(args$but_plot_FP,
        plot = butyryl_coa_transferase, 
-       width = 11, 
-       height = 7)
+       width = 12, 
+       height = 4.5)

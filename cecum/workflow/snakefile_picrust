@@ -1,6 +1,5 @@
 rule all:
     input:
-        "data/picrust/tmp_out_pipeline",
         "data/picrust/out_pipeline",
         "data/picrust/meta_contrib.tsv",
         "plots/butyrate_kinase.pdf",
@@ -22,7 +21,7 @@ rule picrust2:
         biom = "data/cecal_qiime/total_sum_scaling.biom"
     output:
         tmp_out = directory("data/picrust/tmp_out_pipeline"),
-        out = directory("data/picrust/out_pipeline")
+        out = "data/picrust/out_pipeline"
     conda:
         "picrust2"
     shell:

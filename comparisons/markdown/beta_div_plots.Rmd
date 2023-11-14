@@ -93,11 +93,12 @@ pcoa_plot <- function(biom_file,
     filter(!is.na(diet)) %>% 
     ggplot(aes(x = PC1, y = PC2)) +
     geom_point(aes(fill = faith_pd), pch = 21, alpha = 0.7, size = 2) +
-    theme_bw(base_size = 14) +
+    theme_bw(base_size = 16) +
+    # scale_fill_brewer(palette = 'Dark2', name = 'Sample Type') +
     scale_fill_distiller(palette = 'Spectral', name = "Faith's PD") +
     facet_grid(day_post_inf~diet,
                labeller = labeller(diet = labs)) +
-    theme(legend.text = element_text(size = 8.5),
+    theme(legend.text = element_text(size = 12),
           strip.text.y = element_text(angle = 0)) +
     ggtitle(title) +
     labs(x = xlab, y = ylab) -> pcoa
@@ -113,6 +114,13 @@ weighted_FP <- '../data/core_outputs/weighted_unifrac_pcoa_results.qza'
 faith_pd_FP <- '../data/core_outputs/faith_pd.tsv'
 shannon_FP <- '../data/core_outputs/shannon_entropy.tsv'
 
+## day 3 filtered out of stool "colon" samples
+filt_metadata_FP <- '../data/misc/filt_comp_metadata.tsv'
+filt_unweighted_FP <- '../data/day3_filt_core/unweighted_unifrac_pcoa_results.qza'
+filt_weighted_FP <- '../data/day3_filt_core/weighted_unifrac_pcoa_results.qza'
+filt_faith_pd_FP <- '../data/day3_filt_core/faith_pd.tsv'
+filt_shannon_FP <- '../data/day3_filt_core/shannon_entropy.tsv'
+
 diet_labs <- 
   c('Chow', 
     'High Fat / High Fiber', 
@@ -126,6 +134,9 @@ diet_names_labels <- c('Chow',
                        'LF/HF', 
                        'LF/LF')
 ```
+
+
+# **Colon and Cecum Data Combined with No Filtering**
 
 **Metadata File**
 ```{r}
@@ -150,7 +161,7 @@ weighted_biom <- core_files$WeightedBiom
 ```
 
 **Unweighted UniFrac PCoA**
-```{r, fig.height=7, fig.width=12}
+```{r, fig.height=7, fig.width=13}
 uw_uni_xlab <- pcoa_ax_lab(uw_var, 'PC1')
 uw_uni_ylab <- pcoa_ax_lab(uw_var, 'PC2')
 
@@ -166,7 +177,7 @@ unweighted_pcoa
 ```
 
 **Weighted UniFrac PCoA Plot**
-```{r, fig.height=7, fig.width=12}
+```{r, fig.height=7, fig.width=13}
 w_uni_xlab <- pcoa_ax_lab(w_var, 'PC1')
 w_uni_ylab <- pcoa_ax_lab(w_var, 'PC2')
 
@@ -185,12 +196,81 @@ weighted_pcoa
 ```{r}
 ggsave('../plots/unweighted_unifrac_pcoa.pdf',
        plot = unweighted_pcoa, 
-       width = 12, 
+       width = 13, 
        height = 7)
 
 ggsave('../plots/weighted_unifrac_pcoa.pdf',
        plot = weighted_pcoa, 
-       width = 12, 
+       width = 13, 
        height = 7)
 ```
 
+
+# **Cecum and Colon Data Combined with Day 3 Filtered out of the Colon Samples**
+
+**Metadata File**
+```{r}
+filt_metadata <- read_tsv(filt_metadata_FP)
+names(filt_metadata)[names(filt_metadata) == '#SampleID'] <- 'sampleid'
+```
+
+**Data Wrangling for my Files**
+```{r}
+## preparing core beta diversity files for ggplot
+filt_core_files <- biom_table_prep(filt_unweighted_FP,
+                                    filt_weighted_FP,
+                                    filt_faith_pd_FP,
+                                    filt_shannon_FP,
+                                    filt_metadata)
+
+## extracting core beta diversity files from named list 
+filt_uw_var <- filt_core_files$UnweightedVar
+filt_w_var <- filt_core_files$WeightedVar
+filt_unweighted_biom <- filt_core_files$UnweightedBiom
+filt_weighted_biom <- filt_core_files$WeightedBiom
+```
+
+**Unweighted UniFrac PCoA**
+```{r, fig.height=7, fig.width=13}
+filt_uw_uni_xlab <- pcoa_ax_lab(filt_uw_var, 'PC1')
+filt_uw_uni_ylab <- pcoa_ax_lab(filt_uw_var, 'PC2')
+
+filt_uw_title <- 'Day 3 Filtered Unweighted UniFrac PCoA Plot'
+
+filt_unweighted_pcoa <- pcoa_plot(filt_unweighted_biom,
+                                   diet_labs,
+                                   diet_names_labels,
+                                   filt_uw_uni_xlab,
+                                   filt_uw_uni_ylab,
+                                   filt_uw_title)
+filt_unweighted_pcoa
+```
+
+**Weighted UniFrac PCoA Plot**
+```{r, fig.height=7, fig.width=13}
+filt_w_uni_xlab <- pcoa_ax_lab(filt_w_var, 'PC1')
+filt_w_uni_ylab <- pcoa_ax_lab(filt_w_var, 'PC2')
+
+filt_w_title <- 'Day 3 Filtered Weighted UniFrac PCoA Plot'
+
+filt_weighted_pcoa <- pcoa_plot(filt_weighted_biom,
+                                 diet_labs,
+                                 diet_names_labels,
+                                 filt_w_uni_xlab,
+                                 filt_w_uni_ylab,
+                                 filt_w_title)
+filt_weighted_pcoa
+```
+
+**Saving my Outputs**
+```{r}
+ggsave('../day3_filt_plots/unweighted_unifrac_pcoa.pdf',
+       plot = filt_unweighted_pcoa, 
+       width = 13, 
+       height = 7)
+
+ggsave('../day3_filt_plots/weighted_unifrac_pcoa.pdf',
+       plot = filt_weighted_pcoa, 
+       width = 13, 
+       height = 7)
+```

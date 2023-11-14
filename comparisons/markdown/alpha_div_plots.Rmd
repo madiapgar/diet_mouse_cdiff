@@ -98,6 +98,11 @@ metadata_FP <- '../data/misc/comp_metadata.tsv'
 faith_pd_FP <- '../data/core_outputs/faith_pd.tsv'
 shannon_FP <- '../data/core_outputs/shannon_entropy.tsv'
 
+## day 3 filtered out of stool samples and replaced with cecal samples
+filt_metadata_FP <- '../data/misc/filt_comp_metadata.tsv'
+filt_faith_pd_FP <- '../data/day3_filt_core/faith_pd.tsv'
+filt_shannon_FP <- '../data/day3_filt_core/shannon_entropy.tsv'
+
 diet_labs <- 
   c('Chow', 
     'High Fat / High Fiber', 
@@ -112,6 +117,8 @@ diet_names_labels <- c('Chow',
                        'LF/LF')
 ```
 
+# **Colon and Cecum Data Combined with No Filtering**
+
 **Metadata File**
 ```{r}
 metadata <- read_tsv(metadata_FP)
@@ -119,7 +126,7 @@ names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
 ```
 
 **Faith's PD**
-```{r, fig.height=4.5, fig.width=14}
+```{r, fig.height=4.5, fig.width=14, warning=FALSE}
 faith_title <- "Combined Faith's Phylogenetic Diversity"
 
 faith_plot <- faith_pd_plot(faith_pd_FP,
@@ -132,7 +139,7 @@ faith_plot
 ```
 
 **Shannon Entropy**
-```{r, fig.height=4.5, fig.width=14}
+```{r, fig.height=4.5, fig.width=14, warning=FALSE}
 shannon_title <- "Combined Shannon Entropy"
 
 shannon_entropy_plot <- shannon_plot(shannon_FP,
@@ -156,3 +163,48 @@ ggsave('../plots/shannon_entropy.pdf',
        height = 4.5)
 ```
 
+# **Cecum and Colon Data Combined with Day 3 Filtered out of the Colon Samples**
+
+**Metadata File**
+```{r}
+filt_metadata <- read_tsv(filt_metadata_FP)
+names(filt_metadata)[names(filt_metadata) == '#SampleID'] <- 'sampleid'
+```
+
+**Faith's PD**
+```{r, fig.height=4.5, fig.width=14, warning=FALSE}
+filt_faith_title <- "Day 3 Filtered Faith's Phylogenetic Diversity"
+
+filt_faith_plot <- faith_pd_plot(filt_faith_pd_FP,
+                                filt_metadata,
+                                diet_labs,
+                                diet_names_labels,
+                                filt_faith_title)
+
+filt_faith_plot
+```
+
+**Shannon Entropy**
+```{r, fig.height=4.5, fig.width=14, warning=FALSE}
+filt_shannon_title <- "Day 3 Filtered Shannon Entropy"
+
+filt_shannon_entropy_plot <- shannon_plot(filt_shannon_FP,
+                                         filt_metadata,
+                                         diet_labs,
+                                         diet_names_labels,
+                                         filt_shannon_title)
+filt_shannon_entropy_plot
+```
+
+**Saving my Outputs**
+```{r}
+ggsave('../day3_filt_plots/faith_pd.pdf',
+       plot = filt_faith_plot, 
+       width = 14, 
+       height = 4.5)
+
+ggsave('../day3_filt_plots/shannon_entropy.pdf',
+       plot = filt_shannon_entropy_plot, 
+       width = 14, 
+       height = 4.5)
+```

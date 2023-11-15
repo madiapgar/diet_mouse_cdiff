@@ -91,7 +91,8 @@ mini_colon_meta %>%
   filter(day_post_inf != 3) -> colon_for_q
 
 rbind(cecum_for_q,
-      colon_for_q) -> filt_comp_metadata
+      colon_for_q) %>% 
+  filter(study != 1) -> filt_comp_metadata
 
 names(filt_comp_metadata)[names(filt_comp_metadata) == 'sampleid'] <- '#SampleID'
 ```
@@ -108,6 +109,6 @@ write_tsv(new_updated_meta,
 write_tsv(comp_metadata,
           '../../comparisons/data/misc/comp_metadata.tsv')
 write_tsv(filt_comp_metadata,
-          '../../comparisons/data/misc/filt_comp_metadata.tsv')
+          '../../comparisons/data/misc/s1filt_comp_metadata.tsv')
 ```
 

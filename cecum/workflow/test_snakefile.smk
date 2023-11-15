@@ -64,14 +64,19 @@ rule dada2:
         stats = "data/cecal_qiime/{run}_denoise_stats.qza"
     conda:
         "qiime2-2023.5"
+    params:
+        trim_left_for=13,
+        trim_left_rev=13,
+        trunc_len_for=230,
+        trunc_len_rev=160
     shell:
         """
         qiime dada2 denoise-paired \
             --i-demultiplexed-seqs {input} \
-            --p-trim-left-f 13 \
-            --p-trim-left-r 13 \
-            --p-trunc-len-f 230 \
-            --p-trunc-len-r 160 \
+            --p-trim-left-f {params.trim_left_for} \
+            --p-trim-left-r {params.trim_left_rev} \
+            --p-trunc-len-f {params.trunc_len_for} \
+            --p-trunc-len-r {params.trunc_len_rev} \
             --o-table {output.table} \
             --o-representative-sequences {output.seqs} \
             --o-denoising-stats {output.stats}

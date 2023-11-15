@@ -91,11 +91,12 @@ pcoa_plot <- function(biom_file,
   names(labs) <- (names_labels) 
   biom_file %>% 
     filter(!is.na(diet)) %>% 
+    mutate(study = as.factor(study)) %>% 
     ggplot(aes(x = PC1, y = PC2)) +
-    geom_point(aes(fill = faith_pd), pch = 21, alpha = 0.7, size = 2) +
+    geom_point(aes(fill = study), pch = 21, alpha = 0.7, size = 2) +
     theme_bw(base_size = 16) +
-    # scale_fill_brewer(palette = 'Dark2', name = 'Sample Type') +
-    scale_fill_distiller(palette = 'Spectral', name = "Faith's PD") +
+    scale_fill_brewer(palette = 'Dark2', name = 'Replicate') +
+    # scale_fill_distiller(palette = 'Spectral', name = "Faith's PD") +
     facet_grid(day_post_inf~diet,
                labeller = labeller(diet = labs)) +
     theme(legend.text = element_text(size = 12),

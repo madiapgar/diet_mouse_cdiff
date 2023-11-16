@@ -94,9 +94,9 @@ shannon_plot <- function(shannon_fp,
 
 **File Paths**
 ```{r}
-metadata_FP <- '../data/misc/comp_metadata.tsv'
-faith_pd_FP <- '../data/core_outputs/faith_pd.tsv'
-shannon_FP <- '../data/core_outputs/shannon_entropy.tsv'
+metadata_FP <- '../data/misc/s1_filt_comp_metadata.tsv'
+faith_pd_FP <- '../data/s1_filt_core/faith_pd.tsv'
+shannon_FP <- '../data/s1_filt_core/shannon_entropy.tsv'
 
 ## day 3 filtered out of stool samples and replaced with cecal samples
 filt_metadata_FP <- '../data/misc/filt_comp_metadata.tsv'

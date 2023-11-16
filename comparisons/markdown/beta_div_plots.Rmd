@@ -93,10 +93,10 @@ pcoa_plot <- function(biom_file,
     filter(!is.na(diet)) %>% 
     mutate(study = as.factor(study)) %>% 
     ggplot(aes(x = PC1, y = PC2)) +
-    geom_point(aes(fill = study), pch = 21, alpha = 0.7, size = 2) +
+    geom_point(aes(fill = faith_pd), pch = 21, alpha = 0.7, size = 2) +
     theme_bw(base_size = 16) +
-    scale_fill_brewer(palette = 'Dark2', name = 'Replicate') +
-    # scale_fill_distiller(palette = 'Spectral', name = "Faith's PD") +
+    # scale_fill_brewer(palette = 'Dark2', name = 'Replicate') +
+    scale_fill_distiller(palette = 'Spectral', name = "Faith's PD") +
     facet_grid(day_post_inf~diet,
                labeller = labeller(diet = labs)) +
     theme(legend.text = element_text(size = 12),
@@ -109,11 +109,11 @@ pcoa_plot <- function(biom_file,
 
 **File Paths**
 ```{r}
-metadata_FP <- '../data/misc/comp_metadata.tsv'
-unweighted_FP <- '../data/core_outputs/unweighted_unifrac_pcoa_results.qza'
-weighted_FP <- '../data/core_outputs/weighted_unifrac_pcoa_results.qza'
-faith_pd_FP <- '../data/core_outputs/faith_pd.tsv'
-shannon_FP <- '../data/core_outputs/shannon_entropy.tsv'
+metadata_FP <- '../data/misc/s1_filt_comp_metadata.tsv'
+unweighted_FP <- '../data/s1_filt_core/unweighted_unifrac_pcoa_results.qza'
+weighted_FP <- '../data/s1_filt_core/weighted_unifrac_pcoa_results.qza'
+faith_pd_FP <- '../data/s1_filt_core/faith_pd.tsv'
+shannon_FP <- '../data/s1_filt_core/shannon_entropy.tsv'
 
 ## day 3 filtered out of stool "colon" samples
 filt_metadata_FP <- '../data/misc/filt_comp_metadata.tsv'

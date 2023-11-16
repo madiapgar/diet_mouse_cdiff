@@ -136,10 +136,8 @@ comp_plot <- function(histo_table,
 ```
 
 **Statisitical Analysis Functions**
-- to get negative r values - multiply the result by the estimate (given by the full linear model results) (estimate is greater than zero - multiply by one, if not, mulitply by negative one)
 - possibly putting my estimate values on x-axis 
 - have r value equal to size of the point in geom point 
-- need to factor directionality into the stat plots 
 - mediation v. confounder statistical tests? (butyrate and maybe microbiome as a mediator)
 ```{r}
 ## runs linear modeling on the table, diet, location, and toxin/metabolite wanted and returns full results 
@@ -227,7 +225,7 @@ stat_plot <- function(stat_table,
 
 **File Paths**
 ```{r}
-metadata_FP <- '../data/misc/filt_comp_metadata.tsv'
+metadata_FP <- '../data/misc/s1_filt_comp_metadata.tsv'
 histo_FP <- '../../colon/data/misc/histo_data.csv'
 metab_FP <- '../../colon/data/misc/metabolomics.csv'
 toxin_FP <- '../../colon/data/misc/toxin_final_data.tsv'

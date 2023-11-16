@@ -316,49 +316,19 @@ rule core_metrics_analysis:
         meta_filt_tax = "data/comp_qiime/tax_filt_actual.qza",
         metadata = "data/misc/comp_metadata.tsv"
     output:
-        bray_curtis_distance_matrix = "data/core_outputs/bray_curtis_distance_matrix.qza",
-        bray_curtis_emperor = "data/core_outputs/bray_curtis_emperor.qzv",
-        bray_curtis_pcoa_results = "data/core_outputs/bray_curtis_pcoa_results.qza",
-        evenness = "data/core_outputs/evenness_vector.qza",
-        faith_pd = "data/core_outputs/faith_pd_vector.qza",
-        jaccard_distance_matrix = "data/core_outputs/jaccard_distance_matrix.qza",
-        jaccard_emperor = "data/core_outputs/jaccard_emperor.qzv",
-        jaccard_pcoa_results = "data/core_outputs/jaccard_pcoa_results.qza",
-        observed = "data/core_outputs/observed_features_vector.qza",
-        rarefied = "data/core_outputs/rarefied_table.qza",
-        shannon = "data/core_outputs/shannon_vector.qza",
-        unweighted_unifrac_distance_matrix = "data/core_outputs/unweighted_unifrac_distance_matrix.qza",
-        unweighted_unifrac_emperor = "data/core_outputs/unweighted_unifrac_emperor.qzv",
-        unweighted_unifrac_pcoa_results = "data/core_outputs/unweighted_unifrac_pcoa_results.qza",
-        weighted_unifrac_distance_matrix = "data/core_outputs/weighted_unifrac_distance_matrix.qza",
-        weighted_unifrac_emperor = "data/core_outputs/weighted_unifrac_emperor.qzv",
-        weighted_unifrac_pcoa_results = "data/core_outputs/weighted_unifrac_pcoa_results.qza"
+        output_dir = directory("data/core_outputs")
     conda:
         "qiime2-2023.5"
+    params:
+        sampling_depth=99631
     shell:
         """
         qiime diversity core-metrics-phylogenetic \
             --i-phylogeny {input.tree} \
             --i-table {input.meta_filt_tax} \
-            --p-sampling-depth  99631 \
+            --p-sampling-depth  {params.sampling_depth} \
             --m-metadata-file {input.metadata} \
-            --o-rarefied-table {output.rarefied} \
-            --o-faith-pd-vector {output.faith_pd} \
-            --o-observed-features-vector {output.observed} \
-            --o-shannon-vector {output.shannon} \
-            --o-evenness-vector {output.evenness} \
-            --o-unweighted-unifrac-distance-matrix {output.unweighted_unifrac_distance_matrix} \
-            --o-weighted-unifrac-distance-matrix {output.weighted_unifrac_distance_matrix} \
-            --o-jaccard-distance-matrix {output.jaccard_distance_matrix} \
-            --o-bray-curtis-distance-matrix {output.bray_curtis_distance_matrix} \
-            --o-unweighted-unifrac-pcoa-results {output.unweighted_unifrac_pcoa_results} \
-            --o-weighted-unifrac-pcoa-results {output.weighted_unifrac_pcoa_results} \
-            --o-jaccard-pcoa-results {output.jaccard_pcoa_results} \
-            --o-bray-curtis-pcoa-results {output.bray_curtis_pcoa_results} \
-            --o-unweighted-unifrac-emperor {output.unweighted_unifrac_emperor} \
-            --o-weighted-unifrac-emperor {output.weighted_unifrac_emperor} \
-            --o-jaccard-emperor {output.jaccard_emperor} \
-            --o-bray-curtis-emperor {output.bray_curtis_emperor}
+            --output-dir {output}
         """
 
 

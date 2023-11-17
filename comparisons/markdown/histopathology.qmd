@@ -17,8 +17,8 @@ library(ggpubr)
 **File Paths**
 
 ```{r}
-metadata_FP <- '../data/misc/processed_metadata.tsv'
-histo_FP <- '../data/misc/histo_data.csv'
+metadata_FP <- '../../cecum/data/misc/filt_cecal_processed_metadata.tsv'
+histo_FP <- '../../colon/data/misc/histo_data.csv'
 
 ## lists to redo the diet names on the facet labels of the ggplot created below 
 diet_labs <- 
@@ -46,23 +46,11 @@ metadata <- read_tsv(metadata_FP)
 histo <- read_csv(histo_FP) %>% 
   filter(!is.na(mouse_id))
 
-wanted_ids <- histo$mouse_id
-
 ## joining them all together for ggplot rendering 
 metadata %>% 
   merge(histo, by = 'mouse_id') %>% 
-  group_by(mouse_id) %>% 
-  filter(day_post_inf == max(day_post_inf)) %>% 
-  ungroup() %>% 
-  mutate(day_post_inf = as.factor(day_post_inf)) %>% 
-  gather(cecum, colon, key = tissue, value = score) -> big_histo
-
-## test histo without days relative to infection
-metadata %>% 
-  merge(histo, by = 'mouse_id') %>% 
-  group_by(mouse_id) %>% 
-  filter(day_post_inf == max(day_post_inf)) %>% 
-  ungroup() -> test_histo
+  gather(cecum, colon, key = tissue, value = score) %>% 
+  select(!c(tube_num, date, corr_sample_num)) -> big_histo
 ```
 
 **Histopathology Score Kruskal-Wallis and Dunn's Post Hoc Tests by Diet**
@@ -235,8 +223,7 @@ big_histo %>%
   arrange(p.value) %>%
   mutate(p.adj = p.adjust(p.value,
                           method = "BH"),
-        test_id = paste(tissue, diet, sep = "_")) %>% 
-  filter(p.adj <= 0.05) -> batch_kruskal
+        test_id = paste(tissue, diet, sep = "_")) -> batch_kruskal
 
 ## dunn's post hoc test
 big_histo %>% 
@@ -279,24 +266,17 @@ big_histo %>%
 batch_plot
 ```
 
-```{r}
-test_histo %>% 
-  filter(study == 1) -> test_histo1
-
-length(unique(metadata$mouse_id))
-```
-
 **Saving Plot and Stats**
 
 ```{r}
 ## regular plots
-ggsave("histopathology_all.pdf", 
+ggsave("histopathology.pdf", 
        plot = all_day_plot,
        width = 10, 
        height = 6,
        path = '../plots')
 write_tsv(big_histo_lm,
-          '../stats/histopathology_all.tsv')
+          '../stats/histopathology_lm.tsv')
 
 ## by barrier facility plots
 ggsave("histo_facility_comp.pdf", 

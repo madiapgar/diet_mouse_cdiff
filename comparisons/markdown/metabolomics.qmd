@@ -10,7 +10,6 @@ library(cowplot)
 library(magrittr)
 library(qiime2R)
 library(tidyverse)
-library(naniar)
 library(ggpubr)
 library(rstatix)
 ```
@@ -18,8 +17,8 @@ library(rstatix)
 **File Paths**
 
 ```{r}
-metadata_FP <- '../data/misc/processed_metadata.tsv'
-metab_FP <- '../data/misc/metabolomics.csv'
+metadata_FP <- '../../cecum/data/misc/filt_cecal_processed_metadata.tsv'
+metab_FP <- '../../colon/data/misc/metabolomics.csv'
 wanted_metabs <- c('Acetic Acid (ug/g)',
                    'Propanoic Acid (ug/g)',
                    'n-Butanoic Acid (ug/g)')
@@ -34,7 +33,10 @@ unwanted_columns <- c('2-methyl-propanoic acid (ug/g)',
                      'Tube_Label',
                      'Sample_Type',
                      'Collection Date',
-                     'Dil.')
+                     'Dil.',
+                     'tube_num',
+                     'date',
+                     'corr_sample_num')
 metab_labs <- c('Acetic Acid',
                 'Propanoic Acid',
                 'n-Butanoic Acid')
@@ -43,20 +45,17 @@ names(metab_labs) <- wanted_metabs
 
 **Prepping Metadata and Metabolomics Files**
 
+ATTENTION: Some of the zeroes on this plot are from samples labeled 'ND' - most of these samples were from the high-fat/low-fiber diet.
+
 ```{r}
 ## metabolomics file prep 
 metab <- read_csv(metab_FP)
-wanted_ids <- metab$mouse_id
 
 ## metadta file prep 
 metadata <- read_tsv(metadata_FP)
 
 metadata %>% 
-  group_by(mouse_id) %>% 
-  filter(mouse_id %in% wanted_ids) -> meta_filt
-
-meta_filt %>% 
-  left_join(metab, by = 'mouse_id') %>% 
+  merge(metab, by = 'mouse_id') %>% 
   select(-(all_of(unwanted_columns))) %>% 
   gather(wanted_metabs, key = metabolite, value = concentration) %>% 
   filter(!is.na(mouse_id)) -> pre_metab
@@ -66,8 +65,7 @@ pre_metab$concentration[pre_metab$concentration == 'ND'] <- 0
 
 pre_metab %>% 
   filter(!is.na(concentration)) %>% 
-  mutate(concentration = as.numeric(concentration)) %>% 
-  distinct(mouse_id, concentration, .keep_all = TRUE) -> big_metab
+  mutate(concentration = as.numeric(concentration)) -> big_metab
 ```
 
 **Putting Together Stats for the Ggplot**\
@@ -109,11 +107,13 @@ big_metab %>%
   ggplot(aes(x = diet, y = concentration)) +
   geom_violin(aes(group = diet)) +
   geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-  scale_x_discrete(labels = c('Chow', 'HFt/\nHFb', 'HFt/\nLFb',
-                              'LFt/\nHFb', 'LFt/\nLFb')) +
+  scale_x_discrete(labels = c('Chow', 
+                              'HFt/\nHFb', 
+                              'HFt/\nLFb',
+                              'LFt/\nHFb', 
+                              'LFt/\nLFb')) +
   facet_wrap(~metabolite, 
              nrow = 1,
-             scales = 'free_y',
              labeller = labeller(metabolite = metab_labs)) +
   theme_bw(base_size = 20) +
   stat_pvalue_manual(metab_dunn,

@@ -14,55 +14,11 @@ library(ggpubr)
 library(rstatix)
 ```
 
-```{r}
-## general function to prep the metadata file for further data analyses 
-metadata_fixer <- function(metadata_fp) {
-  tmpMeta <- read_tsv(metadata_fp, n_max = 2)
-  mycols <- colnames(tmpMeta)
-  metadata <- read_tsv(metadata_fp, skip = 2, col_names = mycols)
-  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
-  metadata %>% 
-    filter(!is.na(diet)) %>% 
-    mutate(day_post_inf = if_else(day_post_inf == 2, 3, day_post_inf)) %>% 
-    mutate(diet = as.factor(diet)) -> metadata
-  return(metadata)
-}
-
-## for editing my metadata file post metadata fixer 
-meta_diet_fixer <- function(metadata_file,
-                            seq_depth_fp){
-  seq_depths <- read_tsv(seq_depth_fp)
-  metadata_file %>% 
-    select(sampleid, diet, day_post_inf, mouse_id, study) %>% 
-    mutate(diet_true = diet,
-    diet_true = if_else(day_post_inf == -15, "Chow", diet_true),
-    high_fat = case_when(
-      diet_true == 'HF/HF' ~ 1,
-      diet_true == 'HF/LF' ~ 1,
-      .default = 0
-      ), 
-      high_fiber = case_when(
-      diet_true == 'HF/HF' ~ 1,
-      diet_true == 'LF/HF' ~ 1,
-      diet_true == 'Chow' ~ 1,
-      .default = 0
-      ), 
-      purified_diet = case_when(
-      diet_true == 'Chow' ~ 0,
-      .default = 1
-      )
-    ) %>% 
-    left_join(seq_depths) -> metadata
-  return(metadata)
-}
-```
-
 **File Paths**
 
 ```{r}
-metadata_FP <- '../data/misc/updated_metadata.tsv'
-toxin_FP <- '../data/misc/toxin_final_data.tsv'
-seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
+metadata_FP <- '../../cecum/data/misc/filt_cecal_processed_metadata.tsv'
+toxin_FP <- '../../colon/data/misc/toxin_final_data.tsv'
 
 neat_labs <- c('TcdA', 'TcdB')
 names(neat_labs) <- c('Total TcA Neat', 'Total TcB Neat')
@@ -73,7 +29,7 @@ names(dil_labs) <- c('Total TcA 1:10', 'Total TcB 1:10')
 
 **File Processing**
 
-Do I need to filter for mice that are from day_post_inf 3 like I did for the histopathology since I will be comparing it to the histopathology results??
+ATTENTION: You have more zeroes in the toxin data because some of the toxin concentrations were 'below detection limit' so they were put in as zeroes. It doesn't necessarily mean that there is less toxin in those samples. We also have diluted samples that were put in as 'chow' so they were turned to zeroes too - should those have been turned to zeroes?
 
 ```{r}
 ## toxin data 
@@ -81,41 +37,43 @@ toxin <- read_tsv(toxin_FP)
 wanted_ids <- toxin$mouse_id
 
 ## metadata 
-metadata <- metadata_fixer(metadata_FP)
-metadata <- meta_diet_fixer(metadata,
-                            seq_depth_FP)
+metadata <- read_tsv(metadata_FP) %>% 
+  select(!c(tube_num, date, corr_sample_num))
 
-metadata %>% 
-  group_by(mouse_id) %>% 
-  filter(mouse_id %in% wanted_ids) -> meta_filt
-
+## toxin neat concentrations (non_diluted)
 toxin %>% 
-  left_join(meta_filt, by = 'mouse_id') %>% 
+  merge(metadata, by = 'mouse_id') %>% 
+  select(!c('Total TcA 1:10', 'Total TcB 1:10')) %>% 
   gather('Total TcA Neat', 'Total TcB Neat', 
-         key = neat_toxin, value = neat_conc) %>% 
+         key = neat_toxin, value = neat_conc) -> pre_neat_toxin
+
+pre_neat_toxin$neat_conc[pre_neat_toxin$neat_conc == 'BDL'] <- '0'
+
+pre_neat_toxin %>% 
+  mutate(neat_conc = as.numeric(neat_conc)) %>% 
+  select(!c('Tube_Label',
+            'Collection Date',
+            'Sample_Type',
+            'Extra_Sample')) -> neat_toxin
+  
+## toxin diluted concentrations 
+## chow is not included in this 
+toxin %>% 
+  merge(metadata, by = 'mouse_id') %>% 
+  select(!c('Total TcA Neat', 'Total TcB Neat')) %>% 
   gather('Total TcA 1:10', 'Total TcB 1:10',
-         key = dil_toxin, value = dil_conc) -> pre_toxin
+         key = dil_toxin, value = dil_conc) -> pre_dil_toxin
 
-pre_toxin$neat_conc[pre_toxin$neat_conc == 'BDL'] <- '0'
-pre_toxin$dil_conc[pre_toxin$dil_conc == 'BDL'] <- '0'
-pre_toxin$dil_conc[pre_toxin$dil_conc == 'Chow'] <- '0'
+pre_dil_toxin$dil_conc[pre_dil_toxin$dil_conc == 'BDL'] <- '0'
+pre_dil_toxin$dil_conc[pre_dil_toxin$dil_conc == 'Chow'] <- '0'
 
-pre_toxin %>% 
-  filter(!is.na(dil_conc),
-         !is.na(neat_conc)) %>%
-  mutate(neat_conc = as.numeric(neat_conc),
-         dil_conc = as.numeric(dil_conc)) -> big_toxin
-
-## attempting to remove duplicated points due to repeating mouse_ids 
-## from my subsequent plots 
-big_toxin %>% 
-  select(-Extra_Sample) %>% 
-  distinct(mouse_id, dil_conc, .keep_all = TRUE) %>% 
-  filter(diet != 'Chow') -> dil_toxin
-
-big_toxin %>% 
-  select(-Extra_Sample) %>% 
-  distinct(mouse_id, neat_conc, .keep_all = TRUE) -> neat_toxin 
+pre_dil_toxin %>% 
+  mutate(dil_conc = as.numeric(dil_conc)) %>% 
+  filter(diet != 'Chow') %>% 
+  select(!c('Tube_Label',
+            'Collection Date',
+            'Sample_Type',
+            'Extra_Sample')) -> dil_toxin
 ```
 
 **Stats on my Toxin Data for Ggplot**
@@ -174,20 +132,21 @@ TcdA and TcdB concentrations by diet without any kind of dilution factor.
 
 So, I was actually using the wrong table to calculate the stats above for the ggplot and when I re-ran the stats with the correct table, none of the relationships came out as statistically significant according to p-value (rip).
 
-```{r, fig.height=5, fig.width=8}
+```{r, fig.height=5, fig.width=8, warning=FALSE}
 neat_toxin %>% 
+  mutate(study = as.factor(study)) %>% 
   na.omit() %>% 
   ggplot(aes(x = diet, y = neat_conc)) +
   geom_violin(aes(group = diet), draw_quantiles = c(0.5)) +
-  geom_jitter(alpha = 0.4, width = 0.1, height = 0)+
+  geom_jitter(aes(fill = study), alpha = 0.6, width = 0.1, height = 0, pch =21) +
+  # scale_y_log10() +
   scale_x_discrete(labels = c('Chow', 
                               'HFt/\nHFb', 
                               'HFt/\nLFb',
                               'LFt/\nHFb', 
                               'LFt/\nLFb')) +
   facet_wrap(~neat_toxin,
-             labeller = labeller(neat_toxin = neat_labs), 
-             scales = 'free_y') +
+             labeller = labeller(neat_toxin = neat_labs)) +
   stat_pvalue_manual(neat_dunn,
                      tip.length = 0.01,
                      label = 'p.adj.signif',
@@ -206,24 +165,25 @@ You're looking at the plot and you're like, "there must be an issue, there are n
 
 ```{r, fig.height=5, fig.width=8}
 dil_toxin %>% 
+  mutate(study = as.factor(study)) %>% 
   na.omit() %>% 
   ggplot(aes(x = diet, y = dil_conc)) +
   geom_violin(aes(group = diet), draw_quantiles = c(0.5)) +
-  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
+  geom_jitter(aes(fill = study), alpha = 0.7, width = 0.1, height = 0, pch = 21) +
+  scale_y_log10() +
   scale_x_discrete(labels = c('HFt/\nHFb', 
                               'HFt/\nLFb',
                               'LFt/\nHFb', 
                               'LFt/\nLFb')) +
   facet_wrap(~dil_toxin,
-             labeller = labeller(dil_toxin = dil_labs),
-             scales = 'free_y') +
+             labeller = labeller(dil_toxin = dil_labs)) +
   stat_pvalue_manual(dil_dunn,
                      tip.length = 0.01,
                      label = 'p.adj.signif',
                      hide.ns = TRUE) +
   theme_bw(base_size = 14) +
   xlab('Diet') +
-  ylab('Concentration') +
+  ylab('log10(Concentration)') +
   ggtitle('Toxin Diluted (1:10) Concentration by Diet')-> dil_plot
 
 dil_plot
@@ -303,6 +263,7 @@ dil_toxin %>%
   filter(test_id %in% dil_lm_full$test_id) %>%
   do(tidy(lm(dil_conc ~ (purified_diet * seq_depth) + high_fat * high_fiber,
                data = .))) %>% 
+  na.omit() %>% 
   filter(term != '(Intercept)') -> dil_results
 
 dil_results['signif'] <- symnum(dil_results$p.value,

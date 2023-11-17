@@ -29,68 +29,61 @@ file_prep <- function(metadata_fp,
                       histo_fp,
                       toxin_fp){
   ## metadata file
-  metadata <- read_tsv(metadata_fp)
-  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
+  metadata <- read_tsv(metadata_fp) %>% 
+              select(!c(tube_num, date, corr_sample_num))
+  # names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
   ## metabolomics file
   metab <- read_csv(metab_fp)
-  wanted_metab_ids <- metab$mouse_id
   metadata %>% 
-    group_by(mouse_id) %>% 
-    filter(mouse_id %in% wanted_metab_ids) %>% 
-    left_join(metab, by = 'mouse_id') %>% 
-    select(-(all_of(metab_col_filter))) %>% 
-    gather(metab_filter, key = metabolite, value = concentration) %>% 
+    merge(metab, by = 'mouse_id') %>% 
+    select(-(all_of(unwanted_columns))) %>% 
+    gather(wanted_metabs, key = metabolite, value = concentration) %>% 
     filter(!is.na(mouse_id)) -> pre_metab
   ## changes all 'ND' values in the concentration column to 0 
   pre_metab$concentration[pre_metab$concentration == 'ND'] <- 0
   pre_metab %>% 
     filter(!is.na(concentration)) %>% 
-    mutate(concentration = as.numeric(concentration)) %>% 
-    distinct(mouse_id, concentration, .keep_all = TRUE) -> big_metab
+    mutate(concentration = as.numeric(concentration)) -> big_metab
   ## histopathology file
   histo <- read_csv(histo_fp) %>% 
            filter(!is.na(mouse_id))
   metadata %>% 
     merge(histo, by = 'mouse_id') %>% 
-    group_by(mouse_id) %>% 
-    filter(day_post_inf == max(day_post_inf)) %>% 
-    ungroup() %>% 
-    mutate(day_post_inf = as.factor(day_post_inf)) %>% 
     gather(cecum, colon, key = tissue, value = score) -> big_histo
   ## toxin file
   toxin <- read_tsv(toxin_fp)
-  wanted_toxin_ids <- toxin$mouse_id
-  metadata %>% 
-    group_by(mouse_id) %>% 
-    filter(mouse_id %in% wanted_toxin_ids) -> meta_filt
+  ## toxin neat concentrations (non_diluted)
   toxin %>% 
-    left_join(meta_filt, by = 'mouse_id') %>% 
+    merge(metadata, by = 'mouse_id') %>% 
+    select(!c('Total TcA 1:10', 'Total TcB 1:10')) %>% 
     gather('Total TcA Neat', 'Total TcB Neat', 
-           key = neat_toxin, value = neat_conc) %>% 
+           key = neat_toxin, value = neat_conc) -> pre_neat_toxin
+  pre_neat_toxin$neat_conc[pre_neat_toxin$neat_conc == 'BDL'] <- '0'
+  pre_neat_toxin %>% 
+    mutate(neat_conc = as.numeric(neat_conc)) %>% 
+    select(!c('Tube_Label',
+              'Collection Date',
+              'Sample_Type',
+              'Extra_Sample')) -> neat_toxin
+  ## toxin diluted concentrations 
+  toxin %>% 
+    merge(metadata, by = 'mouse_id') %>% 
+    select(!c('Total TcA Neat', 'Total TcB Neat')) %>% 
     gather('Total TcA 1:10', 'Total TcB 1:10',
-           key = dil_toxin, value = dil_conc) -> pre_toxin
-  
-  pre_toxin$neat_conc[pre_toxin$neat_conc == 'BDL'] <- '0'
-  pre_toxin$dil_conc[pre_toxin$dil_conc == 'BDL'] <- '0'
-  pre_toxin$dil_conc[pre_toxin$dil_conc == 'Chow'] <- '0'
-  
-  pre_toxin %>% 
-    filter(!is.na(dil_conc),
-           !is.na(neat_conc)) %>%
-    mutate(neat_conc = as.numeric(neat_conc),
-           dil_conc = as.numeric(dil_conc)) %>% 
-    select(-'Extra_Sample', -'Tube_Label', -'Collection Date',
-           -'Sample_Type') -> big_toxin
-  big_toxin %>% 
-    distinct(mouse_id, dil_conc, .keep_all = TRUE) %>% 
-    filter(diet != 'Chow') -> dil_toxin
-  big_toxin %>%
-    distinct(mouse_id, neat_conc, .keep_all = TRUE) -> neat_toxin 
+           key = dil_toxin, value = dil_conc) -> pre_dil_toxin
+  pre_dil_toxin$dil_conc[pre_dil_toxin$dil_conc == 'BDL'] <- '0'
+  pre_dil_toxin$dil_conc[pre_dil_toxin$dil_conc == 'Chow'] <- '0'
+  pre_dil_toxin %>% 
+    mutate(dil_conc = as.numeric(dil_conc)) %>% 
+    filter(diet != 'Chow') %>% 
+    select(!c('Tube_Label',
+              'Collection Date',
+              'Sample_Type',
+              'Extra_Sample')) -> dil_toxin
   ## creating a list of my outputs
   my_list <- list(Metadata = metadata,
                   Metabolomics = big_metab,
                   Histopathology = big_histo,
-                  Toxin = big_toxin,
                   NeatToxin = neat_toxin,
                   DilToxin = dil_toxin)
   return(my_list)
@@ -119,7 +112,7 @@ comp_plot <- function(histo_table,
     filter(.data[[wanted_y]] == wanted_y_name) %>% 
     na.omit() %>% 
     ggplot(aes(x = .data[[wanted_x]], y = score)) +
-    # scale_x_continuous(trans = 'log10') +
+    scale_x_continuous(trans = 'log10') +
     geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
     geom_smooth(method = 'lm', se = FALSE) +
     facet_grid(tissue~diet,
@@ -225,7 +218,7 @@ stat_plot <- function(stat_table,
 
 **File Paths**
 ```{r}
-metadata_FP <- '../data/misc/s1_filt_comp_metadata.tsv'
+metadata_FP <- '../../cecum/data/misc/filt_cecal_processed_metadata.tsv'
 histo_FP <- '../../colon/data/misc/histo_data.csv'
 metab_FP <- '../../colon/data/misc/metabolomics.csv'
 toxin_FP <- '../../colon/data/misc/toxin_final_data.tsv'
@@ -282,7 +275,6 @@ comp_files <- file_prep(metadata_FP,
 metadata <- comp_files$Metadata
 metab <- comp_files$Metabolomics
 histo <- comp_files$Histopathology
-big_toxin <- comp_files$Toxin
 dil_toxin <- comp_files$DilToxin
 neat_toxin <- comp_files$NeatToxin
 ```
@@ -482,10 +474,9 @@ plot_grid(dil_histo_tca_plot, dil_tox_stat_vis,
           rel_widths = c(1, 0.8),
           labels = c('a)', 'c)', 'b)')) -> dil_toxin_histo_plots
 
+neat_toxin_histo_plots
 dil_toxin_histo_plots
 ```
-
-
 
 
 **Metabolite Concentration Comparisons to Histopathology Score**

@@ -58,8 +58,8 @@ run_ancombc <- function(otu_fp,
   pseq <- phyloseq::phyloseq(otu_table(proc_otu, taxa_are_rows = TRUE),
                              tax_table(as.matrix(tax_table)),
                              sample_data(metadata))
-  # sample_data(pseq)$diet <- as.factor(sample_data(pseq)$diet)
-  # sample_data(pseq)$diet <- relevel(sample_data(pseq)$diet, baseline)
+  sample_data(pseq)$diet <- as.factor(sample_data(pseq)$diet)
+  sample_data(pseq)$diet <- relevel(sample_data(pseq)$diet, baseline)
   ## running ancombc
   ## everything but data (pseq) can be a string
   ancombc_res <- ancombc2(data = pseq,
@@ -125,7 +125,7 @@ baseline_plot <- function(baseline_table,
   baseline_table %>% 
     ggplot(aes(x = day_post_inf, y = taxon)) +
     geom_tile(aes(fill = lfc), color = 'black') +
-    scale_fill_gradient2(low = 'blue', high = 'red') +
+    scale_fill_gradient2(low = 'blue', high = 'red', limits = c(-6.5, 6.5)) +
     geom_text(aes(label = lfc), size = 3) +
     theme_bw(base_size = 16) +
     scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
@@ -142,9 +142,9 @@ baseline_plot <- function(baseline_table,
 
 **Input File Paths**
 ```{r}
-otu_table_FP <- '../data/qiime/tax_filt_actual.qza'
-tax_FP <- '../data/qiime/taxonomy.qza'
-metadata_FP <- '../data/misc/processed_metadata.tsv'
+otu_table_FP <- '../data/comp_qiime/tax_s1_filt.qza'
+tax_FP <- '../data/comp_qiime/taxonomy.qza'
+metadata_FP <- '../data/misc/s1_filt_comp_metadata.tsv'
 
 ftFb_col_names <- c('taxon',
                     'high_fat',
@@ -170,10 +170,11 @@ day_col_names <- c('taxon',
 **Reading in Metadata File**
 ```{r}
 metadata <- read_tsv(metadata_FP)
+names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
 
 ## filtering out day 3 because it was causing problems
-metadata %>% 
-  filter(day_post_inf != 3) -> metadata
+# metadata %>% 
+#   filter(day_post_inf != 3) -> metadata
 ```
 
 ## **ANCOMBC results for ASV by Diet - These were Run in R**
@@ -456,10 +457,10 @@ lftLfb_plot
 **Putting my Plots Together**
 ```{r, fig.width=27, fig.height=27}
 title <- ggdraw() +
-          draw_label('Log Fold Changes Compared to the Diet Baseline',
+          draw_label('Log Fold Changes Compared to the Diet Baseline (Combined Dataset)',
                      size = 28,
                      fontface = "bold",
-                     hjust = 1.43)
+                     hjust = 1)
 plot_grid(chow_plot,
           hftHfb_plot,
           hftLfb_plot,
@@ -540,7 +541,7 @@ ft_fb_lfc %>%
   theme(axis.title.x = element_blank(),
         axis.title.y = element_blank(),
         legend.title = element_blank()) +
-  ggtitle('Log Fold Changes by Diet Composition') -> ftFb_lfc_plot
+  ggtitle('Log Fold Changes by Diet Composition\n(Combined Dataset)') -> ftFb_lfc_plot
 
 ftFb_lfc_plot
 ```
@@ -552,7 +553,7 @@ ggsave('diet_baseline_plot.pdf',
        width = 27, 
        height = 27, 
        path = '../plots')
-ggsave('diet_comp_lfc.pdf',
+ggsave('diet_composition_lfc.pdf',
        plot = ftFb_lfc_plot,
        width = 6.5, 
        height = 9.5, 

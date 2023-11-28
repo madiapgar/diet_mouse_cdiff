@@ -205,7 +205,10 @@ stat_plot <- function(new_dunn,
                scales = 'free_x',
                labeller = labeller(group1 = diet_stat_labs)) +
     theme_bw(base_size = 20) +
-    theme(strip.text.y = element_text(angle = 0)) +
+    ggtitle(label = 'Microbe Comparisons',
+            subtitle = 'Group 1') +
+    theme(strip.text.y = element_text(angle = 0),
+          plot.subtitle = element_text(hjust = 0.5)) +
     xlab('Days Relative to Infection') +
     ylab('Group 2') -> stat_plot
   return(stat_plot)
@@ -334,7 +337,7 @@ long_plots_together
 
 **Poster Presentation Stats**
 these stats are for the shortened figure that I am putting on my poster presentation!
-```{r, fig.height=12, fig.width=17}
+```{r, fig.height=13, fig.width=17}
 short_abun_stats <- abun_stats(short_abun_filt,
                                 wanted_level)
 short_kruskal <- short_abun_stats$KruskalTest
@@ -446,13 +449,13 @@ ggsave("long_family_abun1_w_stats.pdf",
 ggsave("family_abun1.pdf",
        plot = short_abun1, 
        width = 17, 
-       height = 10, 
+       height = 13, 
        path = '../plots')
 
 ggsave("famAbun_stat_vis.pdf",
        plot = stat_plot1, 
-       width = 14.5, 
-       height = 7.5, 
+       width = 17, 
+       height = 13, 
        path = '../plots')
 
 # ggsave("poster_famAbun_stats2.pdf",
@@ -475,14 +478,10 @@ ggsave("cdiff_rel_abun.pdf",
        path = '../plots')
 
 ## plots as an rdata object
-save(long_abun1,
-     file = '../figures/long_fam_abun.rdata')
-save(long_stat_plot,
-     file = '../figures/long_fam_abun_stats.rdata')
 save(short_abun1,
-     file = '../figures/short_fam_abun.rdata')
+     file = '../../figures/short_fam_abun.rdata')
 save(stat_plot1,
-     file = '../figures/short_fam_abun_stats.rdata')
+     file = '../../figures/short_fam_abun_stats.rdata')
 
 ## linear modeling results
 write_tsv(family_abun_lm,

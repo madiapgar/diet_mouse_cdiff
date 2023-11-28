@@ -114,7 +114,7 @@ big_histo_lm
 
 **Histopathology Score by Diet Plot**
 
-```{r, fig.height=6, fig.width=10}
+```{r, fig.height=6, fig.width=12}
 big_histo %>% 
   mutate(day_post_inf = as.numeric(day_post_inf)) %>% 
   ggplot(aes(x = diet, y = score)) +
@@ -135,7 +135,7 @@ big_histo %>%
   theme_bw(base_size = 20) +
   theme(strip.text.y = element_text(angle = 0)) +
   xlab('Diet') +
-  ylab('Histopathology Score') +
+  ylab('Score') +
   ggtitle("Histopathology Score by Diet") -> all_day_plot
 
 all_day_plot
@@ -272,7 +272,7 @@ batch_plot
 ## regular plots
 ggsave("histopathology.pdf", 
        plot = all_day_plot,
-       width = 10, 
+       width = 12, 
        height = 6,
        path = '../plots')
 write_tsv(big_histo_lm,
@@ -304,5 +304,5 @@ How to save plots as an R object that can be pulled into any environment. This w
 
 ```{r}
 save(all_day_plot,
-     file = '../figures/histo.rdata')
+     file = '../../figures/histo.rdata')
 ```

@@ -127,7 +127,7 @@ names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
 
 **Faith's PD**
 ```{r, fig.height=4.5, fig.width=14, warning=FALSE}
-faith_title <- "Combined Faith's Phylogenetic Diversity"
+faith_title <- "Faith's Phylogenetic Diversity"
 
 faith_plot <- faith_pd_plot(faith_pd_FP,
                             metadata,
@@ -140,7 +140,7 @@ faith_plot
 
 **Shannon Entropy**
 ```{r, fig.height=4.5, fig.width=14, warning=FALSE}
-shannon_title <- "Combined Shannon Entropy"
+shannon_title <- "Shannon Entropy"
 
 shannon_entropy_plot <- shannon_plot(shannon_FP,
                                      metadata,
@@ -148,19 +148,6 @@ shannon_entropy_plot <- shannon_plot(shannon_FP,
                                      diet_names_labels,
                                      shannon_title)
 shannon_entropy_plot
-```
-
-**Saving my Outputs**
-```{r}
-ggsave('../plots/faith_pd.pdf',
-       plot = faith_plot, 
-       width = 14, 
-       height = 4.5)
-
-ggsave('../plots/shannon_entropy.pdf',
-       plot = shannon_entropy_plot, 
-       width = 14, 
-       height = 4.5)
 ```
 
 # **Cecum and Colon Data Combined with Day 3 Filtered out of the Colon Samples**
@@ -198,6 +185,7 @@ filt_shannon_entropy_plot
 
 **Saving my Outputs**
 ```{r}
+## plots with day 3 replaced by the cecal data but replicate one isn't filtered out
 ggsave('../day3_filt_plots/faith_pd.pdf',
        plot = filt_faith_plot, 
        width = 14, 
@@ -207,4 +195,21 @@ ggsave('../day3_filt_plots/shannon_entropy.pdf',
        plot = filt_shannon_entropy_plot, 
        width = 14, 
        height = 4.5)
+
+## plots where replicate one IS filtered out
+ggsave('../plots/faith_pd.pdf',
+       plot = faith_plot, 
+       width = 14, 
+       height = 4.5)
+
+ggsave('../plots/shannon_entropy.pdf',
+       plot = shannon_entropy_plot, 
+       width = 14, 
+       height = 4.5)
+
+## as an rdata object
+save(faith_plot,
+     file = '../../figures/faith_pd.rdata')
+save(shannon_entropy_plot,
+     file = '../../figures/shannon.rdata')
 ```

@@ -169,5 +169,15 @@ write_tsv(w_adonis, '../stats/w_adonis_results.tsv')
 write_tsv(uw_adonis, '../stats/uw_adonis_results.tsv')
 write_tsv(unweighted_by_day, '../stats/uw_adonis_by_day.tsv')
 write_tsv(weighted_by_day, '../stats/w_adonis_by_day.tsv')
+
+## as an rdata object
+save(w_adonis,
+     file = '../../figures/w_adonis_results.rdata')
+save(uw_adonis,
+     file = '../../figures/uw_adonis_results.rdata')
+save(unweighted_by_day,
+     file = '../../figures/uw_adonis_by_day.rdata')
+save(weighted_by_day,
+     file = '../../figures/w_adonis_by_day.rdata')
 ```
 

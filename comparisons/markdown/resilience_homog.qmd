@@ -15,53 +15,14 @@ library(rstatix)
 ```
 
 ```{r}
-## general function to prep the metadata file for further data analyses 
-metadata_fixer <- function(metadata_fp) {
-  tmpMeta <- read_tsv(metadata_fp, n_max = 2)
-  mycols <- colnames(tmpMeta)
-  metadata <- read_tsv(metadata_fp, skip = 2, col_names = mycols)
-  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
-  metadata %>% 
-    filter(!is.na(diet)) %>% 
-    mutate(day_post_inf = if_else(day_post_inf == 2, 3, day_post_inf)) %>% 
-    mutate(diet = as.factor(diet)) -> metadata
-  return(metadata)
-}
-
-## for editing my metadata file post metadata fixer 
-meta_diet_fixer <- function(metadata_file,
-                            seq_depth_fp){
-  seq_depths <- read_tsv(seq_depth_fp)
-  metadata_file %>% 
-    select(sampleid, diet, day_post_inf, mouse_id, study) %>% 
-    mutate(diet_true = diet,
-    diet_true = if_else(day_post_inf == -15, "Chow", diet_true),
-    high_fat = case_when(
-      diet_true == 'HF/HF' ~ 1,
-      diet_true == 'HF/LF' ~ 1,
-      .default = 0
-      ), 
-      high_fiber = case_when(
-      diet_true == 'HF/HF' ~ 1,
-      diet_true == 'LF/HF' ~ 1,
-      diet_true == 'Chow' ~ 1,
-      .default = 0
-      ), 
-      purified_diet = case_when(
-      diet_true == 'Chow' ~ 0,
-      .default = 1
-      )
-    ) %>% 
-    left_join(seq_depths) -> metadata
-  return(metadata)
-}
-
 ## this function combines your metadata file and your distance matrix 
 ## it also pulls out the wanted diet variable from the metadata file 
 ## requires the input of a distance matrix (dist_mat), metadata file (meta),
 ## and the list of unique diets (mydiet)
 ## used in subsequent resil/homog_diet_assembly functions
-dist_filter <- function(dist_mat, meta, mydiet){
+dist_filter <- function(dist_mat, 
+                        meta, 
+                        mydiet){
   meta %>% 
     filter(diet == mydiet) -> min_meta
 
@@ -191,10 +152,9 @@ Load in datums
 Needed file paths for analysis and reading in the needed files for simplicity later on.
 
 ```{r, include=FALSE}
-metadata_FP <- '../data/misc/updated_metadata.tsv'
-seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
-uu_dist_fp <- '../data/qiime/core_outputs/uw_dist_matrix.tsv'
-wu_dist_fp <- '../data/qiime/core_outputs/w_dist_matrix.tsv'
+metadata_FP <- '../data/misc/comp_metadata.tsv'
+uu_dist_fp <- '../data/s1_filt_core/uw_dist_matrix.tsv'
+wu_dist_fp <- '../data/s1_filt_core/w_dist_matrix.tsv'
 ## lists to redo the diet names on the facet labels of the ggplot created below 
 diet_labs <- 
     c('Chow', 
@@ -213,13 +173,14 @@ names(stat_labs) <- c('Chow',
                       'HF/LF',
                       'LF/HF')
 
-prep_meta <- metadata_fixer(metadata_fp = metadata_FP)
-meta <- meta_diet_fixer(prep_meta,
-                        seq_depth_FP)
+meta <- read_tsv(metadata_FP)
+names(meta)[names(meta) == '#SampleID'] <- 'sampleid'
+
 uu_dist <- read_tsv(uu_dist_fp)
 wu_dist <- read_tsv(wu_dist_fp)
+
 ## pulling out unique diets 
-diets <- unique(meta$diet)
+diet_col <- 'diet'
 ```
 
 # Functions for Homogeneity and Resilience Calculations
@@ -233,7 +194,8 @@ diets <- unique(meta$diet)
 ## it also esta the baseline that all sample pairs will be compared to 
 ## requires the distance matrix output from the dist_filter (min_dist_mat),
 ## and the metadata file (meta)
-resil_dist_comp <- function(min_dist_mat, meta){
+resil_dist_comp <- function(min_dist_mat, 
+                            meta){
   meta %>% 
     select(sampleid, diet, day_post_inf, high_fat, high_fiber, purified_diet,
            seq_depth, mouse_id) -> min_meta
@@ -268,9 +230,12 @@ resil_diet_assembly <- function(dist_mat,
                                 meta,
                                 mydiet){
   resil <- list()
-    for (i in 1:length(mydiet)){
-      tmp_dist_mat <- dist_filter(dist_mat, meta, mydiet[i])
-      tmp_resil <- resil_dist_comp(tmp_dist_mat, meta)
+    for (i in unique(unlist(meta[mydiet]))){
+      tmp_dist_mat <- dist_filter(dist_mat, 
+                                  meta, 
+                                  i)
+      tmp_resil <- resil_dist_comp(tmp_dist_mat, 
+                                   meta)
       resil[[i]] <- tmp_resil
     }
   resil <- bind_rows(resil)
@@ -334,24 +299,63 @@ homog_diet_assembly <- function(dist_mat,
 # Resilience and Homogeneity Calculations
 
 ```{r}
+meta %>% 
+  filter(diet == 'Chow') -> min_meta
+
+names(uu_dist)[names(uu_dist) == '...1'] <- 'row_sampleid'
+uu_dist <- as.data.frame(uu_dist)
+rownames(uu_dist) <- uu_dist$row_sampleid
+uu_dist <- subset(uu_dist,
+                  select = -row_sampleid)
+  
+sample_idx <- rownames(uu_dist) %in% min_meta$sampleid
+  
+min_dist_mat <- uu_dist[sample_idx, sample_idx]
+min_dist_mat <- as_tibble(min_dist_mat, rownames = 'sampleid')
+colnames(min_dist_mat)[2:ncol(min_dist_mat)] <- min_dist_mat$sampleid
+
+min_dist_mat %>% 
+    rename(sampleid_x = sampleid) %>% 
+    gather(-sampleid_x, key = sampleid_y, value = dist) %>% 
+    merge(min_meta, by.x = 'sampleid_x', by.y = 'sampleid') %>% 
+    merge(min_meta, by.x = 'sampleid_y', by.y = 'sampleid') -> long_dist_mat
+
+long_dist_mat %>% 
+    mutate(key = paste0(pmin(sampleid_x, sampleid_y), 
+                        pmax(sampleid_x, sampleid_y), 
+                        sep = "_")) %>% 
+    distinct(key, .keep_all = TRUE) %>% 
+    filter(sampleid_x != sampleid_y) %>% 
+           ## for homogenicity testing, do day_post_inf.x == day_post_inf.y 
+           ## and don't filter out day -15 
+           # day_post_inf.x == -8,
+           # day_post_inf.y > -8) %>% 
+    select(-diet.y) %>% 
+    rename(diet = diet.x) -> long_dist_mat
+
+long_dist_mat %>% 
+  filter(day_post_inf.x == -8)
+```
+
+```{r}
 ## unweighted unifrac
 uu_resil <- resil_diet_assembly(uu_dist,
                                 meta,
-                                diets)
+                                diet_col)
 
 ## weighted unifrac
 wu_resil <- resil_diet_assembly(wu_dist,
                                 meta,
-                                diets)
+                                diet_col)
 ## unweighted unifrac
 uu_homog <- homog_diet_assembly(uu_dist,
                                 meta,
-                                diets)
+                                diet_col)
 
 ## weighted unifrac
 wu_homog <- homog_diet_assembly(wu_dist,
                                 meta,
-                                diets)
+                                diet_col)
 ```
 
 **Unweighted UniFrac Resiliency Plot**
@@ -384,7 +388,7 @@ uu_resil_plot
 
 Statistical analysis by diet for the unweighted UniFrac resiliency plot above.
 
-```{r, fig.height=3.5, fig.width=13}
+```{r, fig.height=3.5, fig.width=10}
 uu_resil_stats <- stats(uu_resil)
 
 uu_resil_lm <- uu_resil_stats$LinearModel
@@ -440,7 +444,7 @@ stat_plot_prep(wu_resil,
 
 Weighted UniFrac Resiliency Dunn's Post Hoc Visualization
 
-```{r, fig.height=3.5, fig.width=13}
+```{r, fig.height=3.5, fig.width=10}
 stat_plot(new_w_resil_dunn) -> w_resil_stat_vis
 
 w_resil_stat_vis
@@ -472,7 +476,7 @@ uu_homog_plot
 
 **Unweighted UniFrac Homogeneity Linear Modeling**
 
-```{r, fig.height=3.5, fig.width=13}
+```{r, fig.height=3.5, fig.width=14}
 uu_homog_stats <- stats(uu_homog)
 
 uu_homog_lm <- uu_homog_stats$LinearModel

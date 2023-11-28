@@ -138,7 +138,7 @@ neat_toxin %>%
   na.omit() %>% 
   ggplot(aes(x = diet, y = neat_conc)) +
   geom_violin(aes(group = diet), draw_quantiles = c(0.5)) +
-  geom_jitter(aes(fill = study), alpha = 0.6, width = 0.1, height = 0, pch =21) +
+  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
   # scale_y_log10() +
   scale_x_discrete(labels = c('Chow', 
                               'HFt/\nHFb', 
@@ -163,14 +163,16 @@ TcA and TcB concentrations by diet with a 1:10 dilution factor.
 
 You're looking at the plot and you're like, "there must be an issue, there are no significance bars according to p-value, there must be a mistake!", no, there's not a mistake, none of them are significant (unfortunately). This plot also currently doesn't have any points representing the Chow diet on it because the Chow diets weren't diluted to re-run the toxin ELISA and the other diets were.
 
+Study (batch) 6 has significantly lower amounts of C. diff toxin in the high-fat/low-fiber diet only. This may indicate that there wasn't a successful infection of the high-fat/low-fiber mice in this batch? Also may be skewing the results but you can only really see it in the diluted toxin plots.
+
 ```{r, fig.height=5, fig.width=8}
 dil_toxin %>% 
   mutate(study = as.factor(study)) %>% 
   na.omit() %>% 
   ggplot(aes(x = diet, y = dil_conc)) +
   geom_violin(aes(group = diet), draw_quantiles = c(0.5)) +
-  geom_jitter(aes(fill = study), alpha = 0.7, width = 0.1, height = 0, pch = 21) +
-  scale_y_log10() +
+  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
+  # scale_y_log10() +
   scale_x_discrete(labels = c('HFt/\nHFb', 
                               'HFt/\nLFb',
                               'LFt/\nHFb', 
@@ -183,7 +185,7 @@ dil_toxin %>%
                      hide.ns = TRUE) +
   theme_bw(base_size = 14) +
   xlab('Diet') +
-  ylab('log10(Concentration)') +
+  ylab('Concentration') +
   ggtitle('Toxin Diluted (1:10) Concentration by Diet')-> dil_plot
 
 dil_plot
@@ -207,9 +209,9 @@ ggsave("dil_toxin.pdf",
 
 ## as an Rdata object for manuscript figures
 save(neat_plot,
-     file = '../figures/neat_toxin.rdata')
+     file = '../../figures/neat_toxin.rdata')
 save(dil_plot,
-     file = '../figures/dil_toxin.rdata')
+     file = '../../figures/dil_toxin.rdata')
 ```
 
 **Linear Modeling on Toxin Data**

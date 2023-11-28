@@ -328,7 +328,7 @@ neat_histo_tca_plot <- comp_plot(histo,
                                  'Total TcA Neat',
                                  diet_labs,
                                  tissue_labs,
-                                 'Combined C. difficile TcdA Toxin')
+                                 'C. difficile TcdA Toxin')
 ## neat tcdB
 neat_histo_tcb_plot <- comp_plot(histo,
                                  neat_toxin,
@@ -337,7 +337,7 @@ neat_histo_tcb_plot <- comp_plot(histo,
                                  'Total TcB Neat',
                                  diet_labs,
                                  tissue_labs,
-                                 'Combined C. difficile TcdB Toxin')
+                                 'C. difficile TcdB Toxin')
 neat_histo_tcb_plot
 neat_histo_tca_plot
 ```
@@ -384,7 +384,7 @@ dil_histo_tca_plot <- comp_plot(histo,
                                 'Total TcA 1:10',
                                  diet_labs,
                                  tissue_labs,
-                                 'Combined Diluted TcdA')
+                                 'Diluted TcdA')
 ## diluted tcdB
 dil_histo_tcb_plot <- comp_plot(histo,
                                 dil_toxin,
@@ -393,7 +393,7 @@ dil_histo_tcb_plot <- comp_plot(histo,
                                 'Total TcB 1:10',
                                  diet_labs,
                                  tissue_labs,
-                                 'Combined Diluted TcdB')
+                                 'Diluted TcdB')
 dil_histo_tcb_plot
 dil_histo_tca_plot
 ```
@@ -625,18 +625,18 @@ ggsave('histo_metab_stats.pdf',
 
 ## as an rdata object
 save(neat_histo_tca_plot,
-     file = '../figures/neat_histo_tca.rdata')
+     file = '../../figures/neat_histo_tca.rdata')
 save(neat_histo_tcb_plot,
-     file = '../figures/neat_histo_tcb.rdata')
+     file = '../../figures/neat_histo_tcb.rdata')
 save(neat_tox_stat_vis,
-     file = '../figures/neat_histo_stats.rdata')
+     file = '../../figures/neat_histo_stats.rdata')
 save(histo_acetic_plot,
-     file = '../figures/histo_acetic.rdata')
+     file = '../../figures/histo_acetic.rdata')
 save(histo_butanoic_plot,
-     file = '../figures/histo_butanoic.rdata')
+     file = '../../figures/histo_butanoic.rdata')
 save(histo_propanoic_plot,
-     file = '../figures/histo_propanoic.rdata')
+     file = '../../figures/histo_propanoic.rdata')
 save(metab_stat_vis,
-     file = '../figures/histo_metab_stats.rdata')
+     file = '../../figures/histo_metab_stats.rdata')
 ```
 

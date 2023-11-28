@@ -261,7 +261,6 @@ comp_files <- file_prep(metadata_FP,
 
 metadata <- comp_files$Metadata
 metab <- comp_files$Metabolomics
-big_toxin <- comp_files$Toxin
 dil_toxin <- comp_files$DilToxin
 neat_toxin <- comp_files$NeatToxin
 ```
@@ -367,12 +366,12 @@ ggsave('metab_tox_comp.pdf',
 
 ## as an rdata object
 save(tox_acetic,
-     file = '../figures/tox_metab_acetic.rdata')
+     file = '../../figures/tox_metab_acetic.rdata')
 save(tox_butanoic,
-     file = '../figures/tox_metab_butanoic.rdata')
+     file = '../../figures/tox_metab_butanoic.rdata')
 save(tox_propanoic,
-     file = '../figures/tox_metab_propanoic.rdata')
+     file = '../../figures/tox_metab_propanoic.rdata')
 save(tox_metab_stat_vis,
-     file = '../figures/tox_metab_stats.rdata')
+     file = '../../figures/tox_metab_stats.rdata')
 ```
 

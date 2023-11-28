@@ -284,11 +284,11 @@ shannon_stat_vis <- stat_plot(new_shannon_dunn)
 
 **Alpha Diversity Statistical Visualizations**
 I'm doing this for my poster presentation but these will be helpful overall in the future.
-```{r, fig.height=3.5, fig.width=13.75}
+```{r, fig.height=3.5, fig.width=14}
 faith_stat_vis
 ```
 
-```{r, fig.height=3.5, fig.width=13.75}
+```{r, fig.height=3.5, fig.width=14}
 shannon_stat_vis
 ```
 
@@ -299,19 +299,19 @@ shannon_stat_vis
 ggsave("faith_stats.pdf",
        plot = faith_stat_vis, 
        width = 14, 
-       height = 4, 
+       height = 3.5, 
        path = '../plots')
 ggsave("shannon_stats.pdf",
        plot = shannon_stat_vis, 
        width = 14, 
-       height = 4, 
+       height = 3.5, 
        path = '../plots')
 
 ## as an rdata object
 save(faith_stat_vis,
-     file = '../figures/faith_stats.rdata')
+     file = '../../figures/faith_stats.rdata')
 save(shannon_stat_vis,
-     file = '../figures/shannon_stats.rdata')
+     file = '../../figures/shannon_stats.rdata')
 
 ## example of how to write results out as a .tsv 
 write_tsv(new_faith_dunn, '../stats/faith_dunn.tsv')

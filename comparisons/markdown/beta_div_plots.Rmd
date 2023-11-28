@@ -162,11 +162,11 @@ weighted_biom <- core_files$WeightedBiom
 ```
 
 **Unweighted UniFrac PCoA**
-```{r, fig.height=7, fig.width=13}
+```{r, fig.height=7, fig.width=13.5}
 uw_uni_xlab <- pcoa_ax_lab(uw_var, 'PC1')
 uw_uni_ylab <- pcoa_ax_lab(uw_var, 'PC2')
 
-uw_title <- 'Combined Unweighted UniFrac PCoA Plot'
+uw_title <- 'Unweighted UniFrac PCoA Plot'
 
 unweighted_pcoa <- pcoa_plot(unweighted_biom,
                              diet_labs,
@@ -178,11 +178,11 @@ unweighted_pcoa
 ```
 
 **Weighted UniFrac PCoA Plot**
-```{r, fig.height=7, fig.width=13}
+```{r, fig.height=7, fig.width=13.5}
 w_uni_xlab <- pcoa_ax_lab(w_var, 'PC1')
 w_uni_ylab <- pcoa_ax_lab(w_var, 'PC2')
 
-w_title <- 'Combined Weighted UniFrac PCoA Plot'
+w_title <- 'Weighted UniFrac PCoA Plot'
 
 weighted_pcoa <- pcoa_plot(weighted_biom,
                            diet_labs,
@@ -192,20 +192,6 @@ weighted_pcoa <- pcoa_plot(weighted_biom,
                            w_title)
 weighted_pcoa
 ```
-
-**Saving my Outputs**
-```{r}
-ggsave('../plots/unweighted_unifrac_pcoa.pdf',
-       plot = unweighted_pcoa, 
-       width = 13, 
-       height = 7)
-
-ggsave('../plots/weighted_unifrac_pcoa.pdf',
-       plot = weighted_pcoa, 
-       width = 13, 
-       height = 7)
-```
-
 
 # **Cecum and Colon Data Combined with Day 3 Filtered out of the Colon Samples**
 
@@ -274,4 +260,21 @@ ggsave('../day3_filt_plots/weighted_unifrac_pcoa.pdf',
        plot = filt_weighted_pcoa, 
        width = 13, 
        height = 7)
+
+## day 3 replaced by the cecal data and replicate one filtered out 
+ggsave('../plots/unweighted_unifrac_pcoa.pdf',
+       plot = unweighted_pcoa, 
+       width = 13.5, 
+       height = 7)
+
+ggsave('../plots/weighted_unifrac_pcoa.pdf',
+       plot = weighted_pcoa, 
+       width = 13.5, 
+       height = 7)
+
+## saving outputs as an rdata object 
+save(unweighted_pcoa,
+     file = '../../figures/unweighted_pcoa.rdata')
+save(weighted_pcoa,
+     file = '../../figures/weighted_pcoa.rdata')
 ```

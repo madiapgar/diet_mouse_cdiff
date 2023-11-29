@@ -122,28 +122,31 @@ stat_plot_prep <- function(biom_table,
 }
 
 ## actual statistical plot visualization!!
-stat_plot <- function(new_dunn){
+stat_plot <- function(new_dunn,
+                      wanted_title){
   new_dunn %>% 
     filter(day_post_inf.y != -15) %>%
-    ggplot(aes(x = group1, y = group2)) +
+    ggplot(aes(x = day_post_inf.y, y = group2)) +
     geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
-    scale_fill_gradient2(low = 'green', high = 'blue', name = 'Group 1 -\nGroup 2',
+    scale_fill_gradient2(high = 'blue', low = 'green', name = 'Group 1 -\nGroup 2',
                          trans = 'reverse') +
     geom_text(aes(label = p.adj.signif)) +
-    scale_x_discrete(labels = c('Chow',
-                                'HFt/\nHFb',
-                                'HFt/\nLFb',
-                                'LFt/\nHFb')) +
+    scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
     scale_y_discrete(labels = c('HFt / HFb',
                                 'HFt / LFb',
                                 'LFt / HFb',
                                 'LFt / LFb')) +
-    facet_grid(~day_post_inf.y) +
+    facet_grid(~group1,
+              scales = 'free_x',
+              labeller = labeller(group1 = stat_labs)) +
     theme_bw(base_size = 20) +
-    theme(strip.text.y = element_text(angle = 0)) +
-    xlab('Group 1') +
+    ggtitle(label = wanted_title,
+            subtitle = 'Group 1') +
+    theme(strip.text.y = element_text(angle = 0),
+          plot.subtitle = element_text(hjust = 0.5)) +
+    xlab('Days Relative to Infection') +
     ylab('Group 2') -> stat_vis
-  return(stat_vis)
+   return(stat_vis)
 }
 ```
 
@@ -162,8 +165,8 @@ diet_labs <-
       'High Fat / Low Fiber', 
       'Low Fat / High Fiber', 
       'Low Fat / Low Fiber')
-
 names(diet_labs) <- c('Chow', 'HF/HF', 'HF/LF', 'LF/HF', 'LF/LF')
+
 stat_labs <- c('Chow',
                'High Fat / High Fiber', 
                'High Fat / Low Fiber', 
@@ -285,9 +288,12 @@ homog_diet_assembly <- function(dist_mat,
                                 meta,
                                 mydiet){
   homog <- list()
-    for (i in 1:length(mydiet)){
-      tmp_dist_mat <- dist_filter(dist_mat, meta, mydiet[i])
-      tmp_homog <- homog_dist_comp(tmp_dist_mat, meta)
+    for (i in unique(unlist(meta[mydiet]))){
+      tmp_dist_mat <- dist_filter(dist_mat, 
+                                  meta, 
+                                  i)
+      tmp_homog <- homog_dist_comp(tmp_dist_mat, 
+                                   meta)
       homog[[i]] <- tmp_homog
     }
   homog <- bind_rows(homog)
@@ -388,7 +394,7 @@ uu_resil_plot
 
 Statistical analysis by diet for the unweighted UniFrac resiliency plot above.
 
-```{r, fig.height=3.5, fig.width=10}
+```{r, fig.height=4, fig.width=14}
 uu_resil_stats <- stats(uu_resil)
 
 uu_resil_lm <- uu_resil_stats$LinearModel
@@ -397,7 +403,8 @@ uu_resil_dunn <- uu_resil_stats$DunnPostHoc
 
 new_uu_resil_dunn <- stat_plot_prep(uu_resil,
                                     uu_resil_dunn)
-stat_plot(new_uu_resil_dunn) -> uu_resil_stat_vis
+stat_plot(new_uu_resil_dunn,
+          'Resilience Comparisons') -> uu_resil_stat_vis
 
 uu_resil_stat_vis
 ```
@@ -444,8 +451,9 @@ stat_plot_prep(wu_resil,
 
 Weighted UniFrac Resiliency Dunn's Post Hoc Visualization
 
-```{r, fig.height=3.5, fig.width=10}
-stat_plot(new_w_resil_dunn) -> w_resil_stat_vis
+```{r, fig.height=4, fig.width=14}
+stat_plot(new_w_resil_dunn,
+          'Resilience Comparisons') -> w_resil_stat_vis
 
 w_resil_stat_vis
 ```
@@ -476,7 +484,7 @@ uu_homog_plot
 
 **Unweighted UniFrac Homogeneity Linear Modeling**
 
-```{r, fig.height=3.5, fig.width=14}
+```{r, fig.height=4, fig.width=14}
 uu_homog_stats <- stats(uu_homog)
 
 uu_homog_lm <- uu_homog_stats$LinearModel
@@ -485,7 +493,8 @@ uu_homog_dunn <- uu_homog_stats$DunnPostHoc
 
 stat_plot_prep(uu_homog,
                uu_homog_dunn) -> new_uu_homog_dunn
-stat_plot(new_uu_homog_dunn) -> uu_homog_stat_vis
+stat_plot(new_uu_homog_dunn,
+          'Homogeneity Comparisons') -> uu_homog_stat_vis
 
 uu_homog_stat_vis
 ```
@@ -529,21 +538,22 @@ stat_plot_prep(wu_homog,
 
 Weighted UniFrac Homogeneity Dunn's Post Hoc Visualization
 
-```{r, fig.height=3.5, fig.width=13}
-stat_plot(new_wu_homog_dunn) -> w_homog_stat_vis
+```{r, fig.height=4, fig.width=14}
+stat_plot(new_wu_homog_dunn,
+          'Homogeneity Comparisons') -> w_homog_stat_vis
 
 w_homog_stat_vis
 ```
 
 **Putting Unweighted UniFrac Plots Together**
 
-```{r, fig.width=28, fig.height=9}
+```{r, fig.width=28, fig.height=10}
 plot_grid(uu_resil_plot, uu_homog_plot,
           uu_resil_stat_vis, uu_homog_stat_vis,
           nrow = 2,
           labels = c('a)', 'b)', 'c)', 'd)'),
           label_size = 22,
-          rel_heights = c(1, 0.6),
+          rel_heights = c(1, 0.7),
           rel_widths = c(0.95, 1)) -> uu_resil_homog_together
 
 uu_resil_homog_together
@@ -551,13 +561,13 @@ uu_resil_homog_together
 
 **Putting Weighted UniFrac Plots Together**
 
-```{r, fig.width=28, fig.height=9}
+```{r, fig.width=28, fig.height=10}
 plot_grid(wu_resil_plot, wu_homog_plot,
           w_resil_stat_vis, w_homog_stat_vis,
           nrow = 2,
           labels = c('a)', 'b)', 'c)', 'd)'),
           label_size = 22,
-          rel_heights = c(1, 0.6),
+          rel_heights = c(1, 0.7),
           rel_widths = c(0.95, 1)) -> w_resil_homog_together
 
 w_resil_homog_together
@@ -601,40 +611,40 @@ ggsave("uu_homogeneity.pdf",
        path = '../plots')
 ggsave("wu_resil_stats.pdf", 
        plot = w_resil_stat_vis,
-       width = 13, 
-       height = 3.5,
+       width = 14, 
+       height = 4,
        path = '../plots')
 ggsave("wu_homog_stats.pdf", 
        plot = w_homog_stat_vis,
-       width = 13, 
-       height = 3.5,
+       width = 14, 
+       height = 4,
        path = '../plots')
 ggsave("w_resil_homog_stat_vis.pdf", 
        plot = w_resil_homog_together,
        width = 28, 
-       height = 9,
+       height = 10,
        path = '../plots')
 ggsave("uu_resil_homog_stat_vis.pdf", 
        plot = uu_resil_homog_together,
        width = 28, 
-       height = 9,
+       height = 10,
        path = '../plots')
 
 ## as an rdata object
 save(wu_resil_plot,
-     file = '../figures/wu_resil.rdata')
+     file = '../../figures/wu_resil.rdata')
 save(uu_resil_plot,
-     file = '../figures/uu_resil.rdata')
+     file = '../../figures/uu_resil.rdata')
 save(wu_homog_plot,
-     file = '../figures/wu_homog.rdata')
+     file = '../../figures/wu_homog.rdata')
 save(uu_homog_plot,
-     file = '../figures/uu_homog.rdata')
+     file = '../../figures/uu_homog.rdata')
 save(w_resil_stat_vis,
-     file = '../figures/wu_resil_stats.rdata')
+     file = '../../figures/wu_resil_stats.rdata')
 save(uu_resil_stat_vis,
-     file = '../figures/uu_resil_stats.rdata')
+     file = '../../figures/uu_resil_stats.rdata')
 save(w_homog_stat_vis,
-     file = '../figures/wu_homog_stats.rdata')
+     file = '../../figures/wu_homog_stats.rdata')
 save(uu_homog_stat_vis,
-     file = '../figures/uu_homog_stats.rdata')
+     file = '../../figures/uu_homog_stats.rdata')
 ```

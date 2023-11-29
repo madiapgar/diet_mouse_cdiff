@@ -119,8 +119,8 @@ abun_stats <- function(filtered_table,
     na.omit() %>% 
     mutate(adj.p = p.adjust(p.value, 
                             method = "BH"),
-          test_id = paste(.data[[tax_level]], day_post_inf, sep = "_")) -> lm_full
-    # filter(adj.p <= 0.05) -> lm_full
+          test_id = paste(.data[[tax_level]], day_post_inf, sep = "_")) %>% 
+    filter(adj.p <= 0.05) -> lm_full
   filtered_table %>%
     na.omit() %>% 
     group_by(.data[[tax_level]], day_post_inf) %>% 
@@ -145,8 +145,8 @@ abun_stats <- function(filtered_table,
     arrange(p.value) %>% 
     mutate(p.adj = p.adjust(p.value,
                             method = "BH"),
-           test_id = paste(.data[[tax_level]], day_post_inf, sep = "_")) -> kruskal
-    # filter(p.adj <= 0.05) -> kruskal
+           test_id = paste(.data[[tax_level]], day_post_inf, sep = "_")) %>% 
+    filter(p.adj <= 0.05) -> kruskal
   ## dunn's post hoc test
   filtered_table %>% 
     na.omit() %>% 

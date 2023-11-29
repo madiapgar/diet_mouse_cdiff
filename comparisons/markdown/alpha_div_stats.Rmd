@@ -214,26 +214,28 @@ stat_plot_prep <- function(biom_table,
   return(new_dunn)
 }
 
-stat_plot <- function(new_dunn){
+stat_plot <- function(new_dunn,
+                      wanted_title){
   new_dunn %>% 
     filter(day_post_inf != -15) %>%
-    ggplot(aes(x = group1, y = group2)) +
+    ggplot(aes(x = day_post_inf, y = group2)) +
     geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
     scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
     geom_text(aes(label = p.adj.signif)) +
-    scale_x_discrete(labels = c('Chow',
-                                'HFt/\nHFb',
-                                'HFt/\nLFb',
-                                'LFt/\nHFb')) +
+    scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
     scale_y_discrete(labels = c('HFt / HFb',
                                 'HFt / LFb',
                                 'LFt / HFb',
                                 'LFt / LFb')) +
-    facet_grid(~day_post_inf,
-              scales = 'free_x') +
+    facet_grid(~group1,
+              scales = 'free_x',
+              labeller = labeller(group1 = diet_stat_labs)) +
     theme_bw(base_size = 20) +
-    theme(strip.text.y = element_text(angle = 0)) +
-    xlab('Group 1') +
+    ggtitle(label = wanted_title,
+            subtitle = 'Group 1') +
+    theme(strip.text.y = element_text(angle = 0),
+          plot.subtitle = element_text(hjust = 0.5)) +
+    xlab('Days Relative to Infection') +
     ylab('Group 2') -> stat_vis
   return(stat_vis)
 }
@@ -244,6 +246,15 @@ stat_plot <- function(new_dunn){
 metadata_FP <- '../data/misc/s1_filt_comp_metadata.tsv'
 faith_pd_fp <- '../data/s1_filt_core/faith_pd.tsv'
 shannon_fp <- '../data/s1_filt_core/shannon_entropy.tsv'
+
+diet_stat_labs <- c('Chow', 
+                    'High Fat / High Fiber', 
+                    'High Fat / Low Fiber', 
+                    'Low Fat / High Fiber')
+names(diet_stat_labs) <- c('Chow', 
+                            'HF/HF', 
+                            'HF/LF', 
+                            'LF/HF')
 ```
 
 
@@ -267,7 +278,8 @@ faith_dunn <- faith_stats$DunnPostHoc
 new_faith_dunn <- stat_plot_prep(faith,
                                  faith_dunn,
                                  'faith_pd')
-faith_stat_vis <- stat_plot(new_faith_dunn)
+faith_stat_vis <- stat_plot(new_faith_dunn,
+                            "Faith's PD Comparisons")
 
 ## shannon entropy stats
 shannon_stats <- shannon_div_stats(shannon)
@@ -278,17 +290,18 @@ shannon_dunn <- shannon_stats$DunnPostHoc
 new_shannon_dunn <- stat_plot_prep(shannon,
                                    shannon_dunn,
                                    'shannon_entropy')
-shannon_stat_vis <- stat_plot(new_shannon_dunn)
+shannon_stat_vis <- stat_plot(new_shannon_dunn,
+                              "Shannon Entropy Comparisons")
 ```
 
 
 **Alpha Diversity Statistical Visualizations**
 I'm doing this for my poster presentation but these will be helpful overall in the future.
-```{r, fig.height=3.5, fig.width=14}
+```{r, fig.height=4, fig.width=14}
 faith_stat_vis
 ```
 
-```{r, fig.height=3.5, fig.width=14}
+```{r, fig.height=4, fig.width=14}
 shannon_stat_vis
 ```
 
@@ -299,12 +312,12 @@ shannon_stat_vis
 ggsave("faith_stats.pdf",
        plot = faith_stat_vis, 
        width = 14, 
-       height = 3.5, 
+       height = 4, 
        path = '../plots')
 ggsave("shannon_stats.pdf",
        plot = shannon_stat_vis, 
        width = 14, 
-       height = 3.5, 
+       height = 4, 
        path = '../plots')
 
 ## as an rdata object

@@ -1,0 +1,4 @@
+location	.y.	group1	group2	n1	n2	statistic	p	p.adj	p.adj.signif	y.position	groups
+Cecum	fluorescence	high_fiber	low_fiber	27	21	3.294051009752838	9.87545753100899e-4	9.87545753100899e-4	***	36158.29144	
+Dist_colon	fluorescence	high_fiber	low_fiber	27	21	0.9248282014763491	0.35505527860479735	0.35505527860479735	ns	31275.25288	
+Prox_colon	fluorescence	high_fiber	low_fiber	27	21	-0.4052617961525567	0.6852850854041493	0.6852850854041493	ns	22010.212720000003	

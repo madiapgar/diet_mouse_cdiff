@@ -24,7 +24,6 @@ rule picrust2:
         seqs_fasta = "data/misc/dna-sequences.fasta",
         biom = "data/misc/comp_tss_table.biom"
     output:
-        tmp_out = directory("data/picrust/tmp_out_pipeline"),
         out = directory("data/picrust/out_pipeline")
     conda:
         "picrust2"
@@ -33,10 +32,8 @@ rule picrust2:
         picrust2_pipeline.py \
             -s {input.seqs_fasta} \
             -i {input.biom} \
-            -o {output.tmp_out} \
+            -o {output.out} \
             --stratified \
             --per_sequence_contrib \
             -p 32
-        
-        mv {output.tmp_out} {output.out}
         """

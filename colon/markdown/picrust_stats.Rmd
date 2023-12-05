@@ -125,6 +125,12 @@ buty_stat_calc <- function(biom_table,
 ## bile acid stats
 bile_stat_calc <- function(biom_table,
                            taxonomy_level){
+  biom_table %>% 
+    group_by(genus) %>% 
+      mutate(sum = sum(taxon_function_abun),
+            genus = if_else(sum < 346, "I don't want you", genus)) %>% 
+      filter(genus != "I don't want you") %>% 
+      ungroup() -> biom_table
   ## linear modeling
   biom_table %>% 
     na.omit() %>% 
@@ -152,7 +158,31 @@ bile_stat_calc <- function(biom_table,
                          symbols = c("****", "***", "**", "*", "+", "ns"),
                          abbr.colnames = FALSE,
                          na = "")
-  return(lm)
+  ## kruskal wallis and dunns post hoc tests
+  biom_table %>% 
+    na.omit() %>% 
+    group_by(.data[[taxonomy_level]], day_post_inf) %>% 
+    do(tidy(kruskal.test(taxon_function_abun ~ diet,
+             data = .))) %>% 
+    ungroup() %>% 
+    arrange(p.value) %>% 
+    mutate(p.adj = p.adjust(p.value,
+                            method = "BH"),
+          test_id = paste(day_post_inf, .data[[taxonomy_level]], sep = "_")) %>% 
+    na.omit() -> kruskal
+  biom_table %>% 
+    na.omit() %>% 
+    group_by(.data[[taxonomy_level]], day_post_inf) %>% 
+    mutate(test_id = paste(day_post_inf, .data[[taxonomy_level]], sep = "_")) %>% 
+    filter(test_id %in% kruskal$test_id) %>% 
+    dunn_test(taxon_function_abun ~ diet,
+              p.adjust.method = 'BH',
+              data = .) -> dunn
+  ## creating a list 
+  my_list <- list(LinearModel = lm,
+                  KruskalTest = kruskal,
+                  DunnPostHoc = dunn)
+  return(my_list)
 }
 
 ## creating a function for this so I don't have to keep doing each one by hand 
@@ -184,6 +214,36 @@ stat_plot_prep <- function(biom_table,
            stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
   return(new_dunn)
 }
+
+## creating one for my bile plots bc nothing is significant lol
+bile_stat_plot_prep <- function(biom_table,
+                           dunn_test,
+                           value,
+                           taxonomy_level){
+  biom_table %>% 
+    group_by(diet, day_post_inf, .data[[taxonomy_level]]) %>% 
+    summarise(means = mean(.data[[value]])) -> mean_table
+  dunn_test %>% 
+    merge(mean_table, 
+          by.x = c('group1',
+                   'day_post_inf',
+                   taxonomy_level),
+          by.y = c('diet',
+                   'day_post_inf',
+                   taxonomy_level)) %>% 
+    rename('group1_means' = 'means') %>% 
+    merge(mean_table,
+          by.x = c('group2',
+                   'day_post_inf',
+                   taxonomy_level),
+          by.y = c('diet',
+                   'day_post_inf',
+                   taxonomy_level)) %>% 
+    rename('group2_means' = 'means') %>% 
+    mutate(stat_diff_means = (group1_means - group2_means)) -> new_dunn
+  return(new_dunn)
+}
+
 
 stat_plot <- function(new_dunn,
                       taxonomy_level,
@@ -265,8 +325,7 @@ baiI_long <- stat_file_prep(metadata_FP,
                             bile_level)
 ```
 **Butyrate Kinase Statistical Analysis**
-Should I filter day -15 out of these results as well? 
-```{r, fig.height=6.5, fig.width=14.5}
+```{r, fig.height=7, fig.width=14.5}
 buk_stats <- buty_stat_calc(buk_long,
                             buty_level)
 
@@ -306,13 +365,32 @@ but_plot <- stat_plot(new_but_dunn,
 but_plot
 ```
 
+**baiH Statistical Analysis**
+```{r, fig.height=5.5, fig.width=16}
+baiH_stats <- bile_stat_calc(baiH_long,
+                             'genus')
 
-**Secondary Bile Acid Linear Modeling**
-```{r}
-bile_lm <- bile_stat_calc(bile_long)
+baiH_lm <- baiH_stats$LinearModel
+baiH_kruskal <- baiH_stats$KruskalTest
+baiH_dunn <- baiH_stats$DunnPostHoc
 
-bile_lm
+new_baiH_dunn <- bile_stat_plot_prep(baiH_long,
+                                      baiH_dunn, 
+                                      'taxon_function_abun',
+                                     'genus')
+
+baiH_plot <- stat_plot(new_baiH_dunn,
+                      'genus',
+                      'BaiH Functional Potential Over Time Between Diets')
+
+baiH_plot
 ```
+**baiI Statistical Analysis**
+```{r}
+baiI_stats <- bile_stat_calc(baiI_long,
+                             'genus')
+```
+
 
 **Saving my Outputs**
 ```{r}
@@ -320,22 +398,26 @@ bile_lm
 ggsave("buk_stat_vis.pdf",
        plot = buk_plot, 
        width = 14.5, 
-       height = 6.5, 
+       height = 7, 
        path = '../plots')
 ggsave("but_stat_vis.pdf",
        plot = but_plot, 
        width = 14.5, 
        height = 6.5, 
        path = '../plots')
+ggsave("baiH_stat_vis.pdf",
+       plot = baiH_plot, 
+       width = 16, 
+       height = 5.5, 
+       path = '../plots')
+
 ## as an rdata object
-save(buty_plot,
-     file = '../figures/buty_stats.rdata')
-
-
-write_tsv(buty_lm,
-          '../stats/buty_enzyme_lm.tsv')
-write_tsv(bile_lm,
-          '../stats/bile_enzyme_lm.tsv')
+save(buk_plot,
+     file = '../../figures/buk_stats.rdata')
+save(but_plot,
+     file = '../../figures/but_stats.rdata')
+save(baiH_plot,
+     file = '../../figures/baiH_stats.rdata')
 ```
 
 

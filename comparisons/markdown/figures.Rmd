@@ -221,12 +221,14 @@ fig7
 ```
 
 ## **Figure Eight**
-PROBABLY TAKING THIS FIGURE OUT!!
+TAKING THIS FIGURE OUT!!
 
-Plots to go in figure:
-- PICRUSt result plots and stats
-- will need to include bile acid statistical results at some point (currently can't get kruskal wallis and dunn's post hoc test to work - possibly because of low abundances??)
-- redo the butyrate stats to include the bacterial classes!!
+Just in case we decide to do more with this data, here's the results text I wrote for it:
+
+*SCFA (butyrate) and secondary bile acid coding capacity by bacterial class and mouse diet.*
+	We put the 16S rDNA fecal sample results through PICRUSt2 software to measure the potential functional coding capacity of key SCFA and secondary bile acid producing enzymes throughout our experimental timeline to determine the possible difference between coding capacity and which bacterial classes could be contributing to those differences in our tested diets. Butyrate kinase and butyryl-CoA-transferase are enzymes that aid in producing butyrate from dietary fiber through two different pathways. baiH and baiI are enzymes that play a role in producing secondary bile acids from primary bile acids through hydroxylation. 
+	Based on our PICRUSt2 results, we saw that Bacilli, Bacteroidia, and Clostridia were the top bacterial classes contributing to the production of butyrate through the use of butyrate kinase with no major differences seen between our tested diets (Figure 8a,e). Alphaproteobacteria, Bacilli, Bacteroidia, and Clostridia were the top bacterial classes contributing to the production of butyrate through the use of butyryl-CoA- transferase with no major differences seen between our tested diets (Figure 8b,e). Hungatella and Lachnospiraceae were top contributors of baiH and Blautia was the top contributor of baiI for the production of secondary bile acids (Figure 8 c,d) (note: secondary bile acid enzyme contributors are measured at the genus level rather than the class level). Mice on the chow diet had higher butyrate kinase and butyryl-CoA-transferase coding capacity at day 3 than mice on high fiber diets after antibiotic administration and CDI (Figure 8e). These results indicate the top bacterial classes that have coding capacity for butyrate coding capacity and the top bacterial genus’s that have coding capacity for secondary bile acids between the tested diets. Mice on the chow diet are the only diet to show higher butyrate coding capacity at day 3 compared to mice on the high fiber diets. Overall, these results, while interesting, do not contribute in explaining the differences in mouse mortality between diets (Figure 1). 
+
 
 *Caption*:
 *All results come from PICRUSt2 analysis based on the fecal sample 16S sequences. The dashed red line at day negative three indicates the day the mice received oral antibiotics and the purple dashed line at day zero indicates with the mice were infected with C. difficile. a) Abundance of butyrate-kinase coding capacity genes by bacterial class and the tested diets across time points. b) Abundance of butyryl-coa-transferase coding capacity genes by bacterial class and the tested diets across time points. Abundance of c) baiH and d) baiI (secondary bile acid producing enzymes) by bacterial species and the tested diets across time points. e) Pairwise comparisons by days relative to infection (columns) and butyrate producing enzyme (rows) per diet as determined by a Kruskal-Wallis test followed by a Dunn's Post Hoc test with the color gradient indicating the difference in means.*P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, +p<0.1, ns<1).**
@@ -291,9 +293,9 @@ ggsave('../../figures/fig7.pdf',
        plot = fig7,
        width = 35,
        height = 12)
-ggsave('../../figures/fig8.pdf',
-       plot = fig8,
-       width = 35,
-       height = 29)
+# ggsave('../../figures/fig8.pdf',
+#        plot = fig8,
+#        width = 35,
+#        height = 29)
 ```
 

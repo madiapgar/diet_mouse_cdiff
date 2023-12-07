@@ -543,11 +543,19 @@ ggsave("wu_resil_stats.pdf",
        width = 14, 
        height = 4,
        path = '../plots')
+ggsave('../plots/uu_resil_stats.pdf',
+       plot = uu_resil_stat_vis,
+       width = 14,
+       height = 4)
 ggsave("wu_homog_stats.pdf", 
        plot = w_homog_stat_vis,
        width = 14, 
        height = 4,
        path = '../plots')
+ggsave('../plots/uu_homog_stats.pdf',
+       plot = uu_homog_stat_vis,
+       width = 14, 
+       height = 4)
 ggsave("w_resil_homog_stat_vis.pdf", 
        plot = w_resil_homog_together,
        width = 28, 

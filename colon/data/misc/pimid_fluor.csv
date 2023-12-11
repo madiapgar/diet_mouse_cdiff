@@ -1,9 +1,9 @@
 mouse_id,location,diet,fiber,fluorescence,batch
 9740,Cecum,Chow,high_fiber,0,1
-9742,Cecum,Chow,high_fiber,577.1707963,1
+9741,Cecum,Chow,high_fiber,577.1707963,1
 9743,Cecum,Chow,high_fiber,985.3140625,1
 9941,Cecum,Chow,high_fiber,1199.179357,1
-9743,Cecum,Chow,high_fiber,731.0100714,1
+9742,Cecum,Chow,high_fiber,731.0100714,1
 9963,Cecum,Chow,high_fiber,16224.46667,1
 9964,Cecum,Chow,high_fiber,2836.635642,1
 9841,Cecum,LF/LF,low_fiber,23661.79842,1
@@ -33,10 +33,10 @@ mouse_id,location,diet,fiber,fluorescence,batch
 9877,Cecum,HF/HF,high_fiber,856.6666667,1
 9880,Cecum,HF/HF,high_fiber,1344.526771,1
 9740,Prox_colon,Chow,high_fiber,165.25,1
-9742,Prox_colon,Chow,high_fiber,545.7541818,1
+9741,Prox_colon,Chow,high_fiber,545.7541818,1
 9743,Prox_colon,Chow,high_fiber,497.7245667,1
 9941,Prox_colon,Chow,high_fiber,2467.140286,1
-9743,Prox_colon,Chow,high_fiber,929.1412245,1
+9742,Prox_colon,Chow,high_fiber,929.1412245,1
 9963,Prox_colon,Chow,high_fiber,3573.875,1
 9964,Prox_colon,Chow,high_fiber,3848.714286,1
 9841,Prox_colon,LF/LF,low_fiber,16189.79646,1
@@ -66,10 +66,10 @@ mouse_id,location,diet,fiber,fluorescence,batch
 9877,Prox_colon,HF/HF,high_fiber,6912.117647,1
 9880,Prox_colon,HF/HF,high_fiber,10981.63636,1
 9740,Dist_colon,Chow,high_fiber,55.91666667,1
-9742,Dist_colon,Chow,high_fiber,368.5227333,1
+9741,Dist_colon,Chow,high_fiber,368.5227333,1
 9743,Dist_colon,Chow,high_fiber,3906.548727,1
 9941,Dist_colon,Chow,high_fiber,8283.268545,1
-9743,Dist_colon,Chow,high_fiber,5902.0738,1
+9742,Dist_colon,Chow,high_fiber,5902.0738,1
 9963,Dist_colon,Chow,high_fiber,9864.969796,1
 9964,Dist_colon,Chow,high_fiber,10337.83333,1
 9841,Dist_colon,LF/LF,low_fiber,16937.17778,1

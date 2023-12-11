@@ -32,7 +32,6 @@ file_prep <- function(metadata_fp,
   ## metadata file
   metadata <- read_tsv(metadata_fp) %>% 
               select(!c(tube_num, date, corr_sample_num))
-  # names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
   ## hypoxia file 
   hypoxia <- read_csv(hypoxia_fp)
   hypoxia %>% 

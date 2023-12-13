@@ -1,0 +1,103 @@
+---
+title: "timeline_fig"
+output: html_document
+date: "2023-12-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(scales)
+library(lubridate)
+library(tidyverse)
+```
+
+**Creating my Timeline Dataframe**
+```{r}
+timeline <- data.frame(day = c(-15, -8, -3, -1, 0, 3),
+                       col_value = c('Day -15',
+                                     'Day -8',
+                                     'Day -3',
+                                     'Day -1',
+                                     'Day 0',
+                                     'Day 3'),
+                       day_text = c('Day -15:\nSix-week old mice arrive and\nbegin determined diet',
+                                    'Day -8:\nMice are switched to water\nwith an antibiotic cocktail',
+                                    'Day -3:\nMice stop receiving antibiotic\ncocktail in water',
+                                    'Day -1:\nClindamycin injection',
+                                    'Day 0:\nC. difficile infection',
+                                    'Day 3:\nMice sacrificed,\ncecal contents harvested,\nquantification\n(SCFAs, toxins A&B,\nbile acids,\n16S rDNA sequencing),\ncolon and cecum histology\nand hypoxia measurements'),
+                       cohort = c('Cohort 1',
+                                  'Cohort 1',
+                                  'Cohort 1',
+                                  'Cohort 1',
+                                  'Cohort 1',
+                                  'Cohort 2'),
+                       seq = c('16S rDNA sequencing',
+                               '16S rDNA sequencing',
+                               '16S rDNA sequencing',
+                               '16S rDNA sequencing',
+                               '16S rDNA sequencing',
+                               '16S rDNA sequencing'),
+                       position = c(0.20,
+                                    0.15,
+                                    0.20,
+                                    0.15,
+                                    0.20, 
+                                    0.15),
+                       direction = c(1,
+                                     1,
+                                     1,
+                                     -1,
+                                     1,
+                                     1))
+```
+
+**Timeline Plot**
+I have absolutely no idea what I'm doing :)
+```{r, fig.width=16.5, fig.height=5.5}
+timeline %>% 
+  mutate(text_position = ifelse(day == 3, (position + 0.03), position +  0.01)) %>% 
+  ggplot(aes(x = day, y = 0, col = col_value)) +
+  geom_hline(yintercept = 0,
+               color = 'black',
+               size = 0.7) +
+  geom_segment(aes(y = position, yend = 0, xend = day), color = 'black', size = 0.7) +
+  scale_x_continuous(breaks = c(-15, -8, -3, -1, 0, 3)) +
+  geom_label(aes(y = text_position, label = day_text, fill = col_value), 
+            size = 2.5,
+            color = 'black',
+            fontface = 'bold',
+            alpha = 0.4) +
+  scale_fill_brewer(palette = 'Dark2') +
+  theme_classic() +
+  theme(axis.line.y=element_blank(),
+                 axis.text.y=element_blank(),
+                 axis.title.x=element_blank(),
+                 axis.title.y=element_blank(),
+                 axis.ticks.y=element_blank(),
+                 axis.line.x = element_blank(),
+                 axis.ticks.x = element_blank(),
+                 axis.text.x = element_blank(),
+                 legend.position = 'none') +
+  geom_point(aes(y = 0, color = col_value), size = 4, alpha = 0.4) +
+  scale_color_brewer(palette = 'Dark2') +
+  geom_text(aes(y = -0.007, label = day), color = 'black', fontface = 'bold') -> timeline_plot
+
+timeline_plot
+```
+
+**Saving my Output**
+```{r}
+ggsave('../plots/timeline_plot.pdf',
+       plot = timeline_plot,
+       width = 16.5,
+       height = 5.5)
+
+save(timeline_plot,
+     file = '../../figures/timeline_plot.rdata')
+```
+

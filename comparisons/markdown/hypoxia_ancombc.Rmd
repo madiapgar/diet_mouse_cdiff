@@ -173,7 +173,9 @@ hypoxia <- read_csv(hypoxia_FP)
 hypoxia %>% 
   group_by(mouse_id, diet, fiber, batch) %>% 
   pivot_wider(names_from = location, 
-              values_from = fluorescence) -> hypoxia
+              values_from = fluorescence) %>% 
+  ungroup() %>% 
+  mutate(fiber = ifelse(diet == 'Chow', 'chow', fiber)) -> hypoxia
 
 hypoxia[[1]][[4]] <- '9939'
 
@@ -220,7 +222,7 @@ test_lfc %>%
 I think I want to go through and run the ANCOMBC analysis based on location between diets and then smush them together. Or I can run the analysis between locations for each diet and then smuch it together for a plot. I like my first suggestion better but we'll see. 
 
 Update: I tried to do this by diet but there were too few data points and ANCOMBC got upset with me so that's why it's sectioned out by dietary fiber content instead. In this dataset, chow is coded under high fiber. 
-```{r, fig.width=13, fig.height=10}
+```{r, fig.width=12, fig.height=7}
 test_plot <- baseline_plot(test_lfc,
                            hypoxia_facet_labs,
                            hypoxia_names_labs,
@@ -230,10 +232,11 @@ test_plot
 ```
 
 **Saving my Output**
+REMEMBER TO CHANGE THE NAME OF THIS PLOT!! YOU ALTERED IT FOR THE GENUS AND SPECIES PLOTS BUT YOU TYPICALLY RUN THIS AT THE FAMILY LEVEL
 ```{r}
 ggsave('../plots/hypoxia_ancombc.pdf',
        plot = test_plot,
-       width = 13, 
-       height = 10)
+       width = 12, 
+       height = 7)
 ```
 

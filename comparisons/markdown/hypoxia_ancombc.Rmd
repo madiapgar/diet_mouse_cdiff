@@ -159,6 +159,8 @@ hypoxia_names_labs <- c(1,
 ```
 
 **Combining Metadata Table with Hypoxia Data**
+Encode the diets by high fiber, low fiber, and purified diet. Put everything together. Consider interactions between diets. Stratify by location and run the model by dietary fiber content!!
+
 We don't have hypoxia data for all mice that we have cecal data for (not sure what's going on here). 
 Mouse ID 9743 was duplicated in the hypoxia data but the rest of the values were different (i.e. fluorescence). I think the mouse ids are supposed to go 9740, 9741, 9743, 9742 but I will need to ask Keith. I'm temporarily altering the mouse ids to reflect that order (was 9740, 9742, 9743, 9743). 
 
@@ -176,6 +178,9 @@ hypoxia %>%
               values_from = fluorescence) %>% 
   ungroup() %>% 
   mutate(fiber = ifelse(diet == 'Chow', 'chow', fiber)) -> hypoxia
+
+hypoxia %>% 
+  count(diet)
 
 hypoxia[[1]][[4]] <- '9939'
 

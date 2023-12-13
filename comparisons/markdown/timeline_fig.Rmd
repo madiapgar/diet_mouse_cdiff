@@ -13,6 +13,7 @@ library(ggplot2)
 library(scales)
 library(lubridate)
 library(tidyverse)
+library(ggpubr)
 ```
 
 **Creating my Timeline Dataframe**
@@ -30,38 +31,31 @@ timeline <- data.frame(day = c(-15, -8, -3, -1, 0, 3),
                                     'Day -1:\nClindamycin injection',
                                     'Day 0:\nC. difficile infection',
                                     'Day 3:\nMice sacrificed,\ncecal contents harvested,\nquantification\n(SCFAs, toxins A&B,\nbile acids,\n16S rDNA sequencing),\ncolon and cecum histology\nand hypoxia measurements'),
-                       cohort = c('Cohort 1',
-                                  'Cohort 1',
-                                  'Cohort 1',
-                                  'Cohort 1',
-                                  'Cohort 1',
-                                  'Cohort 2'),
-                       seq = c('16S rDNA sequencing',
-                               '16S rDNA sequencing',
-                               '16S rDNA sequencing',
-                               '16S rDNA sequencing',
-                               '16S rDNA sequencing',
-                               '16S rDNA sequencing'),
+                       ## how high the text will be 
                        position = c(0.20,
                                     0.15,
                                     0.20,
                                     0.15,
                                     0.20, 
                                     0.15),
+                       ## idk what this does, I haven't used it yet
                        direction = c(1,
                                      1,
                                      1,
                                      -1,
                                      1,
                                      1))
+
+
 ```
 
 **Timeline Plot**
 I have absolutely no idea what I'm doing :)
-```{r, fig.width=16.5, fig.height=5.5}
+```{r, fig.width=16.5, fig.height=6}
 timeline %>% 
   mutate(text_position = ifelse(day == 3, (position + 0.03), position +  0.01)) %>% 
-  ggplot(aes(x = day, y = 0, col = col_value)) +
+  ggplot(aes(x = day, y = 0)) +
+  geom_col(aes(col = col_value)) +
   geom_hline(yintercept = 0,
                color = 'black',
                size = 0.7) +
@@ -83,9 +77,23 @@ timeline %>%
                  axis.ticks.x = element_blank(),
                  axis.text.x = element_blank(),
                  legend.position = 'none') +
-  geom_point(aes(y = 0, color = col_value), size = 4, alpha = 0.4) +
-  scale_color_brewer(palette = 'Dark2') +
-  geom_text(aes(y = -0.007, label = day), color = 'black', fontface = 'bold') -> timeline_plot
+  geom_text(aes(y = -0.007, label = day), color = 'black', fontface = 'bold') +
+  geom_bracket(xmin = -15, xmax = 0, y.position = 0.25,
+               label = "Cohort 1",
+               family = "Arial Bold",
+               size = 0.7) +
+  geom_bracket(xmin = 2, xmax = 4, y.position = 0.25,
+               label = "Cohort 2",
+               family = "Arial Bold",
+               size = 0.7) +
+  geom_bracket(xmin = -15, xmax = c(-8, -3, 0),
+               y.position = -0.04,
+               label = c("16S rDNA Stool Sequencing", " ", " "),
+               family = "Arial Bold",
+               size = 0.7,
+               tip.length = -0.03,
+               vjust = 4,
+               hjust = -1) -> timeline_plot
 
 timeline_plot
 ```
@@ -95,7 +103,7 @@ timeline_plot
 ggsave('../plots/timeline_plot.pdf',
        plot = timeline_plot,
        width = 16.5,
-       height = 5.5)
+       height = 6)
 
 save(timeline_plot,
      file = '../../figures/timeline_plot.rdata')

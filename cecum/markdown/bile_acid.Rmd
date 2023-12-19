@@ -1,0 +1,268 @@
+---
+title: "bile_acid"
+output: html_document
+date: "2023-12-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(rstatix)
+library(ggplot2)
+library(ggpubr)
+library(ggh4x)
+library(cowplot)
+library(magrittr)
+library(glue)
+```
+
+**Functions**
+```{r}
+## data wrangling
+bile_file_prep <- function(bile_acid_fp,
+                           inhibitors,
+                           promoters){
+  ## reading in bile acid file
+  bile_acid <- read_tsv(bile_acid_FP)
+  ## putting together inhibitor table
+  bile_acid %>% 
+    mutate(temp_id = paste(tube_label, reisdorph_lab_id, sep = ".")) %>% 
+    select(temp_id, tube_label, collection_date, 
+           sample_type, contains(unlist(inhibitors))) %>% 
+    gather(contains('acid'), key = bile_acid, value = concentration) %>% 
+    mutate(c_diff_effect = paste('inhibitor')) %>% 
+    filter(concentration != '#VALUE!') -> inhibit_bile
+  ## putting together promoter table
+  bile_acid %>% 
+    mutate(temp_id = paste(tube_label, reisdorph_lab_id, sep = ".")) %>% 
+    select(temp_id, tube_label, collection_date, 
+           sample_type, contains(unlist(promoters))) %>% 
+    gather(contains('acid'), key = bile_acid, value = concentration) %>% 
+    mutate(c_diff_effect = paste('promoter')) -> promote_bile
+  ## putting tables back together
+  big_bile_acid <- rbind(inhibit_bile,
+                         promote_bile)
+  ## adding diet key column and taking table from wide to long format
+  big_bile_acid %>% 
+    na.omit() %>% 
+    mutate(diet = ifelse(sample_type == 'Ctrl', 'LF/LF', sample_type),
+           diet = ifelse(diet == 'Ctrl+F', 'LF/HF', diet),
+           diet = ifelse(diet == 'WD', 'HF/LF', diet),
+           diet = ifelse(diet == 'WD+F', 'HF/HF', diet)) -> big_bile_acid
+  ## changing all undetectable values to 0 
+  big_bile_acid$concentration[big_bile_acid$concentration == '<LOD' | big_bile_acid$concentration == '<LOQ'] <- 0
+  ## adding 2 to all values so that all points will be on the plot when transformed to log10
+  big_bile_acid %>% 
+    mutate(concentration = as.numeric(concentration),
+           conc_normalized = concentration + 2) -> big_bile_acid
+  ## creating list of outputs
+  my_list <- list(NonProcBile = bile_acid,
+                  ProcBile = big_bile_acid)
+  return(my_list)
+}
+
+## statistical analysis function
+bile_stats <- function(big_bile_table,
+                       group_cols,
+                       conc_value){
+  ## kruskal test
+  big_bile_table %>% 
+    group_by(big_bile_table[unlist(group_cols)]) %>% 
+    do(tidy(kruskal.test(.data[[conc_value]] ~ diet,
+               data = .))) %>% 
+    ungroup() %>% 
+    arrange(p.value) %>% 
+    mutate(p.adj = p.adjust(p.value,
+                            method = "BH")) -> kruskal_test
+  ## dunns post hoc test
+  diet_name <- 'diet'
+  test <- reformulate(glue("{diet_name}"),glue("{conc_value}"))
+  
+  big_bile_table %>% 
+    group_by(big_bile_table[unlist(group_cols)]) %>% 
+    dunn_test(test,
+              p.adjust.method = 'BH',
+              data = .) %>% 
+    add_y_position(scales = 'free',
+                   fun = 'max',
+                   y.trans = log10) -> dunn_test
+  ## creating a list of outputs
+  my_list <- list(KruskalTest = kruskal_test,
+                  DunnPostHoc = dunn_test)
+  return(my_list)
+}
+
+## creating plots
+bile_plots <- function(big_bile_table,
+                       x_labs,
+                       non_bile_dunn,
+                       bile_dunn){
+  ## plot not faceted by bile acid
+  big_bile_table %>% 
+    ggplot(aes(x = diet, y = conc_normalized)) +
+      geom_boxplot(aes(group = diet), outlier.shape = NA) +
+      geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
+      scale_x_discrete(labels = x_labs) +
+      theme_bw() +
+      facet_wrap(~c_diff_effect,
+                 labeller = labeller(c_diff_effect = cdiff_effect_labs)) +
+      scale_y_log10() +
+      stat_pvalue_manual(non_bile_dunn,
+                         tip.length = 0.01,
+                         step.increase = 0.05,
+                         label = 'p.adj.signif',
+                         hide.ns = TRUE) +
+      labs(x = 'Diet',
+           y = 'log10(Concentration (pmol/mg))',
+           title = 'Cecal Bile Acid Concentration') -> overall_bile_plot
+  ## plot faceted by bile acid
+  big_bile_acid %>% 
+    ggplot(aes(x = diet, y = conc_normalized)) +
+      geom_boxplot(aes(group = diet), outlier.shape = NA) +
+      geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
+      scale_x_discrete(labels = x_labs) +
+      facet_nested_wrap(~c_diff_effect + bile_acid,
+                        labeller = labeller(c_diff_effect = cdiff_effect_labs,
+                                            bile_acid = bile_labs),
+                        nrow = 3) +
+      theme_bw() +
+      scale_y_log10() +
+      stat_pvalue_manual(dunn_bile,
+                         tip.length = 0.01,
+                         step.increase = 0.05,
+                         label = 'p.adj.signif',
+                         hide.ns = TRUE) +
+    labs(x = 'Diet',
+         y = 'log10(Concentration (pmol/mg))',
+         title = 'Cecal Bile Acid Concentration') -> bile_include_plot
+  ## creating list of outputs
+  my_list <- list(NoFacetBilePlot = overall_bile_plot,
+                  FacetBilePlot = bile_include_plot)
+  return(my_list)
+}
+```
+
+**File Paths**
+```{r}
+bile_acid_FP <- '../../colon/data/misc/bile_acid.txt'
+
+inhibitor_list <- c('_a-MCA',
+                    '_b-MCA',
+                    '_LCA',
+                    '_DCA',
+                    '_CDCA',
+                    '_UDCA')
+
+promoter_list <- c('_T-CA',
+                   '_CA')
+
+cdiff_effect_labs <- c('C. difficile Inhibitor',
+                       'C. difficile Promoter')
+
+names(cdiff_effect_labs) <- c('inhibitor',
+                              'promoter')
+
+bile_labs <- c('a-MCA',
+               'b-MCA',
+               'LCA',
+               'DCA',
+               'CDCA',
+               'UDCA',
+               'TCA',
+               'CA')
+  
+names(bile_labs) <- c("Alpha_muricholic_acid_a-MCA",
+                     "Beta_muricholic_acid_b-MCA",
+                     "Lithocholic_acid_LCA", 
+                     "Deoxycholic_acid_DCA", 
+                     "Chenodeoxycholic_acid_CDCA",
+                     "Ursodeoxycholic_acid_UDCA", 
+                     "Taurocholic_acid_T-CA",
+                     "Cholic_acid_CA")
+
+bile_groups <- c('c_diff_effect',
+                 'bile_acid')
+non_bile_groups <- c('c_diff_effect')
+
+diet_x_labs <- c('Chow',
+                 'HFt/\nHFb',
+                 'HFt/\nLFb',
+                 'LFt/\nHFb',
+                 'LFt/\nLFb')
+```
+
+**Bile Acid File Prep**
+```{r}
+bile_files <- bile_file_prep(bile_acid_FP,
+                             inhibitor_list,
+                             promoter_list)
+
+big_bile_acid <- bile_files$ProcBile
+```
+
+**Stats**
+```{r}
+## not faceted by bile acid
+no_bile_stat_files <- bile_stats(big_bile_acid,
+                                 non_bile_groups,
+                                 'conc_normalized')
+
+kruskal <- stat_files$KruskalTest
+dunn <- stat_files$DunnPostHoc
+
+## faceted by bile acid 
+bile_stat_files <- bile_stats(big_bile_acid,
+                              bile_groups,
+                              'conc_normalized')
+
+kruskal_bile <- stat_files$KruskalTest
+dunn_bile <- stat_files$DunnPostHoc
+```
+
+**Plots**
+```{r, fig.width=6, fig.height=3.5}
+all_bile_plots <- bile_plots(big_bile_acid,
+                             diet_x_labs,
+                             dunn,
+                             dunn_bile)
+
+overall_plot <- all_bile_plots$NoFacetBilePlot
+bile_plot <- all_bile_plots$FacetBilePlot
+
+overall_plot
+```
+
+```{r, fig.width=10, fig.height=10}
+bile_plot
+```
+
+**Saving my Outputs**
+```{r}
+## plots
+ggsave('../plots/overall_bile_acid.pdf',
+       plot = overall_plot,
+       width = 6,
+       height = 3.5)
+ggsave('../plots/bile_acid.pdf',
+       plot = bile_plot,
+       width = 10,
+       height = 10)
+
+## rdata object 
+save(overall_plot,
+     file = '../../figures/overall_bile_acid.rdata')
+save(bile_plot,
+     file = '../../figures/bile_acid.rdata')
+
+## stats
+write_tsv(dunn,
+          '../stats/overall_bile_dunn.tsv')
+write_tsv(dunn,
+          '../stats/bile_acid_dunn.tsv')
+```
+
+
+

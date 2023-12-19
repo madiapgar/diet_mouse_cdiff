@@ -1,0 +1,572 @@
+---
+title: "hypoxia_comparisons"
+output: html_document
+date: "2023-12-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(broom)
+library(cowplot)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+library(naniar)
+library(ggpubr)
+library(rstatix)
+library(viridis)
+```
+
+**Functions**
+```{r}
+file_prep <- function(metadata_fp,
+                      hypoxia_fp,
+                      metab_fp,
+                      metab_col_filter,
+                      metab_filter,
+                      histo_fp,
+                      toxin_fp){
+  ## metadata file
+  metadata <- read_tsv(metadata_fp) %>% 
+              select(!c(tube_num, date, corr_sample_num))
+  ## hypoxia file 
+  hypoxia <- read_csv(hypoxia_fp)
+  hypoxia %>% 
+    mutate(order = ifelse(location == 'Cecum', 1, location),
+           order = ifelse(order == 'Prox_colon', 2, order),
+           order = ifelse(order == 'Dist_colon', 3, order)) %>% 
+    arrange(order) -> hypoxia
+  ## metabolomics file
+  metab <- read_csv(metab_fp)
+  metadata %>% 
+    merge(metab, by = 'mouse_id') %>% 
+    select(-(all_of(unwanted_columns))) %>% 
+    gather(wanted_metabs, key = metabolite, value = concentration) %>% 
+    filter(!is.na(mouse_id)) -> pre_metab
+  ## changes all 'ND' values in the concentration column to 0 
+  pre_metab$concentration[pre_metab$concentration == 'ND'] <- 0
+  pre_metab %>% 
+    filter(!is.na(concentration)) %>% 
+    mutate(concentration = as.numeric(concentration)) -> big_metab
+  ## histopathology file
+  histo <- read_csv(histo_fp) %>% 
+           filter(!is.na(mouse_id))
+  metadata %>% 
+    merge(histo, by = 'mouse_id') %>% 
+    gather(cecum, colon, key = tissue, value = score) -> big_histo
+  ## toxin file
+  toxin <- read_tsv(toxin_fp)
+  ## toxin neat concentrations (non_diluted)
+  toxin %>% 
+    merge(metadata, by = 'mouse_id') %>% 
+    select(!c('Total TcA 1:10', 'Total TcB 1:10')) %>% 
+    gather('Total TcA Neat', 'Total TcB Neat', 
+           key = neat_toxin, value = neat_conc) -> pre_neat_toxin
+  pre_neat_toxin$neat_conc[pre_neat_toxin$neat_conc == 'BDL'] <- '0'
+  pre_neat_toxin %>% 
+    mutate(neat_conc = as.numeric(neat_conc)) %>% 
+    select(!c('Tube_Label',
+              'Collection Date',
+              'Sample_Type',
+              'Extra_Sample')) -> neat_toxin
+  ## toxin diluted concentrations 
+  toxin %>% 
+    merge(metadata, by = 'mouse_id') %>% 
+    select(!c('Total TcA Neat', 'Total TcB Neat')) %>% 
+    gather('Total TcA 1:10', 'Total TcB 1:10',
+           key = dil_toxin, value = dil_conc) -> pre_dil_toxin
+  pre_dil_toxin$dil_conc[pre_dil_toxin$dil_conc == 'BDL'] <- '0'
+  pre_dil_toxin$dil_conc[pre_dil_toxin$dil_conc == 'Chow'] <- '0'
+  pre_dil_toxin %>% 
+    mutate(dil_conc = as.numeric(dil_conc)) %>% 
+    filter(diet != 'Chow') %>% 
+    select(!c('Tube_Label',
+              'Collection Date',
+              'Sample_Type',
+              'Extra_Sample')) -> dil_toxin
+  ## creating a list of my outputs
+  my_list <- list(Metadata = metadata,
+                  Hypoxia = hypoxia, 
+                  Metabolomics = big_metab,
+                  Histopathology = big_histo,
+                  NeatToxin = neat_toxin,
+                  DilToxin = dil_toxin)
+  return(my_list)
+}
+
+## hypoxia plot comparison function
+comp_plot <- function(hypoxia_table,
+                       wanted_table,
+                       ## this is what you want your x axis to be (neat, diluted, or concentration)? 
+                       wanted_x,
+                       ## this is toxin/metabolite column you want to filter by (neat or diluted)?
+                       wanted_y,
+                       ## what is the toxin/metabolite you want to filter by called in the table?
+                       wanted_y_name,
+                       diet_labels,
+                       location_labels,
+                       x_label,
+                       title){
+  ## putting tables together
+  hypoxia_table %>% 
+    left_join(wanted_table, by = 'mouse_id') %>% 
+    na.omit() -> compiled_table
+  ## constructing plot
+  compiled_table %>% 
+    filter(.data[[wanted_y]] == wanted_y_name) %>% 
+    na.omit() %>% 
+    ggplot(aes(x = .data[[wanted_x]], y = fluorescence)) +
+    scale_x_continuous(trans = 'log10') +
+    scale_y_continuous(trans = 'log10') +
+    geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
+    geom_smooth(method = 'lm', se = FALSE) +
+    facet_grid(order~diet,
+               labeller = labeller(order = location_labels,
+                                   diet = diet_labels)) +
+    theme_bw() +
+    theme(strip.text.y = element_text(angle = 0)) +
+    xlab(x_label) +
+    ylab('Fluorescence') +
+    ggtitle(title) -> plot
+  return(plot)
+}
+```
+
+**Statisitical Analysis Functions**
+```{r}
+## runs linear modeling on the table, diet, location, and toxin/metabolite wanted and returns full results 
+## along with a table containing the r2 and p-value 
+## this goes into the following function with a for loop 
+r2_value <- function(biom_table,
+                     wanted_diet,
+                     wanted_location,
+                     tox_metab_col,
+                     wanted_tox_metab,
+                     wanted_conc_value){
+  ## to get r squared value and p value
+  biom_table %>% 
+    filter(diet == wanted_diet,
+           location == wanted_location,
+           .data[[tox_metab_col]] == wanted_tox_metab) %>%
+    do(glance(lm(fluorescence ~ .data[[wanted_conc_value]],
+                 data = .))) -> lm_glance
+  output <- list(r_squared = lm_glance$r.squared,
+                 p_value = lm_glance$p.value)
+  ## to get estimate and place it with the overall output table
+  biom_table %>% 
+    filter(diet == wanted_diet,
+           location == wanted_location,
+           .data[[tox_metab_col]] == wanted_tox_metab) %>%
+    do(tidy(lm(fluorescence ~ .data[[wanted_conc_value]],
+                 data = .))) %>% 
+    filter(term != '(Intercept)') -> lm_full
+  output <- as_tibble(output) %>%
+            mutate(diet = paste(wanted_diet),
+                   location = paste(wanted_location),
+                   tox_metab = paste(wanted_tox_metab),
+                   just_r = sqrt(r_squared),
+                   estimate = lm_full$estimate,
+                   r_direct = if_else(estimate < 0, just_r * -1, just_r))
+  my_list <- list(LinearModel = lm_full,
+                  WantedStats = output)
+  return(my_list)
+}
+
+## creating a nested for loop since running this function individually is a nightmare
+r2_value_for_loop <- function(biom_table,
+                              wanted_col,
+                              wanted_conc) {
+  ## nested for loop for the r squared and p values 
+  output <- tibble()
+  for(i in unique(unlist(biom_table$diet))) {
+    for(j in unique(unlist(biom_table$location))) {
+      for(k in unique(unlist(biom_table[wanted_col]))) {
+        tmp_output <- r2_value(biom_table,
+                               i,
+                               j,
+                               wanted_col,
+                               k,
+                               wanted_conc)$WantedStats
+        output <- bind_rows(output, tmp_output)
+      }
+    }
+  }
+  return(output)
+}
+
+## statistical visualization plot function
+stat_plot <- function(stat_table,
+                      x_lab_list,
+                      y_lab_list,
+                      facet_labels,
+                      title){
+  stat_table %>% 
+    ggplot(aes(x = order, y = diet)) +
+    geom_tile(aes(fill = r_direct), color = 'black', alpha = 0.6) +
+    geom_text(aes(label = signif)) +
+    scale_fill_gradient2(low = 'blue', high = 'green', name = "Correlation\nCoefficient") +
+    scale_x_discrete(labels = x_lab_list) +
+    scale_y_discrete(labels = y_lab_list) +
+    facet_wrap(~tox_metab,
+               labeller = labeller(tox_metab = facet_labels)) +
+    theme_bw() +
+    xlab("Location") +
+    ylab("Diet") +
+    ggtitle(title) -> plot
+  return(plot)
+  }
+```
+
+**File Paths**
+```{r}
+metadata_FP <- '../../cecum/data/misc/filt_cecal_processed_metadata.tsv'
+histo_FP <- '../../colon/data/misc/histo_data.csv'
+metab_FP <- '../../colon/data/misc/metabolomics.csv'
+toxin_FP <- '../../colon/data/misc/toxin_final_data.tsv'
+hypoxia_FP <- '../../colon/data/misc/pimid_fluor.csv'
+
+## lists to redo the diet names on the facet labels of the ggplot created below 
+diet_labs <- 
+    c('Chow', 
+      'High Fat / High Fiber', 
+      'High Fat / Low Fiber', 
+      'Low Fat / High Fiber', 
+      'Low Fat / Low Fiber')
+
+names(diet_labs) <- c('Chow', 'HF/HF', 'HF/LF', 'LF/HF', 'LF/LF')
+
+tissue_labs <- c('Cecum',
+                 'Colon')
+names(tissue_labs) <- c('cecum',
+                        'colon')
+diet_y_labs <- c('Chow',
+                  'HFt/HFb',
+                  'HFt/LFb',
+                  'LFt/HFb',
+                  'LFt/LFb')
+
+wanted_metabs <- c('Acetic Acid (ug/g)',
+                   'Propanoic Acid (ug/g)',
+                   'n-Butanoic Acid (ug/g)')
+unwanted_columns <- c('2-methyl-propanoic acid (ug/g)',
+                     'Isopentanoic Acid (ug/g)',
+                     '2-methyl-Butanoic Acid (ug/g)',
+                     'Pentanoic Acid (ug/g)',
+                     'Notes',
+                     'Sample Group',
+                     'SCFA Data File',
+                     'Acq. Date-Time',
+                     'Tube_Label',
+                     'Sample_Type',
+                     'Collection Date',
+                     'Dil.')
+metab_labs <- c('Acetic Acid',
+                'Propanoic Acid',
+                'n-Butanoic Acid')
+names(metab_labs) <- wanted_metabs
+
+neat_labs <- c('TcdA', 'TcdB')
+names(neat_labs) <- c('Total TcA Neat', 'Total TcB Neat')
+
+dil_labs <- c('TcdA', 'TcdB')
+names(dil_labs) <- c('Total TcA 1:10', 'Total TcB 1:10')
+
+location_labs <- c('Cecum',
+                   'Proximal Colon',
+                   'Distal Colon')
+names(location_labs) <- c(1,
+                          2,
+                          3)
+```
+
+**Data Wrangling**
+```{r}
+hypoxia_files <- file_prep(metadata_FP,
+                           hypoxia_FP,
+                           metab_FP,
+                           unwanted_columns,
+                           wanted_metabs,
+                           histo_FP,
+                           toxin_FP)
+
+metadata <- hypoxia_files$Metadata
+hypoxia <- hypoxia_files$Hypoxia
+metab <- hypoxia_files$Metabolomics
+metab %>% 
+  select(metabolite, concentration, mouse_id) -> mini_metab
+
+dil_toxin <- hypoxia_files$DilToxin
+neat_toxin <- hypoxia_files$NeatToxin
+neat_toxin %>% 
+  select(neat_toxin, neat_conc, mouse_id) -> mini_neat_toxin
+
+histo <- hypoxia_files$Histopathology
+histo %>% 
+  select(mouse_id, tissue, score) -> mini_histo
+```
+
+
+**Hypoxia and Histopathology Score Comparisons**
+
+**Plot**
+```{r, warning=FALSE, fig.width=10, fig.height=5}
+hypox_cecum_plot <- comp_plot(hypoxia,
+                              mini_histo,
+                              'score',
+                              'tissue',
+                              'cecum',
+                              diet_labs,
+                              location_labs,
+                              'Histopathology Score',
+                              'Hypoxia and Cecal Inflammation')
+
+hypox_colon_plot <- comp_plot(hypoxia,
+                              mini_histo,
+                              'score',
+                              'tissue',
+                              'colon',
+                              diet_labs,
+                              location_labs,
+                              'Histopathology Score',
+                              'Hypoxia and Colon Inflammation')
+
+
+hypox_cecum_plot
+hypox_colon_plot
+```
+
+**Stats**
+```{r}
+hypox_histo_table <- hypoxia %>% 
+  left_join(mini_histo, by = 'mouse_id') %>% 
+  na.omit()
+
+hypox_histo_stat_table <- r2_value_for_loop(hypox_histo_table,
+                                            "tissue",
+                                            "score")
+
+hypox_histo_stat_table['signif'] <- symnum(hypox_histo_stat_table$p_value,
+                                           cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                           symbols = c("****", "***", "**", "*", "+", "ns"),
+                                           abbr.colnames = FALSE,
+                                           na = "")
+
+hypox_histo_stat_table %>% 
+  mutate(order = ifelse(location == 'Cecum', 1, location),
+           order = ifelse(order == 'Prox_colon', 2, order),
+           order = ifelse(order == 'Dist_colon', 3, order)) %>% 
+  arrange(order) -> hypox_histo_stat_table
+
+
+hypox_histo_stat_plot <- stat_plot(hypox_histo_stat_table,
+                                   location_labs,
+                                   histo_y_labs,
+                                   tissue_labs,
+                                   'Hypoxia and Histopathology Score Comparisons')
+
+hypox_histo_stat_plot
+```
+
+**Everything Together**
+```{r, warning=FALSE, fig.height=7, fig.width=17}
+hypoxia_histo_plots <- plot_grid(hypox_cecum_plot,
+                                 hypox_colon_plot,
+                                 hypox_histo_stat_plot,
+                                 nrow = 2,
+                                 labels = c('a)', 'b)', 'c)'),
+                                 label_size = 18,
+                                 align = c('hv'),
+                                 axis = c('tblr'),
+                                 rel_heights = c(1, 0.6))
+
+hypoxia_histo_plots
+```
+
+
+**Hypoxia and Neat C. difficile Toxin Concentration Comparisons**
+
+**Plots**
+```{r, warning=FALSE, fig.width=10, fig.height=5}
+hypox_tcda_plot <- comp_plot(hypoxia,
+                             mini_neat_toxin,
+                             'neat_conc',
+                             'neat_toxin',
+                             'Total TcA Neat',
+                             diet_labs,
+                             location_labs,
+                             'Concentration',
+                             'Hypoxia Compared to TcdA Toxin')
+
+hypox_tcdb_plot <- comp_plot(hypoxia,
+                             mini_neat_toxin,
+                             'neat_conc',
+                             'neat_toxin',
+                             'Total TcB Neat',
+                             diet_labs,
+                             location_labs,
+                             'Concentration',
+                             'Hypoxia Compared to TcdB Toxin')
+
+hypox_tcda_plot
+hypox_tcdb_plot
+```
+
+**Stats**
+I think there are too few points for the high-fat/high-fiber diet so there isn't a calculated p-value for that diet. I turned the NAs into 1 so the result would show as non-significant on the plot. 
+```{r}
+hypox_toxin_table <- hypoxia %>% 
+  left_join(mini_neat_toxin, by = 'mouse_id') %>% 
+  na.omit()
+
+hypox_toxin_stat_table <- r2_value_for_loop(hypox_toxin_table,
+                                            "neat_toxin",
+                                            "neat_conc")
+hypox_toxin_stat_table %>% 
+  mutate(p_value = ifelse(p_value == 'NaN', 1, p_value)) -> hypox_toxin_stat_table
+
+hypox_toxin_stat_table['signif'] <- symnum(hypox_toxin_stat_table$p_value,
+                                           cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                           symbols = c("****", "***", "**", "*", "+", "ns"),
+                                           abbr.colnames = FALSE,
+                                           na = "")
+
+hypox_toxin_stat_table %>% 
+  mutate(order = ifelse(location == 'Cecum', 1, location),
+           order = ifelse(order == 'Prox_colon', 2, order),
+           order = ifelse(order == 'Dist_colon', 3, order)) %>% 
+  arrange(order) -> hypox_toxin_stat_table
+
+
+hypox_toxin_stat_plot <- stat_plot(hypox_toxin_stat_table,
+                                   location_labs,
+                                   diet_y_labs,
+                                   neat_labs,
+                                   'Hypoxia and Toxin Comparisons')
+
+hypox_toxin_stat_plot
+```
+
+**Everything Together**
+```{r, warning=FALSE, fig.height=7, fig.width=17}
+hypoxia_toxin_plots <- plot_grid(hypox_tcda_plot,
+                                 hypox_tcdb_plot,
+                                 hypox_toxin_stat_plot,
+                                 nrow = 2,
+                                 labels = c('a)', 'b)', 'c)'),
+                                 label_size = 18,
+                                 align = c('hv'),
+                                 axis = c('tblr'),
+                                 rel_heights = c(1, 0.6))
+
+hypoxia_toxin_plots
+```
+
+
+**Hypoxia and Metabolite Concentration Comparisons**
+
+**Plots**
+```{r, warning=FALSE, fig.width=10, fig.height=5}
+hypox_acetic_plot <- comp_plot(hypoxia,
+                               mini_metab,
+                               'concentration',
+                               'metabolite',
+                               'Acetic Acid (ug/g)',
+                               diet_labs,
+                               location_labs,
+                               'Concentration',
+                               'Hypoxia Compared to Acetic Acid Concentration')
+
+hypox_butanoic_plot <- comp_plot(hypoxia,
+                                 mini_metab,
+                                 'concentration',
+                                 'metabolite',
+                                 'n-Butanoic Acid (ug/g)',
+                                 diet_labs,
+                                 location_labs,
+                                 'Concentration',
+                                 'Hypoxia Compared to n-Butanoic Acid Concentration')
+
+hypox_propanoic_plot <- comp_plot(hypoxia,
+                                   mini_metab,
+                                   'concentration',
+                                   'metabolite',
+                                   'Propanoic Acid (ug/g)',
+                                   diet_labs,
+                                   location_labs,
+                                   'Concentration',
+                                   'Hypoxia Compared to Propanoic Acid Concentration')
+
+hypox_acetic_plot
+hypox_butanoic_plot
+hypox_propanoic_plot
+```
+
+**Stats**
+```{r, warning=FALSE, fig.height=4, fig.width=10}
+hypox_metab_table <- hypoxia %>% 
+  left_join(mini_metab, by = 'mouse_id') %>% 
+  na.omit()
+
+hypox_metab_stat_table <- r2_value_for_loop(hypox_metab_table,
+                                            "metabolite",
+                                            "concentration")
+hypox_metab_stat_table %>% 
+  mutate(p_value = ifelse(p_value == 'NaN', 1, p_value)) -> hypox_metab_stat_table
+
+hypox_metab_stat_table['signif'] <- symnum(hypox_metab_stat_table$p_value,
+                                           cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                           symbols = c("****", "***", "**", "*", "+", "ns"),
+                                           abbr.colnames = FALSE,
+                                           na = "")
+
+hypox_metab_stat_table %>% 
+  mutate(order = ifelse(location == 'Cecum', 1, location),
+           order = ifelse(order == 'Prox_colon', 2, order),
+           order = ifelse(order == 'Dist_colon', 3, order)) %>% 
+  arrange(order) -> hypox_metab_stat_table
+
+
+hypox_metab_stat_plot <- stat_plot(hypox_metab_stat_table,
+                                   location_labs,
+                                   diet_y_labs,
+                                   metab_labs,
+                                   'Hypoxia and Metabolite Comparisons')
+
+hypox_metab_stat_plot
+```
+
+**Everything Together**
+```{r, warning=FALSE, fig.height=10, fig.width=20}
+hypoxia_metab_plots <- plot_grid(hypox_acetic_plot,
+                                 hypox_butanoic_plot,
+                                 hypox_propanoic_plot,
+                                 hypox_metab_stat_plot,
+                                 nrow = 2,
+                                 labels = c('a)', 'b)', 'c)', 'd)'),
+                                 label_size = 18,
+                                 align = c('hv'),
+                                 axis = c('tblr'))
+
+hypoxia_metab_plots
+```
+
+
+**Saving my Outputs**
+```{r}
+ggsave('../plots/hypoxia_histo_comp_plots.pdf',
+       plot = hypoxia_histo_plots,
+       width = 17, 
+       height = 7)
+ggsave('../plots/hypoxia_toxin_comp_plots.pdf',
+       plot = hypoxia_toxin_plots,
+       width = 17, 
+       height = 7)
+ggsave('../plots/hypoxia_metab_comp_plots.pdf',
+       plot = hypoxia_metab_plots,
+       width = 20, 
+       height = 10)
+```
+

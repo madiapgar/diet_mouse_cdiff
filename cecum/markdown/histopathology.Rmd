@@ -27,17 +27,14 @@ histo_file_prep <- function(metadata_fp,
                             histo_fp){
   ## reading in metadata file
   metadata <- read_tsv(metadata_fp)
-  ## reading in histopathology scores
+  ## reading in histo file
   histo <- read_csv(histo_fp) %>% 
     filter(!is.na(mouse_id))
-  ## joining the two together 
+  ## joining them all together for ggplot rendering 
   metadata %>% 
     merge(histo, by = 'mouse_id') %>% 
-    group_by(mouse_id) %>% 
-    filter(day_post_inf == max(day_post_inf)) %>% 
-    ungroup() %>% 
-    mutate(day_post_inf = as.factor(day_post_inf)) %>% 
-    gather(cecum, colon, key = tissue, value = score) -> big_histo
+    gather(cecum, colon, key = tissue, value = score) %>% 
+    select(!c(tube_num, date, corr_sample_num)) -> big_histo
   return(big_histo)
 }
 
@@ -106,10 +103,10 @@ histo_plot <- function(big_histo,
     geom_violin(aes(group = diet),  draw_quantiles = c(0.5)) +
     geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
     scale_x_discrete(labels = c('Chow', 
-                                'HFt/HFb', 
-                                'HFt/LFb',
-                                'LFt/HFb', 
-                                'LFt/LFb')) +
+                                'HFt/\nHFb', 
+                                'HFt/\nLFb',
+                                'LFt/\nHFb', 
+                                'LFt/\nLFb')) +
     facet_wrap(~tissue, labeller = labeller(tissue = tissue_labs),
                scales = "free_y") +
     stat_pvalue_manual(histo_dunn,
@@ -117,7 +114,7 @@ histo_plot <- function(big_histo,
                        label = 'p.adj.signif',
                        hide.ns = TRUE,
                        step.increase = 0.1) +
-    theme_bw(base_size = 14) +
+    theme_bw(base_size = 20) +
     xlab('Diet') +
     ylab('Histopathology Score') +
     ggtitle("Cecal Sample Histopathology Score by Diet") -> all_day_plot
@@ -136,7 +133,7 @@ names(tissue_labs) <- c('cecum',
 ```
 
 **Histopathology Calculations**
-```{r, fig.height=5, fig.width=10}
+```{r, fig.height=6, fig.width=12}
 ## file prep 
 histo <- histo_file_prep(metadata_FP,
                          histo_FP)
@@ -149,22 +146,25 @@ dunn <- stats$DunnsPostHoc
 linear_model <- stats$LinearModel
 
 ## plot 
-plot <- histo_plot(histo,
-                   dunn)
+all_day_plot <- histo_plot(histo,
+                           dunn)
 
-plot
+all_day_plot
 ```
 
 **Saving my Outputs**
 ```{r}
 ggsave("../plots/histopathology.pdf", 
-       plot = plot,
-       width = 10, 
-       height = 5)
+       plot = all_day_plot,
+       width = 12, 
+       height = 6)
 
 write_tsv(linear_model,
           "../stats/histopathology_lm.tsv")
 write_tsv(dunn,
           "../stats/histopathology_dunn.tsv")
+
+save(all_day_plot,
+     file = '../../figures/histo.rdata')
 ```
 

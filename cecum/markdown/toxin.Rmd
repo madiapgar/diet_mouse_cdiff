@@ -26,43 +26,50 @@ library(argparse)
 ## for toxin file prep
 file_prep <- function(metadata_fp,
                       toxin_fp){
-  ## metadata file
-  metadata <- read_tsv(metadata_fp)
-  ## toxin file
-  toxin <- read_tsv(toxin_fp)
-  wanted_toxin_ids <- toxin$mouse_id
-  metadata %>% 
-    group_by(mouse_id) %>% 
-    filter(mouse_id %in% wanted_toxin_ids) -> meta_filt
+  ## toxin data 
+  toxin <- read_tsv(toxin_FP)
+  wanted_ids <- toxin$mouse_id
+  
+  ## metadata 
+  metadata <- read_tsv(metadata_FP) %>% 
+    select(!c(tube_num, date, corr_sample_num))
+  
+  ## toxin neat concentrations (non_diluted)
   toxin %>% 
-    left_join(meta_filt, by = 'mouse_id') %>% 
+    merge(metadata, by = 'mouse_id') %>% 
+    select(!c('Total TcA 1:10', 'Total TcB 1:10')) %>% 
     gather('Total TcA Neat', 'Total TcB Neat', 
-           key = neat_toxin, value = neat_conc) %>% 
+           key = neat_toxin, value = neat_conc) -> pre_neat_toxin
+  
+  pre_neat_toxin$neat_conc[pre_neat_toxin$neat_conc == 'BDL'] <- '0'
+  
+  pre_neat_toxin %>% 
+    mutate(neat_conc = as.numeric(neat_conc)) %>% 
+    select(!c('Tube_Label',
+              'Collection Date',
+              'Sample_Type',
+              'Extra_Sample')) -> neat_toxin
+    
+  ## toxin diluted concentrations 
+  ## chow is not included in this 
+  toxin %>% 
+    merge(metadata, by = 'mouse_id') %>% 
+    select(!c('Total TcA Neat', 'Total TcB Neat')) %>% 
     gather('Total TcA 1:10', 'Total TcB 1:10',
-           key = dil_toxin, value = dil_conc) -> pre_toxin
+           key = dil_toxin, value = dil_conc) -> pre_dil_toxin
   
-  pre_toxin$neat_conc[pre_toxin$neat_conc == 'BDL'] <- '0'
-  pre_toxin$dil_conc[pre_toxin$dil_conc == 'BDL'] <- '0'
-  pre_toxin$dil_conc[pre_toxin$dil_conc == 'Chow'] <- '0'
+  pre_dil_toxin$dil_conc[pre_dil_toxin$dil_conc == 'BDL'] <- '0'
+  pre_dil_toxin$dil_conc[pre_dil_toxin$dil_conc == 'Chow'] <- '0'
   
-  pre_toxin %>% 
-    filter(!is.na(dil_conc),
-           !is.na(neat_conc)) %>%
-    mutate(neat_conc = as.numeric(neat_conc),
-           dil_conc = as.numeric(dil_conc)) %>% 
-    select(-'Extra_Sample', -'Tube_Label', -'Collection Date',
-           -'Sample_Type') -> big_toxin
-  big_toxin %>% 
-    select(-neat_toxin, -neat_conc) %>% 
-    distinct(mouse_id, dil_conc, .keep_all = TRUE) %>% 
-    filter(diet != 'Chow') -> dil_toxin
-  
-  big_toxin %>%
-    select(-dil_toxin, -dil_conc) %>% 
-    distinct(mouse_id, neat_conc, .keep_all = TRUE) -> neat_toxin 
+  pre_dil_toxin %>% 
+    mutate(dil_conc = as.numeric(dil_conc)) %>% 
+    filter(diet != 'Chow') %>% 
+    select(!c('Tube_Label',
+              'Collection Date',
+              'Sample_Type',
+              'Extra_Sample')) -> dil_toxin
   ## creating a list of my outputs
   my_list <- list(Metadata = metadata,
-                  Toxin = big_toxin,
                   NeatToxin = neat_toxin,
                   DilToxin = dil_toxin)
   return(my_list)
@@ -238,13 +245,19 @@ dil_plot
 ## plots
 ggsave("../plots/neat_toxin.pdf",
        plot = neat_plot,
-       width = 10,
+       width = 8,
        height = 5)
 
 ggsave("../plots/dil_toxin.pdf",
        plot = dil_plot,
-       width = 10,
+       width = 8,
        height = 5)
+
+## as an Rdata object for manuscript figures
+save(neat_plot,
+     file = '../../figures/neat_toxin.rdata')
+save(dil_plot,
+     file = '../../figures/dil_toxin.rdata')
 
 ## stats
 write_tsv(neat_kruskal,

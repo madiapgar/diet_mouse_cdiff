@@ -27,24 +27,22 @@ file_prep <- function(metadata_fp,
                       metab_fp,
                       metab_col_filter,
                       metab_filter){
-  ## metadata file
-  metadata <- read_tsv(metadata_fp)
-  ## metabolomics file
-  metab <- read_csv(metab_fp)
-  wanted_metab_ids <- metab$mouse_id
+  ## metabolomics file prep 
+  metab <- read_csv(metab_FP)
+  ## metadta file prep 
+  metadata <- read_tsv(metadata_FP)
+  
   metadata %>% 
-    group_by(mouse_id) %>% 
-    filter(mouse_id %in% wanted_metab_ids) %>% 
-    left_join(metab, by = 'mouse_id') %>% 
+    merge(metab, by = 'mouse_id') %>% 
     select(-(all_of(metab_col_filter))) %>% 
     gather(metab_filter, key = metabolite, value = concentration) %>% 
     filter(!is.na(mouse_id)) -> pre_metab
   ## changes all 'ND' values in the concentration column to 0 
   pre_metab$concentration[pre_metab$concentration == 'ND'] <- 0
+  
   pre_metab %>% 
     filter(!is.na(concentration)) %>% 
-    mutate(concentration = as.numeric(concentration)) %>% 
-    distinct(mouse_id, concentration, .keep_all = TRUE) -> big_metab
+    mutate(concentration = as.numeric(concentration)) -> big_metab
   ## creating a list of my outputs
   my_list <- list(Metadata = metadata,
                   Metabolomics = big_metab)
@@ -212,6 +210,10 @@ ggsave("../plots/metabolomics.pdf",
        plot = metab_plot,
        width = 12,
        height = 5)
+
+## as an rdata object
+save(metab_plot,
+     file = '../../figures/metab.rdata')
 
 ## statistical tests 
 write_tsv(linear_model,

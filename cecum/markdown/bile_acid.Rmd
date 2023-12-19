@@ -147,7 +147,7 @@ bile_plots <- function(big_bile_table,
 
 **File Paths**
 ```{r}
-bile_acid_FP <- '../../colon/data/misc/bile_acid.txt'
+bile_acid_FP <- '../data/misc/bile_acid.txt'
 
 inhibitor_list <- c('_a-MCA',
                     '_b-MCA',

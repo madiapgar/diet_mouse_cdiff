@@ -165,7 +165,7 @@ tox_plot <- function(biom_table,
 **File Paths**
 ```{r}
 metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
-toxin_FP <- '../../colon/data/misc/toxin_final_data.tsv'
+toxin_FP <- '../data/misc/toxin_final_data.tsv'
 
 ## labeling lists
 neat_labs <- c('TcdA', 'TcdB')

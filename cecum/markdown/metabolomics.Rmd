@@ -139,7 +139,7 @@ metab_plot <- function(biom_table,
 **File Paths**
 ```{r}
 metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
-metab_FP <- '../../colon/data/misc/metabolomics.csv'
+metab_FP <- '../data/misc/metabolomics.csv'
 wanted_metabs <- c('Acetic Acid (ug/g)',
                    'Propanoic Acid (ug/g)',
                    'n-Butanoic Acid (ug/g)')

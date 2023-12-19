@@ -125,7 +125,7 @@ histo_plot <- function(big_histo,
 **File Paths**
 ```{r}
 metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
-histo_FP <- '../../colon/data/misc/histo_data.csv'
+histo_FP <- '../data/misc/histo_data.csv'
 tissue_labs <- c('Cecum',
                  'Colon')
 names(tissue_labs) <- c('cecum',

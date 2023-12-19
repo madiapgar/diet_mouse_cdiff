@@ -15,9 +15,10 @@ library(broom)
 library(rstatix)
 library(ggpubr)
 ```
+
 **File Path**
 ```{r}
-hypoxia_fp <- '../../colon/data/misc/pimid_fluor.csv'
+hypoxia_fp <- '../data/misc/pimid_fluor.csv'
 
 diet_labs <- c('Chow',
                'High Fat / High Fiber',

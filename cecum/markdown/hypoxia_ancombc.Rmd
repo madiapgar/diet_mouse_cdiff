@@ -136,10 +136,10 @@ baseline_plot <- function(baseline_table,
 
 **File Paths**
 ```{r}
-metadata_FP <- '../../cecum/data/misc/filt_cecal_processed_metadata.tsv'
-hypoxia_FP <- '../../colon/data/misc/pimid_fluor.csv'
-otu_table_FP <- '../../cecum/data/cecal_qiime/tax_filt_actual.qza'
-tax_FP <- '../../cecum/data/cecal_qiime/taxonomy.qza'
+metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
+hypoxia_FP <- '../data/misc/pimid_fluor.csv'
+otu_table_FP <- '../data/cecal_qiime/tax_filt_actual.qza'
+tax_FP <- '../data/cecal_qiime/taxonomy.qza'
 
 col_names <- c('taxon',
                'location',

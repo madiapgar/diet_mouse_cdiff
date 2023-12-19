@@ -211,9 +211,9 @@ stat_plot <- function(stat_table,
 
 **File Paths**
 ```{r}
-metadata_FP <- '../../cecum/data/misc/filt_cecal_processed_metadata.tsv'
-metab_FP <- '../../colon/data/misc/metabolomics.csv'
-toxin_FP <- '../../colon/data/misc/toxin_final_data.tsv'
+metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
+metab_FP <- '../data/misc/metabolomics.csv'
+toxin_FP <- '../data/misc/toxin_final_data.tsv'
 
 ## lists to redo the diet names on the facet labels of the ggplot created below 
 diet_labs <- 

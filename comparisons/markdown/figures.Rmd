@@ -12,6 +12,9 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(cowplot)
 library(patchwork)
+# library(svgparser)
+# library(cssparser)
+# library(grid)
 library(dmcdmfigs)
 ```
 
@@ -26,13 +29,24 @@ Plots to go in figure:
 
 *Caption*:
 *a) Survival curves for the five tested diets after antibiotic induced gut microbiome dysbiosis and C. difficile infection. b) A heat map of log-normal pairwise comparisons of survival probability between the tested diets. P-value significance (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, +p<0.1, ns<1).*
+
+```{r}
+# timeline_FP <- '../../figures/test_timeline.svg'
+# 
+# timeline <- svgparser::read_svg(timeline_FP, obj_type = 'data.frame')
+# 
+# grid::grid.draw(timeline)
+```
+
+
 ```{r, warning=FALSE, fig.height=12, fig.width=15}
 fig1_bottom_row <- plot_grid(surv_stat_vis, NULL,
                              rel_widths = c(0.6, 1),
                              labels = c('b)', ' '),
                              label_size = 20)
 
-plot_grid(diet_plot_final,
+plot_grid(diet_plot_final +
+            theme_bw(base_size = 18),
           fig1_bottom_row,
           rel_heights = c(1, 0.5),
           nrow = 2,

@@ -80,7 +80,7 @@ timeline %>%
   geom_text(aes(y = -0.007, label = day), color = 'black', fontface = 'bold') +
   geom_bracket(xmin = -15, xmax = 0, y.position = 0.25,
                label = "Cohort 1",
-               family = "Arial Bold",
+          family = "Arial Bold",
                size = 0.7) +
   geom_bracket(xmin = 2, xmax = 4, y.position = 0.25,
                label = "Cohort 2",

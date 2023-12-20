@@ -26,38 +26,31 @@ bile_file_prep <- function(bile_acid_fp,
                            inhibitors,
                            promoters){
   ## reading in bile acid file
-  bile_acid <- read_tsv(bile_acid_FP)
+  bile_acid <- read_tsv(bile_acid_fp)
   ## putting together inhibitor table
   bile_acid %>% 
-    mutate(temp_id = paste(tube_label, reisdorph_lab_id, sep = ".")) %>% 
-    select(temp_id, tube_label, collection_date, 
-           sample_type, contains(unlist(inhibitors))) %>% 
+    select(diet, tube_numb, tube_label, date, 
+           mouse_id, facility, study, contains(unlist(inhibitors))) %>% 
     gather(contains('acid'), key = bile_acid, value = concentration) %>% 
     mutate(c_diff_effect = paste('inhibitor')) %>% 
     filter(concentration != '#VALUE!') -> inhibit_bile
   ## putting together promoter table
   bile_acid %>% 
-    mutate(temp_id = paste(tube_label, reisdorph_lab_id, sep = ".")) %>% 
-    select(temp_id, tube_label, collection_date, 
-           sample_type, contains(unlist(promoters))) %>% 
+    select(diet, tube_numb, tube_label, date, 
+           mouse_id, facility, study, contains(unlist(promoters))) %>% 
     gather(contains('acid'), key = bile_acid, value = concentration) %>% 
     mutate(c_diff_effect = paste('promoter')) -> promote_bile
   ## putting tables back together
   big_bile_acid <- rbind(inhibit_bile,
                          promote_bile)
-  ## adding diet key column and taking table from wide to long format
-  big_bile_acid %>% 
-    na.omit() %>% 
-    mutate(diet = ifelse(sample_type == 'Ctrl', 'LF/LF', sample_type),
-           diet = ifelse(diet == 'Ctrl+F', 'LF/HF', diet),
-           diet = ifelse(diet == 'WD', 'HF/LF', diet),
-           diet = ifelse(diet == 'WD+F', 'HF/HF', diet)) -> big_bile_acid
   ## changing all undetectable values to 0 
   big_bile_acid$concentration[big_bile_acid$concentration == '<LOD' | big_bile_acid$concentration == '<LOQ'] <- 0
   ## adding 2 to all values so that all points will be on the plot when transformed to log10
   big_bile_acid %>% 
+    na.omit() %>% 
     mutate(concentration = as.numeric(concentration),
-           conc_normalized = concentration + 2) -> big_bile_acid
+           conc_normalized = concentration + 2) %>% 
+    filter(study != 1) -> big_bile_acid
   ## creating list of outputs
   my_list <- list(NonProcBile = bile_acid,
                   ProcBile = big_bile_acid)
@@ -89,7 +82,7 @@ bile_stats <- function(big_bile_table,
     add_y_position(scales = 'free',
                    fun = 'max',
                    y.trans = log10) -> dunn_test
-  ## creating a list of outputs
+  # ## creating a list of outputs
   my_list <- list(KruskalTest = kruskal_test,
                   DunnPostHoc = dunn_test)
   return(my_list)
@@ -147,14 +140,14 @@ bile_plots <- function(big_bile_table,
 
 **File Paths**
 ```{r}
-bile_acid_FP <- '../data/misc/bile_acid.txt'
+bile_acid_FP <- '../data/misc/corrected_bile_acid.tsv'
 
 inhibitor_list <- c('_a-MCA',
                     '_b-MCA',
                     '_LCA',
-                    '_DCA',
-                    '_CDCA',
-                    '_UDCA')
+                    '_DCA')
+                    # '_CDCA',
+                    # '_UDCA')
 
 promoter_list <- c('_T-CA',
                    '_CA')
@@ -169,8 +162,8 @@ bile_labs <- c('a-MCA',
                'b-MCA',
                'LCA',
                'DCA',
-               'CDCA',
-               'UDCA',
+               # 'CDCA',
+               # 'UDCA',
                'TCA',
                'CA')
   
@@ -178,8 +171,8 @@ names(bile_labs) <- c("Alpha_muricholic_acid_a-MCA",
                      "Beta_muricholic_acid_b-MCA",
                      "Lithocholic_acid_LCA", 
                      "Deoxycholic_acid_DCA", 
-                     "Chenodeoxycholic_acid_CDCA",
-                     "Ursodeoxycholic_acid_UDCA", 
+                     # "Chenodeoxycholic_acid_CDCA",
+                     # "Ursodeoxycholic_acid_UDCA", 
                      "Taurocholic_acid_T-CA",
                      "Cholic_acid_CA")
 
@@ -194,6 +187,10 @@ diet_x_labs <- c('Chow',
                  'LFt/\nLFb')
 ```
 
+Use prescence/abscence tests or rank-based test instead of a non-parametric statistical test!!
+- Look at whether you'd like to include additional bile acids in the promoters/inhibitors categories
+- join with metadata and filter out replicate one 
+
 **Bile Acid File Prep**
 ```{r}
 bile_files <- bile_file_prep(bile_acid_FP,
@@ -202,24 +199,24 @@ bile_files <- bile_file_prep(bile_acid_FP,
 
 big_bile_acid <- bile_files$ProcBile
 ```
-
 **Stats**
+Had to filter out CDCA and UDCA from the 'inhibitors' category because the dunn_test wouldn't run - I think it's because they're all zeroes so there aren't any pairwise comparisons to do between diets for them. 
 ```{r}
 ## not faceted by bile acid
 no_bile_stat_files <- bile_stats(big_bile_acid,
                                  non_bile_groups,
                                  'conc_normalized')
 
-kruskal <- stat_files$KruskalTest
-dunn <- stat_files$DunnPostHoc
+kruskal <- no_bile_stat_files$KruskalTest
+dunn <- no_bile_stat_files$DunnPostHoc
 
 ## faceted by bile acid 
 bile_stat_files <- bile_stats(big_bile_acid,
                               bile_groups,
                               'conc_normalized')
 
-kruskal_bile <- stat_files$KruskalTest
-dunn_bile <- stat_files$DunnPostHoc
+kruskal_bile <- bile_stat_files$KruskalTest
+dunn_bile <- bile_stat_files$DunnPostHoc
 ```
 
 **Plots**
@@ -235,7 +232,7 @@ bile_plot <- all_bile_plots$FacetBilePlot
 overall_plot
 ```
 
-```{r, fig.width=10, fig.height=10}
+```{r, fig.width=8, fig.height=8}
 bile_plot
 ```
 
@@ -248,8 +245,8 @@ ggsave('../plots/overall_bile_acid.pdf',
        height = 3.5)
 ggsave('../plots/bile_acid.pdf',
        plot = bile_plot,
-       width = 10,
-       height = 10)
+       width = 8,
+       height = 8)
 
 ## rdata object 
 save(overall_plot,

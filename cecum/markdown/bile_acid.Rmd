@@ -200,7 +200,7 @@ bile_files <- bile_file_prep(bile_acid_FP,
 big_bile_acid <- bile_files$ProcBile
 ```
 **Stats**
-Had to filter out CDCA and UDCA from the 'inhibitors' category because the dunn_test wouldn't run - I think it's because they're all zeroes so there aren't any pairwise comparisons to do between diets for them. 
+Had to filter out CDCA and UDCA from the 'inhibitors' category because the dunn_test wouldn't run - I think it's because they're all zeroes so there aren't any pairwise comparisons to do between diets for them. Maybe include T-CDCA and T-DCA as inhibitors instead?
 ```{r}
 ## not faceted by bile acid
 no_bile_stat_files <- bile_stats(big_bile_acid,

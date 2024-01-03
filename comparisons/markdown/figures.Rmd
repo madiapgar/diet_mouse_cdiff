@@ -112,7 +112,7 @@ Plots to go in figure:
 - bile acid concentration plots (we don't have these yet)
 - hypoxia data? 
 ```{r}
-
+plot_grid(overall_plot)
 ```
 
 ## **Figure Four**

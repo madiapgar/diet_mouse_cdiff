@@ -79,7 +79,7 @@ meta_filter <- function(metadata_table,
                         wanted_filter){
   metadata_table %>% 
     # select(sampleid, mouse_id, location, diet, fiber, fluorescence, batch, .data[[wanted_filter]]) -> filt_meta
-    filter(location == wanted_filter) -> filt_meta
+    filter(fiber == wanted_filter) -> filt_meta
   return(filt_meta)
 }
 
@@ -147,7 +147,7 @@ col_names <- c('taxon',
                'high_fiber',
                'purified_diet')
 
-strat_value <- 'location'
+strat_value <- 'fiber'
 
 hypoxia_facet_labs <- c('Cecum',
                         'Proximal Colon',
@@ -196,41 +196,41 @@ hypox_metadata %>%
   left_join(hypoxia, by = 'mouse_id') %>% 
   na.omit() -> hypox_metadata
 
-hypox_metadata %>% 
-  group_by(location) %>% 
-  mutate(sum = sum(fluorescence),
-         ratio = (fluorescence/sum),
-         high_fat_scaled = (high_fat * ratio),
-         high_fiber_scaled = (high_fiber * ratio),
-         purified_diet_scaled = (purified_diet * ratio)) %>% 
-  ungroup() -> hypox_metadata
+# hypox_metadata %>% 
+#   group_by(location) %>% 
+#   mutate(sum = sum(fluorescence),
+#          ratio = (fluorescence/sum),
+#          high_fat_scaled = (high_fat * ratio),
+#          high_fiber_scaled = (high_fiber * ratio),
+#          purified_diet_scaled = (purified_diet * ratio)) %>% 
+#   ungroup() -> hypox_metadata
 ```
-
+Attempting to run this analysis stratified by fiber content of the diets - tried to run it stratified by each diet with HF/HF filtered out and ANCOMBC still wouldn't run (I have a feeling that there aren't enough samples so there isn't enough power to run the statistical test). Just read the ANCOMBC paper - the authors said that ANCOMBC may not work well on a small sample size (n < 10). 
 ```{r, warning=FALSE}
 hypox_metadata %>% 
   filter(location == 'Cecum') -> hypox_meta_cecum
 
-cecum_res <- run_ancombc(otu_table_FP,
-                        tax_FP,
-                        hypox_meta_cecum,
-                        'Family',
-                        'fluorescence',
-                        'BH')
-
-cecum_ancom <- cecum_res$ANCOMBCResults
+cecum_res <- ancom_diet_for_loop(otu_table_FP,
+                                 tax_FP,
+                                 hypox_meta_cecum,
+                                 'Family',
+                                 'fluorescence',
+                                 'BH',
+                                 strat_value)
 ```
 
 ```{r}
-cecum_ancom %>% 
+cecum_res %>% 
   filter(diff_fluorescence == TRUE) %>% 
   mutate(lfc_fluorescence_corr = (lfc_fluorescence * diff_fluorescence)) %>% 
-  select(taxon, contains('corr')) -> cecum_lfc
+  select(taxon, fiber, contains('corr')) -> cecum_lfc
 
 colnames(cecum_lfc) <- c('taxon',
+                         'fiber',
                          'fluorescence')
 
 cecum_lfc %>% 
-  gather(-taxon, key = component, value = lfc) %>% 
+  gather(-taxon, -fiber, key = component, value = lfc) %>% 
   mutate(lfc = as.numeric(lfc),
          lfc = signif(lfc, digits = 5),
          lfc = ifelse(is.na(lfc), 0, lfc)) -> cecum_lfc
@@ -238,18 +238,20 @@ cecum_lfc %>%
 
 ```{r, fig.width=10, fig.height=7}
 cecum_lfc %>% 
-    ggplot(aes(x = component, y = taxon)) +
+    ggplot(aes(x = fiber, y = taxon)) +
     geom_tile(aes(fill = lfc), color = 'black') +
     scale_fill_gradient2(low = 'blue', high = 'red') +
-    geom_text(aes(label = lfc), size = 3) +
+    geom_text(aes(label = lfc), size = 4) +
     theme_bw(base_size = 16) +
-    # scale_x_discrete(labels = x_labels) +
-    # facet_grid(~order,
-    #            labeller = labeller(order = facet_labs)) +
+    scale_x_discrete(labels = c('High Fiber',
+                                'Low Fiber')) +
     theme(axis.title.x = element_blank(),
           axis.title.y = element_blank(),
           legend.title = element_blank(),
-          plot.title = element_text(face = "bold")) 
+          plot.title = element_text(face = "bold")) +
+  ggtitle('Family Level Hypoxia Significant\nLog Fold Changes') -> cecum_lfc_family_plot
+
+cecum_lfc_family_plot
 ```
 
 
@@ -359,9 +361,9 @@ location_plot
 
 **Saving my Outputs**
 ```{r}
-ggsave('../plots/hypoxia_ancombc.pdf',
-       plot = test_plot,
-       width = 12, 
+ggsave('../plots/hypoxia_cecum_famLevel.pdf',
+       plot = cecum_lfc_family_plot,
+       width = 10,
        height = 7)
 ggsave('../plots/hypoxia_dietCompFam_ancombc.pdf',
        plot = diet_comp_plot,

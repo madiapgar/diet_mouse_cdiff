@@ -120,7 +120,7 @@ bile_plots <- function(big_bile_table,
       facet_nested_wrap(~c_diff_effect + bile_acid,
                         labeller = labeller(c_diff_effect = cdiff_effect_labs,
                                             bile_acid = bile_labs),
-                        nrow = 3) +
+                        nrow = 2) +
       theme_bw() +
       scale_y_log10() +
       stat_pvalue_manual(dunn_bile,
@@ -134,6 +134,58 @@ bile_plots <- function(big_bile_table,
   ## creating list of outputs
   my_list <- list(NoFacetBilePlot = overall_bile_plot,
                   FacetBilePlot = bile_include_plot)
+  return(my_list)
+}
+
+## promoter to inhibitor ratio file prep, stats, and plot function
+bile_ratio_func <- function(big_bile_table){
+  ## summing the normalized concentration of promoters to inhibitors by mouse id for each diet 
+  big_bile_table %>% 
+    select(-bile_acid) %>% 
+    group_by(diet, c_diff_effect, mouse_id) %>% 
+    summarise(sum = sum(conc_normalized)) %>% 
+    ungroup() -> bile_sum
+  ## them dividing the normalized concentration of promoters/inhibitors for each mouse id by diet
+  bile_sum %>% 
+    spread(c_diff_effect, sum) %>% 
+    group_by(diet, mouse_id) %>% 
+    mutate(ratio = (promoter/inhibitor)) %>% 
+    ungroup() -> bile_ratio
+  ## stats
+  ## kruskal test
+  bile_ratio %>% 
+    do(tidy(kruskal.test(ratio ~ diet,
+                         data = .))) %>% 
+    arrange(p.value) %>% 
+    mutate(p.adj = p.adjust(p.value,
+                            method = 'BH')) -> ratio_kruskal
+  ## dunns test
+  bile_ratio %>% 
+    dunn_test(ratio ~ diet,
+              p.adjust.method = 'BH',
+              data = .) %>% 
+    add_y_position(scales = 'free_y',
+                   fun = 'max') -> ratio_dunn
+  ## plot
+  bile_ratio %>% 
+    ggplot(aes(x = diet, y = ratio)) +
+      geom_boxplot(aes(group = diet), outlier.shape = NA) +
+      geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
+      theme_bw() +
+      scale_x_discrete(labels = diet_x_labs) +
+      stat_pvalue_manual(ratio_dunn,
+                         tip.length = 0.01,
+                         step.increase = 0.05,
+                         label = 'p.adj.signif',
+                         hide.ns = TRUE) +
+      labs(x = 'Diet',
+           y = 'Ratio(Promoters:Inhibitors)',
+           title = 'Cecal Ratio of C. difficile Bile Acid Promoters to Inhibitors') -> ratio_bile_plot
+  ## creating a list of my outputs
+  my_list <- list(RatioTable = bile_ratio,
+                  RatioKruskal = ratio_kruskal,
+                  RatioDunn = ratio_dunn,
+                  RatioPlot = ratio_bile_plot)
   return(my_list)
 }
 ```
@@ -189,7 +241,6 @@ diet_x_labs <- c('Chow',
 
 Use prescence/abscence tests or rank-based test instead of a non-parametric statistical test!!
 - Look at whether you'd like to include additional bile acids in the promoters/inhibitors categories
-- join with metadata and filter out replicate one 
 
 **Bile Acid File Prep**
 ```{r}
@@ -232,8 +283,20 @@ bile_plot <- all_bile_plots$FacetBilePlot
 overall_plot
 ```
 
-```{r, fig.width=8, fig.height=8}
+```{r, fig.width=8, fig.height=6}
 bile_plot
+```
+
+**Ratio of C. difficile Promoter:Inhibitor**
+```{r, fig.width=6, fig.height=3.5}
+ratio_files <- bile_ratio_func(big_bile_acid)
+
+bile_ratio <- ratio_files$RatioTable
+ratio_kruskal <- ratio_files$RatioKruskal
+ratio_dunn <- ratio_files$RatioDunn
+ratio_bile_plot <- ratio_files$RatioPlot
+
+ratio_bile_plot
 ```
 
 **Saving my Outputs**
@@ -246,19 +309,27 @@ ggsave('../plots/overall_bile_acid.pdf',
 ggsave('../plots/bile_acid.pdf',
        plot = bile_plot,
        width = 8,
-       height = 8)
+       height = 6)
+ggsave('../plots/bile_acid_ratio.pdf',
+       plot = ratio_bile_plot,
+       width = 6,
+       height = 3.5)
 
 ## rdata object 
 save(overall_plot,
      file = '../../figures/overall_bile_acid.rdata')
 save(bile_plot,
      file = '../../figures/bile_acid.rdata')
+save(ratio_bile_plot,
+     file = '../../figures/bile_acid_ratio.rdata')
 
 ## stats
 write_tsv(dunn,
           '../stats/overall_bile_dunn.tsv')
-write_tsv(dunn,
+write_tsv(dunn_bile,
           '../stats/bile_acid_dunn.tsv')
+write_tsv(ratio_dunn,
+          '../stats/ratio_bile_acid.tsv')
 ```
 
 

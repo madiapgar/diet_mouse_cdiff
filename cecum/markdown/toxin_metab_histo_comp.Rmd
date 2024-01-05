@@ -93,7 +93,7 @@ file_prep <- function(metadata_fp,
 comp_plot <- function(histo_table,
                       ## toxin or metabolomics?
                        wanted_table,
-                       ## this is what you want your x axiss to be (neat, diluted, or concentration)? 
+                       ## this is what you want your x axis to be (neat, diluted, or concentration)? 
                        wanted_x,
                        ## this is toxin/metabolite column you want to filter by (neat or diluted)?
                        wanted_y,
@@ -638,5 +638,16 @@ save(histo_propanoic_plot,
      file = '../../figures/histo_propanoic.rdata')
 save(metab_stat_vis,
      file = '../../figures/histo_metab_stats.rdata')
+
+## saving processed histo, metab, and toxin files so I don't have to continue to redo the processing 
+## with each new comparison script
+write_tsv(histo,
+          '../data/misc/processed_histopathology.tsv')
+write_tsv(metab,
+          '../data/misc/processed_metabolomics.tsv')
+write_tsv(neat_toxin,
+          '../data/misc/processed_neatToxin.tsv')
+write_tsv(dil_toxin,
+          '../data/misc/processed_dilutedToxin.tsv')
 ```
 

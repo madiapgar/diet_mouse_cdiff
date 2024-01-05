@@ -330,6 +330,12 @@ write_tsv(dunn_bile,
           '../stats/bile_acid_dunn.tsv')
 write_tsv(ratio_dunn,
           '../stats/ratio_bile_acid.tsv')
+
+## saving processed bile acid files so I don't have to keep reprocessing them
+write_tsv(big_bile_acid,
+          '../data/misc/processed_bile_acid.tsv')
+write_tsv(bile_ratio,
+          '../data/misc/processed_ratio_bileAcid.tsv')
 ```
 
 

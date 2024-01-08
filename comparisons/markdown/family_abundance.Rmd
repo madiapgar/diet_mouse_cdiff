@@ -131,8 +131,8 @@ abun_stats <- function(filtered_table,
     na.omit() %>% 
     filter(term != '(Intercept)') -> linear_model
   linear_model['signif'] <- symnum(linear_model$p.value,
-                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                   symbols = c("****", "***", "**", "*", "+", "ns"),
+                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                   symbols = c("****", "***", "**", "*", "ns"),
                                    abbr.colnames = FALSE,
                                    na = "")
   ## kruskal wallis test 
@@ -471,11 +471,11 @@ ggsave("famAbun_together.pdf",
        path = '../plots')
 
 ## c diff rel abun
-ggsave("cdiff_rel_abun.pdf",
-       plot = cdiff, 
-       width = 15, 
-       height = 8, 
-       path = '../plots')
+# ggsave("cdiff_rel_abun.pdf",
+#        plot = cdiff, 
+#        width = 15, 
+#        height = 8, 
+#        path = '../plots')
 
 ## plots as an rdata object
 save(short_abun1,
@@ -486,8 +486,8 @@ save(stat_plot1,
 ## linear modeling results
 write_tsv(family_abun_lm,
           '../stats/family_abun_lm.tsv')
-write_tsv(poster_family_abun_lm,
-          '../stats/poster_family_abun_lm.tsv')
-write_tsv(new_poster_dunn,
+write_tsv(short_family_abun_lm,
+          '../stats/short_family_abun_lm.tsv')
+write_tsv(new_short_dunn,
           '../stats/family_abun_dunn.tsv')
 ```

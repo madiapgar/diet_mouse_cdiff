@@ -22,10 +22,18 @@ library(ggpubr)
 ```{r}
 ## prepping all of my files for downstream analysis
 file_prep <- function(histo_fp,
+                      histo_cat_fp,
                       metadata_fp, 
                       hypoxia_fp){
-  ## reading in histo file
-  histo <- read_tsv(histo_fp)
+  ## reading in histo and histo categories file
+  histo <- read_csv(histo_fp)
+  colnames(histo) <- c('mouse_id',
+                       'cecum_total',
+                       'colon_total')
+  histo_cat <- read_tsv(histo_cat_fp)
+  histo %>% 
+    left_join(histo_cat, by = 'mouse_id') %>% 
+    na.omit() -> histo
   ## reading in metadata file
   metadata <- read_tsv(metadata_fp) %>% 
     select(!c(tube_num, date, day_post_inf, sample_type, corr_sample_num))
@@ -83,7 +91,8 @@ histo_stats <- function(histo_table,
     dunn_test(score ~ diet,
               p.adjust.method = 'BH',
               data = .) %>% 
-    add_y_position(scales = 'free_y') -> dunn
+    add_xy_position(scales = 'free',
+                   fun = 'max') -> dunn
   ## list of my outputs
   my_list <- list(KruskalTest = kruskal,
                   DunnsPostHocTest = dunn)
@@ -110,6 +119,7 @@ histo_plot <- function(histo_table,
     stat_pvalue_manual(dunn_test,
                        tip.length = 0.01,
                        step.increase = 0.05,
+                       step.group.by = 'category',
                        label = 'p.adj.signif',
                        hide.ns = TRUE) +
     labs(x = 'Diet',
@@ -192,28 +202,29 @@ r2_value_for_loop <- function(biom_table,
 
 ## statistical visualization plot function
 stat_plot <- function(stat_table,
+                      x_lab_list,
                       y_lab_list,
-                      facet_labels,
-                      title){
+                      facet_labels){
   stat_table %>% 
     ggplot(aes(x = category, y = diet)) +
     geom_tile(aes(fill = r_direct), color = 'black', alpha = 0.6) +
     geom_text(aes(label = signif)) +
-    scale_fill_gradient2(low = 'blue', high = 'green', name = "Correlation\nCoefficient") +
+    scale_fill_gradient2(low = 'blue', high = 'green', name = "Correlation\nCoefficient", limits = c(-0.7, 0.7)) +
+    scale_x_discrete(labels = x_lab_list) +
     scale_y_discrete(labels = y_lab_list) +
     facet_wrap(~tissue,
                labeller = labeller(tissue = facet_labels)) +
     theme_bw() +
     xlab("Category") +
-    ylab("Diet") +
-    ggtitle(title) -> plot
+    ylab("Diet") -> plot
   return(plot)
 }
 ```
 
 **File Paths**
 ```{r}
-histo_FP <- '../data/misc/histo_categories.txt'
+histo_cat_FP <- '../data/misc/histo_categories.txt'
+histo_FP <- '../data/misc/histo_data.csv'
 metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
 hypoxia_FP <- '../data/misc/pimid_fluor.csv'
 
@@ -242,20 +253,24 @@ names(diet_labs) <- c('Chow',
                       'LF/HF', 
                       'LF/LF')
 
-cecum_labels <- c('Submucosal Edema',
+cecum_labels <- c('Total',
+                  'Submucosal Edema',
                   'Neutrophil Infiltration',
                   'Number of Goblet Cells',
                   'Epithelial Integrity')
-names(cecum_labels) <- c('cecum_submuc_edema',
+names(cecum_labels) <- c('cecum_total',
+                         'cecum_submuc_edema',
                         'cecum_PNM_infil',
                         'cecum_num_gobletCells',
                         'cecum_epithelial_integrity')
 
-colon_labels <- c('Severity of Inflammation',
+colon_labels <- c('Total',
+                  'Severity of Inflammation',
                   'Extent of Injury',
                   'Epithelial Regeneration',
                   'Crypt Damage')
-names(colon_labels) <- c('colon_inflamm_sev',
+names(colon_labels) <- c('colon_total',
+                         'colon_inflamm_sev',
                         'colon_injury_extent',
                         'colon_epithelial_regen',
                         'colon_crypt_damage')
@@ -270,6 +285,7 @@ names(tissue_labs) <- c('cecum',
 This data does not contain replicate one!
 ```{r}
 wanted_files <- file_prep(histo_FP,
+                          histo_cat_FP,
                           metadata_FP,
                           hypoxia_FP)
 
@@ -298,7 +314,7 @@ colon_dunn <- colon_stats$DunnsPostHocTest
 ```
 
 **Plots**
-```{r, fig.height=3, fig.width=8}
+```{r, fig.height=3.5, fig.width=10}
 ## cecal plot
 cecum_plot <- histo_plot(big_histo,
                          'cecum',
@@ -320,7 +336,7 @@ colon_plot
 ```
 
 **Histopathology Plots Together**
-```{r, fig.width=8, fig.height=6}
+```{r, fig.width=10.5, fig.height=7}
 plot_grid(cecum_plot,
           colon_plot,
           nrow = 2,
@@ -375,8 +391,8 @@ cecum_comp_stat_table <- r2_value_for_loop(cecum_hypox_table,
                                             'score')
 
 cecum_comp_stat_table['signif'] <- symnum(cecum_comp_stat_table$p_value,
-                                           cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                           symbols = c("****", "***", "**", "*", "+", "ns"),
+                                           cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                           symbols = c("****", "***", "**", "*", "ns"),
                                            abbr.colnames = FALSE,
                                            na = "")
 cecum_comp_stat_table %>% 
@@ -394,49 +410,91 @@ colon_comp_stat_table %>%
          r_direct = ifelse(is.na(r_direct), 0, r_direct)) -> colon_comp_stat_table
 
 colon_comp_stat_table['signif'] <- symnum(colon_comp_stat_table$p_value,
-                                           cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                           symbols = c("****", "***", "**", "*", "+", "ns"),
+                                           cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                           symbols = c("****", "***", "**", "*", "ns"),
                                            abbr.colnames = FALSE,
                                            na = "")
 colon_comp_stat_table %>% 
   mutate(tissue = paste('colon')) -> colon_comp_stat_table
 ```
 
-**Visualization**
-I have no idea why this isn't working - it has something to do with the faceting but it shouldn't be doing that. My head hurts too badly to figure it out right now. 
+**Visualization** 
 ```{r}
-rbind(cecum_comp_stat_table,
-      colon_comp_stat_table) -> comp_stat_table
+colon_x_labs <- c('Crypt\nDamage',
+                  'Epithelial\nRegeneration',
+                  'Severity of\nInflammation',
+                  'Extent of\nInjury',
+                  'Total')
 
-comp_stat_vis <- stat_plot(comp_stat_table,
+cecum_x_labs <- c('Epithelial\nIntegrity',
+                  'Number of\nGoblet Cells',
+                  'Neutrophil\nInfiltration',
+                  'Submucosal\nEdema',
+                  'Total')
+
+colon_stat_vis <- stat_plot(colon_comp_stat_table,
+                            colon_x_labs,
                            diet_y_labs,
-                           tissue_labs,
-                           'test')
-comp_stat_vis
+                           tissue_labs)
 
-comp_stat_table %>% 
-    ggplot(aes(x = category, y = diet)) +
-    geom_tile(aes(fill = r_direct), color = 'black', alpha = 0.6) +
-    geom_text(aes(label = signif)) +
-    scale_fill_gradient2(low = 'blue', high = 'green', name = "Correlation\nCoefficient") +
-    scale_y_discrete(labels = diet_y_labs) +
-    facet_wrap(~tissue,
-               labeller = labeller(tissue = tissue_labs)) +
-    theme_bw() +
-    xlab("Category") +
-    ylab("Diet")
+cecum_stat_vis <- stat_plot(cecum_comp_stat_table,
+                            cecum_x_labs,
+                           diet_y_labs,
+                           tissue_labs)
+colon_stat_vis
+cecum_stat_vis
+```
+
+**Stat Plots Together**
+```{r, fig.width=10, fig.height=3.3}
+title <- ggdraw() +
+  draw_label('Histopathology and Hypoxia Concentration Comparisons',
+             size = 14,
+             hjust = 0.86,
+             vjust = 0.3)
+
+pre_comp_stat_vis <- plot_grid(cecum_stat_vis +
+                             theme(legend.position = "none",
+                                   axis.title.x = element_blank()), 
+                           colon_stat_vis +
+                             theme(axis.title.y = element_blank(),
+                                   axis.text.y = element_blank(),
+                                   axis.ticks.y = element_blank(),
+                                   axis.title.x = element_blank()),
+                           rel_widths = c(0.95, 1))
+
+comp_stat_vis <- plot_grid(title,
+                           pre_comp_stat_vis,
+                           ncol = 1,
+                           rel_heights = c(0.065, 1),
+                           align = c('hv'),
+                           axis = c('tblr'))
+
+comp_stat_vis
+```
+
+**Comp Plots Together**
+```{r, fig.width=10, fig.height=12}
+plot_grid(comp_plots, comp_stat_vis,
+          nrow = 2,
+          labels = c(' ', 'c)'),
+          rel_heights = c(1, 0.3),
+          axis = c('tblr'),
+          align = c('hv')) -> comp_plots_together
+
+comp_plots_together
 ```
 
 **Saving my Outputs**
 ```{r}
 ggsave('../plots/histo_categories.pdf',
        plot = tissue_plots,
-       width = 8,
-       height = 6)
+       width = 10.5,
+       height = 7)
 ggsave('../plots/histo_categories_hypox.pdf',
-       plot = comp_plots,
+       plot = comp_plots_together,
        width = 10,
-       height = 9)
+       height = 12)
 
 ## stats
 write_tsv(comp_stat_table,

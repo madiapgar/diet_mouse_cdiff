@@ -121,8 +121,8 @@ stats <- function(biom_table,
     filter(term != '(Intercept)') -> lm
   
   lm['signif'] <- symnum(lm$p.value,
-                         cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                         symbols = c("****", "***", "**", "*", "+", "ns"),
+                         cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                         symbols = c("****", "***", "**", "*", "ns"),
                          abbr.colnames = FALSE,
                          na = "")
   ## creating a list of my outputs
@@ -148,8 +148,7 @@ tox_plot <- function(biom_table,
     geom_jitter(alpha = 0.4, width = 0.1, height = 0)+
     scale_x_discrete(labels = x_labels) +
     facet_wrap(~.data[[tox_col]],
-               labeller = labeller(.cols = facet_labs),
-               scales = 'free_y') +
+               labeller = labeller(.cols = facet_labs)) +
     stat_pvalue_manual(dunn,
                        tip.length = 0.01,
                        label = 'p.adj.signif',

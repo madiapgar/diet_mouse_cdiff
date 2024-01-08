@@ -109,7 +109,7 @@ bile_plots <- function(big_bile_table,
                          label = 'p.adj.signif',
                          hide.ns = TRUE) +
       labs(x = 'Diet',
-           y = 'log10(Concentration (pmol/mg))',
+           y = 'Concentration (pmol/mg) (log10)',
            title = 'Cecal Bile Acid Concentration') -> overall_bile_plot
   ## plot faceted by bile acid
   big_bile_acid %>% 
@@ -129,7 +129,7 @@ bile_plots <- function(big_bile_table,
                          label = 'p.adj.signif',
                          hide.ns = TRUE) +
     labs(x = 'Diet',
-         y = 'log10(Concentration (pmol/mg))',
+         y = 'Concentration (pmol/mg) (log10)',
          title = 'Cecal Bile Acid Concentration') -> bile_include_plot
   ## creating list of outputs
   my_list <- list(NoFacetBilePlot = overall_bile_plot,
@@ -150,7 +150,8 @@ bile_ratio_func <- function(big_bile_table){
     spread(c_diff_effect, sum) %>% 
     group_by(diet, mouse_id) %>% 
     mutate(ratio = (promoter/inhibitor)) %>% 
-    ungroup() -> bile_ratio
+    ungroup() %>% 
+    mutate(ratio_label = paste('C. difficile Promoter:Inhibitor')) -> bile_ratio
   ## stats
   ## kruskal test
   bile_ratio %>% 
@@ -173,14 +174,15 @@ bile_ratio_func <- function(big_bile_table){
       geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
       theme_bw() +
       scale_x_discrete(labels = diet_x_labs) +
+      facet_wrap(~ratio_label) +
       stat_pvalue_manual(ratio_dunn,
                          tip.length = 0.01,
                          step.increase = 0.05,
                          label = 'p.adj.signif',
                          hide.ns = TRUE) +
       labs(x = 'Diet',
-           y = 'Ratio(Promoters:Inhibitors)',
-           title = 'Cecal Ratio of C. difficile Bile Acid Promoters to Inhibitors') -> ratio_bile_plot
+           y = 'Ratio',
+           title = 'Cecal Bile Acid Ratio') -> ratio_bile_plot
   ## creating a list of my outputs
   my_list <- list(RatioTable = bile_ratio,
                   RatioKruskal = ratio_kruskal,
@@ -288,7 +290,7 @@ bile_plot
 ```
 
 **Ratio of C. difficile Promoter:Inhibitor**
-```{r, fig.width=6, fig.height=3.5}
+```{r, fig.width=5, fig.height=3.5}
 ratio_files <- bile_ratio_func(big_bile_acid)
 
 bile_ratio <- ratio_files$RatioTable
@@ -312,7 +314,7 @@ ggsave('../plots/bile_acid.pdf',
        height = 6)
 ggsave('../plots/bile_acid_ratio.pdf',
        plot = ratio_bile_plot,
-       width = 6,
+       width = 5,
        height = 3.5)
 
 ## rdata object 

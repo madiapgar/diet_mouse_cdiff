@@ -221,6 +221,7 @@ ratio_stat_plot <- function(stat_table,
     scale_fill_gradient2(low = 'blue', high = 'green', name = "Correlation\nCoefficient") +
     scale_y_discrete(labels = y_lab_list) +
     scale_x_discrete(labels = x_lab_list) +
+    facet_wrap(~ratio_label) +
     theme_bw() +
     xlab("Tissue") +
     ylab("Diet") +
@@ -315,7 +316,7 @@ histo_inhibitors_plot <- comp_plot(histo,
                                    tissue_labs,
                                    'Score',
                                    'Concentration (log10)',
-                                   'Histopathology Score v Inhibitors')
+                                   'Histopathology Score Against Bile Acid Inhibitors')
 
 histo_promoters_plot <- comp_plot(histo,
                                   'tissue',
@@ -328,7 +329,7 @@ histo_promoters_plot <- comp_plot(histo,
                                    tissue_labs,
                                    'Score',
                                    'Concentration (log10)',
-                                   'Histopathology Score v Promoters')
+                                   'Histopathology Score Against Bile Acid Promoters')
 
 histo_inhibitors_plot
 histo_promoters_plot
@@ -349,8 +350,8 @@ histo_bile_stats <- r2_value_for_loop(histo_bile_acid,
 
 ## assigning p value significance
 histo_bile_stats['signif'] <- symnum(histo_bile_stats$p_value,
-                                     cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                     symbols = c("****", "***", "**", "*", "+", "ns"),
+                                     cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                     symbols = c("****", "***", "**", "*", "ns"),
                                      abbr.colnames = FALSE,
                                      na = "")
 
@@ -408,10 +409,13 @@ histo_ratio_stats <- ratio_r2_value_for_loop(histo_ratio,
 
 ## assigning p value significance
 histo_ratio_stats['signif'] <- symnum(histo_ratio_stats$p_value,
-                                     cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                     symbols = c("****", "***", "**", "*", "+", "ns"),
+                                     cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                     symbols = c("****", "***", "**", "*", "ns"),
                                      abbr.colnames = FALSE,
                                      na = "")
+
+histo_ratio_stats %>% 
+  mutate(ratio_label = paste('Promoter:Inhibitor')) -> histo_ratio_stats
 
 histo_ratio_stat_plot <- ratio_stat_plot(histo_ratio_stats,
                                          stat_diet_y_labs,
@@ -484,8 +488,8 @@ metab_bile_stats <- r2_value_for_loop(metab_bile_acid,
 
 ## assigning p value significance
 metab_bile_stats['signif'] <- symnum(metab_bile_stats$p_value,
-                                     cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                     symbols = c("****", "***", "**", "*", "+", "ns"),
+                                     cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                     symbols = c("****", "***", "**", "*", "ns"),
                                      abbr.colnames = FALSE,
                                      na = "")
 
@@ -561,8 +565,8 @@ tox_bile_stats <- r2_value_for_loop(tox_bile_acid,
 
 ## assigning p value significance
 tox_bile_stats['signif'] <- symnum(tox_bile_stats$p_value,
-                                     cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                     symbols = c("****", "***", "**", "*", "+", "ns"),
+                                     cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                     symbols = c("****", "***", "**", "*", "ns"),
                                      abbr.colnames = FALSE,
                                      na = "")
 

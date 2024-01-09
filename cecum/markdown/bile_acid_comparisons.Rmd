@@ -48,7 +48,7 @@ comp_plot <- function(base_table,
     na.omit() -> compiled_table
   ## constructing plot
   compiled_table %>% 
-    filter(.data[[wanted_y]] == wanted_y_name) %>%
+    # filter(.data[[wanted_y]] == wanted_y_name) %>%
     na.omit() %>% 
     ggplot(aes(x = .data[[wanted_x]], y = .data[[base_table_col_select2]])) +
     scale_x_continuous(trans = 'log10') +
@@ -162,13 +162,14 @@ stat_plot <- function(stat_table,
 ratio_r2_value <- function(biom_table,
                      wanted_diet,
                      category_col,
+                     col_value,
                      wanted_category,
                      wanted_conc_value){
   ## to get r squared value and p value
   biom_table %>% 
     filter(diet == wanted_diet,
            .data[[category_col]] == wanted_category) %>%
-    do(glance(lm(score ~ .data[[wanted_conc_value]],
+    do(glance(lm(.data[[col_value]] ~ .data[[wanted_conc_value]],
                  data = .))) -> lm_glance
   output <- list(r_squared = lm_glance$r.squared,
                  p_value = lm_glance$p.value)
@@ -176,7 +177,7 @@ ratio_r2_value <- function(biom_table,
   biom_table %>% 
     filter(diet == wanted_diet,
            .data[[category_col]] == wanted_category) %>%
-    do(tidy(lm(score ~ .data[[wanted_conc_value]],
+    do(tidy(lm(.data[[col_value]] ~ .data[[wanted_conc_value]],
                  data = .))) %>% 
     filter(term != '(Intercept)') -> lm_full
   output <- as_tibble(output) %>%
@@ -193,6 +194,7 @@ ratio_r2_value <- function(biom_table,
 ## creating a nested for loop since running this function individually is a nightmare
 ratio_r2_value_for_loop <- function(biom_table,
                               wanted_col,
+                              col_value,
                               wanted_conc) {
   ## nested for loop for the r squared and p values 
   output <- tibble()
@@ -201,6 +203,7 @@ ratio_r2_value_for_loop <- function(biom_table,
         tmp_output <- ratio_r2_value(biom_table,
                                i,
                                wanted_col,
+                               col_value,
                                j,
                                wanted_conc)$WantedStats
         output <- bind_rows(output, tmp_output)
@@ -213,6 +216,7 @@ ratio_r2_value_for_loop <- function(biom_table,
 ratio_stat_plot <- function(stat_table,
                       y_lab_list,
                       x_lab_list,
+                      x_label,
                       title){
   stat_table %>% 
     ggplot(aes(x = category, y = diet)) +
@@ -223,7 +227,7 @@ ratio_stat_plot <- function(stat_table,
     scale_x_discrete(labels = x_lab_list) +
     facet_wrap(~ratio_label) +
     theme_bw() +
-    xlab("Tissue") +
+    xlab(x_label) +
     ylab("Diet") +
     ggtitle(title) -> plot
   return(plot)
@@ -405,6 +409,7 @@ histo %>%
 
 histo_ratio_stats <- ratio_r2_value_for_loop(histo_ratio,
                                               'tissue',
+                                             'score',
                                               'ratio')
 
 ## assigning p value significance
@@ -420,6 +425,7 @@ histo_ratio_stats %>%
 histo_ratio_stat_plot <- ratio_stat_plot(histo_ratio_stats,
                                          stat_diet_y_labs,
                                         tissue_labs,
+                                        'Tissue',
                                          'Histopathology Score and Bile Acid\nRatio Comparisons')
 
 histo_ratio_stat_plot
@@ -594,6 +600,68 @@ plot_grid(toxin_inhibitors_plot,
 tox_bile_plots_together
 ```
 
+**Ratio/Toxin Comparisons**
+```{r, fig.width=9, fig.height=4, warning=FALSE}
+tox_ratio_plot <- comp_plot(neat_tox,
+                              'neat_toxin',
+                              'neat_conc_norm',
+                              ratio_bile_acid,
+                              'ratio',
+                              NULL,
+                              NULL,
+                              diet_labs,
+                              neat_labs,
+                              'Toxin Concentration',
+                              'Ratio',
+                              'Toxin Against Bile Acid Growth Ratio')
+
+tox_ratio_plot
+```
+
+**Ratio/Toxin Stats**
+```{r, warning=FALSE, fig.height=3, fig.width=5}
+neat_tox %>% 
+  select(mouse_id, neat_toxin, neat_conc_norm) %>% 
+  left_join(ratio_bile_acid, by = 'mouse_id') %>% 
+  na.omit() -> tox_ratio
+
+tox_ratio_stats <- ratio_r2_value_for_loop(tox_ratio,
+                                              'neat_toxin',
+                                           'neat_conc_norm',
+                                              'ratio')
+
+## assigning p value significance
+tox_ratio_stats['signif'] <- symnum(tox_ratio_stats$p_value,
+                                     cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                     symbols = c("****", "***", "**", "*", "ns"),
+                                     abbr.colnames = FALSE,
+                                     na = "")
+
+tox_ratio_stats %>% 
+  mutate(ratio_label = paste('Promoter:Inhibitor')) -> tox_ratio_stats
+
+tox_ratio_stat_plot <- ratio_stat_plot(tox_ratio_stats,
+                                         stat_diet_y_labs,
+                                        neat_labs,
+                                       'Toxin',
+                                         'Toxin Concentration and Bile Acid\nRatio Comparisons')
+
+tox_ratio_stat_plot
+```
+
+**Ratio/Toxin Plots Together**
+```{r, fig.width=15, fig.height=3.5}
+plot_grid(tox_ratio_plot,
+          tox_ratio_stat_plot,
+          rel_widths = c(1, 0.5),
+          labels = c('a)', 'b)'),
+          axis = c('tblr'),
+          align = c('hv')) -> tox_ratio_plots_together
+
+tox_ratio_plots_together
+```
+
+
 
 **Saving my Outputs**
 ```{r}
@@ -611,6 +679,10 @@ ggsave('../plots/bileAcid_toxin_comp.pdf',
        height = 8)
 ggsave('../plots/bileRatio_histo_comp.pdf',
        plot = histo_ratio_plots_together,
+       width = 15,
+       height = 3.5)
+ggsave('../plots/bileRatio_toxin_comp.pdf',
+       plot = tox_ratio_plots_together,
        width = 15,
        height = 3.5)
 

@@ -21,11 +21,11 @@ These are, of course, subject to change but I mine as well start somewhere. The 
 
 ## **Figure One**
 Plots to go in figure:
-- experimental timeline diagram (need to redo this)
+- experimental timeline diagram 
 - mouse survival curve plot and stats
 
 *Caption*:
-*a) Survival curves for the five tested diets after antibiotic induced gut microbiome dysbiosis and C. difficile infection. b) A heat map of log-normal pairwise comparisons of survival probability between the tested diets. P-value significance (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, +p<0.1, ns<1).*
+*a) Survival curves for the five tested diets after antibiotic induced gut microbiome dysbiosis and C. difficile infection. b) A heat map of log-normal pairwise comparisons of survival probability between the tested diets. P-value significance (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).*
 
 ```{r, warning=FALSE, fig.height=12, fig.width=15}
 fig1_bottom_row <- plot_grid(surv_stat_vis, NULL,
@@ -48,11 +48,11 @@ fig1
 ## **Figure Two**
 Plots to go in figure:
 - toxin plot (neat)
-- histopathology plot
+- histopathology plot - replace this with the histopathology components plot instead?
 - toxin and histopathology comparison plot and stats
 
 *Caption*:
-*a) C. difficile TcdA and TcdB toxin concentrations in the five tested diets, determined by ELISA. b) Histologic inflammation scoring of mouse colon and cecal contents at three days post C. difficile infection in the tested diets as determined by a blinded histologist. Statistical analysis for score differences was done using a Kruskal-Wallis test followed by a Dunn's Post Hoc test with p-values being corrected for multiple comparisons via Benjamini and Hochberg. c) Linear regression comparison of histopathology scores to TcdA burden across tested diets. d) Linear regression comparison of histopathology scores to TcdB burden across tested diets. e) Linear regression results for c) and d) as a heat map with the color indicating the correlation coefficient with the overlaid text being the p-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, +p<0.1, ns<1).
+*a) C. difficile TcdA and TcdB toxin concentrations in the five tested diets, determined by ELISA. b) Histologic inflammation scoring of mouse colon and cecal contents at three days post C. difficile infection in the tested diets as determined by a blinded histologist. Statistical analysis for score differences was done using a Kruskal-Wallis test followed by a Dunn's Post Hoc test with p-values being corrected for multiple comparisons via Benjamini and Hochberg. c) Linear regression comparison of histopathology scores to TcdA burden across tested diets. d) Linear regression comparison of histopathology scores to TcdB burden across tested diets. e) Linear regression results for c) and d) as a heat map with the color indicating the correlation coefficient with the overlaid text being the p-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).
 ```{r, warning=FALSE, fig.height=17, fig.width=26.5}
 fig2_top_row <- plot_grid(neat_plot +
                             theme_bw(base_size = 20), 
@@ -99,11 +99,12 @@ fig2
 Plots to go in figure:
 - bile acid concentration plot
 - bile acid c. diff promoters/inhibitors ratio plot
-- bile acid comparison plots (have only included comparisons with histopathology scoring to be consistent with the toxin/metabolomics figures)
+- bile acid comparison plots (have only included comparisons with histopathology scoring to be consistent with the toxin/metabolomics figures) - do I actually want to include histo comparisons or toxin comparisons instead since bile acids directly inhibit c. diff growth and would be reflected in toxin concentration 
+- there are some interesting strong correlations between metabolites and bile acid concentration in the diets 
 - stats for all 
 
 *Caption*:
-*a) Bile acid cecal levels of C. difficile growth inhibitors (a-MCA, b-MCA, LCA, DCA) and C. difficile growth promoters (TCA, CA) across the tested diets. b) The ratios of C. difficile growth promoters:inhibitors across the tested diets (a higher ratio indicates a higher level of promoters relative to inhibitors for that diet). Statistical analysis for dietary bile acid concentration/ratio differences was done using a Kruskal-Wallis test followed by a Dunn's Post Hoc test with p-values being corrected for multiple comparisons via Benjamini and Hochberg. Linear regression comparison of histopathology scores to c) C. difficile growth inhibitors, d) C. difficile growth promoters, and e) the promoter:inhibitor ratios. f)-g) Linear regression results for c)-e) as a heat map with the color indicating the correlation coefficient with the overlaid text being the p-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, +p<0.1, ns<1)*
+*a) Bile acid cecal levels of C. difficile growth inhibitors (a-MCA, b-MCA, LCA, DCA) and C. difficile growth promoters (TCA, CA) across the tested diets. b) The ratios of C. difficile growth promoters:inhibitors across the tested diets (a higher ratio indicates a higher level of promoters relative to inhibitors for that diet). Statistical analysis for dietary bile acid concentration/ratio differences was done using a Kruskal-Wallis test followed by a Dunn's Post Hoc test with p-values being corrected for multiple comparisons via Benjamini and Hochberg. Linear regression comparison of histopathology scores to c) C. difficile growth inhibitors, d) C. difficile growth promoters, and e) the promoter:inhibitor ratios. f)-g) Linear regression results for c)-e) as a heat map with the color indicating the correlation coefficient with the overlaid text being the p-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1)*
 ```{r, fig.height=22, fig.width=26.5}
 fig3_top_row <- plot_grid(overall_plot +
                             theme_bw(base_size = 20), 
@@ -165,7 +166,7 @@ Plots to go in figure:
 - metab and histo comparison plot and stats
 
 *Caption*:
-*a) SCFA (acetate, butyrate, propionate) levels of mouse cecal contents three days post C. difficile infecion by the tested diets. Linear regression comparison of SCFAs, b) acetate, c) butyrate, and d) propionate to histopathology scores across tested diets. e) Linear regression results for b)-d) as a heat map with the color indicating the correlation coefficient with the overlaid text being the p-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, +p<0.1, ns<1).*
+*a) SCFA (acetate, butyrate, propionate) levels of mouse cecal contents three days post C. difficile infecion by the tested diets. Linear regression comparison of SCFAs, b) acetate, c) butyrate, and d) propionate to histopathology scores across tested diets. e) Linear regression results for b)-d) as a heat map with the color indicating the correlation coefficient with the overlaid text being the p-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).*
 ```{r, warning=FALSE, fig.height=20, fig.width=32}
 fig4_bottom_row <- plot_grid(histo_acetic_plot +
                                theme_bw(base_size = 20) +
@@ -199,11 +200,9 @@ fig4
 ```
 
 ## **Figure Five**
-Plots to go in figure:
-- change all to the unweighted unifrac instead of the weighted unifrac!!!
 
 *Caption*:
-*a) Unweighted UniFrac PCoA plots delimited by diet (columns) and by days relative to infection (rows). Individual points are colored by their associated Faith's PD score. b) Microbiome resilience determined using pairwise comparisons between day negative eight (seven days post diet switch and five days prior to oral antibiotic administration) and later time points. c) Microbiome homogeneity determined using pairwise Unweighted UniFrac distances within each time point by tested diets. The dashed red line at day negative three indicates the day the mice received oral antibiotics and the purple dashed line at day zero indicates with the mice were infected with C. difficile. Statistical analysis of microbiome d) resiliency and e) homogeneity was done with a Kruskal-Wallis test followed by a Dunn's Post Hoc test with the color gradient indicating the difference in means between the various groups.*P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, +p<0.1, ns<1).*
+*a) Unweighted UniFrac PCoA plots delimited by diet (columns) and by days relative to infection (rows). Individual points are colored by their associated Faith's PD score. b) Microbiome resilience determined using pairwise comparisons between day negative eight (seven days post diet switch and five days prior to oral antibiotic administration) and later time points. c) Microbiome homogeneity determined using pairwise Unweighted UniFrac distances within each time point by tested diets. The dashed red line at day negative three indicates the day the mice received oral antibiotics and the purple dashed line at day zero indicates with the mice were infected with C. difficile. Statistical analysis of microbiome d) resiliency and e) homogeneity was done with a Kruskal-Wallis test followed by a Dunn's Post Hoc test with the color gradient indicating the difference in means between the various groups.*P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).*
 ```{r, warning=FALSE, fig.width=26.5, fig.height=18}
 ## use NULL to create a ghost plot to alter your rows
 fig5_bottom_row <- plot_grid(uu_resil_plot, uu_homog_plot,
@@ -244,7 +243,7 @@ Plots to go in figure:
 - faith's pd and stats
 
 *Caption*:
-*a) Faith's Phylogenetic Diversity (alpha diversity) analysis by the five tested diets. The dashed red line at day negative three indicates the day the mice received oral antibiotics and the purple dashed line at day zero indicates with the mice were infected with C. difficile. b) Pairwise comparisons between diets as determined by a Kruskal-Wallis test followed by a Dunn's Post Hoc test with the color gradient indicating the difference in means.*P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, +p<0.1, ns<1).*
+*a) Faith's Phylogenetic Diversity (alpha diversity) analysis by the five tested diets. The dashed red line at day negative three indicates the day the mice received oral antibiotics and the purple dashed line at day zero indicates with the mice were infected with C. difficile. b) Pairwise comparisons between diets as determined by a Kruskal-Wallis test followed by a Dunn's Post Hoc test with the color gradient indicating the difference in means.*P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).*
 ```{r, warning=FALSE, fig.height=9, fig.width=15}
 plot_grid(faith_plot +
             theme_bw(base_size = 20), 
@@ -268,7 +267,7 @@ Plots to go in figure:
 **- have a distance matrix for every single mouse by their taxonomic information via qiime or r (which taxa are showing more related patterns by diet in mice). then, run an adonis test on it.**
 
 *Caption*:
-*a) Relative abundances of key gut bacterial families by the five tested diets throughout the experimental timeline. The dashed red line at day negative three indicates the day the mice received oral antibiotics and the purple dashed line at day zero indicates with the mice were infected with C. difficile. b) Pairwise comparisons by days relative to infection (columns) and bacterial family (rows) per diet as determined by a Kruskal-Wallis test followed by a Dunn's Post Hoc test with the color gradient indicating the difference in means.*P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, +p<0.1, ns<1).*
+*a) Relative abundances of key gut bacterial families by the five tested diets throughout the experimental timeline. The dashed red line at day negative three indicates the day the mice received oral antibiotics and the purple dashed line at day zero indicates with the mice were infected with C. difficile. b) Pairwise comparisons by days relative to infection (columns) and bacterial family (rows) per diet as determined by a Kruskal-Wallis test followed by a Dunn's Post Hoc test with the color gradient indicating the difference in means.*P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).*
 ```{r, warning=FALSE, fig.height=15, fig.width=35}
 plot_grid(short_abun1, stat_plot1,
           labels = c('a)', 'b)'),

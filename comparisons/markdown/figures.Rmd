@@ -47,49 +47,34 @@ fig1
 
 ## **Figure Two**
 Plots to go in figure:
-- toxin plot (neat)
-- histopathology plot - replace this with the histopathology components plot instead?
-- toxin and histopathology comparison plot and stats
+- toxin plot 
+- metabolomics plot
+- hypoxia by diet plot 
 
 *Caption*:
-*a) C. difficile TcdA and TcdB toxin concentrations in the five tested diets, determined by ELISA. b) Histologic inflammation scoring of mouse colon and cecal contents at three days post C. difficile infection in the tested diets as determined by a blinded histologist. Statistical analysis for score differences was done using a Kruskal-Wallis test followed by a Dunn's Post Hoc test with p-values being corrected for multiple comparisons via Benjamini and Hochberg. c) Linear regression comparison of histopathology scores to TcdA burden across tested diets. d) Linear regression comparison of histopathology scores to TcdB burden across tested diets. e) Linear regression results for c) and d) as a heat map with the color indicating the correlation coefficient with the overlaid text being the p-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).
-```{r, warning=FALSE, fig.height=17, fig.width=26.5}
-fig2_top_row <- plot_grid(neat_plot +
-                            theme_bw(base_size = 20), 
-                          all_day_plot,
-                          labels = c('a)', 'b)'),
-                          rel_widths = c(0.9, 1),
-                          align = 'h',
-                          label_size = 20)
-
-fig2_middle_row <- plot_grid(neat_histo_tca_plot +
+*a) Hypoxia measurements for three intestinal locations (cecum, proximal colon, distal colon) in the tested diets, determined by fluorescence of the oxygen sensitive dye, pimonidazole, in the respective tissues. b) SCFA (acetate, butyrate, propionate) levels of mouse cecal contents three days post C. difficile infecion by the tested diets. c) C. difficile TcdA and TcdB toxin concentrations in the five tested diets, determined by ELISA. Statistical analysis was done using a Kruskal-Wallis test followed by a Dunn's Post Hoc test with p-values being corrected for multiple comparisons via Benjamini and Hochberg. P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).*
+```{r, warning=FALSE, fig.height=12, fig.width=25}
+fig2_top_row <- plot_grid(hypox_plot +
                                theme_bw(base_size = 20) +
-                               theme(strip.text.y.right = element_text(angle = 0)), 
-                             neat_histo_tcb_plot +
-                               theme_bw(base_size = 20) +
-                               theme(strip.text.y.right = element_text(angle = 0)),
-                             labels = c('c)', 'd)'),
-                             align = 'h',
-                             ncol = 1, 
+                               ggtitle('Intestinal Hypoxia'),
+                             labels = c('a)'),
+                             align = c('hv'),
+                             axis = c('tblr'),
+                             nrow = 1,
                              label_size = 20)
 
-fig2_stats <- plot_grid(neat_tox_stat_vis +
-                               theme_bw(base_size = 20) +
-                               ggtitle('Histopathology Score and Toxin\n Concentration Comparisons'),
-                        NULL,
-                        ncol = 1,
-                        rel_heights = c(1, 0.8),
-                        labels = c('e)', ' '),
-                        label_size = 20)
-
-fig2_bottom_row <- plot_grid(fig2_middle_row,
-                             fig2_stats,
-                             nrow = 1,
-                             rel_widths = c(1, 0.6))
-
+fig2_bottom_row <- plot_grid(metab_plot +
+                            theme_bw(base_size = 20) +
+                            ggtitle('Cecal Metabolite Concentration'), 
+                            neat_plot +
+                            theme_bw(base_size = 20) +
+                            ggtitle('Cecal C. difficile Toxin Concentration'),
+                            nrow = 1,
+                            rel_widths = c(1, 0.7),
+                            labels = c('b)', 'c)'),
+                            label_size = 20)
 plot_grid(fig2_top_row,
           fig2_bottom_row,
-          rel_heights = c(0.8, 1),
           ncol = 1) -> fig2
 
 fig2
@@ -97,115 +82,175 @@ fig2
 
 ## **Figure Three**
 Plots to go in figure:
+- cecum histopathology plot 
+- cecum hypoxia plot
+- cecal hypoxia/histopathology comparison plot (stats as supplementary since nothing is significant?)
+- cecal toxin and histopathology comparison plot and stats
+
+*Caption*:
+*a) Histologic inflammation scoring of mouse cecal contents at three days post C. difficile infection in the tested diets as determined by a blinded histologist. b) Cecal hypoxia measurements determined by fluorescence of the oxygen sensitive dye, pimonidazole. Statistical analysis was done using a Kruskal-Wallis test followed by a Dunn's Post Hoc test with p-values being corrected for multiple comparisons via Benjamini and Hochberg. c) Linear regression comparison of cecal histologic inflammation scoring to hypoxia across tested diets. d) Linear regression comparison of cecal histopathology scores to C. difficile toxins TcdA/TcdB burden across tested diets. e) Linear regression results for d) as a heat map with the color indicating the correlation coefficient with the overlaid text being the p-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).
+```{r, warning=FALSE, fig.height=20, fig.width=26}
+fig3_top_row <- plot_grid(cecum_plot +
+                            theme_bw(base_size = 20) +
+                            ggtitle('Cecum Tissue Damage Scores'),
+                          labels = c('a)'),
+                          label_size = 20)
+
+fig3_middle_row <- plot_grid(hypox_cecumLocation_plot +
+                               theme_bw(base_size = 20),
+                            cecal_hypox_plot +
+                               theme_bw(base_size = 20) +
+                               theme(strip.text.y.right = element_text(angle = 0)),
+                             labels = c('b)', 'c)'),
+                             align = c('hv'),
+                             axis = c('tblr'),
+                             nrow = 1,
+                             rel_widths = c(0.7, 1),
+                             label_size = 20)
+
+fig3_stats <- plot_grid(neat_histo_cecum_plot +
+                               theme_bw(base_size = 20) +
+                               theme(strip.text.y.right = element_text(angle = 0)) +
+                               ggtitle('Cecum C. difficile Toxin by Total Tissue Damage Score'),
+                        neat_tox_stat_vis +
+                               theme_bw(base_size = 20) +
+                          ggtitle('Toxin Concentration and\nTissue Damage Comparisons'),
+                        nrow = 1,
+                        rel_widths = c(1, 0.5),
+                        labels = c('d)', 'e)'),
+                        align = c('hv'),
+                        axis = c('tblr'),
+                        label_size = 20)
+
+fig3_bottom_row <- plot_grid(fig3_middle_row,
+                             fig3_stats,
+                             align = c('hv'),
+                             axis = c('tblr'),
+                             rel_heights = c(1, 0.8),
+                             ncol = 1)
+
+plot_grid(fig3_top_row,
+          fig3_bottom_row,
+          rel_heights = c(0.6, 1),
+          ncol = 1,
+          align = c('hv'),
+          axis = c('tblr')) -> fig3
+
+fig3
+```
+
+
+## **Figure Four**
+Plots to go in figure:
+- colon histopathology plot
+- colon histo/hypoxia comparisons plot
+- do I want to include the toxin comparison plots???
+
+*Caption:*
+*a) Histologic inflammation scoring of mouse colon contents at three days post C. difficile infection in the tested diets as determined by a blinded histologist. b) Colon hypoxia measurements determined by fluorescence of the oxygen sensitive dye, pimonidazole. Statistical analysis was done using a Kruskal-Wallis test followed by a Dunn's Post Hoc test with p-values being corrected for multiple comparisons via Benjamini and Hochberg. c) Linear regression comparison of colon histologic inflammation scoring to hypoxia across tested diets. P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).*
+```{r, fig.height=14, fig.width=27}
+fig4_top_row <- plot_grid(colon_plot +
+                            theme_bw(base_size = 20) +
+                            ggtitle('Colon Tissue Damage Scores'),
+                          labels = c('a)'),
+                          label_size = 20)
+
+fig4_middle_row <- plot_grid(hypox_colonLocation_plot +
+                               theme_bw(base_size = 20) +
+                               ggtitle('Colon Hypoxia'), 
+                             colon_hypox_plot +
+                               theme_bw(base_size = 20) +
+                               theme(strip.text.y.right = element_text(angle = 0)), 
+                             rel_widths = c(0.8, 1),
+                             nrow = 1,
+                             labels = c('b)', 'c)'),
+                             align = c('hv'),
+                             axis = c('tblr'),
+                             label_size = 20)
+
+fig4 <- plot_grid(fig4_top_row,
+                  fig4_middle_row,
+                  ncol = 1,
+                  align = c('hv'),
+                  axis = c('tblr'),
+                  rel_heights = c(1, 0.85))
+
+fig4
+```
+
+
+## **Figure Five**
+Plots to go in figure:
 - bile acid concentration plot
 - bile acid c. diff promoters/inhibitors ratio plot
-- bile acid comparison plots (have only included comparisons with histopathology scoring to be consistent with the toxin/metabolomics figures) - do I actually want to include histo comparisons or toxin comparisons instead since bile acids directly inhibit c. diff growth and would be reflected in toxin concentration 
+- *bile acid comparison plots - switch the histo comparison plots out for toxin comparison plots!!*
 - there are some interesting strong correlations between metabolites and bile acid concentration in the diets 
 - stats for all 
 
 *Caption*:
-*a) Bile acid cecal levels of C. difficile growth inhibitors (a-MCA, b-MCA, LCA, DCA) and C. difficile growth promoters (TCA, CA) across the tested diets. b) The ratios of C. difficile growth promoters:inhibitors across the tested diets (a higher ratio indicates a higher level of promoters relative to inhibitors for that diet). Statistical analysis for dietary bile acid concentration/ratio differences was done using a Kruskal-Wallis test followed by a Dunn's Post Hoc test with p-values being corrected for multiple comparisons via Benjamini and Hochberg. Linear regression comparison of histopathology scores to c) C. difficile growth inhibitors, d) C. difficile growth promoters, and e) the promoter:inhibitor ratios. f)-g) Linear regression results for c)-e) as a heat map with the color indicating the correlation coefficient with the overlaid text being the p-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1)*
-```{r, fig.height=22, fig.width=26.5}
-fig3_top_row <- plot_grid(overall_plot +
-                            theme_bw(base_size = 20), 
+*a) Bile acid cecal levels of C. difficile growth inhibitors (a-MCA, b-MCA, LCA, DCA) and C. difficile growth promoters (TCA, CA) across the tested diets. b) The ratios of C. difficile growth promoters:inhibitors across the tested diets (a higher ratio indicates a higher level of promoters relative to inhibitors for that diet). Statistical analysis for dietary bile acid concentration/ratio differences was done using a Kruskal-Wallis test followed by a Dunn's Post Hoc test with p-values being corrected for multiple comparisons via Benjamini and Hochberg. Linear regression comparison of C. difficile toxins TcdA/TcdB concentration to c) C. difficile growth inhibitors and d) C. difficile growth promoters. e) Linear regression results for c)-d) as a heat map with the color indicating the correlation coefficient with the overlaid text being the p-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1)*
+```{r, fig.height=16, fig.width=26.5}
+fig5_top_row <- plot_grid(overall_plot +
+                            theme_bw(base_size = 20)+
+                            ggtitle('Cecum Bile Acid Concentration'), 
                           ratio_bile_plot +
-                            theme_bw(base_size = 20),
+                            theme_bw(base_size = 20)+
+                            ggtitle('Cecum Bile Acid Ratio'),
                           labels = c('a)', 'b)'),
                           label_size = 20,
                           align = c('hv'),
                           axis = c('tblr'),
                           rel_widths = c(1, 0.8))
 
-fig3_middle_row <- plot_grid(histo_inhibitors_plot +
+fig5_middle_row <- plot_grid(toxin_inhibitors_plot +
                                theme_bw(base_size = 20) +
-                               theme(strip.text.y.right = element_text(angle = 0)),
-                             histo_promoters_plot +
+                               theme(strip.text.y.right = element_text(angle = 0)) +
+                               ggtitle('Cecum C. difficile Toxin by Bile Acid Inhibitor Concentration'),
+                             toxin_promoters_plot +
                                theme_bw(base_size = 20) +
-                               theme(strip.text.y.right = element_text(angle = 0)),
-                             histo_ratio_plot +
-                               theme_bw(base_size = 20) +
-                               theme(strip.text.y.right = element_text(angle = 0)),
+                               theme(strip.text.y.right = element_text(angle = 0))+
+                               ggtitle('Cecum C. difficile Toxin by Bile Acid Promoter Concentration'),
                              ncol = 1,
-                             labels = c('c)', 'd)', 'e)'),
+                             labels = c('c)', 'd)'),
                              label_size = 20,
                              align = c('hv'),
                              axis = c('tblr'))
 
-fig3_stats <- plot_grid(histo_bile_stat_plot +
-                               theme_bw(base_size = 20),
-                             histo_ratio_stat_plot +
-                               theme_bw(base_size = 20),
+fig5_stats <- plot_grid(tox_bile_stat_plot +
+                               theme_bw(base_size = 20)+
+                               ggtitle('Toxin and Bile Acid\nConcentration Comparisons'),
                         NULL,
                              ncol = 1,
-                        rel_heights = c(1, 0.9, 0.5),
-                             labels = c('f)', 'g)', ' '),
-                             label_size = 20,
-                             align = c('hv'),
-                             axis = c('tblr'))
+                        rel_heights = c(1, 0.7),
+                        labels = c('e)', ' '),
+                        label_size = 20,
+                        align = c('hv'),
+                        axis = c('tblr'))
 
-fig3_bottom_row <- plot_grid(fig3_middle_row,
-                             fig3_stats,
+fig5_bottom_row <- plot_grid(fig5_middle_row,
+                             fig5_stats,
                              ncol = 2,
                              rel_widths = c(1, 0.6),
                              align = c('hv'),
                              axis = c('tblr'))
 
-fig3 <- plot_grid(fig3_top_row,
-                  fig3_bottom_row,
+fig5 <- plot_grid(fig5_top_row,
+                  fig5_bottom_row,
                   ncol = 1,
-                  rel_heights = c(0.5, 1),
+                  rel_heights = c(0.7, 1),
                   align = c('hv'),
                   axis = c('tblr'))
 
-fig3
+fig5
 ```
 
-## **Figure Four**
-Plots to go in figure:
-- metabolomics plot
-- metab and histo comparison plot and stats
-
-*Caption*:
-*a) SCFA (acetate, butyrate, propionate) levels of mouse cecal contents three days post C. difficile infecion by the tested diets. Linear regression comparison of SCFAs, b) acetate, c) butyrate, and d) propionate to histopathology scores across tested diets. e) Linear regression results for b)-d) as a heat map with the color indicating the correlation coefficient with the overlaid text being the p-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).*
-```{r, warning=FALSE, fig.height=20, fig.width=32}
-fig4_bottom_row <- plot_grid(histo_acetic_plot +
-                               theme_bw(base_size = 20) +
-                               theme(strip.text.y.right = element_text(angle = 0)),
-                             histo_butanoic_plot +
-                               theme_bw(base_size = 20) +
-                               theme(strip.text.y.right = element_text(angle = 0)),
-                             histo_propanoic_plot +
-                               theme_bw(base_size = 20) +
-                               theme(strip.text.y.right = element_text(angle = 0)),
-                             labels = c('c)', 'd)', 'e)'),
-                             align = c('hv'),
-                             axis = c('tblr'),
-                             nrow = 2,
-                             label_size = 20)
-
-fig4_top_row <- plot_grid(metab_plot,
-                          metab_stat_vis +
-                               theme_bw(base_size = 20)+
-                               ggtitle('Histopathology Score and Metabolite\n Concentration Comparisons'),
-                          nrow = 1,
-                          rel_widths = c(1, 0.6),
-                          labels = c('a)', 'b)'),
-                          label_size = 20)
-plot_grid(fig4_top_row,
-          fig4_bottom_row,
-          ncol = 1,
-          rel_heights = c(0.65, 1)) -> fig4
-
-fig4
-```
-
-## **Figure Five**
+## **Figure Six**
 
 *Caption*:
 *a) Unweighted UniFrac PCoA plots delimited by diet (columns) and by days relative to infection (rows). Individual points are colored by their associated Faith's PD score. b) Microbiome resilience determined using pairwise comparisons between day negative eight (seven days post diet switch and five days prior to oral antibiotic administration) and later time points. c) Microbiome homogeneity determined using pairwise Unweighted UniFrac distances within each time point by tested diets. The dashed red line at day negative three indicates the day the mice received oral antibiotics and the purple dashed line at day zero indicates with the mice were infected with C. difficile. Statistical analysis of microbiome d) resiliency and e) homogeneity was done with a Kruskal-Wallis test followed by a Dunn's Post Hoc test with the color gradient indicating the difference in means between the various groups.*P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).*
 ```{r, warning=FALSE, fig.width=26.5, fig.height=18}
 ## use NULL to create a ghost plot to alter your rows
-fig5_bottom_row <- plot_grid(uu_resil_plot, uu_homog_plot,
+fig6_bottom_row <- plot_grid(uu_resil_plot, uu_homog_plot,
                              uu_resil_stat_vis +
                                theme(legend.position = "None"), 
                              uu_homog_stat_vis,
@@ -223,22 +268,22 @@ unweighted_top <- unweighted_pcoa + gridExtra::tableGrob(unweighted_by_day,
                                                      rows = NULL, 
                                                      theme = my_table_theme)
                     
-fig5_top_row <- plot_grid(unweighted_top,
+fig6_top_row <- plot_grid(unweighted_top,
                           nrow = 1,
                           # rel_widths = c(1, 0.5),
                           labels = c('a)'),
                           label_size = 20,
                           align = 'v')
 
-plot_grid(fig5_top_row,
-          fig5_bottom_row,
+plot_grid(fig6_top_row,
+          fig6_bottom_row,
           nrow = 2,
-          rel_heights = c(0.9, 1)) -> fig5
+          rel_heights = c(0.9, 1)) -> fig6
 
-fig5
+fig6
 ```
 
-## **Figure Six**
+## **Figure Seven**
 Plots to go in figure:
 - faith's pd and stats
 
@@ -252,12 +297,12 @@ plot_grid(faith_plot +
           rel_heights = c(1, 0.7),
           labels = c('a)', 'b)'),
           align = 'h',
-          label_size = 20) -> fig6
+          label_size = 20) -> fig7
 
-fig6
+fig7
 ```
 
-## **Figure Seven**
+## **Figure Eight**
 Plots to go in figure:
 - want to eventually have the plot that goes with 16S for stool and cecal samples 
 - need an unbiased differential abundance test? 
@@ -272,12 +317,12 @@ Plots to go in figure:
 plot_grid(short_abun1, stat_plot1,
           labels = c('a)', 'b)'),
           label_size = 20,
-          rel_widths = c(1, 0.9)) -> fig7
+          rel_widths = c(1, 0.9)) -> fig8
 
-fig7
+fig8
 ```
 
-## **Figure Eight**
+## **Figure Nine**
 TAKING THIS FIGURE OUT!!
 
 Just in case we decide to do more with this data, here's the results text I wrote for it:
@@ -290,7 +335,7 @@ Just in case we decide to do more with this data, here's the results text I wrot
 *Caption*:
 *All results come from PICRUSt2 analysis based on the fecal sample 16S sequences. The dashed red line at day negative three indicates the day the mice received oral antibiotics and the purple dashed line at day zero indicates with the mice were infected with C. difficile. a) Abundance of butyrate-kinase coding capacity genes by bacterial class and the tested diets across time points. b) Abundance of butyryl-coa-transferase coding capacity genes by bacterial class and the tested diets across time points. Abundance of c) baiH and d) baiI (secondary bile acid producing enzymes) by bacterial species and the tested diets across time points. e) Pairwise comparisons by days relative to infection (columns) and butyrate producing enzyme (rows) per diet as determined by a Kruskal-Wallis test followed by a Dunn's Post Hoc test with the color gradient indicating the difference in means.*P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, +p<0.1, ns<1).**
 ```{r, warning=FALSE, fig.height=29, fig.width=35}
-fig8_top_row <- plot_grid(butyrate_kinase, butyryl_coa_transferase,
+fig9_top_row <- plot_grid(butyrate_kinase, butyryl_coa_transferase,
                           buk_plot +
                                theme(legend.position = "None"), 
                              but_plot,
@@ -301,7 +346,7 @@ fig8_top_row <- plot_grid(butyrate_kinase, butyryl_coa_transferase,
                           nrow = 2,
                           rel_heights = c(1, 0.6))
 
-fig8_bottom_row <- plot_grid(baiH, baiI,
+fig9_bottom_row <- plot_grid(baiH, baiI,
                              baiH_plot +
                                ggtitle('baiH Functional Potential Over Time Between Diets'),
                              NULL,
@@ -313,14 +358,14 @@ fig8_bottom_row <- plot_grid(baiH, baiI,
                              rel_widths = c(1, 0.7),
                              rel_heights = c(1, 0.7))
 
-plot_grid(fig8_top_row,
-          fig8_bottom_row,
+plot_grid(fig9_top_row,
+          fig9_bottom_row,
           ncol = 1,
           align = 'hv',
           axis = 'tblr',
           rel_heights = c(1, 0.7)) -> fig8
 
-fig8
+fig9
 ```
 
 **Saving my Outputs**
@@ -332,31 +377,31 @@ ggsave('../../figures/fig1.pdf',
        height = 12)
 ggsave('../../figures/fig2.pdf',
        plot = fig2,
-       width = 25.5,
-       height = 15)
+       width = 25,
+       height = 12)
 ggsave('../../figures/fig3.pdf',
        plot = fig3,
-       width = 26.5,
-       height = 22)
+       width = 26,
+       height = 20)
 ggsave('../../figures/fig4.pdf',
        plot = fig4,
-       width = 32,
-       height = 20)
+       width = 27,
+       height = 14)
 ggsave('../../figures/fig5.pdf',
        plot = fig5,
        width = 26.5,
        height = 18)
 ggsave('../../figures/fig6.pdf',
        plot = fig6,
-       width = 15,
-       height = 9)
+       width = 26.5,
+       height = 18)
 ggsave('../../figures/fig7.pdf',
        plot = fig7,
+       width = 15,
+       height = 9)
+ggsave('../../figures/fig8.pdf',
+       plot = fig8,
        width = 35,
        height = 15)
-# ggsave('../../figures/fig8.pdf',
-#        plot = fig8,
-#        width = 35,
-#        height = 29)
 ```
 

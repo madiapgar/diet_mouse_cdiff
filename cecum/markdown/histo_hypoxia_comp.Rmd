@@ -496,6 +496,16 @@ ggsave('../plots/histo_categories_hypox.pdf',
        width = 10,
        height = 12)
 
+## as an rdata object 
+save(cecum_plot,
+     file = '../../figures/cecum_histo_categories.rdata')
+save(colon_plot,
+     file = '../../figures/colon_histo_categories.rdata')
+save(cecal_hypox_plot,
+     file = '../../figures/cecum_histo_hypox.rdata')
+save(colon_hypox_plot,
+     file = '../../figures/colon_histo_hypox.rdata')
+
 ## stats
 write_tsv(comp_stat_table,
           '../stats/histo_categories_hypox.tsv')

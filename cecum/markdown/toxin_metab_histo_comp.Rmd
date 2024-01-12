@@ -99,8 +99,9 @@ comp_plot <- function(histo_table,
                        wanted_y,
                        ## what is the toxin/metabolite you want to filter by called in the table?
                        wanted_y_name,
+                       row_facet,
                        diet_labels,
-                       tissue_labels,
+                       non_diet_labels,
                        title){
   ## putting tables together
   histo_table %>% 
@@ -115,8 +116,8 @@ comp_plot <- function(histo_table,
     scale_x_continuous(trans = 'log10') +
     geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
     geom_smooth(method = 'lm', se = FALSE) +
-    facet_grid(tissue~diet,
-               labeller = labeller(tissue = tissue_labels,
+    facet_grid(.data[[row_facet]]~diet,
+               labeller = labeller(.rows = non_diet_labels,
                                    diet = diet_labels),
                scales = 'free_y') +
     theme_bw() +
@@ -196,20 +197,21 @@ r2_value_for_loop <- function(biom_table,
 ## statistical visualization plot function
 stat_plot <- function(stat_table,
                       wanted_labels,
+                      x_lab_list,
                       y_lab_list,
+                      x_label,
                       title){
   stat_table %>% 
-    ggplot(aes(x = tissue, y = diet)) +
+    ggplot(aes(x = tox_metab, y = diet)) +
     geom_tile(aes(fill = r_direct), color = 'black', alpha = 0.6) +
     geom_text(aes(label = signif)) +
     scale_fill_gradient2(low = 'blue', high = 'green', name = "Correlation\nCoefficient") +
-    scale_x_discrete(labels = c("Cecum",
-                                "Colon")) +
+    scale_x_discrete(labels = x_lab_list) +
     scale_y_discrete(labels = y_lab_list) +
-    facet_wrap(~tox_metab,
-               labeller = labeller(tox_metab = wanted_labels)) +
+    facet_wrap(~tissue,
+               labeller = labeller(tissue = wanted_labels)) +
     theme_bw() +
-    xlab("Tissue") +
+    xlab(x_label) +
     ylab("Diet") +
     ggtitle(title) -> plot
   return(plot)
@@ -274,15 +276,14 @@ comp_files <- file_prep(metadata_FP,
 
 metadata <- comp_files$Metadata
 metab <- comp_files$Metabolomics
+metab %>% 
+  mutate(metab_conc_norm = (concentration + 2)) -> metab
 histo <- comp_files$Histopathology
 dil_toxin <- comp_files$DilToxin
 neat_toxin <- comp_files$NeatToxin
+neat_toxin %>% 
+  mutate(neat_conc_norm = (neat_conc + 2)) -> neat_toxin
 ```
-
-**Comparisons To Do:**
-- toxin and metab concentration to cecal and colon histo scores (on a plot, faceted by diet, x = toxin, y = histo score): DONE
-- toxin and metab concentrations by diet (to each other): DONE
-- correlate above results to overall mouse survival 
 
 **Toxin to Histopathology Scores Comparisons**
 
@@ -321,25 +322,27 @@ neat_histo_plot
 **Neat TcdA and TcdB Plot Construction**
 ```{r, warning=FALSE, fig.height=4, fig.width=9}
 ## neat tcdA
-neat_histo_tca_plot <- comp_plot(histo,
+neat_histo_cecum_plot <- comp_plot(histo,
                                  neat_toxin,
-                                 'neat_conc',
+                                 'neat_conc_norm',
+                                 'tissue',
+                                 'cecum',
                                  'neat_toxin',
-                                 'Total TcA Neat',
                                  diet_labs,
-                                 tissue_labs,
-                                 'C. difficile TcdA Toxin')
+                                 neat_labs,
+                                 'Cecum C. difficile Toxin by Histopathology')
 ## neat tcdB
-neat_histo_tcb_plot <- comp_plot(histo,
+neat_histo_colon_plot <- comp_plot(histo,
                                  neat_toxin,
-                                 'neat_conc',
+                                 'neat_conc_norm',
+                                 'tissue',
+                                 'colon',
                                  'neat_toxin',
-                                 'Total TcB Neat',
                                  diet_labs,
-                                 tissue_labs,
-                                 'C. difficile TcdB Toxin')
-neat_histo_tcb_plot
-neat_histo_tca_plot
+                                 neat_labs,
+                                 'Colon C. difficile Toxin by Histopathology')
+neat_histo_cecum_plot
+neat_histo_colon_plot
 ```
 
 **Diluted Toxin Concentration Comparison**
@@ -377,25 +380,27 @@ dil_histo_plot
 **Diluted TcdA and TcdB Plot Construction**
 ```{r, warning=FALSE, fig.height=4, fig.width=9}
 ## diluted tcdA
-dil_histo_tca_plot <- comp_plot(histo,
+dil_histo_cecum_plot <- comp_plot(histo,
                                 dil_toxin,
                                 'dil_conc',
+                                'tissue',
+                                'cecum',
                                 'dil_toxin',
-                                'Total TcA 1:10',
                                  diet_labs,
-                                 tissue_labs,
-                                 'Diluted TcdA')
+                                 dil_labs,
+                                 'Cecum Toxin by Histopathology (diluted)')
 ## diluted tcdB
-dil_histo_tcb_plot <- comp_plot(histo,
+dil_histo_colon_plot <- comp_plot(histo,
                                 dil_toxin,
                                 'dil_conc',
+                                'tissue',
+                                'colon',
                                 'dil_toxin',
-                                'Total TcB 1:10',
                                  diet_labs,
-                                 tissue_labs,
-                                 'Diluted TcdB')
-dil_histo_tcb_plot
-dil_histo_tca_plot
+                                 dil_labs,
+                                 'Colon Toxin by Histopathology (diluted)')
+dil_histo_cecum_plot
+dil_histo_colon_plot
 ```
 
 **Toxin Stats (to put on plots)**
@@ -436,8 +441,10 @@ neat_y_labs <- c("Chow",
                  "LFt/LFb")
 
 neat_tox_stat_vis <- stat_plot(neatTox_stat_table,
+                               tissue_labs,
                                neat_labs,
                                neat_y_labs,
+                               "Toxin",
                                "Histopathology Score and Toxin Concentration Comparisons (neat)")
 
 neat_tox_stat_vis
@@ -451,8 +458,10 @@ dil_y_labs <- c("HFt/HFb",
                  "LFt/LFb")
 
 dil_tox_stat_vis <- stat_plot(dilTox_stat_table,
+                              tissue_labs,
                               dil_labs,
                               dil_y_labs,
+                              "Toxin",
                               "Histopathology Score and Toxin Concentration Comparisons (diluted)")
 
 dil_tox_stat_vis
@@ -461,15 +470,15 @@ dil_tox_stat_vis
 **Toxin Plots Together!**
 ```{r, warning=FALSE, fig.height=7, fig.width=15.5}
 ## neat
-plot_grid(neat_histo_tca_plot, neat_tox_stat_vis,
-          neat_histo_tcb_plot,
+plot_grid(neat_histo_cecum_plot, neat_tox_stat_vis,
+          neat_histo_colon_plot,
           ncol = 2,
           rel_widths = c(1, 0.7),
           labels = c('a)', 'c)', 'b)')) -> neat_toxin_histo_plots
 
 ## diluted
-plot_grid(dil_histo_tca_plot, dil_tox_stat_vis,
-          dil_histo_tcb_plot,
+plot_grid(dil_histo_cecum_plot, dil_tox_stat_vis,
+          dil_histo_colon_plot,
           ncol = 2,
           rel_widths = c(1, 0.8),
           labels = c('a)', 'c)', 'b)')) -> dil_toxin_histo_plots
@@ -515,38 +524,29 @@ histo_metab_overall
 
 **Metabolomics Plots (faceted by diet)**
 ```{r, warning=FALSE, fig.height=5, fig.width=10}
-## acetic acid
-histo_acetic_plot <- comp_plot(histo,
+histo_metabCecum_plot <- comp_plot(histo,
                                metab,
-                               'concentration',
+                               'metab_conc_norm',
+                               'tissue',
+                               'cecum',
                                'metabolite',
-                               'Acetic Acid (ug/g)',
                                diet_labs,
-                               tissue_labs,
-                               'Acetic Acid')
+                               metab_labs,
+                               'Cecum SCFAs by Histopathology')
 
-## n-butanoic acid
-histo_butanoic_plot <- comp_plot(histo,
-                                 metab,
-                                 'concentration',
-                                 'metabolite',
-                                 'n-Butanoic Acid (ug/g)',
-                                 diet_labs,
-                                 tissue_labs,
-                                 'n-Butanoic Acid')
-## propanoic acid
-histo_propanoic_plot <- comp_plot(histo,
-                                 metab,
-                                 'concentration',
-                                 'metabolite',
-                                 'Propanoic Acid (ug/g)',
-                                 diet_labs,
-                                 tissue_labs,
-                                 'Propanoic Acid')
 
-histo_butanoic_plot
-histo_acetic_plot
-histo_propanoic_plot
+histo_metabColon_plot <- comp_plot(histo,
+                                 metab,
+                                 'metab_conc_norm',
+                                 'tissue',
+                                 'colon',
+                                 'metabolite',
+                                 diet_labs,
+                                 metab_labs,
+                                 'Colon SCFAs by Histopathology')
+
+histo_metabCecum_plot
+histo_metabColon_plot
 ```
 
 **Metabolite Stats (to put on my plots)**
@@ -573,18 +573,23 @@ metab_y_labs <- c("Chow",
                  "LFt/LFb")
 
 metab_stat_vis <- stat_plot(metab_stat_table,
+                            tissue_labs,
                             metab_labs,
                             metab_y_labs,
-                            "Histopathology Score and Metabolite Concentration Comparisons")
+                            "SCFA",
+                            "Histopathology Score and SCFA Concentration Comparisons")
 metab_stat_vis
 ```
 
 **Metabolite Plots Together!!**
-```{r, warning=FALSE, fig.height=8, fig.width=19}
-plot_grid(histo_acetic_plot, histo_butanoic_plot,
-          histo_propanoic_plot, metab_stat_vis,
+```{r, warning=FALSE, fig.height=7, fig.width=19}
+plot_grid(histo_metabCecum_plot, histo_metabColon_plot,
+          metab_stat_vis,
           nrow = 2,
-          labels = c('a)', 'b)', 'c)', 'd)')) -> metab_histo_plot
+          rel_heights = c(1, 0.6),
+          align = c('hv'),
+          axis = c('tblr'),
+          labels = c('a)', 'b)', 'c)')) -> metab_histo_plot
 
 metab_histo_plot
 ```
@@ -614,8 +619,8 @@ ggsave('dil_histo_toxin_stats.pdf',
        path = '../plots')
 ggsave('histo_metab_comp.pdf',
        plot = metab_histo_plot,
-       width = 19.5,
-       height = 8.5,
+       width = 19,
+       height = 7,
        path = '../plots')
 ggsave('histo_metab_stats.pdf',
        plot = metab_stat_vis,
@@ -624,30 +629,28 @@ ggsave('histo_metab_stats.pdf',
        path = '../plots')
 
 ## as an rdata object
-save(neat_histo_tca_plot,
-     file = '../../figures/neat_histo_tca.rdata')
-save(neat_histo_tcb_plot,
-     file = '../../figures/neat_histo_tcb.rdata')
+save(neat_histo_cecum_plot,
+     file = '../../figures/neat_histo_cecum.rdata')
+save(neat_histo_colon_plot,
+     file = '../../figures/neat_histo_colon.rdata')
 save(neat_tox_stat_vis,
      file = '../../figures/neat_histo_stats.rdata')
-save(histo_acetic_plot,
-     file = '../../figures/histo_acetic.rdata')
-save(histo_butanoic_plot,
-     file = '../../figures/histo_butanoic.rdata')
-save(histo_propanoic_plot,
-     file = '../../figures/histo_propanoic.rdata')
+save(histo_metabCecum_plot,
+     file = '../../figures/histo_metab_cecum.rdata')
+save(histo_metabColon_plot,
+     file = '../../figures/histo_metab_colon.rdata')
 save(metab_stat_vis,
      file = '../../figures/histo_metab_stats.rdata')
 
 ## saving processed histo, metab, and toxin files so I don't have to continue to redo the processing 
 ## with each new comparison script
-write_tsv(histo,
-          '../data/misc/processed_histopathology.tsv')
-write_tsv(metab,
-          '../data/misc/processed_metabolomics.tsv')
-write_tsv(neat_toxin,
-          '../data/misc/processed_neatToxin.tsv')
-write_tsv(dil_toxin,
-          '../data/misc/processed_dilutedToxin.tsv')
+# write_tsv(histo,
+#           '../data/misc/processed_histopathology.tsv')
+# write_tsv(metab,
+#           '../data/misc/processed_metabolomics.tsv')
+# write_tsv(neat_toxin,
+#           '../data/misc/processed_neatToxin.tsv')
+# write_tsv(dil_toxin,
+#           '../data/misc/processed_dilutedToxin.tsv')
 ```
 

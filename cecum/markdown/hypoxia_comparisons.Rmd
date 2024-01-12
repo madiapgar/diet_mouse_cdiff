@@ -119,7 +119,7 @@ comp_plot <- function(hypoxia_table,
     filter(.data[[wanted_y]] == wanted_y_name) %>% 
     na.omit() %>% 
     ggplot(aes(x = .data[[wanted_x]], y = fluorescence)) +
-    scale_x_continuous(trans = 'log10') +
+    # scale_x_continuous(trans = 'log10') +
     scale_y_continuous(trans = 'log10') +
     geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
     geom_smooth(method = 'lm', se = FALSE) +
@@ -363,7 +363,7 @@ hypox_histo_stat_table %>%
 
 hypox_histo_stat_plot <- stat_plot(hypox_histo_stat_table,
                                    location_labs,
-                                   histo_y_labs,
+                                   diet_y_labs,
                                    tissue_labs,
                                    'Hypoxia and Histopathology Score Comparisons')
 
@@ -568,5 +568,13 @@ ggsave('../plots/hypoxia_metab_comp_plots.pdf',
        plot = hypoxia_metab_plots,
        width = 20, 
        height = 10)
+
+## as an rdata object 
+save(hypox_tcda_plot,
+     file = '../../figures/hypoxia_tcda_comp.rdata')
+save(hypox_tcdb_plot,
+     file = '../../figures/hypoxia_tcdb_comp.rdata')
+save(hypox_toxin_stat_plot,
+     file = '../../figures/hypoxia_toxin_stats.rdata')
 ```
 

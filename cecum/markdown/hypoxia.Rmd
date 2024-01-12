@@ -211,6 +211,7 @@ hypoxia %>%
 ## **Plots (faceted by location)**
 
 **Hypoxia Plot by Mouse Diet**
+Overall
 ```{r, fig.height=5, fig.width=10}
 hypoxia %>% 
   ggplot(aes(x = diet, y = fluorescence)) +
@@ -230,9 +231,59 @@ hypoxia %>%
                      hide.ns = TRUE) +
   labs(x = 'Diet',
        y = 'Fluorescence',
-       title = 'Mouse GI Oxygen Concentration by Location') -> hypox_location_plot
+       title = 'Cecum Hypoxia') -> hypox_location_plot
 
 hypox_location_plot
+```
+
+
+Cecum!!
+```{r, fig.height=4, fig.width=6}
+hypoxia %>% 
+  filter(order == 1) %>% 
+  ggplot(aes(x = diet, y = fluorescence)) +
+  geom_boxplot(aes(group = diet)) +
+  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
+  scale_x_discrete(labels = c('Chow',
+                              'HFt/\nHFb',
+                              'HFt/\nLFb',
+                              'LFt/\nHFb',
+                              'LFt/\nLFb')) +
+  theme_bw(base_size = 16) +
+  facet_grid(~order,
+             labeller = labeller(order = location_labs)) +
+  stat_pvalue_manual(dunn_location,
+                     tip.length = 0.01,
+                     label = 'p.adj.signif',
+                     hide.ns = TRUE) +
+  labs(x = 'Diet',
+       y = 'Fluorescence',
+       title = 'Cecum Hypoxia') -> hypox_cecumLocation_plot
+
+hypox_cecumLocation_plot
+```
+
+Colon!!
+No statistical significance so that's why no stats on plot
+```{r, fig.height=4, fig.width=8}
+hypoxia %>% 
+  filter(order != 1) %>% 
+  ggplot(aes(x = diet, y = fluorescence)) +
+  geom_boxplot(aes(group = diet)) +
+  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
+  scale_x_discrete(labels = c('Chow',
+                              'HFt/\nHFb',
+                              'HFt/\nLFb',
+                              'LFt/\nHFb',
+                              'LFt/\nLFb')) +
+  theme_bw(base_size = 16) +
+  facet_grid(~order,
+             labeller = labeller(order = location_labs)) +
+  labs(x = 'Diet',
+       y = 'Fluorescence',
+       title = 'Colon Hypoxia') -> hypox_colonLocation_plot
+
+hypox_colonLocation_plot
 ```
 
 **Hypoxia Plot by Fiber Content**
@@ -278,6 +329,12 @@ save(hypox_location_plot,
      file = '../../figures/hypoxia_by_diet.rdata')
 save(location_fib_plot,
      file = '../../figures/hypoxia_by_fiberContent.rdata')
+save(hypox_plot,
+     file = '../../figures/hypoxia_by_location.rdata')
+save(hypox_cecumLocation_plot,
+     file = '../../figures/hypoxia_cecumONLY.rdata')
+save(hypox_colonLocation_plot,
+     file = '../../figures/hypoxia_colonONLY.rdata')
 
 ## stats
 write_tsv(dunn_location,

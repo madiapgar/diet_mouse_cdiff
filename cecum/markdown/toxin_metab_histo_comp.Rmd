@@ -433,6 +433,34 @@ dilTox_stat_table['signif'] <- symnum(dilTox_stat_table$p_value,
 
 
 **Neat Toxin Statistical Visualization**
+Trying something new - over laying the p-value significance on the plot.
+```{r, fig.height=4, fig.width=9}
+neatTox_stat_table %>% 
+  filter(tissue == 'cecum',
+         signif != 'ns') %>% 
+  select(diet, tox_metab, signif, p_value) %>% 
+  mutate(neat_conc_norm = paste(15),
+         neat_conc_norm = as.numeric(neat_conc_norm),
+         score = paste(5.5),
+         score = as.numeric(score),
+         p_value = signif(p_value, digits = 3),
+         p_value = paste('p-value', p_value, sep = ": ")) -> procNeat_stat_table
+
+names(procNeat_stat_table)[names(procNeat_stat_table) == 'tox_metab'] <- 'neat_toxin'
+
+neat_histo_cecum_plot +
+  geom_label(data = procNeat_stat_table, 
+            label = procNeat_stat_table$p_value,
+            color = 'black',
+            fontface = 'bold',
+            size = 3) -> neat_cecumHisto_stats_plot
+
+neat_cecumHisto_stats_plot
+```
+
+
+
+
 ```{r, warning=FALSE, fig.height=4, fig.width=6.5}
 neat_y_labs <- c("Chow",
                  "HFt/HFb",
@@ -554,7 +582,7 @@ histo_metabColon_plot
 ## metabolite stats
 metab_stat_table <- r2_value_for_loop(histo_metab,
                                       "metabolite",
-                                      "concentration")
+                                      "metab_conc_norm")
 ## assigning p value significance 
 metab_stat_table['signif'] <- symnum(metab_stat_table$p_value,
                                      cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
@@ -565,6 +593,29 @@ metab_stat_table['signif'] <- symnum(metab_stat_table$p_value,
 
 
 **Metabolite Stat Plot Visualization**
+Trying a different way
+```{r}
+metab_stat_table %>% 
+  filter(tissue == 'cecum',
+         signif != 'ns') %>% 
+  select(diet, tox_metab, signif) %>% 
+  mutate(metab_conc_norm = paste(1000),
+         metab_conc_norm = as.numeric(metab_conc_norm),
+         score = paste(5.5),
+         score = as.numeric(score)) -> metab_stat_table2
+
+names(metab_stat_table2)[names(metab_stat_table2) == 'tox_metab'] <- 'metabolite'
+
+histo_metabCecum_plot +
+  geom_text(data = metab_stat_table2, 
+            label = metab_stat_table2$signif,
+            color = 'red',
+            size = 6) -> metab_cecumHisto_stats_plot
+
+metab_cecumHisto_stats_plot
+```
+
+
 ```{r, warning=FALSE, fig.height=3.5, fig.width=7.5}
 metab_y_labs <- c("Chow",
                  "HFt/HFb",
@@ -602,6 +653,11 @@ ggsave('neat_histo_toxin_comp.pdf',
        width = 15.5,
        height = 7,
        path = '../plots')
+## stats on actual plot
+ggsave('../plots/neat_cecumHisto_stats.pdf',
+       plot = neat_cecumHisto_stats_plot,
+       width = 9,
+       height = 4)
 ggsave('dil_histo_toxin_comp.pdf',
        plot = dil_toxin_histo_plots,
        width = 15.5,
@@ -631,6 +687,8 @@ ggsave('histo_metab_stats.pdf',
 ## as an rdata object
 save(neat_histo_cecum_plot,
      file = '../../figures/neat_histo_cecum.rdata')
+save(neat_cecumHisto_stats_plot,
+     file = '../../figures/neat_cecumHisto_stats.rdata')
 save(neat_histo_colon_plot,
      file = '../../figures/neat_histo_colon.rdata')
 save(neat_tox_stat_vis,

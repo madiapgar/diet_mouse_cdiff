@@ -133,7 +133,7 @@ names(tissue_labs) <- c('cecum',
 ```
 
 **Histopathology Calculations**
-```{r, fig.height=6, fig.width=12}
+```{r, fig.height=6, fig.width=8}
 ## file prep 
 histo <- histo_file_prep(metadata_FP,
                          histo_FP)
@@ -145,11 +145,31 @@ kruskal <- stats$KruskalWallis
 dunn <- stats$DunnsPostHoc
 linear_model <- stats$LinearModel
 
-## plot 
+## overall plot 
 all_day_plot <- histo_plot(histo,
                            dunn)
 
+## cecum only plot
+histo %>% 
+  filter(tissue == 'cecum') -> histo_cecumOnly
+dunn %>% 
+  filter(tissue == 'cecum') -> dunn_cecum
+
+cecum_histo_plot <- histo_plot(histo_cecumOnly,
+                               dunn_cecum)
+
+## colon only plot 
+histo %>% 
+  filter(tissue == 'colon') -> histo_colonOnly
+dunn %>% 
+  filter(tissue == 'colon') -> dunn_colon
+
+colon_histo_plot <- histo_plot(histo_colonOnly,
+                               dunn_colon)
+
 all_day_plot
+cecum_histo_plot
+colon_histo_plot
 ```
 
 **Saving my Outputs**
@@ -166,5 +186,9 @@ write_tsv(dunn,
 
 save(all_day_plot,
      file = '../../figures/histo.rdata')
+save(cecum_histo_plot,
+     file = '../../figures/cecum_histo.rdata')
+save(colon_histo_plot,
+     file = '../../figures/colon_histo.rdata')
 ```
 

@@ -312,8 +312,12 @@ histo %>%
 **Hypoxia and Histopathology Score Comparisons**
 
 **Plot**
-```{r, warning=FALSE, fig.width=10, fig.height=5}
-hypox_cecum_plot <- comp_plot(hypoxia,
+```{r, warning=FALSE, fig.width=10, fig.height=3}
+## cecum
+hypoxia %>% 
+  filter(location == 'Cecum') -> hypox_cecumOnly
+
+hypox_cecum_plot <- comp_plot(hypox_cecumOnly,
                               mini_histo,
                               'score',
                               'tissue',
@@ -321,9 +325,13 @@ hypox_cecum_plot <- comp_plot(hypoxia,
                               diet_labs,
                               location_labs,
                               'Histopathology Score',
-                              'Hypoxia and Cecal Inflammation')
+                              'Cecum Hypoxia by Inflammation')
 
-hypox_colon_plot <- comp_plot(hypoxia,
+## colon
+hypoxia %>% 
+  filter(location != 'Cecum') -> hypox_colonOnly
+
+hypox_colon_plot <- comp_plot(hypox_colonOnly,
                               mini_histo,
                               'score',
                               'tissue',
@@ -331,7 +339,7 @@ hypox_colon_plot <- comp_plot(hypoxia,
                               diet_labs,
                               location_labs,
                               'Histopathology Score',
-                              'Hypoxia and Colon Inflammation')
+                              'Colon Hypoxia by Inflammation')
 
 
 hypox_cecum_plot
@@ -368,6 +376,32 @@ hypox_histo_stat_plot <- stat_plot(hypox_histo_stat_table,
                                    'Hypoxia and Histopathology Score Comparisons')
 
 hypox_histo_stat_plot
+```
+**Putting the Stats on the Actual Plot**
+```{r, fig.width=10, fig.height=4}
+hypox_histo_stat_table %>% 
+    filter(tox_metab == 'colon',
+           location != 'Cecum',
+           signif != 'ns') %>% 
+    select(diet, location, signif, p_value) %>% 
+    mutate(score = paste(8),
+           score = as.numeric(score),
+           fluorescence = paste(100),
+           fluorescence = as.numeric(fluorescence),
+           order = ifelse(location == "Prox_colon", 2, 3),
+           p_value = signif(p_value, digits = 3),
+           p_value = paste('p-value', p_value, sep = ": ")) -> proc_stat_table
+  
+# names(proc_stat_table)[names(proc_stat_table) == 'location'] <- 'order'
+  
+hypox_colon_plot +
+  geom_label(data = proc_stat_table,
+            label = proc_stat_table$p_value,
+            color = 'black',
+            fontface = 'bold',
+            size = 3) -> hypox_colonStats_plot
+
+hypox_colonStats_plot
 ```
 
 **Everything Together**
@@ -576,5 +610,9 @@ save(hypox_tcdb_plot,
      file = '../../figures/hypoxia_tcdb_comp.rdata')
 save(hypox_toxin_stat_plot,
      file = '../../figures/hypoxia_toxin_stats.rdata')
+save(hypox_cecum_plot,
+     file = '../../figures/hypox_histo_cecum_comp.rdata')
+save(hypox_colonStats_plot,
+     file = '../../figures/hypox_histo_colon_comp.rdata')
 ```
 

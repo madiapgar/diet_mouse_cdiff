@@ -586,6 +586,32 @@ tox_bile_stat_plot <- stat_plot(tox_bile_stats,
 tox_bile_stat_plot
 ```
 
+**Stats on the Plot**
+```{r, fig.width=10, fig.height=4, warning=FALSE}
+tox_bile_stats %>% 
+  filter(tox_metab == 'inhibitor',
+         signif != 'ns') %>% 
+  select(diet, tox_metab, comp_col, signif, p_value) %>% 
+  mutate(neat_conc_norm = paste(160),
+         neat_conc_norm = as.numeric(neat_conc_norm),
+         conc_normalized = paste(3000),
+         conc_normalized = as.numeric(conc_normalized),
+         p_value = signif(p_value, digits = 3),
+         p_value = paste('p-value', p_value, sep = ": ")) -> tox_bile_stats2
+
+names(tox_bile_stats2)[names(tox_bile_stats2) == 'comp_col'] <- 'neat_toxin'
+names(tox_bile_stats2)[names(tox_bile_stats2) == 'tox_metab'] <- 'c_diff_effect'
+
+toxin_inhibitors_plot +
+  geom_label(data = tox_bile_stats2, 
+            label = tox_bile_stats2$p_value,
+            color = 'black',
+            fontface = 'bold',
+            size = 3) -> toxin_inhibitors_stats_plot
+
+toxin_inhibitors_stats_plot
+```
+
 **Plots Together**
 ```{r, warning=FALSE, fig.height=7.5, fig.width=16.5}
 plot_grid(toxin_inhibitors_plot,
@@ -649,6 +675,27 @@ tox_ratio_stat_plot <- ratio_stat_plot(tox_ratio_stats,
 tox_ratio_stat_plot
 ```
 
+**Stats on the Plot**
+```{r, fig.width=10, fig.height=4, warning=FALSE}
+tox_ratio_stats %>% 
+  filter(signif != 'ns') %>% 
+  select(diet, category, signif) %>% 
+  mutate(neat_conc_norm = paste(500),
+         neat_conc_norm = as.numeric(neat_conc_norm),
+         ratio = paste(0.1),
+         ratio = as.numeric(ratio)) -> tox_ratio_stats2
+
+names(tox_ratio_stats2)[names(tox_ratio_stats2) == 'category'] <- 'neat_toxin'
+
+tox_ratio_plot +
+  geom_text(data = tox_ratio_stats2, 
+            label = tox_ratio_stats2$signif,
+            color = 'red',
+            size = 6) -> tox_ratio_stats_plot
+
+tox_ratio_stats_plot
+```
+
 **Ratio/Toxin Plots Together**
 ```{r, fig.width=15, fig.height=3.5}
 plot_grid(tox_ratio_plot,
@@ -685,6 +732,10 @@ ggsave('../plots/bileRatio_toxin_comp.pdf',
        plot = tox_ratio_plots_together,
        width = 15,
        height = 3.5)
+ggsave('../plots/bileRatio_toxin_comp_wStats.pdf',
+       plot = tox_ratio_stats_plot,
+       width = 10,
+       height = 4)
 
 ## as rdata objects for manuscript figures
 save(histo_inhibitors_plot,
@@ -701,7 +752,7 @@ save(metab_promoters_plot,
      file = '../../figures/bile_promote_metab.rdata')
 save(metab_bile_stat_plot,
      file = '../../figures/bile_metab_stats.rdata')
-save(toxin_inhibitors_plot,
+save(toxin_inhibitors_stats_plot,
      file = '../../figures/bile_inhibit_toxin.rdata')
 save(toxin_promoters_plot,
      file = '../../figures/bile_promote_toxin.rdata')

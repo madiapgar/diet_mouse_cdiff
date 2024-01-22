@@ -11,11 +11,17 @@ survival <- read_csv(survival_FP)
 ## should I reflect the number of mice used for the analysis or the actual total number of mice?
 metadata %>% 
   filter(day_post_inf == -15) %>% 
-  count(diet) -> n_mouse_stool
+  count(diet) -> n_sample_stool
 
 metadata %>% 
   filter(sample_type == 'cecum') %>% 
-  count(diet) -> n_mouse_cecum
+  count(diet) -> n_sample_cecum
+
+
+metadata %>% 
+  ungroup() %>% 
+  distinct(mouse_id, .keep_all = TRUE) %>% 
+  count(diet) -> n_mouse_day3
 
 
 ## survival cohort

@@ -30,7 +30,7 @@ comp_plot <- function(base_table,
                       base_table_col_select2,
                       ## toxin or metabolomics?
                        wanted_table,
-                       ## this is what you want your x axiss to be (neat, diluted, or concentration)? 
+                       ## this is what you want your x axis to be (neat, diluted, or concentration)? 
                        wanted_x,
                        ## this is toxin/metabolite column you want to filter by (neat or diluted)?
                        wanted_y=NULL,

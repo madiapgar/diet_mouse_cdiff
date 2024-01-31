@@ -37,19 +37,6 @@ rule target:
         "stats/family_abun_lm.tsv",
         "stats/family_abun_dunn.tsv",
         "plots/famAbun_stat_vis.pdf",
-        "plots/histopathology.pdf",
-        "stats/histopathology_lm.tsv",
-        "stats/histopathology_dunn.tsv",
-        "plots/neat_toxin.pdf",
-        "plots/dil_toxin.pdf",
-        "stats/neatToxin_kruskal_test.tsv",
-        "stats/neatToxin_dunn_test.tsv",
-        "stats/dilToxin_kruskal_test.tsv",
-        "stats/dilToxin_dunn_test.tsv",
-        "plots/metabolomics.pdf",
-        "stats/metab_linear_model.tsv",
-        "stats/metab_dunn_test.tsv",
-        "stats/metab_kruskal_test.tsv",
         "data/picrust/out_pipeline/KO_metagenome_out/pred_metagenome_contrib.tsv.gz",
         "plots/butyrate_kinase.pdf",
         "plots/butyryl_coa_transferase.pdf",
@@ -614,74 +601,6 @@ rule family_abundance_stats:
                                             --stat_plot {output.stat_plot} \
                                             --linear_model {output.lm} \
                                             --dunn {output.dunn}
-        """
-
-
-rule histopathology:
-    input:
-        metadata = "data/misc/processed_metadata.tsv",
-        histo = "data/misc/histo_data.csv"
-    output:
-        plot = "plots/histopathology.pdf",
-        lm = "stats/histopathology_lm.tsv",
-        dunn = "stats/histopathology_dunn.tsv"
-    conda:
-        "r_env"
-    shell:
-        """
-        Rscript scripts/histopathology.R --metadata {input.metadata} \
-                                         --histo {input.histo} \
-                                         --histo_plot {output.plot} \
-                                         --linear_model {output.lm} \
-                                         --dunn {output.dunn}
-        """
-
-
-rule toxin:
-    input:
-        metadata = "data/misc/processed_metadata.tsv",
-        toxin = "data/misc/toxin_final_data.tsv"
-    output:
-        neat_plot = "plots/neat_toxin.pdf",
-        diluted_plot = "plots/dil_toxin.pdf",
-        neat_kruskal = "stats/neatToxin_kruskal_test.tsv",
-        neat_dunn = "stats/neatToxin_dunn_test.tsv",
-        dil_kruskal = "stats/dilToxin_kruskal_test.tsv",
-        dil_dunn = "stats/dilToxin_dunn_test.tsv"
-    conda:
-        "r_env"
-    shell:
-        """
-        Rscript scripts/toxin.R --metadata {input.metadata} \
-                                --toxin {input.toxin} \
-                                --neat_plot {output.neat_plot} \
-                                --diluted_plot {output.diluted_plot} \
-                                --neat_kruskal {output.neat_kruskal} \
-                                --neat_dunn {output.neat_dunn} \
-                                --diluted_kruskal {output.dil_kruskal} \
-                                --diluted_dunn {output.dil_dunn}
-        """
-
-
-rule metabolomics:
-    input:
-        metadata = "data/misc/processed_metadata.tsv",
-        metab = "data/misc/metabolomics.csv"
-    output:
-        metab_plot = "plots/metabolomics.pdf",
-        metab_lm = "stats/metab_linear_model.tsv",
-        metab_dunn = "stats/metab_dunn_test.tsv",
-        metab_kruskal = "stats/metab_kruskal_test.tsv"
-    conda:
-        "r_env"
-    shell:
-        """
-        Rscript scripts/metab.R --metadata {input.metadata} \
-                                --metab {input.metab} \
-                                --metab_plot {output.metab_plot} \
-                                --metab_lm {output.metab_lm} \
-                                --metab_dunn {output.metab_dunn} \
-                                --metab_kruskal {output.metab_kruskal}
         """
 
 

@@ -1,0 +1,324 @@
+---
+title: "exact_bileAcid_histo_comp"
+output: html_document
+date: "2024-02-02"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(broom)
+library(cowplot)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+library(naniar)
+library(ggpubr)
+library(rstatix)
+library(viridis)
+```
+
+**Functions**
+```{r}
+## histo plot comparison function
+comp_plot <- function(base_table,
+                      ## names associated with the score/concentration value on the y-axis
+                      base_table_col_select1,
+                      ## score/concentration value that you want on the y-axis
+                      base_table_col_select2,
+                      ## toxin or metabolomics?
+                       wanted_table,
+                       ## this is what you want your x axis to be (neat, diluted, or concentration)? 
+                       wanted_x,
+                       ## this is toxin/metabolite column you want to filter by (neat or diluted)?
+                       wanted_y=NULL,
+                       ## what is the toxin/metabolite you want to filter by called in the table?
+                       wanted_y_name=NULL,
+                       diet_labels,
+                       row_labels,
+                       y_label,
+                       x_label,
+                       title){
+  ## putting tables together
+  base_table %>% 
+    select(mouse_id, .data[[base_table_col_select1]], .data[[base_table_col_select2]]) %>% 
+    left_join(wanted_table, by = 'mouse_id') %>% 
+    na.omit() -> compiled_table
+  ## constructing plot
+  compiled_table %>% 
+    filter(.data[[wanted_y]] == wanted_y_name) %>%
+    na.omit() %>% 
+    ggplot(aes(x = .data[[wanted_x]], y = .data[[base_table_col_select2]])) +
+    scale_x_continuous(trans = 'log10') +
+    scale_y_continuous(trans = 'log10') +
+    geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
+    geom_smooth(method = 'lm', se = FALSE) +
+    facet_grid(.data[[base_table_col_select1]]~diet,
+               labeller = labeller(.rows = row_labels,
+                                   diet = diet_labels),
+               scales = 'free_y') +
+    theme_bw() +
+    theme(strip.text.y = element_text(angle = 0)) +
+    xlab(x_label) +
+    ylab(y_label) +
+    ggtitle(title) -> plot
+  return(plot)
+}
+
+## runs linear modeling on the table, diet, location, and toxin/metabolite wanted and returns full results 
+## along with a table containing the r2 and p-value 
+## this goes into the following function with a for loop 
+r2_value <- function(biom_table,
+                     wanted_diet,
+                     wanted_comp_col,
+                     wanted_comp_value,
+                     stat_value,
+                     tox_metab_col,
+                     wanted_tox_metab,
+                     wanted_conc_value){
+  ## to get r squared value and p value
+  biom_table %>% 
+    filter(diet == wanted_diet,
+           .data[[wanted_comp_col]] == wanted_comp_value,
+           .data[[tox_metab_col]] == wanted_tox_metab) %>%
+    do(glance(lm(.data[[stat_value]] ~ .data[[wanted_conc_value]],
+                 data = .))) -> lm_glance
+  output <- list(r_squared = lm_glance$r.squared,
+                 p_value = lm_glance$p.value)
+  ## to get estimate and place it with the overall output table
+  biom_table %>% 
+    filter(diet == wanted_diet,
+           .data[[wanted_comp_col]] == wanted_comp_value,
+           .data[[tox_metab_col]] == wanted_tox_metab) %>%
+    do(tidy(lm(.data[[stat_value]] ~ .data[[wanted_conc_value]],
+                 data = .))) %>% 
+    filter(term != '(Intercept)') -> lm_full
+  output <- as_tibble(output) %>%
+            mutate(diet = paste(wanted_diet),
+                   comp_col = paste(wanted_comp_value),
+                   tox_metab = paste(wanted_tox_metab),
+                   just_r = sqrt(r_squared),
+                   estimate = lm_full$estimate,
+                   r_direct = if_else(estimate < 0, just_r * -1, just_r))
+  my_list <- list(LinearModel = lm_full,
+                  WantedStats = output)
+  return(my_list)
+}
+
+## creating a nested for loop since running this function individually is a nightmare
+r2_value_for_loop <- function(biom_table,
+                              comp_col,
+                              wanted_stat_value,
+                              wanted_col,
+                              wanted_conc) {
+  ## nested for loop for the r squared and p values 
+  output <- tibble()
+  for(i in unique(unlist(biom_table$diet))) {
+    for(j in unique(unlist(biom_table[comp_col]))) {
+      for(k in unique(unlist(biom_table[wanted_col]))) {
+        tmp_output <- r2_value(biom_table,
+                               i,
+                               comp_col,
+                               j,
+                               wanted_stat_value,
+                               wanted_col,
+                               k,
+                               wanted_conc)$WantedStats
+        output <- bind_rows(output, tmp_output)
+      }
+    }
+  }
+  return(output)
+}
+
+## statistical visualization plot function
+stat_plot <- function(stat_table,
+                      wanted_labels,
+                      x_lab_list,
+                      y_lab_list,
+                      x_axis_label,
+                      title){
+  stat_table %>% 
+    ggplot(aes(x = comp_col, y = diet)) +
+    geom_tile(aes(fill = r_direct), color = 'black', alpha = 0.6) +
+    geom_text(aes(label = signif)) +
+    scale_fill_gradient2(low = 'blue', high = 'green', name = "Correlation\nCoefficient") +
+    scale_x_discrete(labels = x_lab_list) +
+    scale_y_discrete(labels = y_lab_list) +
+    facet_wrap(~tox_metab,
+               labeller = labeller(tox_metab = wanted_labels)) +
+    theme_bw() +
+    xlab(x_axis_label) +
+    ylab("Diet") +
+    ggtitle(title) -> plot
+  return(plot)
+}
+```
+
+**Bile Acid Ratio Stats Functions**
+```{r}
+ratio_r2_value <- function(biom_table,
+                     wanted_diet,
+                     category_col,
+                     col_value,
+                     wanted_category,
+                     wanted_conc_value){
+  ## to get r squared value and p value
+  biom_table %>% 
+    filter(diet == wanted_diet,
+           .data[[category_col]] == wanted_category) %>%
+    do(glance(lm(.data[[col_value]] ~ .data[[wanted_conc_value]],
+                 data = .))) -> lm_glance
+  output <- list(r_squared = lm_glance$r.squared,
+                 p_value = lm_glance$p.value)
+  ## to get estimate and place it with the overall output table
+  biom_table %>% 
+    filter(diet == wanted_diet,
+           .data[[category_col]] == wanted_category) %>%
+    do(tidy(lm(.data[[col_value]] ~ .data[[wanted_conc_value]],
+                 data = .))) %>% 
+    filter(term != '(Intercept)') -> lm_full
+  output <- as_tibble(output) %>%
+            mutate(diet = paste(wanted_diet),
+                   category = paste(wanted_category),
+                   just_r = sqrt(r_squared),
+                   estimate = lm_full$estimate,
+                   r_direct = if_else(estimate < 0, just_r * -1, just_r))
+  my_list <- list(LinearModel = lm_full,
+                  WantedStats = output)
+  return(my_list)
+}
+
+## creating a nested for loop since running this function individually is a nightmare
+ratio_r2_value_for_loop <- function(biom_table,
+                              wanted_col,
+                              col_value,
+                              wanted_conc) {
+  ## nested for loop for the r squared and p values 
+  output <- tibble()
+  for(i in unique(unlist(biom_table$diet))) {
+    for(j in unique(unlist(biom_table[wanted_col]))) {
+        tmp_output <- ratio_r2_value(biom_table,
+                               i,
+                               wanted_col,
+                               col_value,
+                               j,
+                               wanted_conc)$WantedStats
+        output <- bind_rows(output, tmp_output)
+      }
+    }
+  return(output)
+}
+
+## statistical visualization plot function
+ratio_stat_plot <- function(stat_table,
+                      y_lab_list,
+                      x_lab_list,
+                      x_label,
+                      title){
+  stat_table %>% 
+    ggplot(aes(x = category, y = diet)) +
+    geom_tile(aes(fill = r_direct), color = 'black', alpha = 0.6) +
+    geom_text(aes(label = signif)) +
+    scale_fill_gradient2(low = 'blue', high = 'green', name = "Correlation\nCoefficient") +
+    scale_y_discrete(labels = y_lab_list) +
+    scale_x_discrete(labels = x_lab_list) +
+    facet_wrap(~ratio_label) +
+    theme_bw() +
+    xlab(x_label) +
+    ylab("Diet") +
+    ggtitle(title) -> plot
+  return(plot)
+}
+```
+
+**File Paths**
+```{r}
+metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
+histo_FP <- '../data/misc/processed_histopathology.tsv'
+bile_acid_FP <- '../data/misc/processed_bile_acid.tsv'
+bile_acidRatio_FP <- '../data/misc/processed_ratio_bileAcid.tsv'
+neat_tox_FP <- '../data/misc/processed_neatToxin.tsv'
+
+## lists to redo the diet names on the facet labels of the ggplot created below 
+diet_labs <- 
+    c('Chow', 
+      'High Fat / High Fiber', 
+      'High Fat / Low Fiber', 
+      'Low Fat / High Fiber', 
+      'Low Fat / Low Fiber')
+
+names(diet_labs) <- c('Chow', 'HF/HF', 'HF/LF', 'LF/HF', 'LF/LF')
+
+stat_diet_y_labs <- c("Chow",
+                       "HFt/HFb",
+                       "HFt/LFb",
+                       "LFt/HFb",
+                       "LFt/LFb")
+
+tissue_labs <- c('Cecum',
+                 'Colon')
+names(tissue_labs) <- c('cecum',
+                        'colon')
+
+bile_facet_labs <- c('Promoter',
+                     'Inhibitor')
+names(bile_facet_labs) <- c('promoter',
+                            'inhibitor')
+
+neat_labs <- c('TcdA', 'TcdB')
+names(neat_labs) <- c('Total TcA Neat', 'Total TcB Neat')
+```
+
+**File Prep**
+```{r}
+metadata <- read_tsv(metadata_FP)
+histo <- read_tsv(histo_FP)
+bile_acid <- read_tsv(bile_acid_FP)
+
+ratio_bile_acid <- read_tsv(bile_acidRatio_FP)
+ratio_bile_acid %>% 
+  select(!c(inhibitor, promoter)) -> ratio_bile_acid
+
+neat_tox <- read_tsv(neat_tox_FP)
+neat_tox %>% 
+  mutate(neat_conc_norm = (neat_conc + 2)) -> neat_tox
+```
+
+**DCA Concentration/Histo Score Comparisons**
+```{r, fig.width=9, fig.height=4, warning=FALSE}
+dca_histo_plot <- comp_plot(histo,
+                            'tissue',
+                            'score',
+                            bile_acid,
+                            'conc_normalized',
+                            'bile_acid',
+                            'Deoxycholic_acid_DCA',
+                             diet_labs,
+                             tissue_labs,
+                             'Score',
+                             'log10(Concentration pmoles/mg)',
+                              'Histopathology Score Against DCA Concentration')
+
+dca_histo_plot
+```
+
+**DCA/Toxin Concentration Comparisons**
+```{r}
+toxin_dca_plot <- comp_plot(neat_tox,
+                                   'neat_toxin',
+                                   'neat_conc_norm',
+                                   bile_acid,
+                                   'conc_normalized',
+                                   'bile_acid',
+                                   'Deoxycholic_acid_DCA',
+                                   diet_labs,
+                                   neat_labs,
+                                   'Toxin Concentration',
+                                   'Bile Acid Concentration(pmoles/mg)',
+                                   'Toxin Against DCA Concentration')
+toxin_dca_plot
+```
+

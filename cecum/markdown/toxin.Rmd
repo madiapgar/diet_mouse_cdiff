@@ -144,7 +144,7 @@ tox_plot <- function(biom_table,
   biom_table %>% 
     na.omit() %>% 
     ggplot(aes(x = diet, y = .data[[conc_col]])) +
-    geom_violin(aes(group = diet), draw_quantiles = c(0.5)) +
+    geom_boxplot(aes(group = diet)) +
     geom_jitter(alpha = 0.4, width = 0.1, height = 0)+
     scale_x_discrete(labels = x_labels) +
     facet_wrap(~.data[[tox_col]],

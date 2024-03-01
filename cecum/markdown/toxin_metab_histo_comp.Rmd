@@ -130,9 +130,6 @@ comp_plot <- function(histo_table,
 ```
 
 **Statisitical Analysis Functions**
-- possibly putting my estimate values on x-axis 
-- have r value equal to size of the point in geom point 
-- mediation v. confounder statistical tests? (butyrate and maybe microbiome as a mediator)
 ```{r}
 ## runs linear modeling on the table, diet, location, and toxin/metabolite wanted and returns full results 
 ## along with a table containing the r2 and p-value 
@@ -434,7 +431,7 @@ dilTox_stat_table['signif'] <- symnum(dilTox_stat_table$p_value,
 
 **Neat Toxin Statistical Visualization**
 Trying something new - over laying the p-value significance on the plot.
-```{r, fig.height=4, fig.width=9}
+```{r, fig.height=6, fig.width=15}
 neatTox_stat_table %>% 
   filter(tissue == 'cecum',
          signif != 'ns') %>% 
@@ -453,7 +450,7 @@ neat_histo_cecum_plot +
             label = procNeat_stat_table$p_value,
             color = 'black',
             fontface = 'bold',
-            size = 3) -> neat_cecumHisto_stats_plot
+            size = 6) -> neat_cecumHisto_stats_plot
 
 neat_cecumHisto_stats_plot
 ```
@@ -594,23 +591,26 @@ metab_stat_table['signif'] <- symnum(metab_stat_table$p_value,
 
 **Metabolite Stat Plot Visualization**
 Trying a different way
-```{r}
+```{r, fig.height=5, fig.width=10}
 metab_stat_table %>% 
   filter(tissue == 'cecum',
          signif != 'ns') %>% 
-  select(diet, tox_metab, signif) %>% 
-  mutate(metab_conc_norm = paste(1000),
+  select(diet, tox_metab, signif, p_value) %>% 
+  mutate(metab_conc_norm = paste(100),
          metab_conc_norm = as.numeric(metab_conc_norm),
-         score = paste(5.5),
-         score = as.numeric(score)) -> metab_stat_table2
+         score = paste(5.75),
+         score = as.numeric(score),
+         p_value = signif(p_value, digits = 3),
+         p_value = paste('p-value', p_value, sep = ": ")) -> metab_stat_table2
 
 names(metab_stat_table2)[names(metab_stat_table2) == 'tox_metab'] <- 'metabolite'
 
 histo_metabCecum_plot +
-  geom_text(data = metab_stat_table2, 
-            label = metab_stat_table2$signif,
-            color = 'red',
-            size = 6) -> metab_cecumHisto_stats_plot
+  geom_label(data = metab_stat_table2, 
+            label = metab_stat_table2$p_value,
+            color = 'black',
+            fontface = 'bold',
+            size = 3.5) -> metab_cecumHisto_stats_plot
 
 metab_cecumHisto_stats_plot
 ```
@@ -656,8 +656,12 @@ ggsave('neat_histo_toxin_comp.pdf',
 ## stats on actual plot
 ggsave('../plots/neat_cecumHisto_stats.pdf',
        plot = neat_cecumHisto_stats_plot,
-       width = 9,
-       height = 4)
+       width = 15,
+       height = 6)
+ggsave('../plots/metab_cecumHisto_stats.pdf',
+       plot = metab_cecumHisto_stats_plot,
+       width = 10,
+       height = 5)
 ggsave('dil_histo_toxin_comp.pdf',
        plot = dil_toxin_histo_plots,
        width = 15.5,

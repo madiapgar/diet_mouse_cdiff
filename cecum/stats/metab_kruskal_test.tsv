@@ -1,4 +1,4 @@
 metabolite	statistic	p.value	parameter	method	p.adj	test_id
-Acetic Acid (ug/g)	29.47876739356849	6.248197037797755e-6	4	Kruskal-Wallis rank sum test	1.8744591113393265e-5	Acetic Acid (ug/g)
-n-Butanoic Acid (ug/g)	23.991586458763727	8.018552689530311e-5	4	Kruskal-Wallis rank sum test	1.2027829034295466e-4	n-Butanoic Acid (ug/g)
+Acetic Acid (ug/g)	29.478767393568518	6.248197037797673e-6	4	Kruskal-Wallis rank sum test	1.5542974292187514e-5	Acetic Acid (ug/g)
+n-Butanoic Acid (ug/g)	28.397136334918073	1.0361982861458343e-5	4	Kruskal-Wallis rank sum test	1.5542974292187514e-5	n-Butanoic Acid (ug/g)
 Propanoic Acid (ug/g)	17.34780348631867	0.0016541466448061325	4	Kruskal-Wallis rank sum test	0.0016541466448061325	Propanoic Acid (ug/g)

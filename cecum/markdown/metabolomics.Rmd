@@ -75,7 +75,8 @@ stats <- function(biom_table,
     dunn_test(test,
               p.adjust.method = 'BH',
               data = .) %>% 
-    add_y_position(scales = 'free_y') -> dunn
+    add_xy_position(scales = 'free',
+                    fun = 'max') -> dunn
   ## linear modeling
   biom_table %>% 
     group_by(biom_table[metab_col]) %>%
@@ -118,7 +119,7 @@ metab_plot <- function(biom_table,
   biom_table %>% 
     na.omit() %>% 
     ggplot(aes(x = diet, y = .data[[conc_col]])) +
-    geom_violin(aes(group = diet), draw_quantiles = c(0.5)) +
+    geom_boxplot(aes(group = diet)) +
     geom_jitter(alpha = 0.4, width = 0.1, height = 0)+
     scale_x_discrete(labels = x_labels) +
     facet_wrap(~.data[[metab_col]],
@@ -127,6 +128,8 @@ metab_plot <- function(biom_table,
     stat_pvalue_manual(dunn,
                        tip.length = 0.01,
                        label = 'p.adj.signif',
+                       step.increase = 0.05,
+                       step.group.by = metab_col,
                        hide.ns = TRUE) +
     theme_bw(base_size = 16) +
     xlab('Diet') +
@@ -134,6 +137,10 @@ metab_plot <- function(biom_table,
     ggtitle(title) -> plot
   return(plot)
 }
+```
+
+```{r}
+draw_quantiles = c(0.5)
 ```
 
 **File Paths**

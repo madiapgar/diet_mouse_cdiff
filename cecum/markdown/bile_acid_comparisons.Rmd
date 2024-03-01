@@ -587,7 +587,7 @@ tox_bile_stat_plot
 ```
 
 **Stats on the Plot**
-```{r, fig.width=10, fig.height=4, warning=FALSE}
+```{r, fig.width=17, fig.height=5, warning=FALSE}
 tox_bile_stats %>% 
   filter(tox_metab == 'inhibitor',
          signif != 'ns') %>% 
@@ -607,7 +607,7 @@ toxin_inhibitors_plot +
             label = tox_bile_stats2$p_value,
             color = 'black',
             fontface = 'bold',
-            size = 3) -> toxin_inhibitors_stats_plot
+            size = 6) -> toxin_inhibitors_stats_plot
 
 toxin_inhibitors_stats_plot
 ```

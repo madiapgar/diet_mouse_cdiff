@@ -378,7 +378,7 @@ hypox_histo_stat_plot <- stat_plot(hypox_histo_stat_table,
 hypox_histo_stat_plot
 ```
 **Putting the Stats on the Actual Plot**
-```{r, fig.width=10, fig.height=4}
+```{r, fig.width=17, fig.height=4}
 hypox_histo_stat_table %>% 
     filter(tox_metab == 'colon',
            location != 'Cecum',
@@ -399,7 +399,7 @@ hypox_colon_plot +
             label = proc_stat_table$p_value,
             color = 'black',
             fontface = 'bold',
-            size = 3) -> hypox_colonStats_plot
+            size = 6) -> hypox_colonStats_plot
 
 hypox_colonStats_plot
 ```

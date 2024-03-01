@@ -17,6 +17,8 @@ library(vegan)
 library(viridis)
 library(broom)
 library(rstatix)
+library(ggpubr)
+library(ggh4x)
 ```
 
 **Function**
@@ -65,7 +67,8 @@ family_abun_file_prep <- function(metadata_fp,
 
 ## takes large assembled table and creates the quantitative plot 
 abun_plots <- function(abundance_table,
-                       tax_level){
+                       tax_level,
+                       row_labs){
   ## first plot
   abundance_table %>%
     filter(!is.na(diet)) %>% 
@@ -80,7 +83,9 @@ abun_plots <- function(abundance_table,
       geom_smooth(se = FALSE) +
       geom_jitter(width = 0.1, height = 0, alpha = 0.6) +
       theme_bw(base_size = 20) +
-      facet_grid(.data[[tax_level]]~diet, labeller = labeller(diet = diet_labs)) +
+      facet_grid(.data[[tax_level]]~diet, 
+                 labeller = labeller(diet = diet_labs,
+                                     .rows = row_labs)) +
       theme(strip.text.y = element_text(angle = 0)) +
       ggtitle("Microbe Relative Abundance") +
       ylab("Relative Abundance") +
@@ -92,8 +97,10 @@ abun_plots <- function(abundance_table,
       geom_tile(aes(fill = rel_abund), alpha = 0.5) +
       scale_fill_viridis(option = "H", name = 'Relative\nAbundance') +
       theme_bw(base_size = 16) +
-      facet_grid(.data[[tax_level]]~diet, scales = 'free',
-                 labeller = labeller(diet = diet_labs)) +
+      facet_grid(.data[[tax_level]]~diet, 
+                 scales = 'free',
+                 labeller = labeller(diet = diet_labs,
+                                     .rows = row_labs)) +
       theme(strip.text.y = element_text(angle = 0),
             axis.text.x = element_blank()) + 
       xlab("Mouse ID") +
@@ -189,7 +196,8 @@ abun_stats <- function(filtered_table,
 ## can drop the 'new' dunn test results into this function for the 
 ## stat visualization 
 stat_plot <- function(new_dunn,
-                      tax_level){
+                      tax_level,
+                      row_labs){
   new_dunn %>% 
     filter(day_post_inf != -15) %>% 
     ggplot(aes(x = day_post_inf, y = group2)) +
@@ -203,7 +211,8 @@ stat_plot <- function(new_dunn,
                                 'LFt / LFb')) +
     facet_grid(.data[[tax_level]]~group1,
                scales = 'free_x',
-               labeller = labeller(group1 = diet_stat_labs)) +
+               labeller = labeller(group1 = diet_stat_labs,
+                                   .rows = row_labs)) +
     theme_bw(base_size = 20) +
     ggtitle(label = 'Microbe Comparisons',
             subtitle = 'Group 1') +
@@ -213,7 +222,6 @@ stat_plot <- function(new_dunn,
     ylab('Group 2') -> stat_plot
   return(stat_plot)
 }
-
 ```
 
 **Needed File Paths**
@@ -239,6 +247,23 @@ names(diet_labs) <- c('Chow',
                       'HF/LF', 
                       'LF/HF', 
                       'LF/LF')
+
+fam_row_labs <- c('Lachnospiraceae',
+                  'Ruminococcaceae',
+                  'Bacteroidaceae',
+                  'Marinifilaceae',
+                  'Peptostreptococcaceae',
+                  'Enterobacteriaceae',
+                  'Enterococcaceae',
+                  'Staphylococcaceae')
+names(fam_row_labs) <- c(1,
+                         2,
+                         3,
+                         4,
+                         5,
+                         6,
+                         7,
+                         8)
 
 ## for stat plots
 diet_stat_labs <- c('Chow', 
@@ -286,6 +311,19 @@ short_abun_files <- family_abun_file_prep(metadata_FP,
                                           short_wanted_family)
 
 short_abun_filt <- short_abun_files$AbundanceTable
+short_abun_filt %>% 
+  mutate(order = ifelse(Family == 'Lachnospiraceae', 1, Family),
+         order = ifelse(Family == 'Ruminococcaceae', 2, order),
+         order = ifelse(Family == 'Bacteroidaceae', 3, order),
+         order = ifelse(Family == 'Marinifilaceae', 4, order),
+         order = ifelse(Family == 'Peptostreptococcaceae', 5, order),
+         order = ifelse(Family == 'Enterobacteriaceae', 6, order),
+         order = ifelse(Family == 'Enterococcaceae', 7, order),
+         order = ifelse(Family == 'Staphylococcaceae', 8, order),
+         microbe_ident = ifelse(Family == 'Lachnospiraceae' | Family == 'Ruminococcaceae' |
+                                  Family == 'Bacteroidaceae' | Family == 'Marinifilaceae' | 
+                                  Family == 'Peptostreptococcaceae', 'Obligate\nAnaerobe',
+                                'Facultative\nAnaerobe')) -> short_abun_filt
 short_tax <- short_abun_files$Taxonomy
 ```
 
@@ -301,7 +339,8 @@ long_abun2 <- long_family_abun_plots$FamilyAbundance2
 
 ## shortened table for poster presentation
 short_family_abun_plots <- abun_plots(short_abun_filt,
-                                      wanted_level)
+                                      'order',
+                                      fam_row_labs)
 
 short_abun1 <- short_family_abun_plots$FamilyAbundance1
 short_abun2 <- short_family_abun_plots$FamilyAbundance2
@@ -339,13 +378,14 @@ long_plots_together
 these stats are for the shortened figure that I am putting on my poster presentation!
 ```{r, fig.height=13, fig.width=17}
 short_abun_stats <- abun_stats(short_abun_filt,
-                                wanted_level)
+                              'order')
 short_kruskal <- short_abun_stats$KruskalTest
 new_short_dunn <- short_abun_stats$DunnPostHoc
 short_family_abun_lm <- short_abun_stats$LinearModel
 
 stat_plot1 <- stat_plot(new_short_dunn,
-                        wanted_level)
+                        'order',
+                        fam_row_labs)
 stat_plot1
 ```
 

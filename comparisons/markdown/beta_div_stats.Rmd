@@ -59,7 +59,7 @@ dist_matrix_prep <- function(metadata_file,
 ## beta diversity adonis2 testing function
 adonis_test <- function(dist_matrix,
                         metadata_file){
-  adonis_results <- adonis2(as.dist(dist_matrix) ~ (purified_diet * high_fat * high_fiber) + study,
+  adonis_results <- adonis2(as.dist(dist_matrix) ~ (purified_diet * high_fat * high_fiber * low_fiber) + study,
                             data = metadata_file,
                             permutations = 999, 
                             parallel = 4)
@@ -126,6 +126,17 @@ day_strat <- 'day_post_inf'
 ## weighted unifrac 
 stat_meta <- read_tsv(metadata_FP)
 names(stat_meta)[names(stat_meta) == '#SampleID'] <- 'sampleid'
+
+## adding a low fiber diet column for the adonis testing 
+stat_meta %>% 
+  mutate(diet_true = diet,
+         diet_true = if_else(day_post_inf == -15, "Chow", diet_true),
+         low_fiber = case_when(
+            diet_true == 'HF/LF' ~ 1,
+            diet_true == 'LF/LF' ~ 1,
+            .default = 0
+          )) %>% 
+  select(-diet_true) -> stat_meta
 
 w_dist_files <- dist_matrix_prep(stat_meta,
                                  w_dist_fp)

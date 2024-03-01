@@ -13,8 +13,6 @@ library(tidyverse)
 library(cowplot)
 library(patchwork)
 library(dmcdmfigs)
-library(imager)
-library(recolorize)
 ```
 
 # **Putting Together Figures for Paper Manuscript**
@@ -93,38 +91,7 @@ Plots to go in figure:
 
 *Caption*:
 *a) Hypoxia measurements for three intestinal locations (cecum, proximal colon, distal colon) in the tested diets, determined by fluorescence of the oxygen sensitive dye, pimonidazole, in the respective tissues. b) Cecal hypoxia measurements between the five tested diets. Statistical analysis was done using a Kruskal-Wallis test followed by a Dunn's Post Hoc test with p-values being corrected for multiple comparisons via Benjamini and Hochberg. c) Linear regression comparison of cecal histologic inflammation scoring to hypoxia across tested diets. d) Linear regression comparison o colon histologic inflammation scoring to hypoxia across tested diets. P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).
-
-**Trying to read in the fluorescence images as pngs**
-```{r}
-hypox_dam_fp <- '../../figures/hypox_damage.png'
-hypox_NoDam_fp <- '../../figures/hypox_NoDamage.png'
-
-## damaged low fat/low fiber image 
-hypox_dam <- readImage(img_path = hypox_dam_fp,
-                       resize = NULL,
-                       rotate = NULL)
-test_rc <- recolorize2(hypox_dam)
-
-test_vector <- recolorizeVector(test_rc,
-                                size_filter = 0.05,
-                                smoothness = 5,
-                                plotting = TRUE)
-
-hypox_dam_plot <- plotImageArray(test_rc$original_img) 
-
-## not damaged low fat/high fiber image
-hypox_no_dam <- readImage(img_path = hypox_NoDam_fp,
-                         resize = NULL,
-                         rotate = NULL)
-
-hypox_no_dam_plot <- plotImageArray(hypox_no_dam) 
-
-
-hypox_dam_plot
-hypox_no_dam_plot
-```
-
-```{r, warning=FALSE, fig.height=13.5, fig.width=23}
+```{r, warning=FALSE, fig.height=14, fig.width=23}
 fig3_top_row <- plot_grid(hypox_plot +
                             theme_bw(base_size = 20) +
                             ggtitle('Intestinal Hypoxia') +
@@ -157,7 +124,7 @@ fig3_middle_row <- plot_grid(hypox_cecum_plot +
 
 plot_grid(fig3_top_row,
           fig3_middle_row,
-          rel_heights = c(1, 0.9),
+          rel_heights = c(0.95, 1),
           ncol = 1,
           align = c('hv'),
           axis = c('tblr')) -> fig3
@@ -174,7 +141,7 @@ Plots to go in figure:
 
 *Caption*:
 *a) Bile acid cecal levels of C. difficile growth inhibitors (a-MCA, b-MCA, LCA, DCA) and C. difficile growth promoters (TCA, CA) across the tested diets. b) The ratios of C. difficile growth promoters:inhibitors across the tested diets (a higher ratio indicates a higher level of promoters relative to inhibitors for that diet). Statistical analysis for dietary bile acid concentration/ratio differences was done using a Kruskal-Wallis test followed by a Dunn's Post Hoc test with p-values being corrected for multiple comparisons via Benjamini and Hochberg. Linear regression comparison of C. difficile toxins TcdA/TcdB concentration to c) C. difficile growth inhibitors and d) C. difficile growth promoters. e) SCFA (acetate, butyrate, propionate) levels of mouse cecal contents three days post C. difficile infecion by the tested diets. P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1)*
-```{r, fig.height=19, fig.width=19}
+```{r, fig.height=12, fig.width=19}
 fig4_top_row <- plot_grid(overall_plot +
                             theme_bw(base_size = 20)+
                             ggtitle('Cecum Bile Acid Concentration'), 
@@ -208,14 +175,13 @@ fig4_bottom_row <- plot_grid(metab_plot +
                              NULL,
                              rel_widths = c(1, 0.4),
                              nrow = 1,
-                             labels = c('e)', ' '),
+                             labels = c('c)', ' '),
                              label_size = 20)
 
 fig4 <- plot_grid(fig4_top_row,
-                  fig4_middle_row,
                   fig4_bottom_row,
                   ncol = 1,
-                  rel_heights = c(0.9, 1, 0.8),
+                  rel_heights = c(0.9, 0.8),
                   align = c('hv'),
                   axis = c('tblr'))
 
@@ -318,11 +284,11 @@ ggsave('../../figures/fig2.pdf',
 ggsave('../../figures/fig3.pdf',
        plot = fig3,
        width = 23,
-       height = 13.5)
+       height = 14)
 ggsave('../../figures/fig4.pdf',
        plot = fig4,
        width = 19,
-       height = 19)
+       height = 12)
 ggsave('../../figures/fig5.pdf',
        plot = fig5,
        width = 35,

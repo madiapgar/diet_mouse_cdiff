@@ -128,6 +128,7 @@ stat_meta <- read_tsv(metadata_FP)
 names(stat_meta)[names(stat_meta) == '#SampleID'] <- 'sampleid'
 
 ## adding a low fiber diet column for the adonis testing 
+## it didn't come out as significant at all so rip
 stat_meta %>% 
   mutate(diet_true = diet,
          diet_true = if_else(day_post_inf == -15, "Chow", diet_true),

@@ -22,66 +22,7 @@ library(viridis)
 
 **File Prep and Plot Functions**
 ```{r}
-file_prep <- function(metadata_fp,
-                      metab_fp,
-                      metab_col_filter,
-                      metab_filter,
-                      toxin_fp){
-  ## metadata file
-  metadata <- read_tsv(metadata_fp) %>% 
-              select(!c(tube_num, date, corr_sample_num))
-  # names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
-  ## metabolomics file
-  metab <- read_csv(metab_fp)
-  metadata %>% 
-    merge(metab, by = 'mouse_id') %>% 
-    select(-(all_of(unwanted_columns))) %>% 
-    gather(wanted_metabs, key = metabolite, value = concentration) %>% 
-    filter(!is.na(mouse_id)) -> pre_metab
-  ## changes all 'ND' values in the concentration column to 0 
-  pre_metab$concentration[pre_metab$concentration == 'ND'] <- 0
-  pre_metab %>% 
-    filter(!is.na(concentration)) %>% 
-    mutate(concentration = as.numeric(concentration)) -> big_metab
-  ## toxin file
-  toxin <- read_tsv(toxin_fp)
-  ## toxin neat concentrations (non_diluted)
-  toxin %>% 
-    merge(metadata, by = 'mouse_id') %>% 
-    select(!c('Total TcA 1:10', 'Total TcB 1:10')) %>% 
-    gather('Total TcA Neat', 'Total TcB Neat', 
-           key = neat_toxin, value = neat_conc) -> pre_neat_toxin
-  pre_neat_toxin$neat_conc[pre_neat_toxin$neat_conc == 'BDL'] <- '0'
-  pre_neat_toxin %>% 
-    mutate(neat_conc = as.numeric(neat_conc)) %>% 
-    select(!c('Tube_Label',
-              'Collection Date',
-              'Sample_Type',
-              'Extra_Sample')) -> neat_toxin
-  ## toxin diluted concentrations 
-  toxin %>% 
-    merge(metadata, by = 'mouse_id') %>% 
-    select(!c('Total TcA Neat', 'Total TcB Neat')) %>% 
-    gather('Total TcA 1:10', 'Total TcB 1:10',
-           key = dil_toxin, value = dil_conc) -> pre_dil_toxin
-  pre_dil_toxin$dil_conc[pre_dil_toxin$dil_conc == 'BDL'] <- '0'
-  pre_dil_toxin$dil_conc[pre_dil_toxin$dil_conc == 'Chow'] <- '0'
-  pre_dil_toxin %>% 
-    mutate(dil_conc = as.numeric(dil_conc)) %>% 
-    filter(diet != 'Chow') %>% 
-    select(!c('Tube_Label',
-              'Collection Date',
-              'Sample_Type',
-              'Extra_Sample')) -> dil_toxin
-  ## creating a list of my outputs
-  my_list <- list(Metadata = metadata,
-                  Metabolomics = big_metab,
-                  NeatToxin = neat_toxin,
-                  DilToxin = dil_toxin)
-  return(my_list)
-}
-
-## histo plot comparison function
+## correlation plot function
 comp_plot <- function(metab_table,
                       ## toxin or metabolomics?
                        wanted_table,
@@ -96,14 +37,14 @@ comp_plot <- function(metab_table,
                        title){
   ## putting tables together
   metab_table %>% 
-    select(mouse_id, metabolite, log_conc, concentration) %>% 
+    select(mouse_id, metabolite, metab_conc_norm) %>% 
     left_join(wanted_table, by = 'mouse_id') %>% 
     na.omit() -> compiled_table
   ## constructing plot
   compiled_table %>% 
     filter(.data[[wanted_y]] == wanted_y_name) %>% 
     na.omit() %>% 
-    ggplot(aes(x = .data[[wanted_x]], y = concentration)) +
+    ggplot(aes(x = .data[[wanted_x]], y = metab_conc_norm)) +
     scale_x_continuous(trans = 'log10') +
     scale_y_continuous(trans = 'log10') +
     geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
@@ -115,7 +56,7 @@ comp_plot <- function(metab_table,
     theme_bw() +
     theme(strip.text.y = element_text(angle = 0)) +
     xlab('Toxin Concentration') +
-    ylab('Metabolite Concentration') +
+    ylab('Metabolite Concentration (ug/g)') +
     ggtitle(title) -> plot
   return(plot)
 }
@@ -137,7 +78,7 @@ r2_value <- function(biom_table,
     filter(diet == wanted_diet,
            metabolite == wanted_metab,
            .data[[tox_col]] == wanted_tox) %>% 
-    do(glance(lm(concentration ~ .data[[wanted_conc_value]],
+    do(glance(lm(metab_conc_norm ~ .data[[wanted_conc_value]],
                  data = .))) -> lm_glance
   output <- list(r_squared = lm_glance$r.squared,
                  p_value = lm_glance$p.value)
@@ -146,7 +87,7 @@ r2_value <- function(biom_table,
     filter(diet == wanted_diet,
            metabolite == wanted_metab,
            .data[[tox_col]] == wanted_tox) %>% 
-    do(tidy(lm(concentration ~ .data[[wanted_conc_value]],
+    do(tidy(lm(metab_conc_norm ~ .data[[wanted_conc_value]],
                  data = .))) %>% 
     filter(term != '(Intercept)') -> lm_full
   output <- as_tibble(output) %>%
@@ -211,9 +152,10 @@ stat_plot <- function(stat_table,
 
 **File Paths**
 ```{r}
+## reading in processed files so I don't have to reprocess them again
 metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
-metab_FP <- '../data/misc/metabolomics.csv'
-toxin_FP <- '../data/misc/toxin_final_data.tsv'
+metab_FP <- '../data/misc/processed_metabolomics.tsv'
+toxin_FP <- '../data/misc/processed_neatToxin.tsv'
 
 ## lists to redo the diet names on the facet labels of the ggplot created below 
 diet_labs <- 
@@ -228,60 +170,35 @@ names(diet_labs) <- c('Chow', 'HF/HF', 'HF/LF', 'LF/HF', 'LF/LF')
 wanted_metabs <- c('Acetic Acid (ug/g)',
                    'Propanoic Acid (ug/g)',
                    'n-Butanoic Acid (ug/g)')
-unwanted_columns <- c('2-methyl-propanoic acid (ug/g)',
-                     'Isopentanoic Acid (ug/g)',
-                     '2-methyl-Butanoic Acid (ug/g)',
-                     'Pentanoic Acid (ug/g)',
-                     'Notes',
-                     'Sample Group',
-                     'SCFA Data File',
-                     'Acq. Date-Time',
-                     'Tube_Label',
-                     'Sample_Type',
-                     'Collection Date',
-                     'Dil.')
 metab_labs <- c('Acetic Acid',
                 'Propanoic Acid',
                 'n-Butanoic Acid')
 names(metab_labs) <- wanted_metabs
+
 neat_labs <- c('TcdA', 'TcdB')
 names(neat_labs) <- c('Total TcA Neat', 'Total TcB Neat')
-
-dil_labs <- c('TcdA', 'TcdB')
-names(dil_labs) <- c('Total TcA 1:10', 'Total TcB 1:10')
 ```
 
 **File Prep**
 ```{r}
-comp_files <- file_prep(metadata_FP,
-                        metab_FP,
-                        unwanted_columns,
-                        wanted_metabs,
-                        toxin_FP)
+metadata <- read_tsv(metadata_FP)
+metab <- read_tsv(metab_FP)
+neat_toxin <- read_tsv(toxin_FP)
 
-metadata <- comp_files$Metadata
-metab <- comp_files$Metabolomics
-dil_toxin <- comp_files$DilToxin
-neat_toxin <- comp_files$NeatToxin
-```
-
-YOURE PLOTTING/DOING STATS ON THE LOG10 TRANSFORMATION IN THE ACTUAL BIOM TABLE RATHER THAN TRANSFORMING THE AXES!!
-This is inconsistent with what you've done so far with all of the other plots - you may want to change this back. Need further thought/information into what exactly you're doing and whether you should change things or not. 
-```{r}
+## adding two so that I don't have any zeroes 
+## zeroes get cut off on the plot since I have the axis in log10
 metab %>% 
-  mutate(log_conc = log(concentration + 0.01)) -> metab
-
+  mutate(metab_conc_norm = (concentration + 2)) -> metab
 neat_toxin %>% 
-  mutate(log_neat_conc = log(neat_conc + 0.001)) -> neat_toxin
+  mutate(neat_conc_norm = (neat_conc + 2)) -> neat_toxin
 ```
-
 
 **Comparison Plots**
 Acetic Acid
 ```{r, warning=FALSE, fig.height=4, fig.width=10}
 tox_acetic <- comp_plot(metab,
                         neat_toxin,
-                        "neat_conc",
+                        "neat_conc_norm",
                         "metabolite",
                         "Acetic Acid (ug/g)",
                         diet_labs,
@@ -294,7 +211,7 @@ n-Butanoic Acid
 ```{r, warning=FALSE, fig.height=4, fig.width=10}
 tox_butanoic <- comp_plot(metab,
                         neat_toxin,
-                        "neat_conc",
+                        "neat_conc_norm",
                         "metabolite",
                         "n-Butanoic Acid (ug/g)",
                         diet_labs,
@@ -307,7 +224,7 @@ Propanoic Acid
 ```{r, warning=FALSE, fig.height=4, fig.width=10}
 tox_propanoic <- comp_plot(metab,
                             neat_toxin,
-                            "neat_conc",
+                            "neat_conc_norm",
                             "metabolite",
                             "Propanoic Acid (ug/g)",
                             diet_labs,
@@ -319,22 +236,21 @@ tox_propanoic
 **Statistical Analysis**
 ```{r}
 metab %>% 
-    select(mouse_id, metabolite, log_conc, concentration) %>% 
+    select(mouse_id, metabolite, metab_conc_norm) %>% 
     left_join(neat_toxin, by = 'mouse_id') %>% 
     na.omit() %>% 
     ungroup() -> metab_tox
 
 stat_table <- r2_value_for_loop(metab_tox,
                                 "neat_toxin",
-                                "neat_conc")
+                                "neat_conc_norm")
 ## assigning p value significance
 stat_table['signif'] <- symnum(stat_table$p_value,
-                               cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                               symbols = c("****", "***", "**", "*", "+", "ns"),
+                               cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                               symbols = c("****", "***", "**", "*", "ns"),
                                abbr.colnames = FALSE,
                                na = "")
 ```
-
 
 **Statistical Visualization**
 ```{r, fig.height=3, fig.width=5.5}

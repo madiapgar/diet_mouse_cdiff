@@ -14,6 +14,71 @@ library(cowplot)
 library(broom)
 library(rstatix)
 library(ggpubr)
+library(glue)
+```
+
+**Functions**
+```{r}
+## this function runs a kruskal test followed by a dunns post hoc test on the data
+hypoxia_stats <- function(hypoxia_table,
+                          grouped_by,
+                          formula_left,
+                          formula_right){
+  ## kruskal test
+  hypoxia_table %>% 
+    group_by(hypoxia_table[grouped_by]) %>% 
+    do(tidy(kruskal.test(.data[[formula_left]] ~ .data[[formula_right]],
+               data = .))) %>% 
+    ungroup() %>% 
+    arrange(p.value) %>% 
+    mutate(p.adj = p.adjust(p.value,
+                            method = "BH")) -> kruskal
+  ## dunns post hoc test
+  rightSide_name <- formula_right
+  funky_formula <- reformulate(glue("{rightSide_name}"),glue("{formula_left}"))
+  
+  hypoxia_table %>% 
+    group_by(hypoxia_table[grouped_by]) %>% 
+    dunn_test(funky_formula,
+              p.adjust.method = 'BH',
+              data = .) %>% 
+    add_y_position(scales = 'free',
+                   fun = 'max') -> dunn
+  ## list of outputs
+  my_list <- list(KruskalTest = kruskal,
+                  DunnTest = dunn)
+  return(my_list)
+}
+
+## this function plots the data/stats
+hypoxia_plots <- function(hypoxia_table,
+                          x_value,
+                          y_value,
+                          grouped_by,
+                          x_labels,
+                          facet_by,
+                          facet_labels,
+                          dunn_table,
+                          x_name,
+                          y_name,
+                          title_content){
+  hypoxia_table %>% 
+    ggplot(aes(x = .data[[x_value]], y = .data[[y_value]])) +
+    geom_boxplot(aes(group = .data[[grouped_by]])) +
+    geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
+    scale_x_discrete(labels = x_labels) +
+    theme_bw(base_size = 16) +
+    facet_grid(~.data[[facet_by]],
+               labeller = labeller(.cols = facet_labels)) +
+    stat_pvalue_manual(dunn_table,
+                       tip.length = 0.01,
+                       label = 'p.adj.signif',
+                       hide.ns = TRUE) +
+    labs(x = x_name,
+         y = y_name,
+         title = title_content) -> plot
+  return(plot)
+}
 ```
 
 **File Path**
@@ -42,6 +107,17 @@ location_labs <- c('Cecum',
 names(location_labs) <- c(1,
                           2,
                           3)
+location_x_labs <- c('Cecum',
+                     'Proximal\nColon',
+                     'Distal\nColon')
+diet_x_labs <- c('Chow',
+                 'HFt/\nHFb',
+                 'HFt/\nLFb',
+                 'LFt/\nHFb',
+                 'LFt/\nLFb')
+
+fiber_x_labs <- c('High\nFiber',
+                   'Low\nFiber')
 ```
 
 **Reading in Table**
@@ -55,291 +131,169 @@ hypoxia %>%
   arrange(order) -> hypoxia
 ```
 
-## **Stats (by diet/fiber content)**
-
-**Mouse Diet**
+# **Statistical Analysis**
 ```{r}
-## kruskal test
-hypoxia %>% 
-  group_by(diet) %>% 
-  do(tidy(kruskal.test(fluorescence ~ order,
-             data = .))) %>% 
-  ungroup() %>% 
-  arrange(p.value) %>% 
-  mutate(p.adj = p.adjust(p.value,
-                          method = "BH"),
-        test_id = paste(diet)) -> kruskal
+## between locations by diet
+dietLocation_stats <- hypoxia_stats(hypoxia,
+                                    'diet',
+                                    'fluorescence',
+                                    'order')
 
-## dunns post hoc test
-hypoxia %>% 
-  group_by(diet) %>% 
-  mutate(test_id = paste(diet)) %>% 
-  filter(test_id %in% kruskal$test_id) %>% 
-  dunn_test(fluorescence ~ order,
-            p.adjust.method = 'BH',
-            data = .) %>% 
-  add_y_position(scales = 'free_y') -> dunn
+dietLocation_kruskal <- dietLocation_stats$KruskalTest
+dietLocation_dunn <- dietLocation_stats$DunnTest
+
+## between locations by fiber content (high v low)
+fiberLocation_stats <- hypoxia_stats(hypoxia,
+                                    'fiber',
+                                    'fluorescence',
+                                    'order')
+
+fiberLocation_kruskal <- fiberLocation_stats$KruskalTest
+fiberLocation_dunn <- fiberLocation_stats$DunnTest
+
+## between diets by location (so the opposite of the first one above)
+locationDiet_stats <- hypoxia_stats(hypoxia,
+                                    'order',
+                                    'fluorescence',
+                                    'diet')
+
+locationDiet_kruskal <- locationDiet_stats$KruskalTest
+locationDiet_dunn <- locationDiet_stats$DunnTest
+
+## between level of fiber content by location (so the opposite of the second one above)
+locationFiber_stats <- hypoxia_stats(hypoxia,
+                                    'order',
+                                    'fluorescence',
+                                    'fiber')
+
+locationFiber_kruskal <- locationFiber_stats$KruskalTest
+locationFiber_dunn <- locationFiber_stats$DunnTest
 ```
 
 
-**Fiber Content**
+# **Plots**
 ```{r}
-## kruskal test
-hypoxia %>% 
-  group_by(fiber) %>% 
-  do(tidy(kruskal.test(fluorescence ~ order,
-             data = .))) %>% 
-  ungroup() %>% 
-  arrange(p.value) %>% 
-  mutate(p.adj = p.adjust(p.value,
-                          method = "BH"),
-        test_id = paste(fiber)) -> kruskal_fiber
+## location is on the x-axis and faceted by diet
+hypoxia_dietLocation_plot <- hypoxia_plots(hypoxia,
+                                        'order',
+                                        'fluorescence',
+                                        'order',
+                                        location_x_labs,
+                                        'diet',
+                                        diet_labs,
+                                        dietLocation_dunn,
+                                        'Location',
+                                        'Fluorescence',
+                                        'Intestinal Hypoxia')
 
-## dunns post hoc test
+## location on x-axis and faceted by fiber content 
+hypoxia_fiberLocation_plot <- hypoxia_plots(hypoxia,
+                                        'order',
+                                        'fluorescence',
+                                        'order',
+                                        location_x_labs,
+                                        'fiber',
+                                        fiber_labs,
+                                        fiberLocation_dunn,
+                                        'Location',
+                                        'Fluorescence',
+                                        'Intestinal Hypoxia by Dietary Fiber')
+
+## diet on x-axis and faceted by location
+hypoxia_locationDiet_plot <- hypoxia_plots(hypoxia,
+                                        'diet',
+                                        'fluorescence',
+                                        'diet',
+                                        diet_x_labs,
+                                        'order',
+                                        location_labs,
+                                        locationDiet_dunn,
+                                        'Diet',
+                                        'Fluorescence',
+                                        'Intestinal Hypoxia')
+
+## diet on x-axis and faceted by location CECUM ONLY
 hypoxia %>% 
-  group_by(fiber) %>% 
-  mutate(test_id = paste(fiber)) %>% 
-  filter(test_id %in% kruskal_fiber$test_id) %>% 
-  dunn_test(fluorescence ~ order,
-            p.adjust.method = 'BH',
-            data = .) %>% 
-  add_y_position(scales = 'free_y') -> dunn_fiber
+  filter(order == 1) -> hypoxia_cecumOnly
+
+hypoxia_cecum_plot <- hypoxia_plots(hypoxia_cecumOnly,
+                                    'diet',
+                                    'fluorescence',
+                                    'diet',
+                                    diet_x_labs,
+                                    'order',
+                                    location_labs,
+                                    locationDiet_dunn,
+                                    'Diet',
+                                    'Fluorescence',
+                                    'Cecum Hypoxia')
+
+## fiber content on x-axis and faceted by location
+hypoxia_locationFiber_plot <- hypoxia_plots(hypoxia,
+                                            'fiber',
+                                            'fluorescence',
+                                            'fiber',
+                                            fiber_x_labs,
+                                            'order',
+                                            location_labs,
+                                            locationFiber_dunn,
+                                            'Fiber Content',
+                                            'Fluorescence',
+                                            'Intestinal Hypoxia by Dietary Fiber')
 ```
 
-
-## **Plots (faceted by diet/fiber content)**
-
-**Hypoxia Plot by Mouse Diet**
 ```{r, fig.height=5, fig.width=15}
-hypoxia %>% 
-  ggplot(aes(x = order, y = fluorescence)) +
-  geom_boxplot(aes(group = order)) +
-  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-  # scale_y_log10() +
-  scale_x_discrete(labels = c('Cecum',
-                              'Proximal\nColon',
-                              'Distal\nColon')) +
-  theme_bw(base_size = 16) +
-  facet_grid(~diet,
-             labeller = labeller(diet = diet_labs)) +
-  stat_pvalue_manual(dunn,
-                     tip.length = 0.01,
-                     label = 'p.adj.signif',
-                     hide.ns = TRUE) +
-  labs(x = 'Intestinal Location',
-       y = 'Fluorescence',
-       title = 'Mouse GI Oxygen Concentration by Diet') -> hypox_plot
-
-hypox_plot
+hypoxia_dietLocation_plot
 ```
 
-**Hypoxia Plot by Fiber Content**
-```{r, fig.height=5, fig.width=8}
-hypoxia %>% 
-  ggplot(aes(x = order, y = fluorescence)) +
-  geom_boxplot(aes(group = order)) +
-  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-  # scale_y_log10() +
-  scale_x_discrete(labels = c('Cecum',
-                              'Proximal\nColon',
-                              'Distal\nColon')) +
-  theme_bw(base_size = 16) +
-  facet_grid(~fiber,
-             labeller = labeller(fiber = fiber_labs)) +
-  stat_pvalue_manual(dunn_fiber,
-                     tip.length = 0.01,
-                     label = 'p.adj.signif',
-                     hide.ns = TRUE) +
-  labs(x = 'Intestinal Location',
-       y = 'Fluorescence',
-       title = 'Mouse GI Oxygen Concentration by Fiber Content') -> hypox_fib_plot
-
-hypox_fib_plot
-```
-
-## **Stats (by location)**
-
-**Mouse Diet**
-```{r}
-## kruskal test
-hypoxia %>% 
-  group_by(order) %>% 
-  do(tidy(kruskal.test(fluorescence ~ diet,
-             data = .))) %>% 
-  ungroup() %>% 
-  arrange(p.value) %>% 
-  mutate(p.adj = p.adjust(p.value,
-                          method = "BH"),
-        test_id = paste(order)) -> kruskal_location
-
-## dunns post hoc test
-hypoxia %>% 
-  group_by(order) %>% 
-  mutate(test_id = paste(order)) %>% 
-  filter(test_id %in% kruskal_location$test_id) %>% 
-  dunn_test(fluorescence ~ diet,
-            p.adjust.method = 'BH',
-            data = .) %>% 
-  add_y_position(scales = 'free_y') -> dunn_location
-```
-
-
-**Fiber Content**
-```{r}
-## kruskal test
-hypoxia %>% 
-  group_by(order) %>% 
-  do(tidy(kruskal.test(fluorescence ~ fiber,
-             data = .))) %>% 
-  ungroup() %>% 
-  arrange(p.value) %>% 
-  mutate(p.adj = p.adjust(p.value,
-                          method = "BH"),
-        test_id = paste(order)) -> kruskal_fiber_location
-
-## dunns post hoc test
-hypoxia %>% 
-  group_by(order) %>% 
-  mutate(test_id = paste(order)) %>% 
-  filter(test_id %in% kruskal_fiber_location$test_id) %>% 
-  dunn_test(fluorescence ~ fiber,
-            p.adjust.method = 'BH',
-            data = .) %>% 
-  add_y_position(scales = 'free_y') -> dunn_fiber_location
-```
-
-## **Plots (faceted by location)**
-
-**Hypoxia Plot by Mouse Diet**
-Overall
-```{r, fig.height=5, fig.width=10}
-hypoxia %>% 
-  ggplot(aes(x = diet, y = fluorescence)) +
-  geom_boxplot(aes(group = diet)) +
-  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-  scale_x_discrete(labels = c('Chow',
-                              'HFt/\nHFb',
-                              'HFt/\nLFb',
-                              'LFt/\nHFb',
-                              'LFt/\nLFb')) +
-  theme_bw(base_size = 16) +
-  facet_grid(~order,
-             labeller = labeller(order = location_labs)) +
-  stat_pvalue_manual(dunn_location,
-                     tip.length = 0.01,
-                     label = 'p.adj.signif',
-                     hide.ns = TRUE) +
-  labs(x = 'Diet',
-       y = 'Fluorescence',
-       title = 'Cecum Hypoxia') -> hypox_location_plot
-
-hypox_location_plot
-```
-
-
-Cecum!!
-```{r, fig.height=4, fig.width=6}
-hypoxia %>% 
-  filter(order == 1) %>% 
-  ggplot(aes(x = diet, y = fluorescence)) +
-  geom_boxplot(aes(group = diet)) +
-  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-  scale_x_discrete(labels = c('Chow',
-                              'HFt/\nHFb',
-                              'HFt/\nLFb',
-                              'LFt/\nHFb',
-                              'LFt/\nLFb')) +
-  theme_bw(base_size = 16) +
-  facet_grid(~order,
-             labeller = labeller(order = location_labs)) +
-  stat_pvalue_manual(dunn_location,
-                     tip.length = 0.01,
-                     label = 'p.adj.signif',
-                     hide.ns = TRUE) +
-  labs(x = 'Diet',
-       y = 'Fluorescence',
-       title = 'Cecum Hypoxia') -> hypox_cecumLocation_plot
-
-hypox_cecumLocation_plot
-```
-
-Colon!!
-No statistical significance so that's why no stats on plot
 ```{r, fig.height=4, fig.width=8}
-hypoxia %>% 
-  filter(order != 1) %>% 
-  ggplot(aes(x = diet, y = fluorescence)) +
-  geom_boxplot(aes(group = diet)) +
-  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-  scale_x_discrete(labels = c('Chow',
-                              'HFt/\nHFb',
-                              'HFt/\nLFb',
-                              'LFt/\nHFb',
-                              'LFt/\nLFb')) +
-  theme_bw(base_size = 16) +
-  facet_grid(~order,
-             labeller = labeller(order = location_labs)) +
-  labs(x = 'Diet',
-       y = 'Fluorescence',
-       title = 'Colon Hypoxia') -> hypox_colonLocation_plot
-
-hypox_colonLocation_plot
+hypoxia_fiberLocation_plot
+```
+```{r, fig.height=5, fig.width=10}
+hypoxia_locationDiet_plot
+```
+```{r, fig.height=4, fig.width=6}
+hypoxia_cecum_plot
 ```
 
-**Hypoxia Plot by Fiber Content**
 ```{r, fig.height=4.5, fig.width=8}
-hypoxia %>% 
-  ggplot(aes(x = fiber, y = fluorescence)) +
-  geom_boxplot(aes(group = fiber)) +
-  geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-  scale_x_discrete(labels = c('High\nFiber',
-                              'Low\nFiber')) +
-  theme_bw(base_size = 16) +
-  facet_grid(~order,
-             labeller = labeller(order = location_labs)) +
-  stat_pvalue_manual(dunn_fiber_location,
-                     tip.length = 0.01,
-                     label = 'p.adj.signif',
-                     hide.ns = TRUE) +
-  labs(x = 'Fiber Content',
-       y = 'Fluorescence',
-       title = 'Mouse GI Oxygen Concentration by Location') -> location_fib_plot
-
-location_fib_plot
+hypoxia_locationFiber_plot
 ```
 
-**Saving my Outputs**
+# **Saving my Outputs**
 ```{r}
 ## as a pdf
-ggsave('../plots/hypoxia_by_diet.pdf',
-       plot = hypox_location_plot,
+ggsave('../plots/hypoxia_diet_facetLocation.pdf',
+       plot = hypoxia_locationDiet_plot,
        width = 10, 
        height = 5)
-ggsave('../plots/hypoxia_by_fiberContent.pdf',
-       plot = location_fib_plot,
+ggsave('../plots/hypoxia_diet_cecumONLY.pdf',
+       plot = hypoxia_cecum_plot,
+       width = 6, 
+       height = 4)
+ggsave('../plots/hypoxia_fiber_facetLocation.pdf',
+       plot = hypoxia_locationFiber_plot,
        width = 8, 
        height = 4.5)
-ggsave('../plots/hypoxia_by_location.pdf',
-       plot = hypox_plot,
+ggsave('../plots/hypoxia_location_facetDiet.pdf',
+       plot = hypoxia_dietLocation_plot,
        width = 15, 
        height = 5)
 
 ## as an rdata object
-save(hypox_location_plot,
-     file = '../../figures/hypoxia_by_diet.rdata')
-save(location_fib_plot,
-     file = '../../figures/hypoxia_by_fiberContent.rdata')
-save(hypox_plot,
-     file = '../../figures/hypoxia_by_location.rdata')
-save(hypox_cecumLocation_plot,
+save(hypoxia_locationDiet_plot,
+     file = '../../figures/hypoxia_diet_facetLocation.rdata')
+save(hypoxia_locationFiber_plot,
+     file = '../../figures/hypoxia_fiber_facetLocation.rdata')
+save(hypoxia_dietLocation_plot,
+     file = '../../figures/hypoxia_location_facetDiet.rdata')
+save(hypoxia_cecum_plot,
      file = '../../figures/hypoxia_cecumONLY.rdata')
-save(hypox_colonLocation_plot,
-     file = '../../figures/hypoxia_colonONLY.rdata')
 
 ## stats
-write_tsv(dunn_location,
-          '../stats/hypoxia_diet_dunn.tsv')
-write_tsv(dunn_fiber_location,
-          '../stats/hypoxia_fiberContent_dunn.tsv')
+write_tsv(dietLocation_dunn,
+          '../stats/hypoxia_dietLocation_dunn.tsv')
+write_tsv(fiberLocation_dunn,
+          '../stats/hypoxia_fiberLocation_dunn.tsv')
 ```
 

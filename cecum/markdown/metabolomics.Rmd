@@ -139,10 +139,6 @@ metab_plot <- function(biom_table,
 }
 ```
 
-```{r}
-draw_quantiles = c(0.5)
-```
-
 **File Paths**
 ```{r}
 metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'

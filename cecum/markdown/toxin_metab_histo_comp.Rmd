@@ -273,51 +273,27 @@ comp_files <- file_prep(metadata_FP,
 
 metadata <- comp_files$Metadata
 metab <- comp_files$Metabolomics
-metab %>% 
-  mutate(metab_conc_norm = (concentration + 2)) -> metab
 histo <- comp_files$Histopathology
 dil_toxin <- comp_files$DilToxin
 neat_toxin <- comp_files$NeatToxin
+
+## adding two so that I don't have any zeroes 
+## zeroes get cut off on the plot since I have the axis in log10
+metab %>% 
+  mutate(metab_conc_norm = (concentration + 2)) -> metab
 neat_toxin %>% 
   mutate(neat_conc_norm = (neat_conc + 2)) -> neat_toxin
 ```
 
-**Toxin to Histopathology Scores Comparisons**
-
-**Neat Toxin Concentration Comparison**
-overall neat plot!
-```{r, warning=FALSE, fig.height=4, fig.width=8}
+#**Toxin to Histopathology Scores Comparisons**
+**Neat TcdA and TcdB Plot Construction**
+```{r, warning=FALSE, fig.height=4, fig.width=9}
+## joining histo and neat toxin tables for functions below
 histo %>% 
   select(mouse_id, tissue, score) %>% 
   left_join(neat_toxin, by = 'mouse_id') %>% 
   na.omit() -> histo_neat_toxin
 
-histo_neat_toxin %>% 
-  na.omit() %>% 
-  ggplot(aes(x = neat_conc, y = score)) +
-  scale_x_continuous(trans = 'log10') +
-  geom_jitter(aes(fill = diet), alpha = 0.6, width = 0.1, height = 0, pch = 21) +
-  scale_fill_brewer(palette = 'Dark2', name = 'Diet',
-                    labels = c('Chow',
-                               'HFt/HFb',
-                               'HFt/LFb',
-                               'LFt/HFb',
-                               'LFt/LFb')) +
-  geom_smooth(method = 'lm', se = FALSE) +
-  facet_grid(~neat_toxin,
-             labeller = labeller(neat_toxin = neat_labs),
-             scales = 'free_y') +
-  theme_bw() +
-  theme(strip.text.y = element_text(angle = 0)) +
-  xlab('Concentration') +
-  ylab('Score') +
-  ggtitle('Neat C. difficile Toxin Concentration to Histopathology Score') -> neat_histo_plot
-
-neat_histo_plot
-```
-
-**Neat TcdA and TcdB Plot Construction**
-```{r, warning=FALSE, fig.height=4, fig.width=9}
 ## neat tcdA
 neat_histo_cecum_plot <- comp_plot(histo,
                                  neat_toxin,
@@ -342,40 +318,13 @@ neat_histo_cecum_plot
 neat_histo_colon_plot
 ```
 
-**Diluted Toxin Concentration Comparison**
-```{r, warning=FALSE, fig.height=4, fig.width=8}
+**Diluted TcdA and TcdB Plot Construction**
+```{r, warning=FALSE, fig.height=4, fig.width=9}
 histo %>% 
   select(mouse_id, tissue, score) %>% 
   left_join(dil_toxin, by = 'mouse_id') %>% 
   na.omit() -> histo_dil_toxin
 
-histo_dil_toxin %>% 
-  na.omit() %>% 
-  ggplot(aes(x = dil_conc, y = score)) +
-  scale_x_continuous(trans = 'log10') +
-  geom_jitter(aes(fill = diet), alpha = 0.6, width = 0.1, height = 0, pch = 21) +
-  scale_fill_brewer(palette = 'Dark2', name = 'Diet',
-                    labels = c('HFt/HFb',
-                               'HFt/LFb',
-                               'LFt/HFb',
-                               'LFt/LFb')) +
-  geom_smooth(method = 'lm', se = FALSE) +
-  facet_grid(tissue~dil_toxin,
-             labeller = labeller(tissue = tissue_labs,
-                                 dil_toxin = dil_labs),
-             scales = 'free_y') +
-  theme_bw() +
-  theme(strip.text.y = element_text(angle = 0)) +
-  xlab('Diluted Toxin Concentration') +
-  ylab('Histopathology Score') +
-  ggtitle('Diluted C. difficile Toxin Concentration to Histopathology Score') -> dil_histo_plot
-
-dil_histo_plot
-```
-
-
-**Diluted TcdA and TcdB Plot Construction**
-```{r, warning=FALSE, fig.height=4, fig.width=9}
 ## diluted tcdA
 dil_histo_cecum_plot <- comp_plot(histo,
                                 dil_toxin,
@@ -401,9 +350,6 @@ dil_histo_colon_plot
 ```
 
 **Toxin Stats (to put on plots)**
-linear modeling: 
-- to get r2 values for each facet block (above) filter out the parameters you need (diet, tissue, toxin, etc) and run your linear model on that filtered table 
-- save r2 value to a list and overlay it on your plots
 ```{r, fig.height=4, fig.width=10}
 ## neat toxin stats
 neatTox_stat_table <- r2_value_for_loop(histo_neat_toxin,
@@ -428,14 +374,14 @@ dilTox_stat_table['signif'] <- symnum(dilTox_stat_table$p_value,
                                        na = "")
 ```
 
-
-**Neat Toxin Statistical Visualization**
-Trying something new - over laying the p-value significance on the plot.
-```{r, fig.height=6, fig.width=15}
+**P-values on Neat Toxin Plots**
+Adding p-value to actual facet block on the plot for increased readability. 
+```{r, fig.height=4, fig.width=9}
 neatTox_stat_table %>% 
-  filter(tissue == 'cecum',
-         signif != 'ns') %>% 
-  select(diet, tox_metab, signif, p_value) %>% 
+  filter(signif != 'ns') %>% 
+  select(diet, tox_metab, signif, p_value, tissue) %>% 
+  ## created columns need to match up with the column names called for the x and y axis in the plot
+  ## numeric values added are the x and y coordinates for where the label will sit in the facet block 
   mutate(neat_conc_norm = paste(15),
          neat_conc_norm = as.numeric(neat_conc_norm),
          score = paste(5.5),
@@ -443,28 +389,51 @@ neatTox_stat_table %>%
          p_value = signif(p_value, digits = 3),
          p_value = paste('p-value', p_value, sep = ": ")) -> procNeat_stat_table
 
+## column name that you're faceting by needs to be the same between the two tables (stats and plot)
 names(procNeat_stat_table)[names(procNeat_stat_table) == 'tox_metab'] <- 'neat_toxin'
 
+## cecum 
+procNeat_stat_table %>% 
+  filter(tissue == 'cecum') %>% 
+  select(-tissue) -> cecal_neat_stat_table
+  
 neat_histo_cecum_plot +
-  geom_label(data = procNeat_stat_table, 
-            label = procNeat_stat_table$p_value,
+  geom_label(data = cecal_neat_stat_table, 
+            label = cecal_neat_stat_table$p_value,
             color = 'black',
             fontface = 'bold',
             size = 6) -> neat_cecumHisto_stats_plot
 
+## colon 
+procNeat_stat_table %>% 
+  filter(tissue == 'colon') %>% 
+  select(-tissue) -> colon_neat_stat_table
+
+neat_histo_colon_plot +
+  geom_label(data = colon_neat_stat_table, 
+            label = colon_neat_stat_table$p_value,
+            color = 'black',
+            fontface = 'bold',
+            size = 3) -> neat_colonHisto_stats_plot
+
 neat_cecumHisto_stats_plot
+neat_colonHisto_stats_plot
 ```
 
-
-
-
+**Heat Map Statistical Visualization**
 ```{r, warning=FALSE, fig.height=4, fig.width=6.5}
+## new y-axis labels 
 neat_y_labs <- c("Chow",
                  "HFt/HFb",
                  "HFt/LFb",
                  "LFt/HFb",
                  "LFt/LFb")
+dil_y_labs <- c("HFt/HFb",
+                 "HFt/LFb",
+                 "LFt/HFb",
+                 "LFt/LFb")
 
+## neat stat plot
 neat_tox_stat_vis <- stat_plot(neatTox_stat_table,
                                tissue_labs,
                                neat_labs,
@@ -472,16 +441,7 @@ neat_tox_stat_vis <- stat_plot(neatTox_stat_table,
                                "Toxin",
                                "Histopathology Score and Toxin Concentration Comparisons (neat)")
 
-neat_tox_stat_vis
-```
-
-**Diluted Toxin Statistical Visualization**
-```{r, warning=FALSE, fig.height=4, fig.width=6.5}
-dil_y_labs <- c("HFt/HFb",
-                 "HFt/LFb",
-                 "LFt/HFb",
-                 "LFt/LFb")
-
+## diuted stat plot
 dil_tox_stat_vis <- stat_plot(dilTox_stat_table,
                               tissue_labs,
                               dil_labs,
@@ -489,9 +449,9 @@ dil_tox_stat_vis <- stat_plot(dilTox_stat_table,
                               "Toxin",
                               "Histopathology Score and Toxin Concentration Comparisons (diluted)")
 
+neat_tox_stat_vis
 dil_tox_stat_vis
 ```
-
 **Toxin Plots Together!**
 ```{r, warning=FALSE, fig.height=7, fig.width=15.5}
 ## neat
@@ -513,42 +473,16 @@ dil_toxin_histo_plots
 ```
 
 
-**Metabolite Concentration Comparisons to Histopathology Score**
-overall plot!
-```{r, warning=FALSE, fig.height=4, fig.width=8}
+#**Metabolite Concentration Comparisons to Histopathology Score**
+**Metabolomics Plots**
+```{r, warning=FALSE, fig.height=5, fig.width=10}
+## putting histo and metab tables together
 histo %>% 
   select(mouse_id, tissue, score) %>% 
   left_join(metab, by = 'mouse_id') %>% 
   na.omit() -> histo_metab
 
-histo_metab %>% 
-  na.omit() %>% 
-  ggplot(aes(x = concentration, y = score)) +
-  scale_x_continuous(trans = 'log10') +
-  geom_jitter(aes(fill = diet), alpha = 0.6, width = 0.1, height = 0, pch = 21) +
-  scale_fill_brewer(palette = 'Dark2', name = 'Diet',
-                    labels = c('Chow',
-                               'HFt/HFb',
-                               'HFt/LFb',
-                               'LFt/HFb',
-                               'LFt/LFb')) +
-  geom_smooth(method = 'lm', se = FALSE) +
-  facet_grid(tissue~metabolite,
-             labeller = labeller(tissue = tissue_labs,
-                                 metabolite = metab_labs),
-             scales = 'free_y') +
-  theme_bw() +
-  theme(strip.text.y = element_text(angle = 0)) +
-  xlab('Concentration (ug/g)') +
-  ylab('Score') +
-  ggtitle('Metabolite Concentration by Histopathology Score') -> histo_metab_overall
-
-histo_metab_overall
-```
-
-
-**Metabolomics Plots (faceted by diet)**
-```{r, warning=FALSE, fig.height=5, fig.width=10}
+## cecum 
 histo_metabCecum_plot <- comp_plot(histo,
                                metab,
                                'metab_conc_norm',
@@ -559,7 +493,7 @@ histo_metabCecum_plot <- comp_plot(histo,
                                metab_labs,
                                'Cecum SCFAs by Histopathology')
 
-
+## colon
 histo_metabColon_plot <- comp_plot(histo,
                                  metab,
                                  'metab_conc_norm',
@@ -573,8 +507,7 @@ histo_metabColon_plot <- comp_plot(histo,
 histo_metabCecum_plot
 histo_metabColon_plot
 ```
-
-**Metabolite Stats (to put on my plots)**
+**Metabolite Stats**
 ```{r}
 ## metabolite stats
 metab_stat_table <- r2_value_for_loop(histo_metab,
@@ -588,14 +521,12 @@ metab_stat_table['signif'] <- symnum(metab_stat_table$p_value,
                                      na = "")
 ```
 
-
-**Metabolite Stat Plot Visualization**
-Trying a different way
+**P-values on Metabolite Plots**
+Putting significant p-values on the actual plot. 
 ```{r, fig.height=5, fig.width=10}
 metab_stat_table %>% 
-  filter(tissue == 'cecum',
-         signif != 'ns') %>% 
-  select(diet, tox_metab, signif, p_value) %>% 
+  filter(signif != 'ns') %>% 
+  select(diet, tox_metab, signif, p_value, tissue) %>% 
   mutate(metab_conc_norm = paste(100),
          metab_conc_norm = as.numeric(metab_conc_norm),
          score = paste(5.75),
@@ -605,17 +536,34 @@ metab_stat_table %>%
 
 names(metab_stat_table2)[names(metab_stat_table2) == 'tox_metab'] <- 'metabolite'
 
+## cecum
+metab_stat_table2 %>% 
+  filter(tissue == 'cecum') %>% 
+  select(-tissue) -> cecal_metab_stat_table
+
 histo_metabCecum_plot +
-  geom_label(data = metab_stat_table2, 
-            label = metab_stat_table2$p_value,
+  geom_label(data = cecal_metab_stat_table, 
+            label = cecal_metab_stat_table$p_value,
             color = 'black',
             fontface = 'bold',
             size = 3.5) -> metab_cecumHisto_stats_plot
 
+## colon
+metab_stat_table2 %>% 
+  filter(tissue == 'colon') %>% 
+  select(-tissue) -> colon_metab_stat_table
+
+histo_metabColon_plot +
+  geom_label(data = colon_metab_stat_table, 
+            label = colon_metab_stat_table$p_value,
+            color = 'black',
+            fontface = 'bold',
+            size = 3.5) -> metab_colonHisto_stats_plot
+
 metab_cecumHisto_stats_plot
+metab_colonHisto_stats_plot
 ```
-
-
+**Heat Map Statistical Visualization**
 ```{r, warning=FALSE, fig.height=3.5, fig.width=7.5}
 metab_y_labs <- c("Chow",
                  "HFt/HFb",
@@ -645,23 +593,34 @@ plot_grid(histo_metabCecum_plot, histo_metabColon_plot,
 metab_histo_plot
 ```
 
-**Saving my Outputs**
+#**Saving my Outputs**
 ```{r}
 ## as a pdf 
-ggsave('neat_histo_toxin_comp.pdf',
-       plot = neat_toxin_histo_plots,
-       width = 15.5,
-       height = 7,
-       path = '../plots')
+
 ## stats on actual plot
 ggsave('../plots/neat_cecumHisto_stats.pdf',
        plot = neat_cecumHisto_stats_plot,
        width = 15,
        height = 6)
+ggsave('../plots/neat_colonHisto_stats.pdf',
+       plot = neat_colonHisto_stats_plot,
+       width = 9,
+       height = 4)
 ggsave('../plots/metab_cecumHisto_stats.pdf',
        plot = metab_cecumHisto_stats_plot,
        width = 10,
        height = 5)
+ggsave('../plots/metab_colonHisto_stats.pdf',
+       plot = metab_colonHisto_stats_plot,
+       width = 10,
+       height = 5)
+
+## plots put together w their stat heat map via cowplot
+ggsave('neat_histo_toxin_comp.pdf',
+       plot = neat_toxin_histo_plots,
+       width = 15.5,
+       height = 7,
+       path = '../plots')
 ggsave('dil_histo_toxin_comp.pdf',
        plot = dil_toxin_histo_plots,
        width = 15.5,

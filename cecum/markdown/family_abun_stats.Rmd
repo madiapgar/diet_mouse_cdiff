@@ -176,9 +176,16 @@ otu_table_FP <- '../data/cecal_qiime/tax_filt_actual.qza'
 tax_FP <- '../data/cecal_qiime/taxonomy.qza'
 metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
 wanted_level <- 'Family'
-wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
-                   'Staphylococcaceae', 'Tannerellaceae', 'Muribaculaceae', 'Bacteroidaceae', 
-                   'Marinifilaceae', 'Ruminococcaceae')
+wanted_family <- c('Enterobacteriaceae', 
+                   'Lactobacillaceae', 
+                   'Lachnospiraceae', 
+                   'Enterococcaceae',
+                   'Staphylococcaceae', 
+                   'Tannerellaceae', 
+                   'Muribaculaceae', 
+                   'Bacteroidaceae', 
+                   'Marinifilaceae', 
+                   'Ruminococcaceae')
 ```
 
 **Data Wrangling**

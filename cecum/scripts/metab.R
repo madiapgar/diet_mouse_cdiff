@@ -15,10 +15,6 @@ library(argparse)
 
 ## argparse for input file paths
 parser <- ArgumentParser()
-parser$add_argument("-m",
-                    "--metadata",
-                    dest = "metadata_FP",
-                    help = "Filepath to metadata file in .tsv format.")
 parser$add_argument("-mb",
                     "--metab",
                     dest = "metab_FP",
@@ -43,27 +39,13 @@ parser$add_argument("-mk",
 args <- parser$parse_args()
 
 ## input file paths
-# metadata_FP <- './cecum/data/misc/cecal_processed_meta.tsv'
-# metab_FP <- './data/misc/metabolomics.csv'
-wanted_metabs <- c('Acetic Acid (ug/g)',
-                   'Propanoic Acid (ug/g)',
-                   'n-Butanoic Acid (ug/g)')
-unwanted_columns <- c('2-methyl-propanoic acid (ug/g)',
-                      'Isopentanoic Acid (ug/g)',
-                      '2-methyl-Butanoic Acid (ug/g)',
-                      'Pentanoic Acid (ug/g)',
-                      'Notes',
-                      'Sample Group',
-                      'SCFA Data File',
-                      'Acq. Date-Time',
-                      'Tube_Label',
-                      'Sample_Type',
-                      'Collection Date',
-                      'Dil.')
+# metab_FP <- './data/misc/processed_metabolomics.tsv'
 metab_labs <- c('Acetic Acid',
                 'Propanoic Acid',
                 'n-Butanoic Acid')
-names(metab_labs) <- wanted_metabs
+names(metab_labs) <- c('Acetic Acid (ug/g)',
+                       'Propanoic Acid (ug/g)',
+                       'n-Butanoic Acid (ug/g)')
 
 metab_x_labs <- c('Chow', 
                  'HFt/\nHFb', 
@@ -75,35 +57,6 @@ metab_title <- 'Cecal Metabolite Concentration by Mouse Diet'
 
 ## needed functions
 ## 1
-file_prep <- function(metadata_fp,
-                      metab_fp,
-                      metab_col_filter,
-                      metab_filter){
-  ## metadata file
-  metadata <- read_tsv(metadata_fp)
-  ## metabolomics file
-  metab <- read_csv(metab_fp)
-  wanted_metab_ids <- metab$mouse_id
-  metadata %>% 
-    group_by(mouse_id) %>% 
-    filter(mouse_id %in% wanted_metab_ids) %>% 
-    left_join(metab, by = 'mouse_id') %>% 
-    select(-(all_of(metab_col_filter))) %>% 
-    gather(metab_filter, key = metabolite, value = concentration) %>% 
-    filter(!is.na(mouse_id)) -> pre_metab
-  ## changes all 'ND' values in the concentration column to 0 
-  pre_metab$concentration[pre_metab$concentration == 'ND'] <- 0
-  pre_metab %>% 
-    filter(!is.na(concentration)) %>% 
-    mutate(concentration = as.numeric(concentration)) %>% 
-    distinct(mouse_id, concentration, .keep_all = TRUE) -> big_metab
-  ## creating a list of my outputs
-  my_list <- list(Metadata = metadata,
-                  Metabolomics = big_metab)
-  return(my_list)
-}
-
-## 2
 ## statistical analysis function
 stats <- function(biom_table,
                   metab_col,
@@ -160,7 +113,7 @@ stats <- function(biom_table,
   return(my_list)
 }
 
-## 3 
+## 2
 ## metabolite ggplot function
 metab_plot <- function(biom_table,
                        metab_col,
@@ -189,14 +142,8 @@ metab_plot <- function(biom_table,
   return(plot)
 }
 
-## file prep
-metab_files <- file_prep(args$metadata_FP,
-                         args$metab_FP,
-                         unwanted_columns,
-                         wanted_metabs)
-
-metdata <- metab_files$Metadata
-metab <- metab_files$Metabolomics
+## reading in metabolomics file
+metab <- read_tsv(args$metab_FP)
 
 ## statistical analysis
 metab_stats <- stats(metab,

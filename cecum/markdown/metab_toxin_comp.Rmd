@@ -20,7 +20,7 @@ library(rstatix)
 library(viridis)
 ```
 
-**File Prep and Plot Functions**
+**Functions**
 ```{r}
 ## correlation plot function
 comp_plot <- function(metab_table,
@@ -60,10 +60,7 @@ comp_plot <- function(metab_table,
     ggtitle(title) -> plot
   return(plot)
 }
-```
 
-**Statisitical Analysis Functions**
-```{r}
 ## runs linear modeling on the table, diet, location, and toxin/metabolite wanted and returns full results 
 ## along with a table containing the r2 and p-value 
 ## this goes into the following function with a for loop 

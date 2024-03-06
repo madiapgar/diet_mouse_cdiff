@@ -23,22 +23,6 @@ library(argparse)
 **Functions**
 ```{r}
 ## 1
-histo_file_prep <- function(metadata_fp,
-                            histo_fp){
-  ## reading in metadata file
-  metadata <- read_tsv(metadata_fp)
-  ## reading in histo file
-  histo <- read_csv(histo_fp) %>% 
-    filter(!is.na(mouse_id))
-  ## joining them all together for ggplot rendering 
-  metadata %>% 
-    merge(histo, by = 'mouse_id') %>% 
-    gather(cecum, colon, key = tissue, value = score) %>% 
-    select(!c(tube_num, date, corr_sample_num)) -> big_histo
-  return(big_histo)
-}
-
-## 2
 ## statistical analysis
 histo_stats <- function(big_histo){
   ## kruskal-wallis test
@@ -123,9 +107,9 @@ histo_plot <- function(big_histo,
 ```
 
 **File Paths**
+Histopathology file has already been joined with metadata so it doesn't need to be read in. 
 ```{r}
-metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
-histo_FP <- '../data/misc/histo_data.csv'
+histo_FP <- '../data/misc/processed_histopathology.tsv'
 tissue_labs <- c('Cecum',
                  'Colon')
 names(tissue_labs) <- c('cecum',
@@ -134,9 +118,8 @@ names(tissue_labs) <- c('cecum',
 
 **Histopathology Calculations**
 ```{r, fig.height=6, fig.width=12}
-## file prep 
-histo <- histo_file_prep(metadata_FP,
-                         histo_FP)
+## reading in histo file
+histo <- read_tsv(histo_FP)
 
 ## stats 
 stats <- histo_stats(big_histo = histo)

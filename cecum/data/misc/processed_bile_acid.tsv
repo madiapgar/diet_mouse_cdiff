@@ -77,7 +77,7 @@ HF/LF	1	WD.1	60322	9847	barrier_1	3	Beta_muricholic_acid_b-MCA	0	inhibitor	2
 HF/LF	1	WD.1	70122	9953	barrier_2	5	Beta_muricholic_acid_b-MCA	13.08317848	inhibitor	15.08317848
 HF/LF	1	WD.1	71523	9974	barrier_2	6	Beta_muricholic_acid_b-MCA	0	inhibitor	2
 HF/LF	1	WD.1	81923	113	barrier_1	7	Beta_muricholic_acid_b-MCA	150.4547439	inhibitor	152.4547439
-HF/LF	2	WD.2	60322	9849	barrier_1	3	Beta_muricholic_acid_b-MCA	7.257015987	inhibitor	9.257015986999999
+HF/LF	2	WD.2	60322	9849	barrier_1	3	Beta_muricholic_acid_b-MCA	7.257015987	inhibitor	9.257015987
 HF/LF	2	WD.2	70122	9949	barrier_2	5	Beta_muricholic_acid_b-MCA	25.56929128	inhibitor	27.56929128
 HF/LF	2	WD.2	71523	9972	barrier_2	6	Beta_muricholic_acid_b-MCA	0	inhibitor	2
 HF/LF	3	WD.3	60322	9846	barrier_1	3	Beta_muricholic_acid_b-MCA	17.05515229	inhibitor	19.05515229
@@ -297,7 +297,7 @@ HF/LF	2	WD.2	60322	9849	barrier_1	3	Cholic_acid_CA	9.596008588	promoter	11.59600
 HF/LF	2	WD.2	70122	9949	barrier_2	5	Cholic_acid_CA	294.8196977	promoter	296.8196977
 HF/LF	2	WD.2	71523	9972	barrier_2	6	Cholic_acid_CA	24.16124053	promoter	26.16124053
 HF/LF	3	WD.3	60322	9846	barrier_1	3	Cholic_acid_CA	60.51816116	promoter	62.51816116
-HF/LF	3	WD.3	70122	9950	barrier_2	5	Cholic_acid_CA	7.874898997	promoter	9.874898996999999
+HF/LF	3	WD.3	70122	9950	barrier_2	5	Cholic_acid_CA	7.874898997	promoter	9.874898997
 HF/LF	3	WD.3	71523	9971	barrier_2	6	Cholic_acid_CA	223.5564533	promoter	225.5564533
 HF/LF	4	WD.4	60322	9848	barrier_1	3	Cholic_acid_CA	0	promoter	2
 HF/LF	4	WD.4	70122	9952	barrier_2	5	Cholic_acid_CA	19.29473398	promoter	21.29473398

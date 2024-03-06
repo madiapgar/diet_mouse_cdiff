@@ -14,14 +14,14 @@ library(argparse)
 
 ## argparse for input file paths
 parser <- ArgumentParser()
-parser$add_argument("-m",
-                    "--metadata",
-                    dest = "metadata_FP",
-                    help = "Filepath to metadata file in .tsv format.")
-parser$add_argument("-t",
-                    "--toxin",
-                    dest = "toxin_FP",
-                    help = "Filepath to toxin data file in .tsv format.")
+parser$add_argument("-nt",
+                    "--neat_toxin",
+                    dest = "neat_toxin_FP",
+                    help = "Filepath to neat toxin data file in .tsv format.")
+parser$add_argument("-dt",
+                    "--dil_toxin",
+                    dest = "dil_toxin_FP",
+                    help = "Filepath to diluted toxin data file in .tsv format.")
 parser$add_argument("-n",
                     "--neat_plot",
                     dest = "neat_plot_FP",
@@ -51,8 +51,8 @@ args <- parser$parse_args()
 
 
 ## needed input file paths
-# metadata_FP <- './cecum/data/misc/cecal_processed_meta.tsv'
-# toxin_FP <- './data/misc/toxin_final_data.tsv'
+# neat_toxin_FP <- './cecum/data/misc/processed_neatToxin.tsv'
+# dil_toxin_FP <- './cecum/data/misc/processed_dilutedToxin.tsv'
 
 ## labeling lists
 neat_labs <- c('TcdA', 'TcdB')
@@ -74,52 +74,6 @@ dil_title <- 'Cecal Toxin Diluted Concentration (1:10) by Mouse Diet'
 
 ## needed functions (in order)
 ## 1
-## for toxin file prep
-file_prep <- function(metadata_fp,
-                      toxin_fp){
-  ## metadata file
-  metadata <- read_tsv(metadata_fp)
-  ## toxin file
-  toxin <- read_tsv(toxin_fp)
-  wanted_toxin_ids <- toxin$mouse_id
-  metadata %>% 
-    group_by(mouse_id) %>% 
-    filter(mouse_id %in% wanted_toxin_ids) -> meta_filt
-  toxin %>% 
-    left_join(meta_filt, by = 'mouse_id') %>% 
-    gather('Total TcA Neat', 'Total TcB Neat', 
-           key = neat_toxin, value = neat_conc) %>% 
-    gather('Total TcA 1:10', 'Total TcB 1:10',
-           key = dil_toxin, value = dil_conc) -> pre_toxin
-  
-  pre_toxin$neat_conc[pre_toxin$neat_conc == 'BDL'] <- '0'
-  pre_toxin$dil_conc[pre_toxin$dil_conc == 'BDL'] <- '0'
-  pre_toxin$dil_conc[pre_toxin$dil_conc == 'Chow'] <- '0'
-  
-  pre_toxin %>% 
-    filter(!is.na(dil_conc),
-           !is.na(neat_conc)) %>%
-    mutate(neat_conc = as.numeric(neat_conc),
-           dil_conc = as.numeric(dil_conc)) %>% 
-    select(-'Extra_Sample', -'Tube_Label', -'Collection Date',
-           -'Sample_Type') -> big_toxin
-  big_toxin %>% 
-    select(-neat_toxin, -neat_conc) %>% 
-    distinct(mouse_id, dil_conc, .keep_all = TRUE) %>% 
-    filter(diet != 'Chow') -> dil_toxin
-  
-  big_toxin %>%
-    select(-dil_toxin, -dil_conc) %>% 
-    distinct(mouse_id, neat_conc, .keep_all = TRUE) -> neat_toxin 
-  ## creating a list of my outputs
-  my_list <- list(Metadata = metadata,
-                  Toxin = big_toxin,
-                  NeatToxin = neat_toxin,
-                  DilToxin = dil_toxin)
-  return(my_list)
-}
-
-## 2
 ## statistical analysis function
 stats <- function(biom_table,
                   tox_col,
@@ -176,7 +130,7 @@ stats <- function(biom_table,
   return(my_list)
 }
 
-## 3 
+## 2 
 ## toxin ggplot function
 tox_plot <- function(biom_table,
                      tox_col,
@@ -206,12 +160,8 @@ tox_plot <- function(biom_table,
 }
 
 ## file prep
-toxin_files <- file_prep(args$metadata_FP,
-                         args$toxin_FP)
-
-metadata <- toxin_files$Metadata
-neat_tox_table <- toxin_files$NeatToxin
-dil_tox_table <- toxin_files$DilToxin
+neat_tox_table <- read_tsv(args$neat_toxin_FP)
+dil_tox_table <- read_tsv(args$dil_toxin_FP)
 
 ## statistical analysis
 ## neat

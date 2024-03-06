@@ -6,11 +6,34 @@ library(ggpubr)
 library(magrittr)
 library(tidyverse)
 library(broom)
+library(argparse)
+
+## using argparse for my file paths
+## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
+parser <- ArgumentParser()
+parser$add_argument("-ba",
+                    "--bile_acid",
+                    dest = "bile_acid_FP",
+                    help = "Filepath to bile acid file in .txt format.")
+parser$add_argument("-c",
+                    "--cecal_key",
+                    dest = "cecal_key_FP",
+                    help = "Filepath to cecal mouse id key file in .tsv/.txt format.")
+parser$add_argument("-i",
+                    "--mouse_id_facil",
+                    dest = "mouseID_facil_FP",
+                    help = "Filepath to mouse ID with barrier facility file in .tsv format.")
+parser$add_argument("-o",
+                    "--output",
+                    dest = "output_fp",
+                    help = "Filepath to location for output file(s).")
+
+args <- parser$parse_args()
 
 ## input file paths 
-bile_acid_FP <- '../data/misc/bile_acid.txt'
-mouseID_facil_FP <- '../data/misc/mouseID_facil.tsv'
-cecal_key_FP <- '../data/misc/cecal_key.txt'
+# bile_acid_FP <- '../data/misc/bile_acid.txt'
+# mouseID_facil_FP <- '../data/misc/mouseID_facil.tsv'
+# cecal_key_FP <- '../data/misc/cecal_key.txt'
 
 ## needed functions
 ## 1
@@ -58,10 +81,10 @@ bile_acid_processing <- function(bile_acid_fp,
 }
 
 ## using the function 
-bile_acid <- bile_acid_processing(bile_acid_FP,
-                                  mouseID_facil_FP,
-                                  cecal_key_FP)
+bile_acid <- bile_acid_processing(args$bile_acid_FP,
+                                  args$mouseID_facil_FP,
+                                  args$cecal_key_FP)
 
 ## writing results out as a .tsv
 write_tsv(bile_acid,
-          '../data/misc/corrected_bile_acid.tsv')
+          args$output_fp)

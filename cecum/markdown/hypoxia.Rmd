@@ -34,6 +34,7 @@ hypoxia_stats <- function(hypoxia_table,
     mutate(p.adj = p.adjust(p.value,
                             method = "BH")) -> kruskal
   ## dunns post hoc test
+  ## need to use reformulate/glue to have function variables work with the dunn test formula
   rightSide_name <- formula_right
   funky_formula <- reformulate(glue("{rightSide_name}"),glue("{formula_left}"))
   

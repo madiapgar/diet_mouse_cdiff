@@ -22,73 +22,6 @@ library(viridis)
 
 **Functions**
 ```{r}
-file_prep <- function(metadata_fp,
-                      metab_fp,
-                      metab_col_filter,
-                      metab_filter,
-                      histo_fp,
-                      toxin_fp){
-  ## metadata file
-  metadata <- read_tsv(metadata_fp) %>% 
-              select(!c(tube_num, date, corr_sample_num))
-  # names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
-  ## metabolomics file
-  metab <- read_csv(metab_fp)
-  metadata %>% 
-    merge(metab, by = 'mouse_id') %>% 
-    select(-(all_of(unwanted_columns))) %>% 
-    gather(wanted_metabs, key = metabolite, value = concentration) %>% 
-    filter(!is.na(mouse_id)) -> pre_metab
-  ## changes all 'ND' values in the concentration column to 0 
-  pre_metab$concentration[pre_metab$concentration == 'ND'] <- 0
-  pre_metab %>% 
-    filter(!is.na(concentration)) %>% 
-    mutate(concentration = as.numeric(concentration)) -> big_metab
-  ## histopathology file
-  histo <- read_csv(histo_fp) %>% 
-           filter(!is.na(mouse_id))
-  metadata %>% 
-    merge(histo, by = 'mouse_id') %>% 
-    gather(cecum, colon, key = tissue, value = score) -> big_histo
-  ## toxin file
-  toxin <- read_tsv(toxin_fp)
-  ## toxin neat concentrations (non_diluted)
-  toxin %>% 
-    merge(metadata, by = 'mouse_id') %>% 
-    select(!c('Total TcA 1:10', 'Total TcB 1:10')) %>% 
-    gather('Total TcA Neat', 'Total TcB Neat', 
-           key = neat_toxin, value = neat_conc) -> pre_neat_toxin
-  pre_neat_toxin$neat_conc[pre_neat_toxin$neat_conc == 'BDL'] <- '0'
-  pre_neat_toxin %>% 
-    mutate(neat_conc = as.numeric(neat_conc)) %>% 
-    select(!c('Tube_Label',
-              'Collection Date',
-              'Sample_Type',
-              'Extra_Sample')) -> neat_toxin
-  ## toxin diluted concentrations 
-  toxin %>% 
-    merge(metadata, by = 'mouse_id') %>% 
-    select(!c('Total TcA Neat', 'Total TcB Neat')) %>% 
-    gather('Total TcA 1:10', 'Total TcB 1:10',
-           key = dil_toxin, value = dil_conc) -> pre_dil_toxin
-  pre_dil_toxin$dil_conc[pre_dil_toxin$dil_conc == 'BDL'] <- '0'
-  pre_dil_toxin$dil_conc[pre_dil_toxin$dil_conc == 'Chow'] <- '0'
-  pre_dil_toxin %>% 
-    mutate(dil_conc = as.numeric(dil_conc)) %>% 
-    filter(diet != 'Chow') %>% 
-    select(!c('Tube_Label',
-              'Collection Date',
-              'Sample_Type',
-              'Extra_Sample')) -> dil_toxin
-  ## creating a list of my outputs
-  my_list <- list(Metadata = metadata,
-                  Metabolomics = big_metab,
-                  Histopathology = big_histo,
-                  NeatToxin = neat_toxin,
-                  DilToxin = dil_toxin)
-  return(my_list)
-}
-
 ## histo plot comparison function
 comp_plot <- function(histo_table,
                       ## toxin or metabolomics?
@@ -105,7 +38,7 @@ comp_plot <- function(histo_table,
                        title){
   ## putting tables together
   histo_table %>% 
-    select(mouse_id, tissue, score) %>% 
+    select(mouse_id, tissue, score, diet) %>% 
     left_join(wanted_table, by = 'mouse_id') %>% 
     na.omit() -> compiled_table
   ## constructing plot
@@ -127,10 +60,7 @@ comp_plot <- function(histo_table,
     ggtitle(title) -> plot
   return(plot)
 }
-```
 
-**Statisitical Analysis Functions**
-```{r}
 ## runs linear modeling on the table, diet, location, and toxin/metabolite wanted and returns full results 
 ## along with a table containing the r2 and p-value 
 ## this goes into the following function with a for loop 
@@ -218,9 +148,9 @@ stat_plot <- function(stat_table,
 **File Paths**
 ```{r}
 metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
-histo_FP <- '../data/misc/histo_data.csv'
-metab_FP <- '../data/misc/metabolomics.csv'
-toxin_FP <- '../data/misc/toxin_final_data.tsv'
+histo_FP <- '../data/misc/processed_histopathology.tsv'
+metab_FP <- '../data/misc/processed_metabolomics.tsv'
+toxin_FP <- '../data/misc/processed_neatToxin.tsv'
 
 ## lists to redo the diet names on the facet labels of the ggplot created below 
 diet_labs <- 
@@ -230,70 +160,68 @@ diet_labs <-
       'Low Fat / High Fiber', 
       'Low Fat / Low Fiber')
 
-names(diet_labs) <- c('Chow', 'HF/HF', 'HF/LF', 'LF/HF', 'LF/LF')
+names(diet_labs) <- c('Chow', 
+                      'HF/HF', 
+                      'HF/LF', 
+                      'LF/HF', 
+                      'LF/LF')
 
 tissue_labs <- c('Cecum',
                  'Colon')
 names(tissue_labs) <- c('cecum',
                         'colon')
-wanted_metabs <- c('Acetic Acid (ug/g)',
-                   'Propanoic Acid (ug/g)',
-                   'n-Butanoic Acid (ug/g)')
-unwanted_columns <- c('2-methyl-propanoic acid (ug/g)',
-                     'Isopentanoic Acid (ug/g)',
-                     '2-methyl-Butanoic Acid (ug/g)',
-                     'Pentanoic Acid (ug/g)',
-                     'Notes',
-                     'Sample Group',
-                     'SCFA Data File',
-                     'Acq. Date-Time',
-                     'Tube_Label',
-                     'Sample_Type',
-                     'Collection Date',
-                     'Dil.')
+
 metab_labs <- c('Acetic Acid',
                 'Propanoic Acid',
                 'n-Butanoic Acid')
-names(metab_labs) <- wanted_metabs
+names(metab_labs) <- c('Acetic Acid (ug/g)',
+                       'Propanoic Acid (ug/g)',
+                       'n-Butanoic Acid (ug/g)')
+
 neat_labs <- c('TcdA', 'TcdB')
 names(neat_labs) <- c('Total TcA Neat', 'Total TcB Neat')
 
-dil_labs <- c('TcdA', 'TcdB')
-names(dil_labs) <- c('Total TcA 1:10', 'Total TcB 1:10')
+
+stat_y_labs <- c("Chow",
+                 "HFt/HFb",
+                 "HFt/LFb",
+                 "LFt/HFb",
+                 "LFt/LFb")
 ```
 
-**File Prep**
+**Reading in Needed Files**
 ```{r}
-comp_files <- file_prep(metadata_FP,
-                        metab_FP,
-                        unwanted_columns,
-                        wanted_metabs,
-                        histo_FP,
-                        toxin_FP)
-
-metadata <- comp_files$Metadata
-metab <- comp_files$Metabolomics
-histo <- comp_files$Histopathology
-dil_toxin <- comp_files$DilToxin
-neat_toxin <- comp_files$NeatToxin
+metadata <- read_tsv(metadata_FP)
+metab <- read_tsv(metab_FP)
+histo <- read_tsv(histo_FP)
+neat_toxin <- read_tsv(toxin_FP)
 
 ## adding two so that I don't have any zeroes 
 ## zeroes get cut off on the plot since I have the axis in log10
 metab %>% 
+  select(metabolite, concentration, mouse_id) %>% 
   mutate(metab_conc_norm = (concentration + 2)) -> metab
+
 neat_toxin %>% 
+  select(neat_toxin, neat_conc, mouse_id) %>% 
   mutate(neat_conc_norm = (neat_conc + 2)) -> neat_toxin
+
+## putting histo and metab tables together
+histo %>% 
+  select(mouse_id, tissue, score, diet) %>% 
+  left_join(metab, by = 'mouse_id') %>% 
+  na.omit() -> histo_metab
+
+## putting histo and neat toxin tables together
+histo %>% 
+  select(mouse_id, tissue, score, diet) %>% 
+  left_join(neat_toxin, by = 'mouse_id') %>% 
+  na.omit() -> histo_neat_toxin
 ```
 
 #**Toxin to Histopathology Scores Comparisons**
 **Neat TcdA and TcdB Plot Construction**
 ```{r, warning=FALSE, fig.height=4, fig.width=9}
-## joining histo and neat toxin tables for functions below
-histo %>% 
-  select(mouse_id, tissue, score) %>% 
-  left_join(neat_toxin, by = 'mouse_id') %>% 
-  na.omit() -> histo_neat_toxin
-
 ## neat tcdA
 neat_histo_cecum_plot <- comp_plot(histo,
                                  neat_toxin,
@@ -318,37 +246,6 @@ neat_histo_cecum_plot
 neat_histo_colon_plot
 ```
 
-**Diluted TcdA and TcdB Plot Construction**
-```{r, warning=FALSE, fig.height=4, fig.width=9}
-histo %>% 
-  select(mouse_id, tissue, score) %>% 
-  left_join(dil_toxin, by = 'mouse_id') %>% 
-  na.omit() -> histo_dil_toxin
-
-## diluted tcdA
-dil_histo_cecum_plot <- comp_plot(histo,
-                                dil_toxin,
-                                'dil_conc',
-                                'tissue',
-                                'cecum',
-                                'dil_toxin',
-                                 diet_labs,
-                                 dil_labs,
-                                 'Cecum Toxin by Histopathology (diluted)')
-## diluted tcdB
-dil_histo_colon_plot <- comp_plot(histo,
-                                dil_toxin,
-                                'dil_conc',
-                                'tissue',
-                                'colon',
-                                'dil_toxin',
-                                 diet_labs,
-                                 dil_labs,
-                                 'Colon Toxin by Histopathology (diluted)')
-dil_histo_cecum_plot
-dil_histo_colon_plot
-```
-
 **Toxin Stats (to put on plots)**
 ```{r, fig.height=4, fig.width=10}
 ## neat toxin stats
@@ -361,22 +258,11 @@ neatTox_stat_table['signif'] <- symnum(neatTox_stat_table$p_value,
                                        symbols = c("****", "***", "**", "*", "ns"),
                                        abbr.colnames = FALSE,
                                        na = "")
-
-## diluted toxin stats
-dilTox_stat_table <- r2_value_for_loop(histo_dil_toxin,
-                                        "dil_toxin",
-                                        "dil_conc")
-## assigning p value significance
-dilTox_stat_table['signif'] <- symnum(dilTox_stat_table$p_value,
-                                       cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
-                                       symbols = c("****", "***", "**", "*", "ns"),
-                                       abbr.colnames = FALSE,
-                                       na = "")
 ```
 
 **P-values on Neat Toxin Plots**
 Adding p-value to actual facet block on the plot for increased readability. 
-```{r, fig.height=4, fig.width=9}
+```{r, fig.height=6, fig.width=15}
 neatTox_stat_table %>% 
   filter(signif != 'ns') %>% 
   select(diet, tox_metab, signif, p_value, tissue) %>% 
@@ -422,35 +308,15 @@ neat_colonHisto_stats_plot
 
 **Heat Map Statistical Visualization**
 ```{r, warning=FALSE, fig.height=4, fig.width=6.5}
-## new y-axis labels 
-neat_y_labs <- c("Chow",
-                 "HFt/HFb",
-                 "HFt/LFb",
-                 "LFt/HFb",
-                 "LFt/LFb")
-dil_y_labs <- c("HFt/HFb",
-                 "HFt/LFb",
-                 "LFt/HFb",
-                 "LFt/LFb")
-
 ## neat stat plot
 neat_tox_stat_vis <- stat_plot(neatTox_stat_table,
                                tissue_labs,
                                neat_labs,
-                               neat_y_labs,
+                               stat_y_labs,
                                "Toxin",
                                "Histopathology Score and Toxin Concentration Comparisons (neat)")
 
-## diuted stat plot
-dil_tox_stat_vis <- stat_plot(dilTox_stat_table,
-                              tissue_labs,
-                              dil_labs,
-                              dil_y_labs,
-                              "Toxin",
-                              "Histopathology Score and Toxin Concentration Comparisons (diluted)")
-
 neat_tox_stat_vis
-dil_tox_stat_vis
 ```
 **Toxin Plots Together!**
 ```{r, warning=FALSE, fig.height=7, fig.width=15.5}
@@ -461,27 +327,12 @@ plot_grid(neat_histo_cecum_plot, neat_tox_stat_vis,
           rel_widths = c(1, 0.7),
           labels = c('a)', 'c)', 'b)')) -> neat_toxin_histo_plots
 
-## diluted
-plot_grid(dil_histo_cecum_plot, dil_tox_stat_vis,
-          dil_histo_colon_plot,
-          ncol = 2,
-          rel_widths = c(1, 0.8),
-          labels = c('a)', 'c)', 'b)')) -> dil_toxin_histo_plots
-
 neat_toxin_histo_plots
-dil_toxin_histo_plots
 ```
-
 
 #**Metabolite Concentration Comparisons to Histopathology Score**
 **Metabolomics Plots**
 ```{r, warning=FALSE, fig.height=5, fig.width=10}
-## putting histo and metab tables together
-histo %>% 
-  select(mouse_id, tissue, score) %>% 
-  left_join(metab, by = 'mouse_id') %>% 
-  na.omit() -> histo_metab
-
 ## cecum 
 histo_metabCecum_plot <- comp_plot(histo,
                                metab,
@@ -565,16 +416,10 @@ metab_colonHisto_stats_plot
 ```
 **Heat Map Statistical Visualization**
 ```{r, warning=FALSE, fig.height=3.5, fig.width=7.5}
-metab_y_labs <- c("Chow",
-                 "HFt/HFb",
-                 "HFt/LFb",
-                 "LFt/HFb",
-                 "LFt/LFb")
-
 metab_stat_vis <- stat_plot(metab_stat_table,
                             tissue_labs,
                             metab_labs,
-                            metab_y_labs,
+                            stat_y_labs,
                             "SCFA",
                             "Histopathology Score and SCFA Concentration Comparisons")
 metab_stat_vis
@@ -621,18 +466,8 @@ ggsave('neat_histo_toxin_comp.pdf',
        width = 15.5,
        height = 7,
        path = '../plots')
-ggsave('dil_histo_toxin_comp.pdf',
-       plot = dil_toxin_histo_plots,
-       width = 15.5,
-       height = 7,
-       path = '../plots')
 ggsave('neat_histo_toxin_stats.pdf',
        plot = neat_tox_stat_vis,
-       width = 6,
-       height = 4,
-       path = '../plots')
-ggsave('dil_histo_toxin_stats.pdf',
-       plot = dil_tox_stat_vis,
        width = 6,
        height = 4,
        path = '../plots')
@@ -662,16 +497,5 @@ save(histo_metabColon_plot,
      file = '../../figures/histo_metab_colon.rdata')
 save(metab_stat_vis,
      file = '../../figures/histo_metab_stats.rdata')
-
-## saving processed histo, metab, and toxin files so I don't have to continue to redo the processing 
-## with each new comparison script
-# write_tsv(histo,
-#           '../data/misc/processed_histopathology.tsv')
-# write_tsv(metab,
-#           '../data/misc/processed_metabolomics.tsv')
-# write_tsv(neat_toxin,
-#           '../data/misc/processed_neatToxin.tsv')
-# write_tsv(dil_toxin,
-#           '../data/misc/processed_dilutedToxin.tsv')
 ```
 

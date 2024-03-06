@@ -124,9 +124,16 @@ names(diet_labs) <- c('Chow',
                       'LF/HF', 
                       'LF/LF')
 wanted_level <- 'Family'
-wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
-                   'Staphylococcaceae', 'Tannerellaceae', 'Muribaculaceae', 'Bacteroidaceae', 
-                   'Marinifilaceae', 'Ruminococcaceae')
+wanted_family <- c('Enterobacteriaceae', 
+                   'Lactobacillaceae', 
+                   'Lachnospiraceae', 
+                   'Enterococcaceae',
+                   'Staphylococcaceae', 
+                   'Tannerellaceae', 
+                   'Muribaculaceae', 
+                   'Bacteroidaceae', 
+                   'Marinifilaceae', 
+                   'Ruminococcaceae')
 ```
 
 **Data Wrangling for Plot**

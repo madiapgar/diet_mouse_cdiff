@@ -53,6 +53,13 @@ rule target:
         "data/core_outputs/faith_pd.tsv",
         "data/misc/seq_depth.tsv",
         "data/misc/filt_cecal_processed_metadata.tsv",
+        "data/misc/corrected_bile_acid.tsv",
+        "data/misc/processed_neatToxin.tsv",
+        "data/misc/processed_dilutedToxin.tsv",
+        "data/misc/processed_metabolomics.tsv",
+        "data/misc/processed_histopathology.tsv",
+        "data/misc/processed_bile_acid.tsv",
+        "data/misc/processed_ratio_bileAcid.tsv",
         "plots/faith_pd.pdf",
         "plots/shannon_entropy.pdf",
         "stats/faith_diet_results.tsv",
@@ -702,6 +709,56 @@ rule metadata_processing:
         """
 
 
+rule bile_acid_preProcessing:
+    input:
+        bile_acid = "data/misc/bile_acid.txt",
+        cecal_key = "data/misc/cecal_key.txt",
+        id_file = "data/misc/mouseID_facil.tsv"
+    output:
+        proc_bile_acid = "data/misc/corrected_bile_acid.tsv"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/bile_acid_processing.R --bile_acid {input.bile_acid} \
+                                               --cecal_key {input.cecal_key} \
+                                               --mouse_id_facil {input.id_file} \
+                                               --output {output.proc_bile_acid}
+        """
+
+
+rule toxin_metab_histo_bileAcid_processing:
+    input:
+        metadata = "data/misc/filt_cecal_processed_metadata.tsv",
+        toxin = "data/misc/toxin_final_data.tsv",
+        histo = "data/misc/histo_data.csv",
+        metab = "data/misc/metabolomics.csv",
+        bile_acid = "data/misc/corrected_bile_acid.tsv"
+    output:
+        proc_neat_toxin = "data/misc/processed_neatToxin.tsv",
+        proc_dil_toxin = "data/misc/processed_dilutedToxin.tsv",
+        proc_metab = "data/misc/processed_metabolomics.tsv",
+        proc_histo = "data/misc/processed_histopathology.tsv",
+        proc_bile_acid = "data/misc/processed_bile_acid.tsv",
+        proc_bile_ratio = "data/misc/processed_ratio_bileAcid.tsv"
+    conda:
+        "r_env"
+    shell:
+        """
+        Rscript scripts/toxinMetab_histoBile_file_prep.R --metadata {input.metadata} \
+                                                         --toxin {input.toxin} \
+                                                         --histopathology {input.histo} \
+                                                         --metabolomics {input.metab} \
+                                                         --bile_acid {input.bile_acid} \
+                                                         --neat_toxin_out {output.proc_neat_toxin} \
+                                                         --dil_toxin_out {output.proc_dil_toxin} \
+                                                         --metab_out {output.proc_metab} \
+                                                         --histo_out {output.proc_histo} \
+                                                         --bile_acid_out {output.proc_bile_acid} \
+                                                         --bile_ratio_out {output.proc_bile_ratio}
+        """
+
+
 rule alpha_diversity_plots:
     input:
         metadata = "data/misc/cecal_processed_metadata.tsv",
@@ -838,8 +895,7 @@ rule family_abundance_stats:
 
 rule histopathology:
     input:
-        metadata = "data/misc/cecal_processed_metadata.tsv",
-        histo = "data/misc/histo_data.csv"
+        histo = "data/misc/processed_histopathology.tsv"
     output:
         plot = "plots/histopathology.pdf",
         lm = "stats/histopathology_lm.tsv",
@@ -848,8 +904,7 @@ rule histopathology:
         "r_env"
     shell:
         """
-        Rscript scripts/histopathology.R --metadata {input.metadata} \
-                                         --histo {input.histo} \
+        Rscript scripts/histopathology.R --histo {input.histo} \
                                          --histo_plot {output.plot} \
                                          --linear_model {output.lm} \
                                          --dunn {output.dunn}
@@ -858,8 +913,8 @@ rule histopathology:
 
 rule toxin:
     input:
-        metadata = "data/misc/cecal_processed_metadata.tsv",
-        toxin = "data/misc/toxin_final_data.tsv"
+        neat_toxin = "data/misc/processed_neatToxin.tsv",
+        dil_toxin = "data/misc/processed_dilutedToxin.tsv"
     output:
         neat_plot = "plots/neat_toxin.pdf",
         diluted_plot = "plots/dil_toxin.pdf",
@@ -871,8 +926,8 @@ rule toxin:
         "r_env"
     shell:
         """
-        Rscript scripts/toxin.R --metadata {input.metadata} \
-                                --toxin {input.toxin} \
+        Rscript scripts/toxin.R --neat_toxin {input.neat_toxin} \
+                                --dil_toxin {input.dil_toxin} \
                                 --neat_plot {output.neat_plot} \
                                 --diluted_plot {output.diluted_plot} \
                                 --neat_kruskal {output.neat_kruskal} \
@@ -884,8 +939,7 @@ rule toxin:
 
 rule metabolomics:
     input:
-        metadata = "data/misc/cecal_processed_metadata.tsv",
-        metab = "data/misc/metabolomics.csv"
+        metab = "data/misc/processed_metabolomics.tsv"
     output:
         metab_plot = "plots/metabolomics.pdf",
         metab_lm = "stats/metab_linear_model.tsv",
@@ -895,8 +949,7 @@ rule metabolomics:
         "r_env"
     shell:
         """
-        Rscript scripts/metab.R --metadata {input.metadata} \
-                                --metab {input.metab} \
+        Rscript scripts/metab.R --metab {input.metab} \
                                 --metab_plot {output.metab_plot} \
                                 --metab_lm {output.metab_lm} \
                                 --metab_dunn {output.metab_dunn} \

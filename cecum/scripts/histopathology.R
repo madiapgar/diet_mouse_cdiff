@@ -16,10 +16,6 @@ library(argparse)
 ## using argparse for my file paths
 ## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
 parser <- ArgumentParser()
-parser$add_argument("-m",
-                    "--metadata",
-                    dest = "metadata_FP",
-                    help = "Filepath to metadata file in .tsv format.")
 parser$add_argument("-hi",
                     "--histo",
                     dest = "histo_FP",
@@ -40,8 +36,7 @@ parser$add_argument("-d",
 args <- parser$parse_args()
 
 ## input file paths and others
-# metadata_FP <- './cecum/data/misc/cecal_processed_meta.tsv'
-# histo_FP <- './data/misc/histo_data.csv'
+# histo_FP <- './data/misc/processed_histopathology.tsv'
 tissue_labs <- c('Cecum',
                  'Colon')
 names(tissue_labs) <- c('cecum',
@@ -49,25 +44,6 @@ names(tissue_labs) <- c('cecum',
 
 ## functions in order of usage 
 ## 1
-histo_file_prep <- function(metadata_fp,
-                            histo_fp){
-  ## reading in metadata file
-  metadata <- read_tsv(metadata_fp)
-  ## reading in histopathology scores
-  histo <- read_csv(histo_fp) %>% 
-    filter(!is.na(mouse_id))
-  ## joining the two together 
-  metadata %>% 
-    merge(histo, by = 'mouse_id') %>% 
-    group_by(mouse_id) %>% 
-    filter(day_post_inf == max(day_post_inf)) %>% 
-    ungroup() %>% 
-    mutate(day_post_inf = as.factor(day_post_inf)) %>% 
-    gather(cecum, colon, key = tissue, value = score) -> big_histo
-  return(big_histo)
-}
-
-## 2
 ## statistical analysis
 histo_stats <- function(big_histo){
   ## kruskal-wallis test
@@ -132,10 +108,10 @@ histo_plot <- function(big_histo,
     geom_violin(aes(group = diet),  draw_quantiles = c(0.5)) +
     geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
     scale_x_discrete(labels = c('Chow', 
-                                'High Fat/\nHigh Fiber', 
-                                'High Fat/\nLow Fiber',
-                                'Low Fat/\nHigh Fiber', 
-                                'Low Fat/\nLow Fiber')) +
+                                'HFt/\nHFb', 
+                                'HFt/\nLFb',
+                                'LFt/\nHFb', 
+                                'LFt/\nLFb')) +
     facet_wrap(~tissue, labeller = labeller(tissue = tissue_labs),
                scales = "free_y") +
     stat_pvalue_manual(histo_dunn,
@@ -151,9 +127,8 @@ histo_plot <- function(big_histo,
 }
 
 
-## file prep 
-histo <- histo_file_prep(args$metadata_FP,
-                         args$histo_FP)
+## reading in histo file
+histo <- read_tsv(args$histo_FP)
 
 ## stats 
 stats <- histo_stats(big_histo = histo)

@@ -21,42 +21,6 @@ library(glue)
 
 **Functions**
 ```{r}
-## data wrangling
-bile_file_prep <- function(bile_acid_fp,
-                           inhibitors,
-                           promoters){
-  ## reading in bile acid file
-  bile_acid <- read_tsv(bile_acid_fp)
-  ## putting together inhibitor table
-  bile_acid %>% 
-    select(diet, tube_numb, tube_label, date, 
-           mouse_id, facility, study, contains(unlist(inhibitors))) %>% 
-    gather(contains('acid'), key = bile_acid, value = concentration) %>% 
-    mutate(c_diff_effect = paste('inhibitor')) %>% 
-    filter(concentration != '#VALUE!') -> inhibit_bile
-  ## putting together promoter table
-  bile_acid %>% 
-    select(diet, tube_numb, tube_label, date, 
-           mouse_id, facility, study, contains(unlist(promoters))) %>% 
-    gather(contains('acid'), key = bile_acid, value = concentration) %>% 
-    mutate(c_diff_effect = paste('promoter')) -> promote_bile
-  ## putting tables back together
-  big_bile_acid <- rbind(inhibit_bile,
-                         promote_bile)
-  ## changing all undetectable values to 0 
-  big_bile_acid$concentration[big_bile_acid$concentration == '<LOD' | big_bile_acid$concentration == '<LOQ'] <- 0
-  ## adding 2 to all values so that all points will be on the plot when transformed to log10
-  big_bile_acid %>% 
-    na.omit() %>% 
-    mutate(concentration = as.numeric(concentration),
-           conc_normalized = concentration + 2) %>% 
-    filter(study != 1) -> big_bile_acid
-  ## creating list of outputs
-  my_list <- list(NonProcBile = bile_acid,
-                  ProcBile = big_bile_acid)
-  return(my_list)
-}
-
 ## statistical analysis function
 bile_stats <- function(big_bile_table,
                        group_cols,
@@ -138,37 +102,24 @@ bile_plots <- function(big_bile_table,
 }
 
 ## promoter to inhibitor ratio file prep, stats, and plot function
-bile_ratio_func <- function(big_bile_table){
-  ## summing the normalized concentration of promoters to inhibitors by mouse id for each diet 
-  big_bile_table %>% 
-    select(-bile_acid) %>% 
-    group_by(diet, c_diff_effect, mouse_id) %>% 
-    summarise(sum = sum(conc_normalized)) %>% 
-    ungroup() -> bile_sum
-  ## them dividing the normalized concentration of promoters/inhibitors for each mouse id by diet
-  bile_sum %>% 
-    spread(c_diff_effect, sum) %>% 
-    group_by(diet, mouse_id) %>% 
-    mutate(ratio = (promoter/inhibitor)) %>% 
-    ungroup() %>% 
-    mutate(ratio_label = paste('C. difficile Promoter:Inhibitor')) -> bile_ratio
+bile_ratio_func <- function(ratio_table){
   ## stats
   ## kruskal test
-  bile_ratio %>% 
+  ratio_table %>% 
     do(tidy(kruskal.test(ratio ~ diet,
                          data = .))) %>% 
     arrange(p.value) %>% 
     mutate(p.adj = p.adjust(p.value,
                             method = 'BH')) -> ratio_kruskal
   ## dunns test
-  bile_ratio %>% 
+  ratio_table %>% 
     dunn_test(ratio ~ diet,
               p.adjust.method = 'BH',
               data = .) %>% 
     add_y_position(scales = 'free_y',
                    fun = 'max') -> ratio_dunn
   ## plot
-  bile_ratio %>% 
+  ratio_table %>% 
     ggplot(aes(x = diet, y = ratio)) +
       geom_boxplot(aes(group = diet), outlier.shape = NA) +
       geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
@@ -184,7 +135,7 @@ bile_ratio_func <- function(big_bile_table){
            y = 'Ratio',
            title = 'Cecal Bile Acid Ratio') -> ratio_bile_plot
   ## creating a list of my outputs
-  my_list <- list(RatioTable = bile_ratio,
+  my_list <- list(RatioTable = ratio_table,
                   RatioKruskal = ratio_kruskal,
                   RatioDunn = ratio_dunn,
                   RatioPlot = ratio_bile_plot)
@@ -194,21 +145,11 @@ bile_ratio_func <- function(big_bile_table){
 
 **File Paths**
 ```{r}
-bile_acid_FP <- '../data/misc/corrected_bile_acid.tsv'
-
-inhibitor_list <- c('_a-MCA',
-                    '_b-MCA',
-                    '_LCA',
-                    '_DCA')
-                    # '_CDCA',
-                    # '_UDCA')
-
-promoter_list <- c('_T-CA',
-                   '_CA')
+bile_acid_FP <- '../data/misc/processed_bile_acid.tsv'
+bile_ratio_FP <- '../data/misc/processed_ratio_bileAcid.tsv'
 
 cdiff_effect_labs <- c('C. difficile Inhibitor',
                        'C. difficile Promoter')
-
 names(cdiff_effect_labs) <- c('inhibitor',
                               'promoter')
 
@@ -216,17 +157,12 @@ bile_labs <- c('a-MCA',
                'b-MCA',
                'LCA',
                'DCA',
-               # 'CDCA',
-               # 'UDCA',
                'TCA',
                'CA')
-  
 names(bile_labs) <- c("Alpha_muricholic_acid_a-MCA",
                      "Beta_muricholic_acid_b-MCA",
                      "Lithocholic_acid_LCA", 
-                     "Deoxycholic_acid_DCA", 
-                     # "Chenodeoxycholic_acid_CDCA",
-                     # "Ursodeoxycholic_acid_UDCA", 
+                     "Deoxycholic_acid_DCA",
                      "Taurocholic_acid_T-CA",
                      "Cholic_acid_CA")
 
@@ -244,13 +180,10 @@ diet_x_labs <- c('Chow',
 Use prescence/abscence tests or rank-based test instead of a non-parametric statistical test!!
 - Look at whether you'd like to include additional bile acids in the promoters/inhibitors categories
 
-**Bile Acid File Prep**
+**Reading in Needed Files**
 ```{r}
-bile_files <- bile_file_prep(bile_acid_FP,
-                             inhibitor_list,
-                             promoter_list)
-
-big_bile_acid <- bile_files$ProcBile
+big_bile_acid <- read_tsv(bile_acid_FP)
+bile_ratio <- read_tsv(bile_ratio_FP)
 ```
 **Stats**
 Had to filter out CDCA and UDCA from the 'inhibitors' category because the dunn_test wouldn't run - I think it's because they're all zeroes so there aren't any pairwise comparisons to do between diets for them. Maybe include T-CDCA and T-DCA as inhibitors instead?
@@ -291,7 +224,7 @@ bile_plot
 
 **Ratio of C. difficile Promoter:Inhibitor**
 ```{r, fig.width=5, fig.height=3.5}
-ratio_files <- bile_ratio_func(big_bile_acid)
+ratio_files <- bile_ratio_func(bile_ratio)
 
 bile_ratio <- ratio_files$RatioTable
 ratio_kruskal <- ratio_files$RatioKruskal

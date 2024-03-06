@@ -195,15 +195,6 @@ hypox_metadata %>%
   mutate(mouse_id = as.character(mouse_id)) %>% 
   left_join(hypoxia, by = 'mouse_id') %>% 
   na.omit() -> hypox_metadata
-
-# hypox_metadata %>% 
-#   group_by(location) %>% 
-#   mutate(sum = sum(fluorescence),
-#          ratio = (fluorescence/sum),
-#          high_fat_scaled = (high_fat * ratio),
-#          high_fiber_scaled = (high_fiber * ratio),
-#          purified_diet_scaled = (purified_diet * ratio)) %>% 
-#   ungroup() -> hypox_metadata
 ```
 Attempting to run this analysis stratified by fiber content of the diets - tried to run it stratified by each diet with HF/HF filtered out and ANCOMBC still wouldn't run (I have a feeling that there aren't enough samples so there isn't enough power to run the statistical test). Just read the ANCOMBC paper - the authors said that ANCOMBC may not work well on a small sample size (n < 10). 
 ```{r, warning=FALSE}

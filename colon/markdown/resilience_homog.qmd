@@ -14,48 +14,9 @@ library(viridis)
 library(rstatix)
 ```
 
+**Resiliency Calculation Functions**
+
 ```{r}
-## general function to prep the metadata file for further data analyses 
-metadata_fixer <- function(metadata_fp) {
-  tmpMeta <- read_tsv(metadata_fp, n_max = 2)
-  mycols <- colnames(tmpMeta)
-  metadata <- read_tsv(metadata_fp, skip = 2, col_names = mycols)
-  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
-  metadata %>% 
-    filter(!is.na(diet)) %>% 
-    mutate(day_post_inf = if_else(day_post_inf == 2, 3, day_post_inf)) %>% 
-    mutate(diet = as.factor(diet)) -> metadata
-  return(metadata)
-}
-
-## for editing my metadata file post metadata fixer 
-meta_diet_fixer <- function(metadata_file,
-                            seq_depth_fp){
-  seq_depths <- read_tsv(seq_depth_fp)
-  metadata_file %>% 
-    select(sampleid, diet, day_post_inf, mouse_id, study) %>% 
-    mutate(diet_true = diet,
-    diet_true = if_else(day_post_inf == -15, "Chow", diet_true),
-    high_fat = case_when(
-      diet_true == 'HF/HF' ~ 1,
-      diet_true == 'HF/LF' ~ 1,
-      .default = 0
-      ), 
-      high_fiber = case_when(
-      diet_true == 'HF/HF' ~ 1,
-      diet_true == 'LF/HF' ~ 1,
-      diet_true == 'Chow' ~ 1,
-      .default = 0
-      ), 
-      purified_diet = case_when(
-      diet_true == 'Chow' ~ 0,
-      .default = 1
-      )
-    ) %>% 
-    left_join(seq_depths) -> metadata
-  return(metadata)
-}
-
 ## this function combines your metadata file and your distance matrix 
 ## it also pulls out the wanted diet variable from the metadata file 
 ## requires the input of a distance matrix (dist_mat), metadata file (meta),
@@ -77,6 +38,163 @@ dist_filter <- function(dist_mat, meta, mydiet){
   return(min_dist_mat)
 }
 
+## this function takes the output from dist_filter and the metadata file 
+## and pulls all unique distance matrix comparisons out for that particular diet 
+## and places them in a new column 
+## it also esta the baseline that all sample pairs will be compared to 
+## requires the distance matrix output from the dist_filter (min_dist_mat),
+## and the metadata file (meta)
+resil_dist_comp <- function(min_dist_mat, meta){
+  meta %>% 
+    select(sampleid, diet, day_post_inf, high_fat, high_fiber, purified_diet,
+           seq_depth, mouse_id) -> min_meta
+  
+  min_dist_mat %>% 
+    rename(sampleid_x = sampleid) %>% 
+    gather(-sampleid_x, key = sampleid_y, value = dist) %>% 
+    merge(min_meta, by.x = 'sampleid_x', by.y = 'sampleid') %>% 
+    merge(min_meta, by.x = 'sampleid_y', by.y = 'sampleid') -> long_dist_mat
+  
+  long_dist_mat %>% 
+    mutate(key = paste0(pmin(sampleid_x, sampleid_y), 
+                        pmax(sampleid_x, sampleid_y), 
+                        sep = "_")) %>% 
+    distinct(key, .keep_all = TRUE) %>% 
+    filter(sampleid_x != sampleid_y,
+           ## for homogenicity testing, do day_post_inf.x == day_post_inf.y 
+           ## and don't filter out day -15 
+           day_post_inf.x == -8,
+           day_post_inf.y > -8) %>% 
+    select(-diet.y) %>% 
+    rename(diet = diet.x) -> long_dist_mat
+  
+  return(long_dist_mat)
+}
+
+## this is a for loop that does the above analysis for each diet variable and places them 
+## in a list of dataframes that can be bound together to create one plot for comparison
+## requires the input of a distance matrix (dist_mat), metadata file (meta),
+## and the list of unique diets (mydiet)
+resil_diet_assembly <- function(dist_mat, 
+                                meta,
+                                mydiet){
+  resil <- list()
+    for (i in 1:length(mydiet)){
+      tmp_dist_mat <- dist_filter(dist_mat, meta, mydiet[i])
+      tmp_resil <- resil_dist_comp(tmp_dist_mat, meta)
+      resil[[i]] <- tmp_resil
+    }
+  resil <- bind_rows(resil)
+  return(resil)
+}
+```
+
+**Homogeneity Calculation Functions**
+
+```{r}
+## this function takes the output from dist_filter and the metadata file 
+## and pulls all unique distance matrix comparisons out for that particular diet 
+## and places them in a new column 
+## it also esta the baseline that all sample pairs will be compared to 
+## requires the distance matrix output from the dist_filter (min_dist_mat),
+## and the metadata file (meta)
+homog_dist_comp <- function(min_dist_mat, meta){
+  meta %>% 
+    select(sampleid, diet, day_post_inf, high_fat, high_fiber, purified_diet,
+           seq_depth, mouse_id) -> min_meta
+  
+  min_dist_mat %>% 
+    rename(sampleid_x = sampleid) %>% 
+    gather(-sampleid_x, key = sampleid_y, value = dist) %>% 
+    merge(min_meta, by.x = 'sampleid_x', by.y = 'sampleid') %>% 
+    merge(min_meta, by.x = 'sampleid_y', by.y = 'sampleid') -> long_dist_mat
+  
+  long_dist_mat %>% 
+    mutate(key = paste0(pmin(sampleid_x, sampleid_y), 
+                        pmax(sampleid_x, sampleid_y), 
+                        sep = "_")) %>% 
+    distinct(key, .keep_all = TRUE) %>% 
+    filter(sampleid_x != sampleid_y,
+           ## for homogenicity testing, do day_post_inf.x == day_post_inf.y 
+           ## and don't filter out day -15 
+           day_post_inf.x == day_post_inf.y) %>% 
+           select(-diet.y) %>% 
+           rename(diet = diet.x) -> long_dist_mat
+  
+  return(long_dist_mat)
+}
+
+## this is a for loop that does the above analysis for each diet variable and places them 
+## in a list of dataframes that can be bound together to create one plot for comparison 
+## requires the input of a distance matrix (dist_mat), metadata file (meta),
+## and the list of unique diets (mydiet)
+homog_diet_assembly <- function(dist_mat, 
+                                meta,
+                                mydiet){
+  homog <- list()
+    for (i in 1:length(mydiet)){
+      tmp_dist_mat <- dist_filter(dist_mat, meta, mydiet[i])
+      tmp_homog <- homog_dist_comp(tmp_dist_mat, meta)
+      homog[[i]] <- tmp_homog
+    }
+  homog <- bind_rows(homog)
+  return(homog)
+}
+```
+
+**Plot Functions**
+
+```{r}
+resil_homog_plots <- function(resil_table,
+                              resil_y,
+                              homog_table,
+                              homog_y){
+  ## resiliency plot
+  resil_table %>% 
+    ggplot(aes(x = day_post_inf.y, y = dist)) +
+      geom_boxplot((aes(group = day_post_inf.y)), outlier.shape = NA) +
+      geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
+      geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
+      geom_line(aes(group = mouse_id.y), alpha = 0.1) +
+      geom_jitter(width = 0.1, alpha = 0.4) +
+      geom_smooth(se = FALSE, method = 'loess') + 
+      scale_x_continuous(breaks = c(-3, 0, 3)) + 
+      scale_y_reverse() +
+      facet_wrap(~diet, 
+                 labeller = labeller(diet = diet_labs),
+                 nrow = 1) +
+      theme_bw(base_size = 20) +
+      xlab('Days Relative to Infection') +
+      ylab(resil_y) +
+      ggtitle('Microbiome Resilience Over Time') -> resil_plot
+  ## homogeneity plot
+  homog_table %>% 
+    ggplot(aes(x = day_post_inf.y, y = dist)) +
+      geom_boxplot((aes(group = day_post_inf.y)), outlier.shape = NA) +
+      geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
+      geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
+      geom_line(aes(group = mouse_id.y), alpha = 0.1) +
+      geom_jitter(width = 0.1, alpha = 0.2) +
+      geom_smooth(se = FALSE, method = 'loess', color = 'blue') + 
+      scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) + 
+      scale_y_reverse() +
+      facet_wrap(~diet, 
+                 labeller = labeller(diet = diet_labs),
+                 nrow = 1) +
+      theme_bw(base_size = 20) +
+      xlab('Days Relative to Infection') +
+      ylab(homog_y) +
+      ggtitle('Microbiome Homogeneity Over Time') -> homog_plot
+  ## plot list 
+  my_list <- list(ResilPlot = resil_plot,
+                  HomogPlot = homog_plot)
+  return(my_list)
+}
+```
+
+**Statistical Analysis Functions**
+
+```{r}
 ## all functions for calculating statistical analysis and creating a plot visualization
 stats <- function(biom_table){
   ## linear modeling 
@@ -161,38 +279,38 @@ stat_plot_prep <- function(biom_table,
 }
 
 ## actual statistical plot visualization!!
-stat_plot <- function(new_dunn){
+stat_plot <- function(new_dunn,
+                      wanted_title){
   new_dunn %>% 
     filter(day_post_inf.y != -15) %>%
-    ggplot(aes(x = group1, y = group2)) +
+    ggplot(aes(x = day_post_inf.y, y = group2)) +
     geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
-    scale_fill_gradient2(low = 'green', high = 'blue', name = 'Group 1 -\nGroup 2',
+    scale_fill_gradient2(high = 'blue', low = 'green', name = 'Group 1 -\nGroup 2',
                          trans = 'reverse') +
     geom_text(aes(label = p.adj.signif)) +
-    scale_x_discrete(labels = c('Chow',
-                                'HFt/\nHFb',
-                                'HFt/\nLFb',
-                                'LFt/\nHFb')) +
+    scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
     scale_y_discrete(labels = c('HFt / HFb',
                                 'HFt / LFb',
                                 'LFt / HFb',
                                 'LFt / LFb')) +
-    facet_grid(~day_post_inf.y) +
+    facet_grid(~group1,
+              scales = 'free_x',
+              labeller = labeller(group1 = stat_labs)) +
     theme_bw(base_size = 20) +
-    theme(strip.text.y = element_text(angle = 0)) +
-    xlab('Group 1') +
+    ggtitle(label = wanted_title,
+            subtitle = 'Group 1') +
+    theme(strip.text.y = element_text(angle = 0),
+          plot.subtitle = element_text(hjust = 0.5)) +
+    xlab('Days Relative to Infection') +
     ylab('Group 2') -> stat_vis
-  return(stat_vis)
+   return(stat_vis)
 }
 ```
 
-Load in datums
-
-Needed file paths for analysis and reading in the needed files for simplicity later on.
+**File Paths**
 
 ```{r, include=FALSE}
-metadata_FP <- '../data/misc/updated_metadata.tsv'
-seq_depth_FP <- '../data/misc/tss_seq_depth.tsv'
+metadata_FP <- '../data/misc/processed_metadata.tsv'
 uu_dist_fp <- '../data/qiime/core_outputs/uw_dist_matrix.tsv'
 wu_dist_fp <- '../data/qiime/core_outputs/w_dist_matrix.tsv'
 ## lists to redo the diet names on the facet labels of the ggplot created below 
@@ -213,125 +331,16 @@ names(stat_labs) <- c('Chow',
                       'HF/LF',
                       'LF/HF')
 
-prep_meta <- metadata_fixer(metadata_fp = metadata_FP)
-meta <- meta_diet_fixer(prep_meta,
-                        seq_depth_FP)
+meta <- read_tsv(metadata_FP)
 uu_dist <- read_tsv(uu_dist_fp)
 wu_dist <- read_tsv(wu_dist_fp)
+
 ## pulling out unique diets 
 diets <- unique(meta$diet)
-```
-
-# Functions for Homogeneity and Resilience Calculations
-
-```{r}
-## resiliency ggplot prep functions 
-
-## this function takes the output from dist_filter and the metadata file 
-## and pulls all unique distance matrix comparisons out for that particular diet 
-## and places them in a new column 
-## it also esta the baseline that all sample pairs will be compared to 
-## requires the distance matrix output from the dist_filter (min_dist_mat),
-## and the metadata file (meta)
-resil_dist_comp <- function(min_dist_mat, meta){
-  meta %>% 
-    select(sampleid, diet, day_post_inf, high_fat, high_fiber, purified_diet,
-           seq_depth, mouse_id) -> min_meta
-  
-  min_dist_mat %>% 
-    rename(sampleid_x = sampleid) %>% 
-    gather(-sampleid_x, key = sampleid_y, value = dist) %>% 
-    merge(min_meta, by.x = 'sampleid_x', by.y = 'sampleid') %>% 
-    merge(min_meta, by.x = 'sampleid_y', by.y = 'sampleid') -> long_dist_mat
-  
-  long_dist_mat %>% 
-    mutate(key = paste0(pmin(sampleid_x, sampleid_y), 
-                        pmax(sampleid_x, sampleid_y), 
-                        sep = "_")) %>% 
-    distinct(key, .keep_all = TRUE) %>% 
-    filter(sampleid_x != sampleid_y,
-           ## for homogenicity testing, do day_post_inf.x == day_post_inf.y 
-           ## and don't filter out day -15 
-           day_post_inf.x == -8,
-           day_post_inf.y > -8) %>% 
-    select(-diet.y) %>% 
-    rename(diet = diet.x) -> long_dist_mat
-  
-  return(long_dist_mat)
-}
-
-## this is a for loop that does the above analysis for each diet variable and places them 
-## in a list of dataframes that can be bound together to create one plot for comparison
-## requires the input of a distance matrix (dist_mat), metadata file (meta),
-## and the list of unique diets (mydiet)
-resil_diet_assembly <- function(dist_mat, 
-                                meta,
-                                mydiet){
-  resil <- list()
-    for (i in 1:length(mydiet)){
-      tmp_dist_mat <- dist_filter(dist_mat, meta, mydiet[i])
-      tmp_resil <- resil_dist_comp(tmp_dist_mat, meta)
-      resil[[i]] <- tmp_resil
-    }
-  resil <- bind_rows(resil)
-  return(resil)
-}
-
-
-## homogeneity ggplot prep functions 
-
-## this function takes the output from dist_filter and the metadata file 
-## and pulls all unique distance matrix comparisons out for that particular diet 
-## and places them in a new column 
-## it also esta the baseline that all sample pairs will be compared to 
-## requires the distance matrix output from the dist_filter (min_dist_mat),
-## and the metadata file (meta)
-homog_dist_comp <- function(min_dist_mat, meta){
-  meta %>% 
-    select(sampleid, diet, day_post_inf, high_fat, high_fiber, purified_diet,
-           seq_depth, mouse_id) -> min_meta
-  
-  min_dist_mat %>% 
-    rename(sampleid_x = sampleid) %>% 
-    gather(-sampleid_x, key = sampleid_y, value = dist) %>% 
-    merge(min_meta, by.x = 'sampleid_x', by.y = 'sampleid') %>% 
-    merge(min_meta, by.x = 'sampleid_y', by.y = 'sampleid') -> long_dist_mat
-  
-  long_dist_mat %>% 
-    mutate(key = paste0(pmin(sampleid_x, sampleid_y), 
-                        pmax(sampleid_x, sampleid_y), 
-                        sep = "_")) %>% 
-    distinct(key, .keep_all = TRUE) %>% 
-    filter(sampleid_x != sampleid_y,
-           ## for homogenicity testing, do day_post_inf.x == day_post_inf.y 
-           ## and don't filter out day -15 
-           day_post_inf.x == day_post_inf.y) %>% 
-           select(-diet.y) %>% 
-           rename(diet = diet.x) -> long_dist_mat
-  
-  return(long_dist_mat)
-}
-
-## this is a for loop that does the above analysis for each diet variable and places them 
-## in a list of dataframes that can be bound together to create one plot for comparison 
-## requires the input of a distance matrix (dist_mat), metadata file (meta),
-## and the list of unique diets (mydiet)
-homog_diet_assembly <- function(dist_mat, 
-                                meta,
-                                mydiet){
-  homog <- list()
-    for (i in 1:length(mydiet)){
-      tmp_dist_mat <- dist_filter(dist_mat, meta, mydiet[i])
-      tmp_homog <- homog_dist_comp(tmp_dist_mat, meta)
-      homog[[i]] <- tmp_homog
-    }
-  homog <- bind_rows(homog)
-  return(homog)
-}
 
 ```
 
-# Resilience and Homogeneity Calculations
+**Resiliency and Homogeneity Calculations**
 
 ```{r}
 ## unweighted unifrac
@@ -354,37 +363,26 @@ wu_homog <- homog_diet_assembly(wu_dist,
                                 diets)
 ```
 
-**Unweighted UniFrac Resiliency Plot**
-
-This plot looks at microbiome resiliency over time by the five different diets using the unweighted UniFrac distance matrix and metadata file (above functions).
+**Unweighted UniFrac Resiliency and Homogeneity Plots**
 
 ```{r, warning=FALSE, fig.width=14, fig.height=5}
-uu_resil %>% 
-  ggplot(aes(x = day_post_inf.y, y = dist)) +
-    geom_boxplot((aes(group = day_post_inf.y)), outlier.shape = NA) +
-    geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
-    geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
-    geom_line(aes(group = mouse_id.y), alpha = 0.1) +
-    geom_jitter(width = 0.1, alpha = 0.2) +
-    geom_smooth(se = FALSE, method = 'loess') + 
-    scale_x_continuous(breaks = c(-3, 0, 3)) + 
-    scale_y_reverse() +
-    facet_wrap(~diet, 
-               labeller = labeller(diet = diet_labs),
-               nrow = 1) +
-    theme_bw(base_size = 20) +
-    xlab('Days Relative to Infection') +
-    ylab('Unweighted UniFrac Distance\n(Pairwise Distances from Day -8)') +
-    ggtitle("Microbiome Resilience Over Time") -> uu_resil_plot
+uu_plots <- resil_homog_plots(uu_resil,
+                              'Unweighted UniFrac Distance\n(Pairwise Distances from Day -8)',
+                              uu_homog,
+                              'Unweighted UniFrac Distance\n(Pairwise Distances within Day)')
+
+uu_resil_plot <- uu_plots$ResilPlot
+uu_homog_plot <- uu_plots$HomogPlot
 
 uu_resil_plot
+uu_homog_plot
 ```
 
-**Unweighted UniFrac Resiliency Linear Modeling, Kruskal-Wallis, and Dunn's Post Hoc Test**
+**Unweighted UniFrac Resiliency and Homogeneity Linear Modeling, Kruskal-Wallis, and Dunn's Post Hoc Test**
 
 Statistical analysis by diet for the unweighted UniFrac resiliency plot above.
 
-```{r, fig.height=3.5, fig.width=13}
+```{r, fig.height=4, fig.width=13}
 uu_resil_stats <- stats(uu_resil)
 
 uu_resil_lm <- uu_resil_stats$LinearModel
@@ -393,40 +391,49 @@ uu_resil_dunn <- uu_resil_stats$DunnPostHoc
 
 new_uu_resil_dunn <- stat_plot_prep(uu_resil,
                                     uu_resil_dunn)
-stat_plot(new_uu_resil_dunn) -> uu_resil_stat_vis
+stat_plot(new_uu_resil_dunn,
+          'Resilience Comparisons') -> uu_resil_stat_vis
 
 uu_resil_stat_vis
 ```
 
-**Weighted UniFrac Resiliency Plot**
+Homogeneity!!
+
+```{r, fig.height=4, fig.width=13}
+uu_homog_stats <- stats(uu_homog)
+
+uu_homog_lm <- uu_homog_stats$LinearModel
+uu_homog_kruskal <- uu_homog_stats$KruskalTest
+uu_homog_dunn <- uu_homog_stats$DunnPostHoc
+
+stat_plot_prep(uu_homog,
+               uu_homog_dunn) -> new_uu_homog_dunn
+stat_plot(new_uu_homog_dunn,
+          'Homogeneity Comparisons') -> uu_homog_stat_vis
+
+uu_homog_stat_vis
+```
+
+**Weighted UniFrac Resiliency and Homogeneity Plots**
 
 This plot looks at microbiome resiliency over time by the five different diets using the weighted UniFrac distance matrix and metadata file (above functions).
 
 ```{r, warning=FALSE, fig.width=14, fig.height=5}
-wu_resil %>% 
-  ggplot(aes(x = day_post_inf.y, y = dist)) +
-    geom_boxplot((aes(group = day_post_inf.y)), outlier.shape = NA) +
-    geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
-    geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
-    geom_line(aes(group = mouse_id.y), alpha = 0.1) +
-    geom_jitter(width = 0.1, alpha = 0.2) +
-    geom_smooth(se = FALSE, method = 'loess') + 
-    scale_x_continuous(breaks = c(-3, 0, 3)) + 
-    scale_y_reverse() +
-    facet_wrap(~diet, 
-               labeller = labeller(diet = diet_labs),
-               nrow = 1) +
-    theme_bw(base_size = 20) +
-    xlab('Days Relative to Infection') +
-    ylab('Weighted UniFrac Distance\n(Pairwise Distances from Day -8)') +
-    ggtitle("Microbiome Resilience Over Time") -> wu_resil_plot
+wu_plots <- resil_homog_plots(wu_resil,
+                              'Weighted UniFrac Distance\n(Pairwise Distances from Day -8)',
+                              wu_homog,
+                              'Weighted UniFrac Distance\n(Pairwise Distances within Day)')
+
+wu_resil_plot <- wu_plots$ResilPlot
+wu_homog_plot <- wu_plots$HomogPlot
 
 wu_resil_plot
+wu_homog_plot
 ```
 
 **Weighted UniFrac Resiliency Linear Modeling, Kruskal-Wallis, and Dunn's Post Hoc Test**
 
-```{r}
+```{r, fig.height=4, fig.width=13}
 wu_resil_stats <- stats(wu_resil)
 
 wu_resil_lm <- wu_resil_stats$LinearModel
@@ -436,83 +443,15 @@ wu_resil_dunn <- wu_resil_stats$DunnPostHoc
 stat_plot_prep(wu_resil,
                wu_resil_dunn) -> new_w_resil_dunn
 
-```
-
-Weighted UniFrac Resiliency Dunn's Post Hoc Visualization
-
-```{r, fig.height=3.5, fig.width=13}
-stat_plot(new_w_resil_dunn) -> w_resil_stat_vis
+stat_plot(new_w_resil_dunn,
+          'Resilience Comparisons') -> w_resil_stat_vis
 
 w_resil_stat_vis
 ```
 
-**Unweighted UniFrac Homogeneity Plot**\
-
-```{r, warning=FALSE, fig.width=14, fig.height=5}
-uu_homog %>% 
-  ggplot(aes(x = day_post_inf.y, y = dist)) +
-    geom_boxplot((aes(group = day_post_inf.y)), outlier.shape = NA) +
-    geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
-    geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
-    geom_line(aes(group = mouse_id.y), alpha = 0.1) +
-    geom_jitter(width = 0.1, alpha = 0.2) +
-    geom_smooth(se = FALSE, method = 'loess', color = 'blue') + 
-    scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) + 
-    scale_y_reverse() +
-    facet_wrap(~diet, 
-               labeller = labeller(diet = diet_labs),
-               nrow = 1) +
-    theme_bw(base_size = 20) +
-    xlab('Days Relative to Infection') +
-    ylab('Unweighted UniFrac Distance\n(Pairwise Distances within Day)') +
-    ggtitle("Microbiome Homogeneity Over Time") -> uu_homog_plot
-
-uu_homog_plot
-```
-
-**Unweighted UniFrac Homogeneity Linear Modeling**
-
-```{r, fig.height=3.5, fig.width=13}
-uu_homog_stats <- stats(uu_homog)
-
-uu_homog_lm <- uu_homog_stats$LinearModel
-uu_homog_kruskal <- uu_homog_stats$KruskalTest
-uu_homog_dunn <- uu_homog_stats$DunnPostHoc
-
-stat_plot_prep(uu_homog,
-               uu_homog_dunn) -> new_uu_homog_dunn
-stat_plot(new_uu_homog_dunn) -> uu_homog_stat_vis
-
-uu_homog_stat_vis
-```
-
-**Weighted UniFrac Homogeneity Plot**
-
-```{r, warning=FALSE, fig.width=14, fig.height=5}
-wu_homog %>% 
-  ggplot(aes(x = day_post_inf.y, y = dist)) +
-    geom_boxplot((aes(group = day_post_inf.y)), outlier.shape = NA) +
-    geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
-    geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
-    geom_line(aes(group = mouse_id.y), alpha = 0.1) +
-    geom_jitter(width = 0.1, alpha = 0.2) +
-    geom_smooth(se = FALSE, method = 'loess', color = 'blue') + 
-    scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) + 
-    scale_y_reverse() +
-    facet_wrap(~diet, 
-               labeller = labeller(diet = diet_labs),
-               nrow = 1) +
-    theme_bw(base_size = 20) +
-    xlab('Days Relative to Infection') +
-    ylab('Weighted UniFrac Distance\n(Pairwise Distances within Day)') +
-    ggtitle("Microbiome Homogeneity Over Time") -> wu_homog_plot
-
-wu_homog_plot
-```
-
 **Weighted UniFrac Homogeneity Linear Modeling**
 
-```{r}
+```{r, fig.height=3.5, fig.width=13}
 wu_homog_stats <- stats(wu_homog)
 
 wu_homog_lm <- wu_homog_stats$LinearModel
@@ -521,12 +460,9 @@ wu_homog_dunn <- wu_homog_stats$DunnPostHoc
 
 stat_plot_prep(wu_homog,
                wu_homog_dunn) -> new_wu_homog_dunn
-```
 
-Weighted UniFrac Homogeneity Dunn's Post Hoc Visualization
-
-```{r, fig.height=3.5, fig.width=13}
-stat_plot(new_wu_homog_dunn) -> w_homog_stat_vis
+stat_plot(new_wu_homog_dunn,
+          'Homogeneity Comparisons') -> w_homog_stat_vis
 
 w_homog_stat_vis
 ```
@@ -615,22 +551,4 @@ ggsave("uu_resil_homog_stat_vis.pdf",
        width = 28, 
        height = 9,
        path = '../plots')
-
-## as an rdata object
-save(wu_resil_plot,
-     file = '../figures/wu_resil.rdata')
-save(uu_resil_plot,
-     file = '../figures/uu_resil.rdata')
-save(wu_homog_plot,
-     file = '../figures/wu_homog.rdata')
-save(uu_homog_plot,
-     file = '../figures/uu_homog.rdata')
-save(w_resil_stat_vis,
-     file = '../figures/wu_resil_stats.rdata')
-save(uu_resil_stat_vis,
-     file = '../figures/uu_resil_stats.rdata')
-save(w_homog_stat_vis,
-     file = '../figures/wu_homog_stats.rdata')
-save(uu_homog_stat_vis,
-     file = '../figures/uu_homog_stats.rdata')
 ```

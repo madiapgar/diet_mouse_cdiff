@@ -1,0 +1,160 @@
+---
+title: "bc_abun_plots"
+output: html_document
+date: "2024-03-14"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggpubr)
+library(ggplot2)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+library(broom)
+library(cowplot)
+library(vegan)
+library(viridis)
+```
+
+**Functions**
+```{r}
+## 1
+abun_file_prep <- function(metadata_fp,
+                                  tax_fp,
+                                  otu_table_fp,
+                                  tax_level,
+                                  wanted_tax){
+  ## metadata
+  metadata <- read_tsv(metadata_fp)
+  ## taxonomy
+  taxonomy <- read_qza(tax_fp)$data %>% 
+    parse_taxonomy() %>% 
+    rownames_to_column('asv')
+  ## otu table 
+  otu_table <- read_qza(otu_table_fp)$data
+  otu_table %>% 
+    as_tibble(rownames = 'asv') %>% 
+    gather(-asv, key = sampleid, value = abun) %>% 
+    group_by(sampleid) %>% 
+    mutate(rel_abun = abun/sum(abun)) %>% 
+    mutate(rel_abun = rel_abun + 0.000001) -> otu_table
+  ## joining all tables together 
+  otu_table %>% 
+    left_join(metadata, by = 'sampleid') %>% 
+    left_join(taxonomy, by = 'asv') -> abun_table
+  abun_table %>% 
+    group_by(sampleid, diet, vendor,
+             cultured_from, oxygen_tol, .data[[tax_level]]) %>% 
+    summarise(rel_abund = sum(rel_abun)) %>% 
+    filter(.data[[tax_level]] %in% wanted_tax) -> abun_filt
+  ## creating a list for my outputs
+  my_list <- list(Metadata = metadata,
+                  Taxonomy = taxonomy,
+                  OTUTable = otu_table,
+                  AbundanceTable = abun_filt)
+  return(my_list)
+}
+
+## 2 
+abun_plots <- function(abundance_table){
+  ## first plot
+  abundance_table %>%
+    filter(!is.na(diet)) %>% 
+    ggplot(aes(x = vendor, y = rel_abund)) +
+    scale_y_continuous(trans = 'log10') +
+    geom_boxplot(aes(group = vendor), outlier.shape = NA) +
+    geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
+    scale_x_discrete(labels = c("Charles\nRiver",
+                                "Taconic")) +
+    theme_bw(base_size = 16) +
+    facet_grid(Genus~diet, labeller = labeller(diet = diet_labs)) +
+    theme(strip.text.y = element_text(angle = 0)) +
+    ggtitle("Blood Culture Relative Abundance") +
+    ylab("Relative Abundance") +
+    xlab("Vendor") -> abun1
+  ## second plot
+  abundance_table %>%
+    filter(!is.na(diet)) %>% 
+    ggplot(aes(x = diet, y = rel_abund)) +
+    scale_y_continuous(trans = 'log10') +
+    geom_boxplot(aes(group = diet), outlier.shape = NA) +
+    geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
+    scale_x_discrete(labels = c("Chow",
+                                "LFt/LFb")) +
+    theme_bw(base_size = 16) +
+    facet_wrap(~Genus) +
+    theme(strip.text.y = element_text(angle = 0)) +
+    ggtitle("Blood Culture Relative Abundance") +
+    ylab("Relative Abundance") +
+    xlab("Diet") -> abun2
+  ## creating a list of my two plots
+  my_list <- list(Abundance1 = abun1,
+                  Abundance2 = abun2)
+  return(my_list)
+}
+```
+
+**File Paths**
+```{r}
+otu_table_FP <- '../data/bloodCulture_qiime/filt_otu_table.qza'
+tax_FP <- '../data/bloodCulture_qiime/taxonomy.qza'
+metadata_FP <- '../data/misc/proc_blood_culture_meta.tsv'
+
+diet_labs <- 
+  c('Chow',
+    'Low Fat / Low Fiber')
+names(diet_labs) <- c('Chow',
+                      'LF/LF')
+wanted_level <- 'Genus'
+wanted_genus <- c('Proteus', 
+                  'Escherichia-Shigella',
+                  'Enterococcus',
+                  'Staphylococcus',
+                  'Erysipelatoclostridium',
+                  '[Clostridium]_innocuum_group',
+                  'Bacteroides')
+```
+
+**Data Wrangling for Plot**
+```{r}
+abun_files <- abun_file_prep(metadata_FP,
+                             tax_FP,
+                             otu_table_FP,
+                             wanted_level,
+                             wanted_genus)
+
+## pulling the abundance table out, you can also take metadata, otu table, and taxonomic info
+## out of the list output 
+abun_filt <- abun_files$AbundanceTable
+```
+
+**Plots**
+```{r, fig.height=9, fig.width=9}
+bc_abun_plots <- abun_plots(abun_filt)
+
+## scatter plot by wanted microbe families and diet at day 3 in the cecum 
+abun1 <- bc_abun_plots$Abundance1
+## scatter plot faceted by wanted microbe families with diet on the x-axis for visual comparisons by diet 
+abun2 <- bc_abun_plots$Abundance2
+
+abun1
+abun2
+```
+
+**Saving my Outputs**
+```{r}
+## option #1
+ggsave('../plots/bloodCulture_abun1.pdf',
+       plot = abun1, 
+       width = 9, 
+       height = 9)
+## option #2
+ggsave('../plots/bloodCulture_abun2.pdf',
+       plot = abun2, 
+       width = 9, 
+       height = 9)
+```

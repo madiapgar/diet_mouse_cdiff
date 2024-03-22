@@ -23,9 +23,7 @@ library(viridis)
 **Functions**
 ```{r}
 ## histo plot comparison function
-comp_plot <- function(histo_table,
-                      ## toxin or metabolomics?
-                       wanted_table,
+comp_plot <- function(compiled_table,
                        ## this is what you want your x axis to be (neat, diluted, or concentration)? 
                        wanted_x,
                        ## this is toxin/metabolite column you want to filter by (neat or diluted)?
@@ -36,11 +34,6 @@ comp_plot <- function(histo_table,
                        diet_labels,
                        non_diet_labels,
                        title){
-  ## putting tables together
-  histo_table %>% 
-    select(mouse_id, tissue, score, diet) %>% 
-    left_join(wanted_table, by = 'mouse_id') %>% 
-    na.omit() -> compiled_table
   ## constructing plot
   compiled_table %>% 
     filter(.data[[wanted_y]] == wanted_y_name) %>% 
@@ -217,33 +210,47 @@ histo %>%
   select(mouse_id, tissue, score, diet) %>% 
   left_join(neat_toxin, by = 'mouse_id') %>% 
   na.omit() -> histo_neat_toxin
+
+## creating mini histo_neat_toxin table that only contains low fiber diets 
+histo_neat_toxin %>% 
+  filter(diet == "HF/LF" | diet == "LF/LF") -> mini_histo_neat_toxin
 ```
 
 #**Toxin to Histopathology Scores Comparisons**
 **Neat TcdA and TcdB Plot Construction**
 ```{r, warning=FALSE, fig.height=4, fig.width=9}
-## neat tcdA
-neat_histo_cecum_plot <- comp_plot(histo,
-                                 neat_toxin,
-                                 'neat_conc_norm',
-                                 'tissue',
-                                 'cecum',
-                                 'neat_toxin',
-                                 diet_labs,
-                                 neat_labs,
-                                 'Cecum C. difficile Toxin by Histopathology')
-## neat tcdB
-neat_histo_colon_plot <- comp_plot(histo,
-                                 neat_toxin,
-                                 'neat_conc_norm',
-                                 'tissue',
-                                 'colon',
-                                 'neat_toxin',
-                                 diet_labs,
-                                 neat_labs,
-                                 'Colon C. difficile Toxin by Histopathology')
+## neat cecum
+neat_histo_cecum_plot <- comp_plot(histo_neat_toxin,
+                                   'neat_conc_norm',
+                                   'tissue',
+                                   'cecum',
+                                   'neat_toxin',
+                                   diet_labs,
+                                   neat_labs,
+                                   'Cecum C. difficile Toxin by Histopathology')
+
+## mini neat cecum
+mini_neat_histo_cecum_plot <- comp_plot(mini_histo_neat_toxin,
+                                         'neat_conc_norm',
+                                         'tissue',
+                                         'cecum',
+                                         'neat_toxin',
+                                         diet_labs,
+                                         neat_labs,
+                                         'Cecum C. difficile Toxin by Histopathology')
+
+## neat colon
+neat_histo_colon_plot <- comp_plot(histo_neat_toxin,
+                                   'neat_conc_norm',
+                                   'tissue',
+                                   'colon',
+                                   'neat_toxin',
+                                   diet_labs,
+                                   neat_labs,
+                                   'Colon C. difficile Toxin by Histopathology')
 neat_histo_cecum_plot
 neat_histo_colon_plot
+mini_neat_histo_cecum_plot
 ```
 
 **Toxin Stats (to put on plots)**
@@ -262,7 +269,7 @@ neatTox_stat_table['signif'] <- symnum(neatTox_stat_table$p_value,
 
 **P-values on Neat Toxin Plots**
 Adding p-value to actual facet block on the plot for increased readability. 
-```{r, fig.height=6, fig.width=15}
+```{r, fig.height=4, fig.width=5}
 neatTox_stat_table %>% 
   filter(signif != 'ns') %>% 
   select(diet, tox_metab, signif, p_value, tissue) %>% 
@@ -290,6 +297,14 @@ neat_histo_cecum_plot +
             fontface = 'bold',
             size = 6) -> neat_cecumHisto_stats_plot
 
+## mini cecum
+mini_neat_histo_cecum_plot +
+  geom_label(data = cecal_neat_stat_table, 
+            label = cecal_neat_stat_table$p_value,
+            color = 'black',
+            fontface = 'bold',
+            size = 4) -> mini_neat_cecumHisto_stats_plot
+
 ## colon 
 procNeat_stat_table %>% 
   filter(tissue == 'colon') %>% 
@@ -302,7 +317,9 @@ neat_histo_colon_plot +
             fontface = 'bold',
             size = 3) -> neat_colonHisto_stats_plot
 
+
 neat_cecumHisto_stats_plot
+mini_neat_cecumHisto_stats_plot
 neat_colonHisto_stats_plot
 ```
 
@@ -334,30 +351,29 @@ neat_toxin_histo_plots
 **Metabolomics Plots**
 ```{r, warning=FALSE, fig.height=5, fig.width=10}
 ## cecum 
-histo_metabCecum_plot <- comp_plot(histo,
-                               metab,
-                               'metab_conc_norm',
-                               'tissue',
-                               'cecum',
-                               'metabolite',
-                               diet_labs,
-                               metab_labs,
-                               'Cecum SCFAs by Histopathology')
+histo_metabCecum_plot <- comp_plot(histo_metab,
+                                   'metab_conc_norm',
+                                   'tissue',
+                                   'cecum',
+                                   'metabolite',
+                                   diet_labs,
+                                   metab_labs,
+                                   'Cecum SCFAs by Histopathology')
 
 ## colon
-histo_metabColon_plot <- comp_plot(histo,
-                                 metab,
-                                 'metab_conc_norm',
-                                 'tissue',
-                                 'colon',
-                                 'metabolite',
-                                 diet_labs,
-                                 metab_labs,
-                                 'Colon SCFAs by Histopathology')
+histo_metabColon_plot <- comp_plot(histo_metab,
+                                   'metab_conc_norm',
+                                   'tissue',
+                                   'colon',
+                                   'metabolite',
+                                    diet_labs,
+                                    metab_labs,
+                                   'Colon SCFAs by Histopathology')
 
 histo_metabCecum_plot
 histo_metabColon_plot
 ```
+
 **Metabolite Stats**
 ```{r}
 ## metabolite stats
@@ -497,5 +513,7 @@ save(histo_metabColon_plot,
      file = '../../figures/histo_metab_colon.rdata')
 save(metab_stat_vis,
      file = '../../figures/histo_metab_stats.rdata')
+save(mini_neat_cecumHisto_stats_plot,
+     file = '../../posters/mini_neat_cecumHisto_stats.rdat')
 ```
 

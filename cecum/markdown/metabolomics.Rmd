@@ -117,9 +117,9 @@ Metabolomics file has already been joined with the metadata so it doesn't need t
 ```{r}
 metab_FP <- '../data/misc/processed_metabolomics.tsv'
 
-metab_labs <- c('Acetic Acid',
-                'Propanoic Acid',
-                'n-Butanoic Acid')
+metab_labs <- c('Acetate',
+                'Propionate',
+                'Butyrate')
 names(metab_labs) <- c('Acetic Acid (ug/g)',
                        'Propanoic Acid (ug/g)',
                        'n-Butanoic Acid (ug/g)')

@@ -56,6 +56,7 @@ Plots to go in figure:
 ```{r, warning=FALSE, fig.height=12, fig.width=20}
 fig2_top_row <- plot_grid(neat_plot +
                             theme_bw(base_size = 20) +
+                            ylab('Concentration (ng/uL)') +
                             ggtitle('Cecum C. difficile Toxin Concentration'),
                           all_day_plot +
                             theme_bw(base_size = 20) +
@@ -70,7 +71,8 @@ fig2_top_row <- plot_grid(neat_plot +
 
 fig2_bottom_row <- plot_grid(neat_cecumHisto_stats_plot +
                                theme_bw(base_size = 20) +
-                               theme(strip.text.y.right = element_text(angle = 0)),
+                               theme(strip.text.y.right = element_text(angle = 0)) +
+                               xlab('Concentration (ng/uL) (log10)'),
                             labels = c('c)'),
                             label_size = 20)
 plot_grid(fig2_top_row,

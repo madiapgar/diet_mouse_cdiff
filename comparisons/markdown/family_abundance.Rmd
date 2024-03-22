@@ -287,8 +287,14 @@ poster_wanted_family <- c('Lachnospiraceae',
                           'Enterococcaceae', 
                           'Staphylococcaceae')
 
-cdiff_level <- 'Genus'
-wanted_genus <- 'Clostridioides'
+wanted_level2 <- 'Genus'
+wanted_genus <- c('Proteus', 
+                  'Escherichia-Shigella',
+                  'Enterococcus',
+                  'Staphylococcus',
+                  'Erysipelatoclostridium',
+                  '[Clostridium]_innocuum_group',
+                  'Bacteroides')
 ```
 
 **File Prep for Plot Construction**
@@ -421,30 +427,30 @@ plots_together
 poster_plots_together
 ```
 
-**Plotting the Relative Abundance of C. diff Specifically**
-could go to the genus level because all species under the genus level were c. diff
-```{r, warning=FALSE, fig.height=5, fig.width=15}
-cdiff_files <- family_abun_file_prep(metadata_FP,
+**Plotting the Relative Abundance of Genus Specifically**
+looking at genuses found in the blood culture results in our microbiome data. 
+```{r, warning=FALSE, fig.height=10, fig.width=17}
+genus_files <- family_abun_file_prep(metadata_FP,
                                      tax_FP,
                                      otu_table_FP,
-                                     cdiff_level,
+                                     wanted_level2,
                                      wanted_genus)
 
-cdiff_abun_filt <- cdiff_files$AbundanceTable
+genus_abun_filt <- genus_files$AbundanceTable
 
 ## plots
-cdiff_plot1 <- abun_plots(abundance_table = cdiff_abun_filt,
+genus_plot1 <- abun_plots(abundance_table = genus_abun_filt,
                           x_axis = 'day_post_inf',
                           y_axis = 'rel_abund',
                           box_group_by = 'day_post_inf',
                           line_group_by = 'mouse_fact',
-                          facet_rows = cdiff_level,
+                          facet_rows = wanted_level2,
                           row_labs = NULL,
                           col_labs = diet_labs,
-                          title = 'C. difficile Relative Abundance',
+                          title = 'Microbiome Genus Relative Abundance',
                           x_label = 'Days Relative to Infection',
                           y_label = 'Relative Abundance')
-cdiff_plot1
+genus_plot1
 ```
 
 **Saving my Outputs**
@@ -465,6 +471,10 @@ ggsave("famAbun_together.pdf",
        width = 35, 
        height = 15, 
        path = '../plots')
+ggsave("../plots/genus_abun1.pdf",
+       plot = genus_plot1,
+       width = 17,
+       height = 10)
 
 ## plots as an rdata object
 save(family_abun1,
@@ -475,6 +485,8 @@ save(poster_abun1,
      file = '../../posters/poster_fam_abun.rdat')
 save(poster_stat_plot1,
      file = '../../posters/poster_fam_abun_stats.rdat')
+save(genus_plot1,
+     file = '../../figures/genus_abun.rdat')
 
 ## linear modeling results
 write_tsv(family_abun_lm,

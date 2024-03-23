@@ -1,0 +1,11 @@
+sampleid	BHI.aerobic.blood	BHI.anaerobic.blood	PYG.aerobic.blood	PYG.anaerobic.blood	BHI.aerobic.spleen	PYG.aerobic.spleen
+CDD01.Tc.LFLF.1	110	30	0	20	0	0
+CDD01.Tc.LFLF.2	2000	2000	0	2200	0	0
+CDD01.CR.LFLF.1	190	60	180	180	0	0
+CDD01.CR.LFLF.2	650	750	670	720	0	0
+CDD01.CR.LFLF.3	280	280	170	220	0	0
+CDD01.CR.Chow.1	0	0	0	0	14	7
+CDD01.CR.Chow.2	0	130	40	100	20	20
+CDD01.Tc.Chow.1	0	0	0	0	0	0
+CDD01.Tc.Chow.2	0	0	0	0	0	0
+CDD01.Tc.LFLF.3	0	0	0	0	0	10

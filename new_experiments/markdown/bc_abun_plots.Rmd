@@ -18,6 +18,7 @@ library(broom)
 library(cowplot)
 library(vegan)
 library(viridis)
+library(rstatix)
 ```
 
 **Functions**
@@ -70,7 +71,7 @@ abun_plots <- function(abundance_table){
     geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
     scale_x_discrete(labels = c("Charles\nRiver",
                                 "Taconic")) +
-    theme_bw(base_size = 16) +
+    theme_bw(base_size = 20) +
     facet_grid(Genus~diet, labeller = labeller(diet = diet_labs)) +
     theme(strip.text.y = element_text(angle = 0)) +
     ggtitle("Blood Culture Relative Abundance") +
@@ -84,9 +85,10 @@ abun_plots <- function(abundance_table){
     geom_boxplot(aes(group = diet), outlier.shape = NA) +
     geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
     scale_x_discrete(labels = c("Chow",
-                                "LFt/LFb")) +
-    theme_bw(base_size = 16) +
-    facet_wrap(~Genus) +
+                                "LFt/\nLFb")) +
+    theme_bw(base_size = 20) +
+    facet_grid(Genus~oxygen_tol,
+               labeller = labeller(oxygen_tol = oxy_tol_labs)) +
     theme(strip.text.y = element_text(angle = 0)) +
     ggtitle("Blood Culture Relative Abundance") +
     ylab("Relative Abundance") +
@@ -96,6 +98,55 @@ abun_plots <- function(abundance_table){
                   Abundance2 = abun2)
   return(my_list)
 }
+
+## 3
+## for processing colony count data
+colony_stats_plot <- function(colony_table){
+  ##stats
+  ## kruskal-wallis test
+  colony_table %>% 
+    group_by(oxygen_tol) %>% 
+    do(tidy(kruskal.test(colony_count ~ diet,
+                         data = .))) %>% 
+    ungroup() %>%
+    arrange(p.value) %>%
+    mutate(p.adj = p.adjust(p.value,
+                            method = "BH"),
+           test_id = paste(oxygen_tol)) %>% 
+    filter(p.adj <= 0.05) -> kruskal
+  ## dunn's post hoc test
+  colony_table %>% 
+    group_by(oxygen_tol) %>% 
+    mutate(test_id = paste(oxygen_tol)) %>% 
+    filter(test_id %in% kruskal$test_id) %>% 
+    dunn_test(colony_count ~ diet,
+              p.adjust.method = 'BH',
+              data =.) %>% 
+    add_y_position(scales = 'free_y', step.increase = 0) -> dunn
+  ## plot
+  colony_table %>% 
+    ggplot(aes(x = diet, y = colony_count)) +
+    geom_boxplot(aes(group = diet), outlier.shape = NA) +
+    geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
+    facet_grid(~oxygen_tol,
+               labeller = labeller(oxygen_tol = oxy_tol_labs)) +
+    scale_x_discrete(labels = c('Chow', 
+                                'Lft/\nLfb')) +
+    stat_pvalue_manual(dunn,
+                         tip.length = 0.01,
+                         label = 'p.adj.signif',
+                         hide.ns = TRUE,
+                         step.increase = 0.1) +
+    theme_bw(base_size = 20) +
+    labs(x = 'Diet',
+         y = 'CFUs/50uL',
+         title = 'Total Blood Culture Colony Counts') -> plot
+  ## creating a list of my outputs
+  my_list <- list(KruskalTest = kruskal,
+                  DunnTest = dunn,
+                  ColonyPlot = plot)
+  return(my_list)
+}
 ```
 
 **File Paths**
@@ -103,12 +154,19 @@ abun_plots <- function(abundance_table){
 otu_table_FP <- '../data/bloodCulture_qiime/filt_otu_table.qza'
 tax_FP <- '../data/bloodCulture_qiime/taxonomy.qza'
 metadata_FP <- '../data/misc/proc_blood_culture_meta.tsv'
+colony_FP <- '../data/misc/proc_colony_count.tsv'
 
 diet_labs <- 
   c('Chow',
     'Low Fat / Low Fiber')
 names(diet_labs) <- c('Chow',
                       'LF/LF')
+
+oxy_tol_labs <- c('Aerobic',
+                  'Anaerobic')
+names(oxy_tol_labs) <- c('aerobic',
+                         'anaerobic')
+  
 wanted_level <- 'Genus'
 wanted_genus <- c('Proteus', 
                   'Escherichia-Shigella',
@@ -117,10 +175,15 @@ wanted_genus <- c('Proteus',
                   'Erysipelatoclostridium',
                   '[Clostridium]_innocuum_group',
                   'Bacteroides')
+poster_wanted_genus <- c('Proteus', 
+                        'Escherichia-Shigella',
+                        'Enterococcus',
+                        'Staphylococcus')
 ```
 
-**Data Wrangling for Plot**
+**Data Wrangling for Plots**
 ```{r}
+## relative abundance plot
 abun_files <- abun_file_prep(metadata_FP,
                              tax_FP,
                              otu_table_FP,
@@ -130,10 +193,23 @@ abun_files <- abun_file_prep(metadata_FP,
 ## pulling the abundance table out, you can also take metadata, otu table, and taxonomic info
 ## out of the list output 
 abun_filt <- abun_files$AbundanceTable
-```
 
-**Plots**
-```{r, fig.height=9, fig.width=9}
+## smaller poster version
+poster_abun_files <- abun_file_prep(metadata_FP,
+                                    tax_FP,
+                                    otu_table_FP,
+                                    wanted_level,
+                                    poster_wanted_genus)
+
+## pulling the abundance table out, you can also take metadata, otu table, and taxonomic info
+## out of the list output 
+poster_abun_filt <- poster_abun_files$AbundanceTable
+
+## colony count plot
+colony <- read_tsv(colony_FP)
+```
+**Relative Abundance Plots**
+```{r, fig.height=9, fig.width=12}
 bc_abun_plots <- abun_plots(abun_filt)
 
 ## scatter plot by wanted microbe families and diet at day 3 in the cecum 
@@ -144,6 +220,47 @@ abun2 <- bc_abun_plots$Abundance2
 abun1
 abun2
 ```
+
+**Poster Relative Abundance Plots**
+```{r, fig.width=8, fig.height=6}
+## attempt at making a mini plot
+poster_abun_filt %>% 
+  filter(cultured_from == 'blood') -> mini_poster_abun_filt
+
+poster_abun_plots <- abun_plots(mini_poster_abun_filt)
+
+## scatter plot by wanted microbe families and diet at day 3 in the cecum 
+poster_abun1 <- poster_abun_plots$Abundance1
+## scatter plot faceted by wanted microbe families with diet on the x-axis for visual comparisons by diet 
+poster_abun2 <- poster_abun_plots$Abundance2
+
+poster_abun1
+poster_abun2
+```
+
+**Colony Count Plot and Stats**
+```{r, fig.width=8, fig.height=5}
+## with full data table 
+colony_files <- colony_stats_plot(colony)
+
+colony_kruskal <- colony_files$KruskalTest
+colony_dunn <- colony_files$DunnTest
+colony_plot <- colony_files$ColonyPlot
+
+## with spleen samples filtered out
+colony %>% 
+  filter(cultured_from == 'blood') -> colony_bloodOnly
+
+colony_bloodOnly_files <- colony_stats_plot(colony_bloodOnly)
+
+colony_bloodOnly_kruskal <- colony_bloodOnly_files$KruskalTest
+colony_bloodOnly_dunn <- colony_bloodOnly_files$DunnTest
+colony_bloodOnly_plot <- colony_bloodOnly_files$ColonyPlot
+
+colony_plot
+colony_bloodOnly_plot
+```
+
 
 **Saving my Outputs**
 ```{r}
@@ -157,4 +274,18 @@ ggsave('../plots/bloodCulture_abun2.pdf',
        plot = abun2, 
        width = 9, 
        height = 9)
+ggsave('../plots/cfus_bloodOnly.pdf',
+       plot = colony_bloodOnly_plot,
+       width = 8,
+       height = 5)
+ggsave('../plots/mini_bloodCulture_abun.pdf',
+       plot = poster_abun2,
+       width = 8,
+       height = 6)
+
+## saving plots as an rdat object
+save(colony_bloodOnly_plot,
+     file = '../../posters/cfus_bloodOnly.rdat')
+save(poster_abun2,
+     file = '../../posters/mini_bloodCulture_abun.rdat')
 ```

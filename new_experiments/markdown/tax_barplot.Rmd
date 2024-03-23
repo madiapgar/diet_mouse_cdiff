@@ -167,14 +167,13 @@ bc_barplot_files <- microshades_tax_barplot(metadata_FP,
 ```
 
 **Messing with the Taxa Barplot Outputs**
-```{r, warning=FALSE, fig.height=7, fig.width=13.5}
+```{r, warning=FALSE, fig.height=6, fig.width=13.5}
 ## pulling the tax barplot out of the named list output of the microshades_tax_barplot function
 main_barplot <- bc_barplot_files$TaxBarplot
 
 main_barplot + 
-  facet_grid2(vendor~diet, scales="free_x", independent = "x",
-              labeller = labeller(diet = bc_diet_labs,
-                                  vendor = vendor_labs)) +
+  facet_grid2(~diet, scales="free_x", independent = "x",
+              labeller = labeller(diet = bc_diet_labs)) +
   theme(legend.text = element_text(size = 8.5),
         strip.text.y = element_text(angle = 0)) -> main_barplot 
 
@@ -198,4 +197,8 @@ ggsave("../plots/bloodCulture_tax_barplot.pdf",
        plot = tax_all, 
        width = 13.5, 
        height = 7)
+
+## saving it as an rdat object 
+save(tax_all,
+     file = '../../posters/bloodCulture_tax_barplot.rdat')
 ```

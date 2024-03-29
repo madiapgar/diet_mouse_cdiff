@@ -8,6 +8,7 @@
 
 # Session Data files
 .RData
+.RDataTmp
 
 # Reference Databases
 ./databases/sepp-refs-silva-128.qza

@@ -1,0 +1,177 @@
+---
+title: "histo_percentages"
+output: html_document
+date: "2024-03-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(magrittr)
+library(tidyverse)
+library(broom)
+library(cowplot)
+library(rstatix)
+library(ggpubr)
+library(glue)
+```
+
+**Functions**
+```{r}
+## combining histo percentages file with metadata
+file_prep <- function(histo_perc_fp,
+                      histo_fp){
+  ## histo percentages file
+  histo_perc <- read_tsv(histo_perc_fp)
+  ## processed histopathology file
+  histo <- read_tsv(histo_fp)
+  histo %>% 
+    filter(tissue == 'cecum') -> histo
+  ## merging the two tables together for metadata info
+  histo %>% 
+    left_join(histo_perc, by = 'mouse_id') %>% 
+    gather(contains(c('perc')), key = category, value = percentage) -> big_histo
+  return(big_histo)
+}
+
+## running a non-parametric ANOVA on the histo percentage data
+stats <- function(table,
+                  grouped_by,
+                  formula_right,
+                  formula_left){
+  ## kruskal-wallis test
+  table %>% 
+    group_by(.data[[grouped_by]]) %>% 
+    do(tidy(kruskal.test(.data[[formula_left]] ~ .data[[formula_right]],
+               data = .))) %>% 
+    ungroup() %>% 
+    arrange(p.value) %>% 
+    mutate(p.adj = p.adjust(p.value,
+                            method = "BH")) -> kruskal
+  ## dunns post hoc test
+  ## note: you NEED glue to use variables in the dunn_test formula
+  ## if you don't, it won't work! 
+  right_hand_name <- formula_right
+  dunn_formula <- reformulate(glue("{right_hand_name}"),glue("{formula_left}"))
+  
+  table %>% 
+    group_by(.data[[grouped_by]]) %>% 
+    dunn_test(dunn_formula,
+              p.adjust.method = 'BH',
+              data = .) %>% 
+    add_xy_position(scales = 'free',
+                   fun = 'max') -> dunn
+  ## making a list of outputs
+  my_list <- list(KruskalTest = kruskal,
+                  DunnPostHoc = dunn)
+  return(my_list)
+}
+
+## putting plot together with statistics overlaid on plot
+make_plot <- function(table,
+                      x_axis,
+                      y_axis,
+                      boxplot_group,
+                      x_labels,
+                      facet_by,
+                      facet_labels,
+                      dunn_test,
+                      x_name,
+                      y_name,
+                      wanted_title){
+  table %>% 
+    ggplot(aes(x = .data[[x_axis]], y = .data[[y_axis]])) +
+    geom_boxplot(aes(group = .data[[boxplot_group]])) +
+    geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
+    theme_bw(base_size = 20) +
+    scale_x_discrete(labels = x_labels) +
+    facet_wrap(~.data[[facet_by]],
+               nrow = 1,
+               labeller = labeller(.cols = facet_labels)) +
+    stat_pvalue_manual(dunn_test,
+                       tip.length = 0.01,
+                       step.increase = 0.05,
+                       step.group.by = facet_by,
+                       label = 'p.adj.signif',
+                       hide.ns = TRUE) +
+    labs(x = x_name,
+         y = y_name,
+         title = wanted_title) -> plot
+  return(plot)
+}
+```
+
+**File Paths**
+Can use processed histopathology file for this since it already contains the needed metadata!
+```{r}
+histo_perc_FP <- '../data/misc/cecum_histo_percentages.txt'
+histo_FP <- '../data/misc/processed_histopathology.tsv'
+
+## plot relabeling lists
+perc_labs <- c('Epithelial Integrity',
+               'Number of Goblet Cells',
+               'Neutrophil Infiltration',
+               'Submucosal Edema')
+names(perc_labs) <- c('perc_epithelial_integrity',
+                      'perc_goblet_cells',
+                      'perc_PNM_infil',
+                      'perc_submuc_edema')
+diet_x_labs <- c('Chow',
+                 'HFt/\nHFb',
+                 'HFt/\nLFb',
+                 'LFt/\nHFb',
+                 'LFt/\nLFb')
+```
+
+**Data Wrangling**
+```{r}
+proc_histo_perc <- file_prep(histo_perc_FP,
+                             histo_FP)
+```
+**Stats**
+```{r}
+perc_stats <- stats(table = proc_histo_perc,
+                    grouped_by = 'category',
+                    formula_right = 'diet',
+                    formula_left = 'percentage')
+
+histo_perc_kruskal <- perc_stats$KruskalTest
+histo_perc_dunn <- perc_stats$DunnPostHoc
+```
+
+**Plot**
+```{r, fig.width=15, fig.height=5}
+histo_perc_plot <- make_plot(table = proc_histo_perc,
+                             x_axis = 'diet',
+                             y_axis = 'percentage',
+                             boxplot_group = 'diet',
+                             x_labels = diet_x_labs,
+                             facet_by = 'category',
+                             facet_labels = perc_labs,
+                             dunn_test = histo_perc_dunn,
+                             x_name = 'Diet',
+                             y_name = 'Percentage',
+                             wanted_title = 'Cecal High Histopathology Scores per Diet')
+histo_perc_plot
+```
+
+**Saving my Outputs**
+```{r}
+## as a pdf
+ggsave('../plots/cecum_histoPerc.pdf',
+       plot = histo_perc_plot,
+       width = 15,
+       height = 5)
+
+## as an rdata object 
+save(histo_perc_plot,
+     file = '../../figures/cecum_histo_percent.rdat')
+
+## stats 
+write_tsv(histo_perc_dunn,
+          '../stats/cecum_histoPerc_dunn.tsv')
+```
+

@@ -337,10 +337,17 @@ poster_abun_filt %>%
          order = ifelse(Family == 'Enterobacteriaceae', 3, order),
          order = ifelse(Family == 'Enterococcaceae', 4, order),
          order = ifelse(Family == 'Staphylococcaceae', 5, order)) -> poster_abun_filt
+
+poster_abun_filt %>% 
+  filter(Family == 'Lachnospiraceae' | Family == 'Ruminococcaceae') -> mini_poster_obAn
+
+poster_abun_filt %>% 
+  filter(Family == 'Enterobacteriaceae' | Family == 'Enterococcaceae' | 
+           Family == 'Staphylococcaceae') -> mini_poster_facAn
 ```
 
 **Family Abundance Plots**
-```{r, warning=FALSE, fig.width=17, fig.height=15}
+```{r, warning=FALSE, fig.width=18, fig.height=9}
 ## full sized regular plot
 family_abun1 <- abun_plots(abundance_table = abun_filt,
                            x_axis = 'day_post_inf',
@@ -367,7 +374,35 @@ poster_abun1 <- abun_plots(abundance_table = poster_abun_filt,
                            x_label = 'Days Relative to Infection',
                            y_label = 'Relative Abundance')
 
-family_abun1
+## poster presentation plot broken up to only include OBLIGATE anaerobes
+obAnaerobe_abun <- abun_plots(abundance_table = mini_poster_obAn,
+                             x_axis = 'day_post_inf',
+                             y_axis = 'rel_abund',
+                             box_group_by = 'day_post_inf',
+                             line_group_by = 'mouse_fact',
+                             facet_rows = 'order',
+                             row_labs = poster_row_labs,
+                             col_labs = diet_labs,
+                             title = 'Obligate Anaerobe Relative Abundance',
+                             x_label = 'Days Relative to Infection',
+                             y_label = 'Relative Abundance')
+
+## poster presentation plot broken up to only include FACULTATIVE anaerobes
+facAnaerobe_abun <- abun_plots(abundance_table = mini_poster_facAn,
+                             x_axis = 'day_post_inf',
+                             y_axis = 'rel_abund',
+                             box_group_by = 'day_post_inf',
+                             line_group_by = 'mouse_fact',
+                             facet_rows = 'order',
+                             row_labs = poster_row_labs,
+                             col_labs = diet_labs,
+                             title = 'Facultative Anaerobe Relative Abundance',
+                             x_label = 'Days Relative to Infection',
+                             y_label = 'Relative Abundance')
+
+
+obAnaerobe_abun
+facAnaerobe_abun
 ```
 
 ```{r, fig.height=10, fig.width=17}
@@ -461,11 +496,27 @@ ggsave("family_abun1.pdf",
        width = 17, 
        height = 13, 
        path = '../plots')
+ggsave("../plots/mini_family_abun1.pdf",
+       plot = poster_abun1,
+       width = 17,
+       height = 10)
+ggsave("../plots/obAnaerobe_family_abun.pdf",
+       plot = obAnaerobe_abun,
+       width = 18,
+       height = 8)
+ggsave("../plots/facAnaerobe_family_abun.pdf",
+       plot = facAnaerobe_abun,
+       width = 18,
+       height = 9)
 ggsave("famAbun_stat_vis.pdf",
        plot = stat_plot1, 
        width = 17, 
        height = 13, 
        path = '../plots')
+ggsave("../plots/mini_famAbun_stat_vis.pdf",
+       plot = poster_stat_plot1,
+       width = 17,
+       height = 13)
 ggsave("famAbun_together.pdf",
        plot = plots_together, 
        width = 35, 

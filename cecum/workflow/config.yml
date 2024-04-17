@@ -1,0 +1,19 @@
+raw_seq_dir: "data/cecal_qiime_upper/"
+raw_seqs: ["SEQ069/s69", "SEQ070/s70", "SEQ071/s71"]
+barcodes: ["SEQ069/cecal_s69", "SEQ070/cecal_s70", "SEQ071/cecal_s71"]
+run1_dir: "SEQ069/s69"
+run2_dir: "SEQ070/s70"
+run3_dir: "SEQ071/s71"
+dada2_trim_left_for: 13
+dada2_trim_left_rev: 13
+dada2_trunc_len_for: 230
+dada2_trunc_len_rev: 160
+metadata: "data/misc/filt_updated_cecal_metadata.tsv"
+core_metrics_sampling_depth: 99631
+sampleID_key: "data/misc/cecal_key.txt"
+mouseID_facil_key: "data/misc/mouseID_facil.tsv"
+processed_metadata: "data/misc/filt_cecal_processed_metadata.tsv"
+bile_acid: "data/misc/bile_acid.txt"
+toxin: "data/misc/toxin_final_data.tsv"
+histo: "data/misc/histo_data.csv"
+metab: "data/misc/metabolomics.csv"

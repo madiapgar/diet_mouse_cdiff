@@ -1,0 +1,8 @@
+raw_seq_dir: "data/bloodCulture_seqs/raw_seqs"
+path_to_seq_dir: "data/bloodCulture_seqs/"
+sampleType_prefix: "blood_culture"
+dada2_trim_left_for: 13
+dada2_trim_left_rev: 13
+dada2_trunc_len_for: 230
+dada2_trunc_len_rev: 160
+metadata: "data/misc/blood_culture_metadata.tsv"

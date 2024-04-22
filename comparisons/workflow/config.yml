@@ -1,0 +1,7 @@
+table1: "data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza"
+table2: "data/misc/filt_cecal_table.qza"
+rep_seqs1: "data/misc/euk_filt-mergedDietAim1rep-seqs_051523-Copy1.qza"
+req_seqs2: "data/misc/all_cecal_rep_seqs.qza"
+sampleType_prefix: "comp"
+metadata: "data/misc/comp_metadata.tsv"
+core_metrics_sampling_depth: 99631

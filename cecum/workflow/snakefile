@@ -1,3 +1,4 @@
+## NEED TO ADD BILE ACID AND HYPOXIA ANALYSIS TO THIS WORKFLOW!
 configfile: "workflow/config.yml"
 
 rule target:

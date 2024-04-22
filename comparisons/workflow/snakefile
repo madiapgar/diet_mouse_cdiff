@@ -1,3 +1,5 @@
+configfile: "workflow/config.yml"
+
 rule all:
     input:
         "plots/faith_pd.pdf",
@@ -43,26 +45,26 @@ rule all:
 
 rule merge_tables:
     input:
-        colon_table = "data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza",
-        colon_seqs = "data/misc/euk_filt-mergedDietAim1rep-seqs_051523-Copy1.qza",
-        cecal_table = "data/misc/filt_cecal_table.qza",
-        cecal_seqs = "data/misc/all_cecal_rep_seqs.qza"
+        table1 = config["table1"],
+        rep_seqs1 = config["rep_seqs1"],
+        table2 = config["table2"],
+        rep_seqs2 = config["rep_seqs2"]
     output:
-        comp_table = "data/misc/comp_table.qza",
-        comp_seqs = "data/misc/comp_rep_seqs.qza"
+        merged_table = "data/misc/" + config["sampleType_prefix"] + "_table.qza",
+        merged_seqs = "data/misc/" + config["sampleType_prefix"] + "_rep_seqs.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime feature-table merge \
-            --i-tables {input.colon_table} \
-            --i-tables {input.cecal_table} \
-            --o-merged-table {output.comp_table}
+            --i-tables {input.table1} \
+            --i-tables {input.table2} \
+            --o-merged-table {output.merged_table}
         
         qiime feature-table merge-seqs \
-            --i-data {input.colon_seqs} \
-            --i-data {input.cecal_seqs} \
-            --o-merged-data {output.comp_seqs}
+            --i-data {input.rep_seqs1} \
+            --i-data {input.rep_seqs2} \
+            --o-merged-data {output.merged_seqs}
         """
 
 
@@ -79,17 +81,17 @@ rule get_reference_databases:
 
 rule sepp_phylo_tree:
     input:
-        comp_seqs = "data/misc/comp_rep_seqs.qza",
+        merged_seqs = "data/misc/" + config["sampleType_prefix"] + "_rep_seqs.qza",
         silva_ref = "databases/sepp-refs-silva-128.qza"
     output:
-        tree = "data/comp_qiime/tree.qza",
-        placements = "data/comp_qiime/placements.qza"
+        tree = "data/qiime/tree.qza",
+        placements = "data/qiime/placements.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime fragment-insertion sepp \
-            --i-representative-sequences {input.comp_seqs} \
+            --i-representative-sequences {input.merged_seqs} \
             --i-reference-database {input.silva_ref} \
             --o-tree {output.tree} \
             --o-placements {output.placements}
@@ -98,36 +100,36 @@ rule sepp_phylo_tree:
 
 rule sepp_ASV_filtering:
     input:
-        comp_table = "data/misc/comp_table.qza",
-        tree = "data/comp_qiime/tree.qza"
+        merged_table = "data/misc/" + config["sampleType_prefix"] + "_table.qza",
+        tree = "data/qiime/tree.qza"
     output:
-        filt_comp_table = "data/comp_qiime/filt_comp_table.qza",
-        rem_comp_table = "data/comp_qiime/rem_comp_table.qza"
+        filt_merged_table = "data/qiime/filt_" + config["sampleType_prefix"] + "_table.qza",
+        rem_merged_table = "data/qiime/rem_" + config["sampleType_prefix"] + "_table.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime fragment-insertion filter-features \
-            --i-table {input.comp_table} \
+            --i-table {input.merged_table} \
             --i-tree {input.tree} \
-            --o-filtered-table {output.filt_comp_table} \
-            --o-removed-table {output.rem_comp_table}
+            --o-filtered-table {output.filt_merged_table} \
+            --o-removed-table {output.rem_merged_table}
         """
 
 
 rule taxonomic_classification:
     input:
         silva_class = "databases/silva-138-99-515-806-nb-classifier.qza",
-        comp_rep_seqs = "data/misc/comp_rep_seqs.qza"
+        merged_seqs = "data/misc/" + config["sampleType_prefix"] + "_rep_seqs.qza"
     output:
-        taxonomy = "data/comp_qiime/taxonomy.qza"
+        taxonomy = "data/qiime/taxonomy.qza"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime feature-classifier classify-sklearn \
             --i-classifier {input.silva_class} \
-            --i-reads {input.comp_rep_seqs} \
+            --i-reads {input.merged_seqs} \
             --o-classification {output.taxonomy}
         """
 
@@ -135,17 +137,17 @@ rule taxonomic_classification:
 ## hopefully the second qiime command works 
 rule filter_taxonomy:
     input:
-        filt_comp_table = "data/comp_qiime/filt_comp_table.qza",
-        taxonomy = "data/comp_qiime/taxonomy.qza"
+        filt_merged_table = "data/qiime/filt_" + config["sampleType_prefix"] + "_table.qza",
+        taxonomy = "data/qiime/taxonomy.qza"
     output:
-        tax_filt_table = "data/comp_qiime/taxonomy_filtered.qza",
-        tax_filt_vis = "data/comp_qiime/taxonomy_filtered.qzv"
+        tax_filt_table = "data/qiime/taxonomy_filtered.qza",
+        tax_filt_vis = "data/qiime/taxonomy_filtered.qzv"
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime taxa filter-table \
-            --i-table {input.filt_comp_table} \
+            --i-table {input.filt_merged_table} \
             --i-taxonomy {input.taxonomy} \
             --p-include p_ \
             --p-exclude mitochondria,chloroplast \
@@ -159,24 +161,24 @@ rule filter_taxonomy:
 
 rule create_lacto_table:
     input:
-        filt_comp_table = "data/comp_qiime/filt_comp_table.qza",
-        taxonomy = "data/comp_qiime/taxonomy.qza",
-        comp_rep_seqs = "data/misc/comp_rep_seqs.qza"
+        filt_merged_table = "data/qiime/filt_" + config["sampleType_prefix"] + "_table.qza",
+        taxonomy = "data/qiime/taxonomy.qza",
+        merged_seqs = "data/misc/" + config["sampleType_prefix"] + "_rep_seqs.qza"
     output:
-        lacto_table = "data/comp_qiime/lacto_table.qza",
-        lacto_rep_seqs = "data/comp_qiime/lacto_rep_seqs.qza" 
+        lacto_table = "data/qiime/lacto_table.qza",
+        lacto_rep_seqs = "data/qiime/lacto_rep_seqs.qza" 
     conda:
         "qiime2-2023.5"
     shell:
         """
         qiime taxa filter-table \
-            --i-table {input.filt_comp_table} \
+            --i-table {input.filt_merged_table} \
             --i-taxonomy {input.taxonomy} \
             --p-include Lactococcus \
             --o-filtered-table {output.lacto_table}
         
         qiime feature-table filter-seqs \
-            --i-data {input.comp_rep_seqs} \
+            --i-data {input.merged_seqs} \
             --i-table {output.lacto_table} \
             --o-filtered-data {output.lacto_rep_seqs}
         """
@@ -184,10 +186,10 @@ rule create_lacto_table:
 
 rule convert_to_fasta:
     input:
-        lacto_rep_seqs = "data/comp_qiime/lacto_rep_seqs.qza"
+        lacto_rep_seqs = "data/qiime/lacto_rep_seqs.qza"
     output:
-        output_path = "data/comp_qiime/dna-sequences.fasta",
-        lacto_fasta = "data/comp_qiime/lactoOnly_rep_seqs.fasta"
+        output_path = "data/qiime/dna-sequences.fasta",
+        lacto_fasta = "data/qiime/lactoOnly_rep_seqs.fasta"
     conda:
         "qiime2-2023.5"
     shell:
@@ -202,15 +204,15 @@ rule convert_to_fasta:
 
 rule total_sum_scaling:
     input:
-        biom = "data/comp_qiime/filt_comp_table.qza",
-        asvs = "data/comp_qiime/lactoOnly_rep_seqs.fasta"
+        filt_merged_table = "data/qiime/filt_" + config["sampleType_prefix"] + "_table.qza",
+        asvs = "data/qiime/lactoOnly_rep_seqs.fasta"
     output:
-        table = "data/misc/comp_tss_table.tsv"
+        table = "data/misc/" + config["sampleType_prefix"] + "_total_sum_scaling.tsv"
     conda:
         "r_env"
     shell:
         """
-        Rscript scripts/total_sum_scaling.R --biom {input.biom} \
+        Rscript scripts/total_sum_scaling.R --biom {input.filt_merged_table} \
                                             --sequence {input.asvs} \
                                             --output {output.table}
         """
@@ -218,9 +220,9 @@ rule total_sum_scaling:
 
 rule tss_tsv2biom:
     input:
-        "data/misc/comp_tss_table.tsv" 
+        "data/misc/" + config["sampleType_prefix"] + "_total_sum_scaling.tsv"
     output:
-        "data/misc/comp_tss_table.biom"
+        "data/misc/" + config["sampleType_prefix"] + "_total_sum_scaling.biom"
     conda:
         "qiime2-2023.5"
     shell:
@@ -235,9 +237,9 @@ rule tss_tsv2biom:
 
 rule tss_biom2qza:
     input:
-        "data/misc/comp_tss_table.biom"
+        "data/misc/" + config["sampleType_prefix"] + "_total_sum_scaling.biom"
     output:
-        "data/misc/comp_tss_table.qza"
+        "data/misc/" + config["sampleType_prefix"] + "_total_sum_scaling.qza"
     conda:
         "qiime2-2023.5"
     shell:
@@ -251,11 +253,11 @@ rule tss_biom2qza:
 
 rule sepp_ASV_filtering2:
     input:
-        tss_table = "data/misc/comp_tss_table.qza",
-        tree = "data/comp_qiime/tree.qza"
+        tss_table = "data/misc/" + config["sampleType_prefix"] + "_total_sum_scaling.qza",
+        tree = "data/qiime/tree.qza"
     output:
-        tss_filt_table = "data/comp_qiime/comp_tss_filt_table.qza",
-        tss_rem_table = "data/comp_qiime/comp_tss_rem_table.qza"
+        tss_filt_table = "data/qiime/" + config["sampleType_prefix"] + "_tss_filt_table.qza",
+        tss_rem_table = "data/qiime/" + config["sampleType_prefix"] + "_tss_rem_table.qza"
     conda:
         "qiime2-2023.5"
     shell:
@@ -270,11 +272,11 @@ rule sepp_ASV_filtering2:
 
 rule filter_taxonomy2:
     input:
-        tss_table = "data/misc/comp_tss_table.qza",
-        taxonomy = "data/comp_qiime/taxonomy.qza"
+        tss_table = "data/misc/" + config["sampleType_prefix"] + "_total_sum_scaling.qza",
+        taxonomy = "data/qiime/taxonomy.qza"
     output:
-        tss_tax_filt = "data/comp_qiime/tss_tax_filt.qza",
-        tss_tax_filt_vis = "data/comp_qiime/tss_tax_filt.qzv"
+        tss_tax_filt = "data/qiime/tss_tax_filt.qza",
+        tss_tax_filt_vis = "data/qiime/tss_tax_filt.qzv"
     conda:
         "qiime2-2023.5"
     shell:
@@ -294,10 +296,10 @@ rule filter_taxonomy2:
 
 rule pre_core_metrics_filter:
     input:
-        tss_tax_filt = "data/comp_qiime/tss_tax_filt.qza",
-        metadata = "data/misc/comp_metadata.tsv"
+        tss_tax_filt = "data/qiime/tss_tax_filt.qza",
+        metadata = config["metadata"]
     output:
-        meta_filt_tax = "data/comp_qiime/tax_filt_actual.qza"
+        otu_table = "data/qiime/" + config["sampleType_prefix"] + "otu_table.qza"
     conda:
         "qiime2-2023.5"
     shell:
@@ -305,27 +307,27 @@ rule pre_core_metrics_filter:
         qiime feature-table filter-samples \
             --i-table {input.tss_tax_filt} \
             --m-metadata-file {input.metadata} \
-            --o-filtered-table {output.meta_filt_tax}
+            --o-filtered-table {output.otu_table}
         """
 
 
 rule core_metrics_analysis:
 ##  NEED TO CHECK THE SAMPLING DEPTH BEFORE YOU RUN THIS STEP
     input:
-        tree = "data/comp_qiime/tree.qza",
-        meta_filt_tax = "data/comp_qiime/tax_filt_actual.qza",
-        metadata = "data/misc/comp_metadata.tsv"
+        tree = "data/qiime/tree.qza",
+        otu_table = "data/qiime/" + config["sampleType_prefix"] + "otu_table.qza",
+        metadata = config["metadata"]
     output:
         output_dir = directory("data/core_outputs")
     conda:
         "qiime2-2023.5"
     params:
-        sampling_depth=99631
+        sampling_depth=config["core_metrics_sampling_depth"]
     shell:
         """
         qiime diversity core-metrics-phylogenetic \
             --i-phylogeny {input.tree} \
-            --i-table {input.meta_filt_tax} \
+            --i-table {input.otu_table} \
             --p-sampling-depth  {params.sampling_depth} \
             --m-metadata-file {input.metadata} \
             --output-dir {output}
@@ -418,7 +420,7 @@ rule unzip_faith_pd:
 
 rule alpha_diversity_plots:
     input:
-        metadata = "data/misc/comp_metadata.tsv",
+        metadata = config["metadata"],
         faith_pd = "data/core_outputs/faith_pd.tsv",
         shannon = "data/core_outputs/shannon_entropy.tsv"
     output:
@@ -438,7 +440,7 @@ rule alpha_diversity_plots:
 
 rule alpha_diversity_stats:
     input:
-        metadata = "data/misc/comp_metadata.tsv",
+        metadata = config["metadata"],
         faith_pd = "data/core_outputs/faith_pd.tsv",
         shannon = "data/core_outputs/shannon_entropy.tsv"
     output:
@@ -470,7 +472,7 @@ rule alpha_diversity_stats:
 
 rule beta_diversity_plots:
     input:
-        metadata = "data/misc/comp_metadata.tsv",
+        metadata = config["metadata"],
         unweighted_uni = "data/core_outputs/unweighted_unifrac_pcoa_results.qza",
         weighted_uni = "data/core_outputs/weighted_unifrac_pcoa_results.qza",
         faith_pd = "data/core_outputs/faith_pd.tsv",
@@ -494,7 +496,7 @@ rule beta_diversity_plots:
 
 rule beta_diversity_stats:
     input:
-        metadata = "data/misc/comp_metadata.tsv",
+        metadata = config["metadata"],
         uw_dist = "data/core_outputs/uw_dist_matrix.tsv",
         w_dist = "data/core_outputs/w_dist_matrix.tsv"
     output:
@@ -518,7 +520,7 @@ rule beta_diversity_stats:
 
 rule homogeneity:
     input:
-        metadata = "data/misc/comp_metadata.tsv",
+        metadata = config["metadata"],
         uu_dist = "data/core_outputs/uw_dist_matrix.tsv",
         wu_dist = "data/core_outputs/w_dist_matrix.tsv"
     output:
@@ -550,7 +552,7 @@ rule homogeneity:
 
 rule resiliency:
     input:
-       metadata = "data/misc/comp_metadata.tsv",
+       metadata = config["metadata"],
        uu_dist = "data/core_outputs/uw_dist_matrix.tsv",
        wu_dist = "data/core_outputs/w_dist_matrix.tsv"
     output:
@@ -582,9 +584,9 @@ rule resiliency:
 
 rule family_abundance_plots:
     input:
-        otu_table = "data/comp_qiime/tax_filt_actual.qza",
-        taxonomy = "data/comp_qiime/taxonomy.qza",
-        metadata = "data/misc/comp_metadata.tsv"
+        otu_table = "data/qiime/" + config["sampleType_prefix"] + "otu_table.qza",
+        taxonomy = "data/qiime/taxonomy.qza",
+        metadata = config["metadata"]
     output:
         plot1 = "plots/family_abun1.pdf",
         plot2 = "plots/family_abun2.pdf"
@@ -602,9 +604,9 @@ rule family_abundance_plots:
 
 rule family_abundance_stats:
     input:
-       otu_table = "data/comp_qiime/tax_filt_actual.qza",
-       taxonomy = "data/comp_qiime/taxonomy.qza",
-       metadata = "data/misc/comp_metadata.tsv"
+       otu_table = "data/qiime/" + config["sampleType_prefix"] + "otu_table.qza",
+       taxonomy = "data/qiime/taxonomy.qza",
+       metadata = config["metadata"]
     output:
         lm = "stats/family_abun_lm.tsv",
         dunn = "stats/family_abun_dunn.tsv",

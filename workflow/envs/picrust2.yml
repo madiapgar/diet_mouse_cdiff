@@ -1,0 +1,10 @@
+name: picrust2
+channels:
+  - bioconda
+  - conda-forge
+  - anaconda
+dependencies:
+  - pip
+  - picrust2=2.5.2
+  - pip:
+    - snakemake

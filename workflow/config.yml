@@ -1,0 +1,39 @@
+## overall config file
+## set to cecal dataset right now
+
+dataset_dir: "cecum/"
+
+## options: yes and no
+raw_sequences: "yes"
+
+## 01: demux and dada2
+raw_seq_dir: "data/cecal_qiime_upper/"
+raw_seqs: ["SEQ069/s69", "SEQ070/s70", "SEQ071/s71"]
+barcodes: ["SEQ069/cecal_s69", "SEQ070/cecal_s70", "SEQ071/cecal_s71"]
+dada2_trim_left_for: 13
+dada2_trim_left_rev: 13
+dada2_trunc_len_for: 230
+dada2_trunc_len_rev: 160
+
+## 02/03: phylogeny and total sum scaling
+r_script_dir: "scripts/"
+biom_table: "data/qiime/merged_table.qza"
+rep_seqs: "data/qiime/merged_rep_seqs.qza"
+
+## 04: core metrics analysis
+metadata: "data/misc/filt_updated_cecal_metadata.tsv"
+core_metrics_sampling_depth: 99631
+
+## 05: longitudinal dataset plots/stats in R (you NEED to have measurements at different time points)
+## options: yes, no, or no downstream
+longitudinal_dataset: "no"
+processed_metadata: "data/misc/filt_cecal_processed_metadata.tsv"
+
+## 06: non-longitudinal dataset plots/stats in R (measurements at only ONE time point)
+sampleID_key: "data/misc/cecal_key.txt"
+mouseID_facil_key: "data/misc/mouseID_facil.tsv"
+bile_acid: "data/misc/bile_acid.txt"
+toxin: "data/misc/toxin_final_data.tsv"
+histo: "data/misc/histo_data.csv"
+metab: "data/misc/metabolomics.csv"
+hypoxia: "data/misc/pimid_fluor.csv"

@@ -1,0 +1,369 @@
+## master snakefile
+configfile: "workflow/config.yml"
+
+## setting environmental variables
+DATASET_DIR = config["dataset_dir"]
+LONGITUDINAL = config["longitudinal_dataset"]
+RUN_DEMUX_DADA2 = config["raw_sequences"]
+R_SCRIPT_DIR = config["r_script_dir"]
+
+## step 1
+RAW_SEQ_DIR = config["raw_seq_dir"]
+RAW_SEQS = config["raw_seqs"]
+BARCODES = config["barcodes"]
+TRIM_LFT_FOR = config["dada2_trim_left_for"]
+TRIM_LFT_REV = config["dada2_trim_left_rev"]
+TRUNC_LEN_FOR = config["dada2_trunc_len_for"]
+TRUNC_LEN_REV = config["dada2_trunc_len_rev"]
+
+## steps 2 and 3
+BIOM = config["biom_table"]
+REP_SEQS = config["rep_seqs"]
+
+## step 4 and 5
+METADATA = config["metadata"]
+CORE_SAMPLING_DEPTH = config["core_metrics_sampling_depth"]
+PROCESSED_META = config["processed_metadata"]
+
+## step 6 (non-longitudinal)
+SAMPLEID_KEY = config["sampleID_key"]
+MOUSEID_FACIL_KEY = config["mouseID_facil_key"]
+BILE_ACID = config["bile_acid"]
+TOXIN = config["toxin"]
+HISTO = config["histo"]
+METAB = config["metab"]
+HYPOXIA = config["hypoxia"]
+
+
+## defining outputs from rules
+## step 1
+demux = expand(DATASET_DIR + RAW_SEQ_DIR + "{run}_demux.qza",
+               run=RAW_SEQS)
+demux_details = expand(DATASET_DIR + RAW_SEQ_DIR + "{run}_demux_details.qza",
+                       run=RAW_SEQS)
+demux_vis = expand(DATASET_DIR + RAW_SEQ_DIR + "{run}_demux.qzv",
+                   run=RAW_SEQS)
+table = expand(DATASET_DIR + "data/qiime/{run}_table.qza",
+               run=RAW_SEQS)
+seqs = expand(DATASET_DIR + "data/qiime/{run}_rep_seqs.qza",
+              run=RAW_SEQS)
+stats = expand(DATASET_DIR + "data/qiime/{run}_denoise_stats.qza",
+               run=RAW_SEQS)
+merged_table = DATASET_DIR + "data/qiime/merged_table.qza"
+merged_seqs = DATASET_DIR + "data/qiime/merged_rep_seqs.qza"
+
+## step 2
+database1 = DATASET_DIR + "databases/sepp-refs-silva-128.qza"
+database2 = DATASET_DIR + "databases/silva-138-99-515-806-nb-classifier.qza"
+tree = DATASET_DIR + "data/qiime/tree.qza"
+placements = DATASET_DIR + "data/qiime/placements.qza"
+filt_table = DATASET_DIR + "data/qiime/filt_table.qza"
+rem_table = DATASET_DIR + "data/qiime/rem_table.qza"
+taxonomy = DATASET_DIR + "data/qiime/taxonomy.qza"
+tax_filt = DATASET_DIR + "data/qiime/taxonomy_filtered.qza"
+tax_filt_vis = DATASET_DIR + "data/qiime/taxonomy_filtered.qzv"
+lacto_table = DATASET_DIR + "data/qiime/lacto_cecal_table.qza"
+lacto_rep_seqs = DATASET_DIR + "data/qiime/lacto_rep_seqs.qza"
+lacto_output_path = DATASET_DIR + "data/qiime/dna-sequences.fasta"
+lacto_fasta = DATASET_DIR + "data/qiime/lactoOnly_rep_seqs.fasta"
+
+## step 3
+tss_table = DATASET_DIR + "data/qiime/total_sum_scaling.tsv"
+tss_biom = DATASET_DIR + "data/qiime/total_sum_scaling.biom"
+tss_qza = DATASET_DIR + "data/qiime/total_sum_scaling.qza"
+fasta_output_path = DATASET_DIR + "data/qiime/fasta_files/dna-sequences.fasta"
+tss_filt_table = DATASET_DIR + "data/qiime/total_sum_filt_table.qza"
+tss_rem_table = DATASET_DIR + "data/qiime/total_sum_rem_table.qza"
+tss_tax_filt = DATASET_DIR + "data/qiime/tax_filt.qza"
+tss_tax_vis = DATASET_DIR + "data/qiime/tax_filt.qzv"
+
+## step 4
+otu_table = DATASET_DIR + "data/qiime/otu_table.qza"
+uw_dist_matrix = DATASET_DIR + "data/core_outputs/uw_dist_matrix.tsv"
+wu_dist_matrix = DATASET_DIR + "data/core_outputs/w_dist_matrix.tsv"
+shannon = DATASET_DIR + "data/core_outputs/shannon_entropy.tsv"
+faith = DATASET_DIR + "data/core_outputs/faith_pd.tsv"
+
+## step 5 - LONGITUDINAL
+faith_plot5 = DATASET_DIR + "plots/faith_pd.pdf"
+shannon_plot5 = DATASET_DIR + "plots/shannon_entropy.pdf"
+faith_lm5 = DATASET_DIR + "stats/faith_total_results.tsv"
+faith_lm_sec5 = DATASET_DIR + "stats/faith_diet_results.tsv"
+faith_dunn5 = DATASET_DIR + "stats/faith_dunn.tsv"
+shannon_lm5 = DATASET_DIR + "stats/shannon_total_results.tsv"
+shannon_lm_sec5 = DATASET_DIR + "stats/shannon_diet_results.tsv"
+shannon_dunn5 = DATASET_DIR + "stats/shannon_dunn.tsv"
+faith_stat_plot5 = DATASET_DIR + "plots/faith_stat_vis.pdf"
+shannon_stat_plot5 = DATASET_DIR + "plots/shannon_stat_vis.pdf"
+unweighted_plot5 = DATASET_DIR + "plots/unweighted_unifrac_pcoa.pdf"
+weighted_plot5 = DATASET_DIR + "plots/weighted_unifrac_pcoa.pdf"
+w_adonis5 = DATASET_DIR + "stats/w_adonis_results.tsv"
+uw_adonis5 = DATASET_DIR + "stats/uw_adonis_results.tsv"
+w_adonis_day5 = DATASET_DIR + "stats/w_adonis_by_day.tsv"
+uw_adonis_day5 = DATASET_DIR + "stats/uw_adonis_by_day.tsv"
+abun_plot15 = DATASET_DIR + "plots/family_abun1.pdf"
+abun_plot25 = DATASET_DIR + "plots/family_abun2.pdf"
+abun_lm5 = DATASET_DIR + "stats/family_abun_lm.tsv"
+abun_dunn5 = DATASET_DIR + "stats/family_abun_dunn.tsv"
+abun_stat_plot5 = DATASET_DIR + "plots/famAbun_stat_vis.pdf"
+homog_wu_lm5 = DATASET_DIR + "stats/wu_homogeneity.tsv"
+homoh_wu_dunn5 = DATASET_DIR + "stats/wu_homog_dunn.tsv"
+homog_uu_lm5 = DATASET_DIR + "stats/uu_homogeneity.tsv"
+homog_uu_dunn5 = DATASET_DIR + "stats/uu_homog_dunn.tsv"
+homog_wu_plot5 = DATASET_DIR + "plots/wu_homogeneity.pdf"
+homog_wu_stat_plot5 = DATASET_DIR + "plots/wu_homog_stats.pdf"
+homog_uu_plot5 = DATASET_DIR + "plots/uu_homogeneity.pdf"
+homog_uu_stat_plot5 = DATASET_DIR + "plots/uu_homog_stats.pdf"
+resil_uu_lm5 = DATASET_DIR + "stats/uu_resiliency.tsv"
+resil_uu_dunn5 = DATASET_DIR + "stats/uu_resil_dunn.tsv"
+resil_wu_lm5 = DATASET_DIR + "stats/wu_resiliency.tsv"
+resil_wu_dunn5 = DATASET_DIR + "stats/wu_resil_dunn.tsv"
+resil_wu_plot5 = DATASET_DIR + "plots/wu_resiliency.pdf"
+resil_wu_stat_plot5 = DATASET_DIR + "plots/wu_resil_stats.pdf"
+resil_uu_plot5 = DATASET_DIR + "plots/uu_resiliency.pdf"
+resil_uu_stat_plot5 = DATASET_DIR + "plots/uu_resil_stats.pdf"
+
+## step 6 - NOT LONGITUDINAL
+seq_depth = DATASET_DIR + "data/misc/seq_depth.tsv"
+proc_meta = DATASET_DIR + PROCESSED_META
+proc_bile_acid = DATASET_DIR + "data/misc/corrected_bile_acid.tsv"
+proc_neat_toxin = DATASET_DIR + "data/misc/processed_neatToxin.tsv"
+proc_dil_toxin = DATASET_DIR + "data/misc/processed_dilutedToxin.tsv"
+proc_metab = DATASET_DIR + "data/misc/processed_metabolomics.tsv"
+proc_histo = DATASET_DIR + "data/misc/processed_histopathology.tsv"
+proc_bile_acid = DATASET_DIR + "data/misc/processed_bile_acid.tsv"
+proc_bile_ratio = DATASET_DIR + "data/misc/processed_ratio_bileAcid.tsv"
+faith_plot6 = DATASET_DIR + "plots/faith_pd.pdf"
+shannon_plot6 = DATASET_DIR + "plots/shannon_entropy.pdf"
+faith_lm_sec6 = DATASET_DIR + "stats/faith_diet_results.tsv"
+faith_dunn6 = DATASET_DIR + "stats/faith_dunn.tsv"
+shannon_lm_sec6 = DATASET_DIR + "stats/shannon_diet_results.tsv"
+shannon_dunn6 = DATASET_DIR + "stats/shannon_dunn.tsv"
+faith_stat_plot6 = DATASET_DIR + "plots/faith_stat_vis.pdf"
+shannon_stat_plot6 = DATASET_DIR + "plots/shannon_stat_vis.pdf"
+unweighted_plot6 = DATASET_DIR + "plots/unweighted_unifrac_pcoa.pdf"
+weighted_plot6 = DATASET_DIR + "plots/weighted_unifrac_pcoa.pdf"
+w_adonis6 = DATASET_DIR + "stats/w_adonis_results.tsv"
+uw_adonis6 = DATASET_DIR + "stats/uw_adonis_results.tsv"
+abun_plot16 = DATASET_DIR + "plots/family_abun1.pdf"
+abun_plot26 = DATASET_DIR + "plots/family_abun2.pdf"
+abun_lm6 = DATASET_DIR + "stats/family_abun_lm.tsv"
+abun_dunn6 = DATASET_DIR + "stats/family_abun_dunn.tsv"
+abun_stat_plot6 = DATASET_DIR + "plots/famAbun_stat_vis.pdf"
+histo_plot = DATASET_DIR + "plots/histopathology.pdf"
+histo_lm = DATASET_DIR + "stats/histopathology_lm.tsv"
+histo_dunn = DATASET_DIR + "stats/histopathology_dunn.tsv"
+neat_plot = DATASET_DIR + "plots/neat_toxin.pdf"
+diluted_plot = DATASET_DIR + "plots/dil_toxin.pdf"
+neat_kruskal = DATASET_DIR + "stats/neatToxin_kruskal_test.tsv"
+neat_dunn = DATASET_DIR + "stats/neatToxin_dunn_test.tsv"
+dil_kruskal = DATASET_DIR + "stats/dilToxin_kruskal_test.tsv"
+dil_dunn = DATASET_DIR + "stats/dilToxin_dunn_test.tsv"
+metab_plot = DATASET_DIR + "plots/metabolomics.pdf"
+metab_lm = DATASET_DIR + "stats/metab_linear_model.tsv"
+metab_dunn = DATASET_DIR + "stats/metab_dunn_test.tsv"
+metab_kruskal = DATASET_DIR + "stats/metab_kruskal_test.tsv"
+
+
+## creating lists of inputs for rule_all
+raw_seq_rule_all = [demux,
+                    demux_details,
+                    demux_vis,
+                    table,
+                    seqs,
+                    stats,
+                    merged_table,
+                    merged_seqs]
+
+    
+rule_all_input_list = [database1,
+                        database2,
+                        tree,
+                        placements,
+                        filt_table,
+                        rem_table,
+                        taxonomy,
+                        tax_filt,
+                        tax_filt_vis,
+                        lacto_table,
+                        lacto_rep_seqs,
+                        lacto_output_path,
+                        lacto_fasta,
+                        tss_table,
+                        tss_biom,
+                        tss_qza,
+                        fasta_output_path,
+                        tss_filt_table,
+                        tss_rem_table,
+                        tss_tax_filt,
+                        tss_tax_vis,
+                        otu_table,
+                        uw_dist_matrix,
+                        wu_dist_matrix,
+                        shannon,
+                        faith]
+
+
+rule_all_longitudinal = [faith_plot5,
+                        shannon_plot5,
+                        faith_lm5,
+                        faith_lm_sec5,
+                        faith_dunn5,
+                        shannon_lm5,
+                        shannon_lm_sec5,
+                        shannon_dunn5,
+                        faith_stat_plot5,
+                        shannon_stat_plot5,
+                        unweighted_plot5,
+                        weighted_plot5,
+                        w_adonis5,
+                        uw_adonis5,
+                        w_adonis_day5,
+                        uw_adonis_day5,
+                        abun_plot15,
+                        abun_plot25,
+                        abun_lm5,
+                        abun_dunn5,
+                        abun_stat_plot5,
+                        homog_wu_lm5,
+                        homoh_wu_dunn5,
+                        homog_uu_lm5,
+                        homog_uu_dunn5,
+                        homog_wu_plot5,
+                        homog_wu_stat_plot5,
+                        homog_uu_plot5,
+                        homog_uu_stat_plot5,
+                        resil_uu_lm5,
+                        resil_uu_dunn5,
+                        resil_wu_lm5,
+                        resil_wu_dunn5,
+                        resil_wu_plot5,
+                        resil_wu_stat_plot5,
+                        resil_uu_plot5,
+                        resil_uu_stat_plot5]
+
+
+rule_all_not_longitudinal = [seq_depth,
+                            proc_meta,
+                            proc_bile_acid,
+                            proc_neat_toxin,
+                            proc_dil_toxin,
+                            proc_metab,
+                            proc_histo,
+                            proc_bile_acid,
+                            proc_bile_ratio,
+                            faith_plot6,
+                            shannon_plot6,
+                            faith_lm_sec6,
+                            faith_dunn6,
+                            shannon_lm_sec6,
+                            shannon_dunn6,
+                            faith_stat_plot6,
+                            shannon_stat_plot6,
+                            unweighted_plot6,
+                            weighted_plot6,
+                            w_adonis6,
+                            uw_adonis6,
+                            abun_plot16,
+                            abun_plot26,
+                            abun_lm6,
+                            abun_dunn6,
+                            abun_stat_plot6,
+                            histo_plot,
+                            histo_lm,
+                            histo_dunn,
+                            neat_plot,
+                            diluted_plot,
+                            neat_kruskal,
+                            neat_dunn,
+                            dil_kruskal,
+                            dil_dunn,
+                            metab_plot,
+                            metab_lm,
+                            metab_dunn,
+                            metab_kruskal]
+
+
+## if else statements for which rules to run (include various rule snakemake files here...I think)
+if RUN_DEMUX_DADA2 == 'yes' and LONGITUDINAL == 'yes':
+
+    rule_all_input_list.extend(raw_seq_rule_all)
+
+    rule_all_input_list.append(rule_all_longitudinal)
+
+    include: "rules/01_demux_dada2.smk"
+    include: "rules/05_longitudinal.smk"
+
+    print("Running demux, DADA2, and longitudinal analysis!")
+
+else:
+    print("Running alternate pathway of analysis")
+
+
+
+if RUN_DEMUX_DADA2 == 'yes' and LONGITUDINAL == 'no':
+
+    rule_all_input_list.extend(raw_seq_rule_all)
+
+    rule_all_input_list.append(rule_all_not_longitudinal)
+
+    include: "rules/01_demux_dada2.smk"
+    include: "rules/06_notLongitudinal.smk"
+
+    print("Running demux and DADA2, but NOT longitudinal analysis!")
+else:
+    print("Running alternate pathway of analysis")
+
+
+
+if RUN_DEMUX_DADA2 == 'yes' and LONGITUDINAL == 'no downstream':
+
+    rule_all_input_list.extend(raw_seq_rule_all)
+
+    include: "rules/01_demux_dada2.smk"
+
+    print("Running upper qiime analysis ONLY!")
+
+else:
+    print("Running alternate pathway of analysis")
+
+
+
+if RUN_DEMUX_DADA2 == 'no' and LONGITUDINAL == 'yes':
+
+    rule_all_input_list.append(rule_all_longitudinal)
+
+    include: "rules/05_longitudinal.smk"
+
+    print("Running longitudinal-based analysis but not demux and DADA2!")
+else: 
+    print("Running alternate pathway of analysis")
+
+
+
+
+if RUN_DEMUX_DADA2 == 'no' and LONGITUDINAL == 'no':
+
+    rule_all_input_list
+
+    print("Running phylogenetic classification, core metrics, and total sum scaling!")
+
+else:
+    print("Running alternate pathway of analysis")
+
+
+
+## rule all
+rule all:
+    input:
+        data = rule_all_input_list
+
+
+
+
+## loading in needed rules for all
+include: "rules/02_phylogeny.smk"
+include: "rules/03_tss.smk"
+include: "rules/04_core_metrics.smk"
+
+

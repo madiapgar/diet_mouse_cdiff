@@ -18,43 +18,12 @@ library(naniar)
 library(ggpubr)
 library(rstatix)
 library(viridis)
+library(apppleplots)
 ```
 
 **Functions**
 ```{r}
-## histo plot comparison function
-comp_plot <- function(compiled_table,
-                       ## this is what you want your x axis to be (neat, diluted, or concentration)? 
-                       wanted_x,
-                       ## this is toxin/metabolite column you want to filter by (neat or diluted)?
-                       wanted_y,
-                       ## what is the toxin/metabolite you want to filter by called in the table?
-                       wanted_y_name,
-                       row_facet,
-                       diet_labels,
-                       non_diet_labels,
-                       title){
-  ## constructing plot
-  compiled_table %>% 
-    filter(.data[[wanted_y]] == wanted_y_name) %>% 
-    na.omit() %>% 
-    ggplot(aes(x = .data[[wanted_x]], y = score)) +
-    scale_x_continuous(trans = 'log10') +
-    geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-    geom_smooth(method = 'lm', se = FALSE) +
-    facet_grid(.data[[row_facet]]~diet,
-               labeller = labeller(.rows = non_diet_labels,
-                                   diet = diet_labels),
-               scales = 'free_y') +
-    theme_bw() +
-    theme(strip.text.y = element_text(angle = 0)) +
-    xlab('Concentration (log10)') +
-    ylab('Score') +
-    ggtitle(title) -> plot
-  return(plot)
-}
-
-## runs linear modeling on the table, diet, location, and toxin/metabolite wanted and returns full results 
+## runs linear modeling on the table, diet, location, and toxin/metabolite wanted and returns full results
 ## along with a table containing the r2 and p-value 
 ## this goes into the following function with a for loop 
 r2_value <- function(biom_table,
@@ -113,29 +82,6 @@ r2_value_for_loop <- function(biom_table,
   }
   return(output)
 }
-
-## statistical visualization plot function
-stat_plot <- function(stat_table,
-                      wanted_labels,
-                      x_lab_list,
-                      y_lab_list,
-                      x_label,
-                      title){
-  stat_table %>% 
-    ggplot(aes(x = tox_metab, y = diet)) +
-    geom_tile(aes(fill = r_direct), color = 'black', alpha = 0.6) +
-    geom_text(aes(label = signif)) +
-    scale_fill_gradient2(low = 'blue', high = 'green', name = "Correlation\nCoefficient") +
-    scale_x_discrete(labels = x_lab_list) +
-    scale_y_discrete(labels = y_lab_list) +
-    facet_wrap(~tissue,
-               labeller = labeller(tissue = wanted_labels)) +
-    theme_bw() +
-    xlab(x_label) +
-    ylab("Diet") +
-    ggtitle(title) -> plot
-  return(plot)
-  }
 ```
 
 **File Paths**
@@ -220,34 +166,66 @@ histo_neat_toxin %>%
 **Neat TcdA and TcdB Plot Construction**
 ```{r, warning=FALSE, fig.height=4, fig.width=9}
 ## neat cecum
-neat_histo_cecum_plot <- comp_plot(histo_neat_toxin,
-                                   'neat_conc_norm',
-                                   'tissue',
-                                   'cecum',
-                                   'neat_toxin',
-                                   diet_labs,
-                                   neat_labs,
-                                   'Cecum C. difficile Toxin by Histopathology')
+histo_neat_toxin %>% 
+  filter(tissue == 'cecum') -> cecum_neat_toxin
+
+neat_histo_cecum_plot <- apppleplots::correlation_plots(input_table = cecum_neat_toxin,
+                                                        x_value = 'neat_conc_norm',
+                                                        y_value = 'score',
+                                                        x_transform = TRUE,
+                                                        y_transform = FALSE,
+                                                        point_alpha = 0.4,
+                                                        regression_method = 'lm',
+                                                        facet_rows = 'neat_toxin',
+                                                        facet_cols = 'diet',
+                                                        row_labs = neat_labs,
+                                                        col_labs = diet_labs,
+                                                        x_name = 'Concentration (ng/uL) (log10)',
+                                                        y_name = 'Score',
+                                                        title_content = 
+                                                          'Cecum C. difficile Toxin by Histopathology')
+
 
 ## mini neat cecum
-mini_neat_histo_cecum_plot <- comp_plot(mini_histo_neat_toxin,
-                                         'neat_conc_norm',
-                                         'tissue',
-                                         'cecum',
-                                         'neat_toxin',
-                                         diet_labs,
-                                         neat_labs,
-                                         'Cecum C. difficile Toxin by Histopathology')
+mini_histo_neat_toxin %>% 
+  filter(tissue == 'cecum') -> mini_cecum_neat_toxin
+
+mini_neat_histo_cecum_plot <- apppleplots::correlation_plots(input_table = mini_cecum_neat_toxin,
+                                                             x_value = 'neat_conc_norm',
+                                                             y_value = 'score',
+                                                             x_transform = TRUE,
+                                                             y_transform = FALSE,
+                                                             point_alpha = 0.4,
+                                                             regression_method = 'lm',
+                                                             facet_rows = 'neat_toxin',
+                                                             facet_cols = 'diet',
+                                                             row_labs = neat_labs,
+                                                             col_labs = diet_labs,
+                                                             x_name = 'Concentration (ng/uL) (log10)',
+                                                             y_name = 'Score',
+                                                             title_content = 'Cecum C. difficile Toxin by Histopathology')
 
 ## neat colon
-neat_histo_colon_plot <- comp_plot(histo_neat_toxin,
-                                   'neat_conc_norm',
-                                   'tissue',
-                                   'colon',
-                                   'neat_toxin',
-                                   diet_labs,
-                                   neat_labs,
-                                   'Colon C. difficile Toxin by Histopathology')
+histo_neat_toxin %>% 
+  filter(tissue == 'colon') -> colon_neat_toxin
+
+neat_histo_colon_plot <- apppleplots::correlation_plots(input_table = colon_neat_toxin,
+                                                        x_value = 'neat_conc_norm',
+                                                        y_value = 'score',
+                                                        x_transform = TRUE,
+                                                        y_transform = FALSE,
+                                                        point_alpha = 0.4,
+                                                        regression_method = 'lm',
+                                                        facet_rows = 'neat_toxin',
+                                                        facet_cols = 'diet',
+                                                        row_labs = neat_labs,
+                                                        col_labs = diet_labs,
+                                                        x_name = 'Concentration (ng/uL) (log10)',
+                                                        y_name = 'Score',
+                                                        title_content = 'Colon C. difficile Toxin by Histopathology')
+  
+  
+  
 neat_histo_cecum_plot
 neat_histo_colon_plot
 mini_neat_histo_cecum_plot
@@ -326,12 +304,27 @@ neat_colonHisto_stats_plot
 **Heat Map Statistical Visualization**
 ```{r, warning=FALSE, fig.height=4, fig.width=6.5}
 ## neat stat plot
-neat_tox_stat_vis <- stat_plot(neatTox_stat_table,
-                               tissue_labs,
-                               neat_labs,
-                               stat_y_labs,
-                               "Toxin",
-                               "Histopathology Score and Toxin Concentration Comparisons (neat)")
+neat_tox_stat_vis <- apppleplots::stat_heat_plot(input_table = neatTox_stat_table,
+                                                 x_value = 'tox_metab',
+                                                 y_value = 'diet',
+                                                 x_value_type = 'discrete',
+                                                 y_value_type = 'discrete',
+                                                 pairwise = FALSE,
+                                                 correlation = TRUE,
+                                                 tile_fill = 'r_direct',
+                                                 tile_outline_color = 'black',
+                                                 tile_alpha = 0.6,
+                                                 text_value = 'signif',
+                                                 low_color = 'blue',
+                                                 high_color = 'green',
+                                                 legend_name = 'Correlation\nCoefficient',
+                                                 x_labels = neat_labs,
+                                                 y_labels = stat_y_labs,
+                                                 facet_by = 'tissue',
+                                                 facet_labels = tissue_labs,
+                                                 x_name = 'Toxin',
+                                                 y_name = 'Diet',
+                                                 title_content = "Histopathology Score and Toxin Concentration Comparisons (neat)")
 
 neat_tox_stat_vis
 ```
@@ -351,25 +344,46 @@ neat_toxin_histo_plots
 **Metabolomics Plots**
 ```{r, warning=FALSE, fig.height=5, fig.width=10}
 ## cecum 
-histo_metabCecum_plot <- comp_plot(histo_metab,
-                                   'metab_conc_norm',
-                                   'tissue',
-                                   'cecum',
-                                   'metabolite',
-                                   diet_labs,
-                                   metab_labs,
-                                   'Cecum SCFAs by Histopathology')
+histo_metab %>% 
+  filter(tissue == 'cecum') -> cecum_metab
+
+histo_metabCecum_plot <- apppleplots::correlation_plots(input_table = cecum_metab,
+                                                        x_value = 'metab_conc_norm',
+                                                        y_value = 'score',
+                                                        x_transform = TRUE,
+                                                        y_transform = FALSE,
+                                                        point_alpha = 0.4,
+                                                        regression_method = 'lm',
+                                                        facet_rows = 'metabolite',
+                                                        facet_cols = 'diet',
+                                                        row_labs = metab_labs,
+                                                        col_labs = diet_labs,
+                                                        x_name = 'Concentration (log10)',
+                                                        y_name = 'Score',
+                                                        title_content = 'Cecum SCFAs by Histopathology')
+  
+  
 
 ## colon
-histo_metabColon_plot <- comp_plot(histo_metab,
-                                   'metab_conc_norm',
-                                   'tissue',
-                                   'colon',
-                                   'metabolite',
-                                    diet_labs,
-                                    metab_labs,
-                                   'Colon SCFAs by Histopathology')
+histo_metab %>% 
+  filter(tissue == 'colon') -> colon_metab
 
+histo_metabColon_plot <- apppleplots::correlation_plots(input_table = colon_metab,
+                                                        x_value = 'metab_conc_norm',
+                                                        y_value = 'score',
+                                                        x_transform = TRUE,
+                                                        y_transform = FALSE,
+                                                        point_alpha = 0.4,
+                                                        regression_method = 'lm',
+                                                        facet_rows = 'metabolite',
+                                                        facet_cols = 'diet',
+                                                        row_labs = metab_labs,
+                                                        col_labs = diet_labs,
+                                                        x_name = 'Concentration (log10)',
+                                                        y_name = 'Score',
+                                                        title_content = 'Colon SCFAs by Histopathology')
+  
+  
 histo_metabCecum_plot
 histo_metabColon_plot
 ```
@@ -432,12 +446,28 @@ metab_colonHisto_stats_plot
 ```
 **Heat Map Statistical Visualization**
 ```{r, warning=FALSE, fig.height=3.5, fig.width=7.5}
-metab_stat_vis <- stat_plot(metab_stat_table,
-                            tissue_labs,
-                            metab_labs,
-                            stat_y_labs,
-                            "SCFA",
-                            "Histopathology Score and SCFA Concentration Comparisons")
+metab_stat_vis <- apppleplots::stat_heat_plot(input_table = metab_stat_table,
+                                              x_value = 'tox_metab',
+                                              y_value = 'diet',
+                                              x_value_type = 'discrete',
+                                              y_value_type = 'discrete',
+                                              pairwise = FALSE,
+                                              correlation = TRUE,
+                                              tile_fill = 'r_direct',
+                                              tile_outline_color = 'black',
+                                              tile_alpha = 0.6,
+                                              text_value = 'signif',
+                                              low_color = 'blue',
+                                              high_color = 'green',
+                                              legend_name = 'Correlation\nCoefficient',
+                                              x_labels = metab_labs,
+                                              y_labels = stat_y_labs,
+                                              facet_by = 'tissue',
+                                              facet_labels = tissue_labs,
+                                              x_name = 'SCFA',
+                                              y_name = 'Diet',
+                                              title_content = "Histopathology Score and SCFA Concentration Comparisons")
+  
 metab_stat_vis
 ```
 

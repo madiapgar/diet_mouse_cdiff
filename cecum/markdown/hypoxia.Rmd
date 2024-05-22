@@ -171,7 +171,6 @@ locationFiber_kruskal <- locationFiber_stats$KruskalTest
 locationFiber_dunn <- locationFiber_stats$DunnTest
 ```
 
-
 # **Plots**
 ```{r}
 ## location is on the x-axis and faceted by diet

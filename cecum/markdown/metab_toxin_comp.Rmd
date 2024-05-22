@@ -18,50 +18,12 @@ library(naniar)
 library(ggpubr)
 library(rstatix)
 library(viridis)
+library(apppleplots)
 ```
 
 **Functions**
 ```{r}
-## correlation plot function
-comp_plot <- function(metab_table,
-                      ## toxin or metabolomics?
-                       wanted_table,
-                       ## this is what you want your x axis to be (neat, diluted, or concentration)? 
-                       wanted_x,
-                       ## this is toxin/metabolite column you want to filter by (neat or diluted)?
-                       wanted_y,
-                       ## what is the toxin/metabolite you want to filter by called in the table?
-                       wanted_y_name,
-                       diet_labels,
-                       tox_labels,
-                       title){
-  ## putting tables together
-  metab_table %>% 
-    select(mouse_id, metabolite, metab_conc_norm) %>% 
-    left_join(wanted_table, by = 'mouse_id') %>% 
-    na.omit() -> compiled_table
-  ## constructing plot
-  compiled_table %>% 
-    filter(.data[[wanted_y]] == wanted_y_name) %>% 
-    na.omit() %>% 
-    ggplot(aes(x = .data[[wanted_x]], y = metab_conc_norm)) +
-    scale_x_continuous(trans = 'log10') +
-    scale_y_continuous(trans = 'log10') +
-    geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-    geom_smooth(method = 'lm', se = FALSE) +
-    facet_grid(neat_toxin~diet,
-               labeller = labeller(neat_toxin = tox_labels,
-                                   diet = diet_labels),
-               scales = 'free_y') +
-    theme_bw() +
-    theme(strip.text.y = element_text(angle = 0)) +
-    xlab('Toxin Concentration') +
-    ylab('Metabolite Concentration (ug/g)') +
-    ggtitle(title) -> plot
-  return(plot)
-}
-
-## runs linear modeling on the table, diet, location, and toxin/metabolite wanted and returns full results 
+## runs linear modeling on the table, diet, location, and toxin/metabolite wanted and returns full results
 ## along with a table containing the r2 and p-value 
 ## this goes into the following function with a for loop 
 r2_value <- function(biom_table,
@@ -120,31 +82,6 @@ r2_value_for_loop <- function(biom_table,
   }
   return(output)
 }
-
-## statistical visualization plot function
-stat_plot <- function(stat_table,
-                      wanted_labels,
-                      title){
-  stat_table %>% 
-    ggplot(aes(x = toxin, y = diet)) +
-    geom_tile(aes(fill = r_direct), color = 'black', alpha = 0.6) +
-    geom_text(aes(label = signif)) +
-    scale_fill_gradient2(low = 'blue', high = 'green', name = "Correlation\nCoefficient") +
-    scale_x_discrete(labels = c("TcdA",
-                                "TcdB")) +
-    scale_y_discrete(labels = c("Chow",
-                                "HFt/HFb",
-                                "HFt/LFb",
-                                "LFt/HFb",
-                                "LFt/LFb")) +
-    facet_wrap(~metabolite,
-               labeller = labeller(metabolite = wanted_labels)) +
-    theme_bw() +
-    xlab("Toxin") +
-    ylab("Diet") +
-    ggtitle(title) -> plot
-  return(plot)
-  }
 ```
 
 **File Paths**
@@ -174,6 +111,12 @@ names(metab_labs) <- wanted_metabs
 
 neat_labs <- c('TcdA', 'TcdB')
 names(neat_labs) <- c('Total TcA Neat', 'Total TcB Neat')
+
+stat_y_labs <- c("Chow",
+                 "HFt/HFb",
+                 "HFt/LFb",
+                 "LFt/HFb",
+                 "LFt/LFb")
 ```
 
 **File Prep**
@@ -184,61 +127,87 @@ neat_toxin <- read_tsv(toxin_FP)
 
 ## adding two so that I don't have any zeroes 
 ## zeroes get cut off on the plot since I have the axis in log10
+## combining metabolite and neat toxin tables
 metab %>% 
-  mutate(metab_conc_norm = (concentration + 2)) -> metab
-neat_toxin %>% 
-  mutate(neat_conc_norm = (neat_conc + 2)) -> neat_toxin
+  select(mouse_id, metabolite, concentration) %>% 
+  left_join(neat_toxin, by = 'mouse_id') %>% 
+  na.omit() %>% 
+  mutate(metab_conc_norm = (concentration + 2),
+         neat_conc_norm = (neat_conc + 2)) -> metab_neatTox
 ```
 
 **Comparison Plots**
 Acetic Acid
 ```{r, warning=FALSE, fig.height=4, fig.width=10}
-tox_acetic <- comp_plot(metab,
-                        neat_toxin,
-                        "neat_conc_norm",
-                        "metabolite",
-                        "Acetic Acid (ug/g)",
-                        diet_labs,
-                        neat_labs,
-                        "Acetic Acid")
+metab_neatTox %>% 
+  filter(metabolite == 'Acetic Acid (ug/g)') -> acetic_neatTox
+
+tox_acetic <- apppleplots::correlation_plots(input_table = acetic_neatTox,
+                                             x_value = 'neat_conc_norm',
+                                             y_value = 'metab_conc_norm',
+                                             x_transform = TRUE,
+                                             y_transform = TRUE,
+                                             point_alpha = 0.4,
+                                             regression_method = 'lm',
+                                             facet_rows = 'neat_toxin',
+                                             facet_cols = 'diet',
+                                             row_labs = neat_labs,
+                                             col_labs = diet_labs,
+                                             x_name = 'Toxin Concentration (ng/uL) (log10)',
+                                             y_name = 'SCFA Concentration (ug/g) (log10)',
+                                             title_content = 'Acetate')
+  
 tox_acetic
 ```
 
 n-Butanoic Acid
 ```{r, warning=FALSE, fig.height=4, fig.width=10}
-tox_butanoic <- comp_plot(metab,
-                        neat_toxin,
-                        "neat_conc_norm",
-                        "metabolite",
-                        "n-Butanoic Acid (ug/g)",
-                        diet_labs,
-                        neat_labs,
-                        "n-Butanoic Acid")
+metab_neatTox %>% 
+  filter(metabolite == 'n-Butanoic Acid (ug/g)') -> butanoic_neatTox
+
+tox_butanoic <- apppleplots::correlation_plots(input_table = butanoic_neatTox,
+                                               x_value = 'neat_conc_norm',
+                                               y_value = 'metab_conc_norm',
+                                               x_transform = TRUE,
+                                               y_transform = TRUE,
+                                               point_alpha = 0.4,
+                                               regression_method = 'lm',
+                                               facet_rows = 'neat_toxin',
+                                               facet_cols = 'diet',
+                                               row_labs = neat_labs,
+                                               col_labs = diet_labs,
+                                               x_name = 'Toxin Concentration (ng/uL) (log10)',
+                                               y_name = 'SCFA Concentration (ug/g) (log10)',
+                                               title_content = 'Butyrate')
 tox_butanoic
 ```
 
 Propanoic Acid 
 ```{r, warning=FALSE, fig.height=4, fig.width=10}
-tox_propanoic <- comp_plot(metab,
-                            neat_toxin,
-                            "neat_conc_norm",
-                            "metabolite",
-                            "Propanoic Acid (ug/g)",
-                            diet_labs,
-                            neat_labs,
-                            "Propanoic Acid")
+metab_neatTox %>% 
+  filter(metabolite == 'Propanoic Acid (ug/g)') -> propanoic_neatTox
+
+tox_propanoic <- apppleplots::correlation_plots(input_table = propanoic_neatTox,
+                                                x_value = 'neat_conc_norm',
+                                                y_value = 'metab_conc_norm',
+                                                x_transform = TRUE,
+                                                y_transform = TRUE,
+                                                point_alpha = 0.4,
+                                                regression_method = 'lm',
+                                                facet_rows = 'neat_toxin',
+                                                facet_cols = 'diet',
+                                                row_labs = neat_labs,
+                                                col_labs = diet_labs,
+                                                x_name = 'Toxin Concentration (ng/uL) (log10)',
+                                                y_name = 'SCFA Concentration (ug/g) (log10)',
+                                                title_content = 'Propionate')
+
 tox_propanoic
 ```
 
 **Statistical Analysis**
 ```{r}
-metab %>% 
-    select(mouse_id, metabolite, metab_conc_norm) %>% 
-    left_join(neat_toxin, by = 'mouse_id') %>% 
-    na.omit() %>% 
-    ungroup() -> metab_tox
-
-stat_table <- r2_value_for_loop(metab_tox,
+stat_table <- r2_value_for_loop(metab_neatTox,
                                 "neat_toxin",
                                 "neat_conc_norm")
 ## assigning p value significance
@@ -251,9 +220,28 @@ stat_table['signif'] <- symnum(stat_table$p_value,
 
 **Statistical Visualization**
 ```{r, fig.height=3, fig.width=5.5}
-stat_plot(stat_table,
-          metab_labs,
-          "Metabolite and Toxin Concentration Comparisons") -> tox_metab_stat_vis
+tox_metab_stat_vis <- apppleplots::stat_heat_plot(input_table = stat_table,
+                                                  x_value = 'toxin',
+                                                  y_value = 'diet',
+                                                  x_value_type = 'discrete',
+                                                  y_value_type = 'discrete',
+                                                  pairwise = FALSE,
+                                                  correlation = TRUE,
+                                                  tile_fill = 'r_direct',
+                                                  tile_outline_color = 'black',
+                                                  tile_alpha = 0.6,
+                                                  text_value = 'signif',
+                                                  low_color = 'blue',
+                                                  high_color = 'green',
+                                                  legend_name = 'Correlation\nCoefficient',
+                                                  x_labels = neat_labs,
+                                                  y_labels = stat_y_labs,
+                                                  facet_by = 'metabolite',
+                                                  facet_labels = metab_labs,
+                                                  x_name = 'Toxin',
+                                                  y_name = 'Diet',
+                                                  title_content = "SCFA and Toxin Concentration Comparisons")
+
 
 tox_metab_stat_vis
 ```

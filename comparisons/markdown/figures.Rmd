@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(cowplot)
 library(patchwork)
-library(dmcdmfigs)
+library(apppleplots)
 ```
 
 # **Putting Together Figures for Paper Manuscript**

@@ -177,6 +177,7 @@ abun_stats <- function(filtered_table,
   ## creating a list of my outputs
   my_list <- list(LinearModel = linear_model,
                   KruskalTest = kruskal,
+                  TestDunn = dunn,
                   DunnPostHoc = new_dunn)
   return(my_list)
 }
@@ -409,7 +410,7 @@ facAnaerobe_abun
 poster_abun1
 ```
 
-**Statistical Analysis for Wanted Family Abundances**
+
 ```{r, fig.height=13, fig.width=17}
 ## regular stats
 fam_abun_stats <- abun_stats(abun_filt,

@@ -15,71 +15,7 @@ library(broom)
 library(rstatix)
 library(ggpubr)
 library(glue)
-```
-
-**Functions**
-```{r}
-## this function runs a kruskal test followed by a dunns post hoc test on the data
-hypoxia_stats <- function(hypoxia_table,
-                          grouped_by,
-                          formula_left,
-                          formula_right){
-  ## kruskal test
-  hypoxia_table %>% 
-    group_by(hypoxia_table[grouped_by]) %>% 
-    do(tidy(kruskal.test(.data[[formula_left]] ~ .data[[formula_right]],
-               data = .))) %>% 
-    ungroup() %>% 
-    arrange(p.value) %>% 
-    mutate(p.adj = p.adjust(p.value,
-                            method = "BH")) -> kruskal
-  ## dunns post hoc test
-  ## need to use reformulate/glue to have function variables work with the dunn test formula
-  rightSide_name <- formula_right
-  funky_formula <- reformulate(glue("{rightSide_name}"),glue("{formula_left}"))
-  
-  hypoxia_table %>% 
-    group_by(hypoxia_table[grouped_by]) %>% 
-    dunn_test(funky_formula,
-              p.adjust.method = 'BH',
-              data = .) %>% 
-    add_y_position(scales = 'free',
-                   fun = 'max') -> dunn
-  ## list of outputs
-  my_list <- list(KruskalTest = kruskal,
-                  DunnTest = dunn)
-  return(my_list)
-}
-
-## this function plots the data/stats
-hypoxia_plots <- function(hypoxia_table,
-                          x_value,
-                          y_value,
-                          grouped_by,
-                          x_labels,
-                          facet_by,
-                          facet_labels,
-                          dunn_table,
-                          x_name,
-                          y_name,
-                          title_content){
-  hypoxia_table %>% 
-    ggplot(aes(x = .data[[x_value]], y = .data[[y_value]])) +
-    geom_boxplot(aes(group = .data[[grouped_by]])) +
-    geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-    scale_x_discrete(labels = x_labels) +
-    theme_bw(base_size = 16) +
-    facet_grid(~.data[[facet_by]],
-               labeller = labeller(.cols = facet_labels)) +
-    stat_pvalue_manual(dunn_table,
-                       tip.length = 0.01,
-                       label = 'p.adj.signif',
-                       hide.ns = TRUE) +
-    labs(x = x_name,
-         y = y_name,
-         title = title_content) -> plot
-  return(plot)
-}
+library(apppleplots)
 ```
 
 **File Path**
@@ -130,42 +66,53 @@ hypoxia %>%
          order = ifelse(order == 'Prox_colon', 2, order),
          order = ifelse(order == 'Dist_colon', 3, order)) %>% 
   arrange(order) -> hypoxia
+
+hypoxia %>% 
+  filter(order == 1) -> hypoxia_cecumOnly
 ```
 
 # **Statistical Analysis**
 ```{r}
 ## between locations by diet
-dietLocation_stats <- hypoxia_stats(hypoxia,
-                                    'diet',
-                                    'fluorescence',
-                                    'order')
+dietLocation_stats <- apppleplots::kruskal_dunn_stats(input_table = hypoxia,
+                                                      grouped_by = 'diet',
+                                                      adjust_method = 'BH',
+                                                      filter_adj_p_value = FALSE,
+                                                      formula_left = 'fluorescence',
+                                                      formula_right = 'order')
 
 dietLocation_kruskal <- dietLocation_stats$KruskalTest
 dietLocation_dunn <- dietLocation_stats$DunnTest
 
 ## between locations by fiber content (high v low)
-fiberLocation_stats <- hypoxia_stats(hypoxia,
-                                    'fiber',
-                                    'fluorescence',
-                                    'order')
+fiberLocation_stats <- apppleplots::kruskal_dunn_stats(input_table = hypoxia,
+                                                       grouped_by = 'fiber',
+                                                       adjust_method = 'BH',
+                                                       filter_adj_p_value = FALSE,
+                                                       formula_left = 'fluorescence',
+                                                       formula_right = 'order')
 
 fiberLocation_kruskal <- fiberLocation_stats$KruskalTest
 fiberLocation_dunn <- fiberLocation_stats$DunnTest
 
 ## between diets by location (so the opposite of the first one above)
-locationDiet_stats <- hypoxia_stats(hypoxia,
-                                    'order',
-                                    'fluorescence',
-                                    'diet')
+locationDiet_stats <- apppleplots::kruskal_dunn_stats(input_table = hypoxia,
+                                                      grouped_by = 'order',
+                                                      adjust_method = 'BH',
+                                                      filter_adj_p_value = FALSE,
+                                                      formula_left = 'fluorescence',
+                                                      formula_right = 'diet')
 
 locationDiet_kruskal <- locationDiet_stats$KruskalTest
 locationDiet_dunn <- locationDiet_stats$DunnTest
 
 ## between level of fiber content by location (so the opposite of the second one above)
-locationFiber_stats <- hypoxia_stats(hypoxia,
-                                    'order',
-                                    'fluorescence',
-                                    'fiber')
+locationFiber_stats <- apppleplots::kruskal_dunn_stats(input_table = hypoxia,
+                                                       grouped_by = 'order',
+                                                       adjust_method = 'BH',
+                                                       filter_adj_p_value = FALSE,
+                                                       formula_left = 'fluorescence',
+                                                       formula_right = 'fiber')
 
 locationFiber_kruskal <- locationFiber_stats$KruskalTest
 locationFiber_dunn <- locationFiber_stats$DunnTest
@@ -174,72 +121,87 @@ locationFiber_dunn <- locationFiber_stats$DunnTest
 # **Plots**
 ```{r}
 ## location is on the x-axis and faceted by diet
-hypoxia_dietLocation_plot <- hypoxia_plots(hypoxia,
-                                        'order',
-                                        'fluorescence',
-                                        'order',
-                                        location_x_labs,
-                                        'diet',
-                                        diet_labs,
-                                        dietLocation_dunn,
-                                        'Location',
-                                        'Fluorescence',
-                                        'Intestinal Hypoxia')
+hypoxia_dietLocation_plot <- apppleplots::facet_once_plots(input_table = hypoxia,
+                                                           stat_on_plot = TRUE,
+                                                           x_value = 'order',
+                                                           y_value = 'fluorescence',
+                                                           x_value_type = 'discrete',
+                                                           grouped_by = 'order',
+                                                           point_alpha = 0.4,
+                                                           x_labels = location_x_labs,
+                                                           facet_by = 'diet',
+                                                           facet_labels = diet_labs,
+                                                           stat_table = dietLocation_dunn,
+                                                           x_name = 'Location',
+                                                           y_name = 'Fluorescence',
+                                                           title_content = 'Intestinal Hypoxia')
+
 
 ## location on x-axis and faceted by fiber content 
-hypoxia_fiberLocation_plot <- hypoxia_plots(hypoxia,
-                                        'order',
-                                        'fluorescence',
-                                        'order',
-                                        location_x_labs,
-                                        'fiber',
-                                        fiber_labs,
-                                        fiberLocation_dunn,
-                                        'Location',
-                                        'Fluorescence',
-                                        'Intestinal Hypoxia by Dietary Fiber')
+hypoxia_fiberLocation_plot <- apppleplots::facet_once_plots(input_table = hypoxia,
+                                                            stat_on_plot = TRUE,
+                                                            x_value = 'order',
+                                                            y_value = 'fluorescence',
+                                                            x_value_type = 'discrete',
+                                                            grouped_by = 'order',
+                                                            point_alpha = 0.4,
+                                                            x_labels = location_x_labs,
+                                                            facet_by = 'fiber',
+                                                            facet_labels = fiber_labs,
+                                                            stat_table = fiberLocation_dunn,
+                                                            x_name = 'Location',
+                                                            y_name = 'Fluorescence',
+                                                            title_content = 'Intestinal Hypoxia by Dietary Fiber')
 
 ## diet on x-axis and faceted by location
-hypoxia_locationDiet_plot <- hypoxia_plots(hypoxia,
-                                        'diet',
-                                        'fluorescence',
-                                        'diet',
-                                        diet_x_labs,
-                                        'order',
-                                        location_labs,
-                                        locationDiet_dunn,
-                                        'Diet',
-                                        'Fluorescence',
-                                        'Intestinal Hypoxia')
+hypoxia_locationDiet_plot <- apppleplots::facet_once_plots(input_table = hypoxia,
+                                                           stat_on_plot = TRUE,
+                                                           x_value = 'diet',
+                                                           y_value = 'fluorescence',
+                                                           x_value_type = 'discrete',
+                                                           grouped_by = 'diet',
+                                                           point_alpha = 0.4,
+                                                           x_labels = diet_x_labs,
+                                                           facet_by = 'order',
+                                                           facet_labels = location_labs,
+                                                           stat_table = locationDiet_dunn,
+                                                           x_name = 'Diet',
+                                                           y_name = 'Fluorescence',
+                                                           title_content = 'Intestinal Hypoxia')
+
 
 ## diet on x-axis and faceted by location CECUM ONLY
-hypoxia %>% 
-  filter(order == 1) -> hypoxia_cecumOnly
-
-hypoxia_cecum_plot <- hypoxia_plots(hypoxia_cecumOnly,
-                                    'diet',
-                                    'fluorescence',
-                                    'diet',
-                                    diet_x_labs,
-                                    'order',
-                                    location_labs,
-                                    locationDiet_dunn,
-                                    'Diet',
-                                    'Fluorescence',
-                                    'Cecum Hypoxia')
+hypoxia_cecum_plot <- apppleplots::facet_once_plots(input_table = hypoxia,
+                                                    stat_on_plot = TRUE,
+                                                    x_value = 'diet',
+                                                    y_value = 'fluorescence',
+                                                    x_value_type = 'discrete',
+                                                    grouped_by = 'diet',
+                                                    point_alpha = 0.4,
+                                                    x_labels = diet_x_labs,
+                                                    facet_by = 'order',
+                                                    facet_labels = location_labs,
+                                                    stat_table = locationDiet_dunn,
+                                                    x_name = 'Diet',
+                                                    y_name = 'Fluorescence',
+                                                    title_content = 'Cecum Hypoxia')
+  
 
 ## fiber content on x-axis and faceted by location
-hypoxia_locationFiber_plot <- hypoxia_plots(hypoxia,
-                                            'fiber',
-                                            'fluorescence',
-                                            'fiber',
-                                            fiber_x_labs,
-                                            'order',
-                                            location_labs,
-                                            locationFiber_dunn,
-                                            'Fiber Content',
-                                            'Fluorescence',
-                                            'Intestinal Hypoxia by Dietary Fiber')
+hypoxia_locationFiber_plot <- apppleplots::facet_once_plots(input_table = hypoxia,
+                                                            stat_on_plot = TRUE,
+                                                            x_value = 'fiber',
+                                                            y_value = 'fluorescence',
+                                                            x_value_type = 'discrete',
+                                                            grouped_by = 'fiber',
+                                                            point_alpha = 0.4,
+                                                            x_labels = fiber_x_labs,
+                                                            facet_by = 'order',
+                                                            facet_labels = location_labs,
+                                                            stat_table = locationFiber_dunn,
+                                                            x_name = 'Fiber Content',
+                                                            y_name = 'Fluorescence',
+                                                            title_content = 'Intestinal Hypoxia by Dietary Fiber')
 ```
 
 ```{r, fig.height=5, fig.width=15}

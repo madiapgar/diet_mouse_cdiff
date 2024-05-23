@@ -125,6 +125,7 @@ metadata <- read_tsv(metadata_FP)
 metab <- read_tsv(metab_FP)
 neat_toxin <- read_tsv(toxin_FP)
 
+## overall table
 ## adding two so that I don't have any zeroes 
 ## zeroes get cut off on the plot since I have the axis in log10
 ## combining metabolite and neat toxin tables
@@ -134,14 +135,21 @@ metab %>%
   na.omit() %>% 
   mutate(metab_conc_norm = (concentration + 2),
          neat_conc_norm = (neat_conc + 2)) -> metab_neatTox
+
+## filtered tables for individual plots
+metab_neatTox %>% 
+  filter(metabolite == 'Acetic Acid (ug/g)') -> acetic_neatTox
+
+metab_neatTox %>% 
+  filter(metabolite == 'n-Butanoic Acid (ug/g)') -> butanoic_neatTox
+
+metab_neatTox %>% 
+  filter(metabolite == 'Propanoic Acid (ug/g)') -> propanoic_neatTox
 ```
 
 **Comparison Plots**
 Acetic Acid
 ```{r, warning=FALSE, fig.height=4, fig.width=10}
-metab_neatTox %>% 
-  filter(metabolite == 'Acetic Acid (ug/g)') -> acetic_neatTox
-
 tox_acetic <- apppleplots::correlation_plots(input_table = acetic_neatTox,
                                              x_value = 'neat_conc_norm',
                                              y_value = 'metab_conc_norm',
@@ -162,9 +170,6 @@ tox_acetic
 
 n-Butanoic Acid
 ```{r, warning=FALSE, fig.height=4, fig.width=10}
-metab_neatTox %>% 
-  filter(metabolite == 'n-Butanoic Acid (ug/g)') -> butanoic_neatTox
-
 tox_butanoic <- apppleplots::correlation_plots(input_table = butanoic_neatTox,
                                                x_value = 'neat_conc_norm',
                                                y_value = 'metab_conc_norm',
@@ -184,9 +189,6 @@ tox_butanoic
 
 Propanoic Acid 
 ```{r, warning=FALSE, fig.height=4, fig.width=10}
-metab_neatTox %>% 
-  filter(metabolite == 'Propanoic Acid (ug/g)') -> propanoic_neatTox
-
 tox_propanoic <- apppleplots::correlation_plots(input_table = propanoic_neatTox,
                                                 x_value = 'neat_conc_norm',
                                                 y_value = 'metab_conc_norm',

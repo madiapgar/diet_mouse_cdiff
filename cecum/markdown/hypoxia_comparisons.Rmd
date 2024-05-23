@@ -18,48 +18,12 @@ library(naniar)
 library(ggpubr)
 library(rstatix)
 library(viridis)
+library(apppleplots)
 ```
 
 **Functions**
 ```{r}
-## hypoxia plot comparison function
-comp_plot <- function(hypoxia_table,
-                       wanted_table,
-                       ## this is what you want your x axis to be (neat, diluted, or concentration)? 
-                       wanted_x,
-                       ## this is toxin/metabolite column you want to filter by (neat or diluted)?
-                       wanted_y,
-                       ## what is the toxin/metabolite you want to filter by called in the table?
-                       wanted_y_name,
-                       diet_labels,
-                       location_labels,
-                       x_label,
-                       title){
-  ## putting tables together
-  hypoxia_table %>% 
-    left_join(wanted_table, by = 'mouse_id') %>% 
-    na.omit() -> compiled_table
-  ## constructing plot
-  compiled_table %>% 
-    filter(.data[[wanted_y]] == wanted_y_name) %>% 
-    na.omit() %>% 
-    ggplot(aes(x = .data[[wanted_x]], y = fluorescence)) +
-    scale_x_continuous(trans = 'log10') +
-    scale_y_continuous(trans = 'log10') +
-    geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-    geom_smooth(method = 'lm', se = FALSE) +
-    facet_grid(order~diet,
-               labeller = labeller(order = location_labels,
-                                   diet = diet_labels)) +
-    theme_bw() +
-    theme(strip.text.y = element_text(angle = 0)) +
-    xlab(x_label) +
-    ylab('Fluorescence') +
-    ggtitle(title) -> plot
-  return(plot)
-}
-
-## runs linear modeling on the table, diet, location, and toxin/metabolite wanted and returns full results 
+## runs linear modeling on the table, diet, location, and toxin/metabolite wanted and returns full results
 ## along with a table containing the r2 and p-value 
 ## this goes into the following function with a for loop 
 r2_value <- function(biom_table,
@@ -118,28 +82,6 @@ r2_value_for_loop <- function(biom_table,
   }
   return(output)
 }
-
-## statistical visualization plot function
-stat_plot <- function(stat_table,
-                      x_lab_list,
-                      y_lab_list,
-                      facet_labels,
-                      title){
-  stat_table %>% 
-    ggplot(aes(x = order, y = diet)) +
-    geom_tile(aes(fill = r_direct), color = 'black', alpha = 0.6) +
-    geom_text(aes(label = signif)) +
-    scale_fill_gradient2(low = 'blue', high = 'green', name = "Correlation\nCoefficient") +
-    scale_x_discrete(labels = x_lab_list) +
-    scale_y_discrete(labels = y_lab_list) +
-    facet_wrap(~tox_metab,
-               labeller = labeller(tox_metab = facet_labels)) +
-    theme_bw() +
-    xlab("Location") +
-    ylab("Diet") +
-    ggtitle(title) -> plot
-  return(plot)
-  }
 ```
 
 **File Paths**
@@ -209,37 +151,80 @@ neat_toxin <- read_tsv(toxin_FP) %>%
 
 histo <- read_tsv(histo_FP) %>% 
          select(mouse_id, tissue, score)
+
+## filtered tables for plots
+## histopathology
+hypox_histo_table <- hypoxia %>% 
+  left_join(histo, by = 'mouse_id') %>% 
+  na.omit()
+
+hypox_histo_table %>% 
+  filter(location == 'Cecum') -> hypox_cecumOnly
+
+hypox_histo_table %>% 
+  filter(location != 'Cecum') -> hypox_colonOnly
+
+## toxin
+hypox_toxin_table <- hypoxia %>% 
+  left_join(neat_toxin, by = 'mouse_id') %>% 
+  na.omit()
+
+hypox_toxin_table %>% 
+  filter(neat_toxin == 'Total TcA Neat') -> hypox_tcda_table
+
+hypox_toxin_table %>% 
+  filter(neat_toxin == 'Total TcB Neat') -> hypox_tcdb_table
+
+## metabolomics
+hypox_metab_table <- hypoxia %>% 
+  left_join(metab, by = 'mouse_id') %>% 
+  na.omit()
+
+hypox_metab_table %>% 
+  filter(metabolite == 'Acetic Acid (ug/g)') -> hypox_acetic_table
+
+hypox_metab_table %>% 
+  filter(metabolite == 'n-Butanoic Acid (ug/g)') -> hypox_butanoic_table
+
+hypox_metab_table %>% 
+  filter(metabolite == 'Propanoic Acid (ug/g)') -> hypox_propanoic_table
 ```
+
 #**Hypoxia and Histopathology Score Comparisons**
 **Plot**
 ```{r, warning=FALSE, fig.width=10, fig.height=3}
 ## cecum
-hypoxia %>% 
-  filter(location == 'Cecum') -> hypox_cecumOnly
+hypox_cecum_plot <- apppleplots::correlation_plots(input_table = hypox_cecumOnly,
+                                                   x_value = 'score',
+                                                   y_value = 'fluorescence',
+                                                   x_transform = FALSE,
+                                                   y_transform = TRUE,
+                                                   point_alpha = 0.4,
+                                                   regression_method = 'lm',
+                                                   facet_rows = 'order',
+                                                   facet_cols = 'diet',
+                                                   row_labs = location_labs,
+                                                   col_labs = diet_labs,
+                                                   x_name = 'Histopathology Score',
+                                                   y_name = 'Fluorescence (log10)',
+                                                   title_content = 'Cecum Hypoxia by Inflammation')
 
-hypox_cecum_plot <- comp_plot(hypox_cecumOnly,
-                              histo,
-                              'score',
-                              'tissue',
-                              'cecum',
-                              diet_labs,
-                              location_labs,
-                              'Histopathology Score',
-                              'Cecum Hypoxia by Inflammation')
 
 ## colon
-hypoxia %>% 
-  filter(location != 'Cecum') -> hypox_colonOnly
-
-hypox_colon_plot <- comp_plot(hypox_colonOnly,
-                              histo,
-                              'score',
-                              'tissue',
-                              'colon',
-                              diet_labs,
-                              location_labs,
-                              'Histopathology Score',
-                              'Colon Hypoxia by Inflammation')
+hypox_colon_plot <- apppleplots::correlation_plots(input_table = hypox_colonOnly,
+                                                   x_value = 'score',
+                                                   y_value = 'fluorescence',
+                                                   x_transform = FALSE,
+                                                   y_transform = TRUE,
+                                                   point_alpha = 0.4,
+                                                   regression_method = 'lm',
+                                                   facet_rows = 'order',
+                                                   facet_cols = 'diet',
+                                                   row_labs = location_labs,
+                                                   col_labs = diet_labs,
+                                                   x_name = 'Histopathology Score',
+                                                   y_name = 'Fluorescence (log10)',
+                                                   title_content = 'Colon Hypoxia by Inflammation')
 
 
 hypox_cecum_plot
@@ -248,10 +233,6 @@ hypox_colon_plot
 
 **Stats**
 ```{r}
-hypox_histo_table <- hypoxia %>% 
-  left_join(histo, by = 'mouse_id') %>% 
-  na.omit()
-
 hypox_histo_stat_table <- r2_value_for_loop(hypox_histo_table,
                                             "tissue",
                                             "score")
@@ -269,11 +250,28 @@ hypox_histo_stat_table %>%
   arrange(order) -> hypox_histo_stat_table
 
 
-hypox_histo_stat_plot <- stat_plot(hypox_histo_stat_table,
-                                   location_labs,
-                                   diet_y_labs,
-                                   tissue_labs,
-                                   'Hypoxia and Histopathology Score Comparisons')
+hypox_histo_stat_plot <- apppleplots::stat_heat_plot(input_table = hypox_histo_stat_table,
+                                                     x_value = 'order',
+                                                     y_value = 'diet',
+                                                     x_value_type = 'discrete',
+                                                     y_value_type = 'discrete',
+                                                     pairwise = FALSE,
+                                                     correlation = TRUE,
+                                                     tile_fill = 'r_direct',
+                                                     tile_outline_color = 'black',
+                                                     tile_alpha = 0.6,
+                                                     text_value = 'signif',
+                                                     low_color = 'blue',
+                                                     high_color = 'green',
+                                                     legend_name = 'Correlation\nCoefficient',
+                                                     x_labels = location_labs,
+                                                     y_labels = diet_y_labs,
+                                                     facet_by = 'tox_metab',
+                                                     facet_labels = tissue_labs,
+                                                     x_name = 'Location',
+                                                     y_name = 'Diet',
+                                                     title_content = "Hypoxia and Histopathology Score Comparisons")
+
 
 hypox_histo_stat_plot
 ```
@@ -322,25 +320,37 @@ hypoxia_histo_plots
 #**Hypoxia and Neat C. difficile Toxin Concentration Comparisons**
 **Plots**
 ```{r, warning=FALSE, fig.width=10, fig.height=5}
-hypox_tcda_plot <- comp_plot(hypoxia,
-                             neat_toxin,
-                             'neat_conc',
-                             'neat_toxin',
-                             'Total TcA Neat',
-                             diet_labs,
-                             location_labs,
-                             'Concentration (log10)',
-                             'Hypoxia Compared to TcdA Toxin')
+hypox_tcda_plot <- apppleplots::correlation_plots(input_table = hypox_tcda_table,
+                                                   x_value = 'neat_conc',
+                                                   y_value = 'fluorescence',
+                                                   x_transform = TRUE,
+                                                   y_transform = TRUE,
+                                                   point_alpha = 0.4,
+                                                   regression_method = 'lm',
+                                                   facet_rows = 'order',
+                                                   facet_cols = 'diet',
+                                                   row_labs = location_labs,
+                                                   col_labs = diet_labs,
+                                                   x_name = 'Concentration (ng/uL) (log10)',
+                                                   y_name = 'Fluorescence (log10)',
+                                                   title_content = 'Hypoxia Compared to TcdA Toxin')
+  
 
-hypox_tcdb_plot <- comp_plot(hypoxia,
-                             neat_toxin,
-                             'neat_conc',
-                             'neat_toxin',
-                             'Total TcB Neat',
-                             diet_labs,
-                             location_labs,
-                             'Concentration (log10)',
-                             'Hypoxia Compared to TcdB Toxin')
+
+hypox_tcdb_plot <- apppleplots::correlation_plots(input_table = hypox_tcdb_table,
+                                                   x_value = 'neat_conc',
+                                                   y_value = 'fluorescence',
+                                                   x_transform = TRUE,
+                                                   y_transform = TRUE,
+                                                   point_alpha = 0.4,
+                                                   regression_method = 'lm',
+                                                   facet_rows = 'order',
+                                                   facet_cols = 'diet',
+                                                   row_labs = location_labs,
+                                                   col_labs = diet_labs,
+                                                   x_name = 'Concentration (ng/uL) (log10)',
+                                                   y_name = 'Fluorescence (log10)',
+                                                   title_content = 'Hypoxia Compared to TcdB Toxin')
 
 hypox_tcda_plot
 hypox_tcdb_plot
@@ -349,10 +359,6 @@ hypox_tcdb_plot
 **Stats**
 I think there are too few points for the high-fat/high-fiber diet so there isn't a calculated p-value for that diet. I turned the NAs into 1 so the result would show as non-significant on the plot. 
 ```{r}
-hypox_toxin_table <- hypoxia %>% 
-  left_join(neat_toxin, by = 'mouse_id') %>% 
-  na.omit()
-
 hypox_toxin_stat_table <- r2_value_for_loop(hypox_toxin_table,
                                             "neat_toxin",
                                             "neat_conc")
@@ -372,11 +378,27 @@ hypox_toxin_stat_table %>%
   arrange(order) -> hypox_toxin_stat_table
 
 
-hypox_toxin_stat_plot <- stat_plot(hypox_toxin_stat_table,
-                                   location_labs,
-                                   diet_y_labs,
-                                   neat_labs,
-                                   'Hypoxia and Toxin Comparisons')
+hypox_toxin_stat_plot <- apppleplots::stat_heat_plot(input_table = hypox_toxin_stat_table,
+                                                     x_value = 'order',
+                                                     y_value = 'diet',
+                                                     x_value_type = 'discrete',
+                                                     y_value_type = 'discrete',
+                                                     pairwise = FALSE,
+                                                     correlation = TRUE,
+                                                     tile_fill = 'r_direct',
+                                                     tile_outline_color = 'black',
+                                                     tile_alpha = 0.6,
+                                                     text_value = 'signif',
+                                                     low_color = 'blue',
+                                                     high_color = 'green',
+                                                     legend_name = 'Correlation\nCoefficient',
+                                                     x_labels = location_labs,
+                                                     y_labels = diet_y_labs,
+                                                     facet_by = 'tox_metab',
+                                                     facet_labels = neat_labs,
+                                                     x_name = 'Location',
+                                                     y_name = 'Diet',
+                                                     title_content = "Hypoxia and Toxin Comparisons")
 
 hypox_toxin_stat_plot
 ```
@@ -399,35 +421,53 @@ hypoxia_toxin_plots
 #**Hypoxia and Metabolite Concentration Comparisons**
 **Plots**
 ```{r, warning=FALSE, fig.width=10, fig.height=5}
-hypox_acetic_plot <- comp_plot(hypoxia,
-                               metab,
-                               'concentration',
-                               'metabolite',
-                               'Acetic Acid (ug/g)',
-                               diet_labs,
-                               location_labs,
-                               'Concentration (log10)',
-                               'Hypoxia Compared to Acetic Acid Concentration')
+hypox_acetic_plot <- apppleplots::correlation_plots(input_table = hypox_acetic_table,
+                                                    x_value = 'concentration',
+                                                    y_value = 'fluorescence',
+                                                    x_transform = TRUE,
+                                                    y_transform = TRUE,
+                                                    point_alpha = 0.4,
+                                                    regression_method = 'lm',
+                                                    facet_rows = 'order',
+                                                    facet_cols = 'diet',
+                                                    row_labs = location_labs,
+                                                    col_labs = diet_labs,
+                                                    x_name = 'Concentration (ug/g) (log10)',
+                                                    y_name = 'Fluorescence (log10)',
+                                                    title_content = 'Hypoxia Compared to Acetate Concentration')
+  
+  
 
-hypox_butanoic_plot <- comp_plot(hypoxia,
-                                 metab,
-                                 'concentration',
-                                 'metabolite',
-                                 'n-Butanoic Acid (ug/g)',
-                                 diet_labs,
-                                 location_labs,
-                                 'Concentration (log10)',
-                                 'Hypoxia Compared to n-Butanoic Acid Concentration')
 
-hypox_propanoic_plot <- comp_plot(hypoxia,
-                                   metab,
-                                   'concentration',
-                                   'metabolite',
-                                   'Propanoic Acid (ug/g)',
-                                   diet_labs,
-                                   location_labs,
-                                   'Concentration (log10)',
-                                   'Hypoxia Compared to Propanoic Acid Concentration')
+hypox_butanoic_plot <- apppleplots::correlation_plots(input_table = hypox_butanoic_table,
+                                                      x_value = 'concentration',
+                                                      y_value = 'fluorescence',
+                                                      x_transform = TRUE,
+                                                      y_transform = TRUE,
+                                                      point_alpha = 0.4,
+                                                      regression_method = 'lm',
+                                                      facet_rows = 'order',
+                                                      facet_cols = 'diet',
+                                                      row_labs = location_labs,
+                                                      col_labs = diet_labs,
+                                                      x_name = 'Concentration (ug/g) (log10)',
+                                                      y_name = 'Fluorescence (log10)',
+                                                      title_content = 'Hypoxia Compared to Butyrate Concentration')
+
+hypox_propanoic_plot <- apppleplots::correlation_plots(input_table = hypox_propanoic_table,
+                                                       x_value = 'concentration',
+                                                       y_value = 'fluorescence',
+                                                       x_transform = TRUE,
+                                                       y_transform = TRUE,
+                                                       point_alpha = 0.4,
+                                                       regression_method = 'lm',
+                                                       facet_rows = 'order',
+                                                       facet_cols = 'diet',
+                                                       row_labs = location_labs,
+                                                       col_labs = diet_labs,
+                                                       x_name = 'Concentration (ug/g) (log10)',
+                                                       y_name = 'Fluorescence (log10)',
+                                                       title_content = 'Hypoxia Compared to Propionate Concentration')
 
 hypox_acetic_plot
 hypox_butanoic_plot
@@ -436,10 +476,6 @@ hypox_propanoic_plot
 
 **Stats**
 ```{r, warning=FALSE, fig.height=4, fig.width=10}
-hypox_metab_table <- hypoxia %>% 
-  left_join(metab, by = 'mouse_id') %>% 
-  na.omit()
-
 hypox_metab_stat_table <- r2_value_for_loop(hypox_metab_table,
                                             "metabolite",
                                             "concentration")
@@ -459,11 +495,27 @@ hypox_metab_stat_table %>%
   arrange(order) -> hypox_metab_stat_table
 
 
-hypox_metab_stat_plot <- stat_plot(hypox_metab_stat_table,
-                                   location_labs,
-                                   diet_y_labs,
-                                   metab_labs,
-                                   'Hypoxia and Metabolite Comparisons')
+hypox_metab_stat_plot <- apppleplots::stat_heat_plot(input_table = hypox_metab_stat_table,
+                                                     x_value = 'order',
+                                                     y_value = 'diet',
+                                                     x_value_type = 'discrete',
+                                                     y_value_type = 'discrete',
+                                                     pairwise = FALSE,
+                                                     correlation = TRUE,
+                                                     tile_fill = 'r_direct',
+                                                     tile_outline_color = 'black',
+                                                     tile_alpha = 0.6,
+                                                     text_value = 'signif',
+                                                     low_color = 'blue',
+                                                     high_color = 'green',
+                                                     legend_name = 'Correlation\nCoefficient',
+                                                     x_labels = location_labs,
+                                                     y_labels = diet_y_labs,
+                                                     facet_by = 'tox_metab',
+                                                     facet_labels = metab_labs,
+                                                     x_name = 'Location',
+                                                     y_name = 'Diet',
+                                                     title_content = "Hypoxia and SCFA Comparisons")
 
 hypox_metab_stat_plot
 ```

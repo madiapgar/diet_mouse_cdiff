@@ -18,94 +18,8 @@ library(cowplot)
 library(rstatix)
 library(ggpubr)
 library(argparse)
+library(apppleplots)
 ```
-
-**Functions**
-```{r}
-## 1
-## statistical analysis
-histo_stats <- function(big_histo){
-  ## kruskal-wallis test
-  big_histo %>% 
-    group_by(tissue) %>% 
-    do(tidy(kruskal.test(score ~ diet,
-                         data = .))) %>% 
-    ungroup() %>%
-    arrange(p.value) %>%
-    mutate(p.adj = p.adjust(p.value,
-                            method = "BH"),
-           test_id = paste(tissue)) %>% 
-    filter(p.adj <= 0.05) -> kruskal
-  ## dunn's post hoc test
-  big_histo %>% 
-    group_by(tissue) %>% 
-    mutate(test_id = paste(tissue)) %>% 
-    filter(test_id %in% kruskal$test_id) %>% 
-    dunn_test(score ~ diet,
-              p.adjust.method = 'BH',
-              data =.) %>% 
-    add_y_position(scales = 'free_y', step.increase = 0) -> dunn
-  ## linear model
-  big_histo %>% 
-    group_by(tissue) %>% 
-    do(glance(lm(score ~ (purified_diet * seq_depth) + high_fat * high_fiber,
-                 data =.))) %>% 
-    ungroup() %>%
-    na.omit() %>%
-    mutate(adj.p = p.adjust(p.value,
-                            method = "BH"),
-           test_id = paste(tissue)) %>% 
-    filter(adj.p <= 0.05) -> lm_full
-  
-  big_histo %>% 
-    group_by(tissue) %>% 
-    mutate(test_id = paste(tissue)) %>% 
-    filter(test_id %in% lm_full$test_id) %>% 
-    do(tidy(lm(score ~ (purified_diet * seq_depth) + high_fat * high_fiber,
-               data =.))) %>%
-    filter(term != '(Intercept)') %>% 
-    na.omit() -> linear_model
-  
-  linear_model['signif'] <- symnum(linear_model$p.value,
-                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                   symbols = c("****", "***", "**", "*", "+", "ns"),
-                                   abbr.colnames = FALSE,
-                                   na = "")
-  ## creating a list of my outputs
-  my_list <- list(KruskalWallis = kruskal,
-                  DunnsPostHoc = dunn,
-                  LinearModel = linear_model)
-  return(my_list)
-}
-
-## 3
-histo_plot <- function(big_histo,
-                       histo_dunn){
-  big_histo %>% 
-    mutate(day_post_inf = as.numeric(day_post_inf)) %>% 
-    ggplot(aes(x = diet, y = score)) +
-    geom_boxplot(aes(group = diet)) +
-    geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-    scale_x_discrete(labels = c('Chow', 
-                                'HFt/\nHFb', 
-                                'HFt/\nLFb',
-                                'LFt/\nHFb', 
-                                'LFt/\nLFb')) +
-    facet_wrap(~tissue, labeller = labeller(tissue = tissue_labs),
-               scales = "free_y") +
-    stat_pvalue_manual(histo_dunn,
-                       tip.length = 0.01,
-                       label = 'p.adj.signif',
-                       hide.ns = TRUE,
-                       step.increase = 0.1) +
-    theme_bw(base_size = 20) +
-    xlab('Diet') +
-    ylab('Histopathology Score') +
-    ggtitle("Cecal Sample Histopathology Score by Diet") -> all_day_plot
-  return(all_day_plot)
-}
-```
-
 **File Paths**
 Histopathology file has already been joined with metadata so it doesn't need to be read in. 
 ```{r}
@@ -114,6 +28,12 @@ tissue_labs <- c('Cecum',
                  'Colon')
 names(tissue_labs) <- c('cecum',
                         'colon')
+
+diet_x_labs <- c('Chow',
+                 'HFt/\nHFb',
+                 'HFt/\nLFb',
+                 'LFt/\nHFb',
+                 'LFt/\nLFb')
 ```
 
 **Histopathology Calculations**
@@ -121,16 +41,41 @@ names(tissue_labs) <- c('cecum',
 ## reading in histo file
 histo <- read_tsv(histo_FP)
 
-## stats 
-stats <- histo_stats(big_histo = histo)
+## kruskal wallis and dunns post hoc test 
+histo_krDunn <- apppleplots::kruskal_dunn_stats(input_table = histo,
+                                                grouped_by = 'tissue',
+                                                adjust_method = 'BH',
+                                                filter_adj_p_value = FALSE,
+                                                formula_left = 'score',
+                                                formula_right = 'diet')
+  
 
-kruskal <- stats$KruskalWallis
-dunn <- stats$DunnsPostHoc
-linear_model <- stats$LinearModel
+kruskal <- histo_krDunn$KruskalTest
+dunn <- histo_krDunn$DunnTest
+
+## linear model
+linear_model <- apppleplots::linear_model(input_table = histo,
+                                          grouped_by = 'tissue',
+                                          adjust_method = 'BH',
+                                          filter_adj_p_value = FALSE,
+                                          formula_left = 'score',
+                                          formula_right = '(purified_diet * seq_depth) + high_fat * high_fiber')
 
 ## overall plot 
-all_day_plot <- histo_plot(histo,
-                           dunn)
+all_day_plot <- apppleplots::facet_once_plots(input_table = histo,
+                                              stat_on_plot = TRUE,
+                                              x_value = 'diet',
+                                              y_value = 'score',
+                                              x_value_type = 'discrete',
+                                              grouped_by = 'diet',
+                                              point_alpha = 0.4,
+                                              x_labels = diet_x_labs,
+                                              facet_by = 'tissue',
+                                              facet_labels = tissue_labs,
+                                              stat_table = dunn,
+                                              x_name = 'Diet',
+                                              y_name = 'Score',
+                                              title_content = 'Histopathology Score')
 
 ## cecum only plot
 histo %>% 
@@ -138,8 +83,21 @@ histo %>%
 dunn %>% 
   filter(tissue == 'cecum') -> dunn_cecum
 
-cecum_histo_plot <- histo_plot(histo_cecumOnly,
-                               dunn_cecum)
+cecum_histo_plot <- apppleplots::facet_once_plots(input_table = histo_cecumOnly,
+                                                  stat_on_plot = TRUE,
+                                                  x_value = 'diet',
+                                                  y_value = 'score',
+                                                  x_value_type = 'discrete',
+                                                  grouped_by = 'diet',
+                                                  point_alpha = 0.4,
+                                                  x_labels = diet_x_labs,
+                                                  facet_by = 'tissue',
+                                                  facet_labels = tissue_labs,
+                                                  stat_table = dunn_cecum,
+                                                  x_name = 'Diet',
+                                                  y_name = 'Score',
+                                                  title_content = 'Cecal Sample Histopathology')
+  
 
 ## colon only plot 
 histo %>% 
@@ -147,8 +105,33 @@ histo %>%
 dunn %>% 
   filter(tissue == 'colon') -> dunn_colon
 
-colon_histo_plot <- histo_plot(histo_colonOnly,
-                               dunn_colon)
+colon_histo_plot <- apppleplots::facet_once_plots(input_table = histo_colonOnly,
+                                                  stat_on_plot = TRUE,
+                                                  x_value = 'diet',
+                                                  y_value = 'score',
+                                                  x_value_type = 'discrete',
+                                                  grouped_by = 'diet',
+                                                  point_alpha = 0.4,
+                                                  x_labels = diet_x_labs,
+                                                  facet_by = 'tissue',
+                                                  facet_labels = tissue_labs,
+                                                  stat_table = dunn_colon,
+                                                  x_name = 'Diet',
+                                                  y_name = 'Score',
+                                                  title_content = 'Colon Sample Histopathology Score')
+
+
+all_day_plot <- all_day_plot +
+                  theme_bw(base_size = 20) +
+                  facet_wrap(~tissue,
+                             scales = 'free_y',
+                             labeller = labeller(tissue = tissue_labs))
+
+cecum_histo_plot <- cecum_histo_plot +
+                      theme_bw(base_size = 20)
+
+colon_histo_plot <- colon_histo_plot +
+                      theme_bw(base_size = 20)
 
 all_day_plot
 cecum_histo_plot

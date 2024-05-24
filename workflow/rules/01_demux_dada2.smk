@@ -1,18 +1,18 @@
 ## step 1
 ## demux and dada2 of raw 16S sequences
-
+import os
 
 rule demux:
     input:
-        in1 = expand(DATASET_DIR +  RAW_SEQ_DIR + "{run_barcodes}_barcodes.txt",
-                        run_barcodes=BARCODES),
-        in2 = expand(DATASET_DIR + RAW_SEQ_DIR + "{run}_paired_end_seqs.qza",
+        in1 = expand(os.path.join(DATASET_DIR, RAW_SEQ_DIR, "{run_barcodes}_barcodes.txt"),
+                                  run_barcodes=BARCODES),
+        in2 = expand(os.path.join(DATASET_DIR, RAW_SEQ_DIR, "{run}_paired_end_seqs.qza"),
                         run=RAW_SEQS)
     output:
-        out1 = DATASET_DIR + RAW_SEQ_DIR + "{run}_demux.qza",
-        out2 = DATASET_DIR + RAW_SEQ_DIR + "{run}_demux_details.qza"
+        out1 = os.path.join(DATASET_DIR, RAW_SEQ_DIR, "{run}_demux.qza"),
+        out2 = os.path.join(DATASET_DIR, RAW_SEQ_DIR, "{run}_demux_details.qza")
     conda:
-        "qiime2-2023.5"
+        QIIME
     shell:
         """
         qiime demux emp-paired \
@@ -27,11 +27,11 @@ rule demux:
 
 rule demux_vis:
     input:
-        DATASET_DIR + RAW_SEQ_DIR + "{run}_demux.qza"
+        os.path.join(DATASET_DIR, RAW_SEQ_DIR, "{run}_demux.qza")
     output:
-        DATASET_DIR + RAW_SEQ_DIR + "{run}_demux.qzv"
+        os.path.join(DATASET_DIR, RAW_SEQ_DIR, "{run}_demux.qzv")
     conda:
-        "qiime2-2023.5"
+        QIIME
     shell:
         """
         qiime demux summarize \
@@ -42,13 +42,13 @@ rule demux_vis:
 
 rule dada2:
     input:
-       DATASET_DIR + RAW_SEQ_DIR + "{run}_demux.qza"
+        os.path.join(DATASET_DIR, RAW_SEQ_DIR, "{run}_demux.qza")
     output:
-        table = DATASET_DIR + "data/qiime/{run}_table.qza",
-        seqs = DATASET_DIR + "data/qiime/{run}_rep_seqs.qza",
-        stats = DATASET_DIR + "data/qiime/{run}_denoise_stats.qza"
+        table = os.path.join(DATASET_DIR, "data/qiime/{run}_table.qza"),
+        seqs = os.path.join(DATASET_DIR, "data/qiime/{run}_rep_seqs.qza"),
+        stats = os.path.join(DATASET_DIR, "data/qiime/{run}_denoise_stats.qza")
     conda:
-        "qiime2-2023.5"
+        QIIME
     params:
         trim_left_for=config["dada2_trim_left_for"],
         trim_left_rev=config["dada2_trim_left_rev"],
@@ -70,15 +70,15 @@ rule dada2:
 
 rule merge_run_tables:
     input:
-        table_list = expand(DATASET_DIR + "data/qiime/{run}_table.qza",
+        table_list = expand(os.path.join(DATASET_DIR, "data/qiime/{run}_table.qza"),
                             run=RAW_SEQS),
-        seqs_list = expand(DATASET_DIR + "data/qiime/{run}_rep_seqs.qza",
+        seqs_list = expand(os.path.join(DATASET_DIR, "data/qiime/{run}_rep_seqs.qza"),
                            run=RAW_SEQS)
     output:
-        merged_table = DATASET_DIR + "data/qiime/merged_table.qza",
-        merged_seqs = DATASET_DIR + "data/qiime/merged_rep_seqs.qza"
+        merged_table = os.path.join(DATASET_DIR, "data/qiime/merged_table.qza"),
+        merged_seqs = os.path.join(DATASET_DIR, "data/qiime/merged_rep_seqs.qza")
     conda:
-        "qiime2-2023.5"
+        QIIME
     shell:
         """
         qiime feature-table merge \

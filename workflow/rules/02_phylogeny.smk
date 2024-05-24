@@ -1,12 +1,13 @@
 ## step 2
 ## phylogenetic classification
 
-## table and rep seqs inputs will either be the merged ones or ones provided 
+## table and rep seqs inputs will either be the merged ones or ones provided
+import os 
 
 rule get_reference_databases:
     output:
-        DATASET_DIR + "databases/sepp-refs-silva-128.qza",
-        DATASET_DIR + "databases/silva-138-99-515-806-nb-classifier.qza"
+        os.path.join(DATASET_DIR, "databases/sepp-refs-silva-128.qza"),
+        os.path.join(DATASET_DIR, "databases/silva-138-99-515-806-nb-classifier.qza")
     shell:
         """
         wget https://data.qiime2.org/2023.5/common/sepp-refs-silva-128.qza -P ./databases/
@@ -16,13 +17,13 @@ rule get_reference_databases:
 
 rule sepp_phylo_tree:
     input:
-        seqs = DATASET_DIR + REP_SEQS,
-        silva_ref = DATASET_DIR + "databases/sepp-refs-silva-128.qza"
+        seqs = os.path.join(DATASET_DIR, REP_SEQS),
+        silva_ref = os.path.join(DATASET_DIR, "databases/sepp-refs-silva-128.qza")
     output:
-        tree = DATASET_DIR + "data/qiime/tree.qza",
-        placements = DATASET_DIR + "data/qiime/placements.qza"
+        tree = os.path.join(DATASET_DIR, "data/qiime/tree.qza"),
+        placements = os.path.join(DATASET_DIR, "data/qiime/placements.qza")
     conda:
-        "qiime2-2023.5"
+        QIIME
     shell:
         """
         qiime fragment-insertion sepp \
@@ -35,13 +36,13 @@ rule sepp_phylo_tree:
 
 rule sepp_ASV_filtering:
     input:
-        table = DATASET_DIR + BIOM,
-        tree = DATASET_DIR + "data/qiime/tree.qza"
+        table = os.path.join(DATASET_DIR, BIOM),
+        tree = os.path.join(DATASET_DIR, "data/qiime/tree.qza")
     output:
-        filt_table = DATASET_DIR + "data/qiime/filt_table.qza",
-        rem_table = DATASET_DIR + "data/qiime/rem_table.qza"
+        filt_table = os.path.join(DATASET_DIR, "data/qiime/filt_table.qza"),
+        rem_table = os.path.join(DATASET_DIR, "data/qiime/rem_table.qza")
     conda:
-        "qiime2-2023.5"
+        QIIME
     shell:
         """
         qiime fragment-insertion filter-features \
@@ -54,12 +55,12 @@ rule sepp_ASV_filtering:
 
 rule taxonomic_classification:
     input:
-        silva_class = DATASET_DIR + "databases/silva-138-99-515-806-nb-classifier.qza",
-        seqs = DATASET_DIR + REP_SEQS
+        silva_class = os.path.join(DATASET_DIR, "databases/silva-138-99-515-806-nb-classifier.qza"),
+        seqs = os.path.join(DATASET_DIR, REP_SEQS)
     output:
-        taxonomy = DATASET_DIR + "data/qiime/taxonomy.qza"
+        taxonomy = os.path.join(DATASET_DIR, "data/qiime/taxonomy.qza")
     conda:
-        "qiime2-2023.5"
+        QIIME
     shell:
         """
         qiime feature-classifier classify-sklearn \
@@ -71,13 +72,13 @@ rule taxonomic_classification:
 
 rule filter_taxonomy:
     input:
-        filt_table = DATASET_DIR + "data/qiime/filt_table.qza",
-        taxonomy = DATASET_DIR + "data/qiime/taxonomy.qza"
+        filt_table = os.path.join(DATASET_DIR, "data/qiime/filt_table.qza"),
+        taxonomy = os.path.join(DATASET_DIR, "data/qiime/taxonomy.qza")
     output:
-        tax_filt = DATASET_DIR + "data/qiime/taxonomy_filtered.qza",
-        tax_filt_vis = DATASET_DIR + "data/qiime/taxonomy_filtered.qzv"
+        tax_filt = os.path.join(DATASET_DIR, "data/qiime/taxonomy_filtered.qza"),
+        tax_filt_vis = os.path.join(DATASET_DIR, "data/qiime/taxonomy_filtered.qzv")
     conda:
-        "qiime2-2023.5"
+        QIIME
     shell:
         """
         qiime taxa filter-table \
@@ -94,14 +95,14 @@ rule filter_taxonomy:
 
 rule create_lacto_table:
     input:
-        filt_table = DATASET_DIR + "data/qiime/filt_table.qza",
-        taxonomy = DATASET_DIR + "data/qiime/taxonomy.qza",
-        seqs = DATASET_DIR + REP_SEQS
+        filt_table = os.path.join(DATASET_DIR, "data/qiime/filt_table.qza"),
+        taxonomy = os.path.join(DATASET_DIR, "data/qiime/taxonomy.qza"),
+        seqs = os.path.join(DATASET_DIR, REP_SEQS)
     output:
-        lacto_table = DATASET_DIR + "data/qiime/lacto_cecal_table.qza",
-        lacto_rep_seqs = DATASET_DIR + "data/qiime/lacto_rep_seqs.qza" 
+        lacto_table = os.path.join(DATASET_DIR, "data/qiime/lacto_cecal_table.qza"),
+        lacto_rep_seqs = os.path.join(DATASET_DIR, "data/qiime/lacto_rep_seqs.qza")
     conda:
-        "qiime2-2023.5"
+        QIIME
     shell:
         """
         qiime taxa filter-table \
@@ -119,12 +120,12 @@ rule create_lacto_table:
 
 rule convert_to_fasta:
     input:
-        lacto_rep_seqs = DATASET_DIR + "data/qiime/lacto_rep_seqs.qza"
+        lacto_rep_seqs = os.path.join(DATASET_DIR, "data/qiime/lacto_rep_seqs.qza")
     output:
-        output_path = DATASET_DIR + "data/qiime/dna-sequences.fasta",
-        lacto_fasta = DATASET_DIR + "data/qiime/lactoOnly_rep_seqs.fasta"
+        output_path = os.path.join(DATASET_DIR, "data/qiime/dna-sequences.fasta"),
+        lacto_fasta = os.path.join(DATASET_DIR, "data/qiime/lactoOnly_rep_seqs.fasta")
     conda:
-        "qiime2-2023.5"
+        QIIME
     shell:
         """
         qiime tools export \

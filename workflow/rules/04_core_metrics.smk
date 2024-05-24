@@ -1,15 +1,16 @@
 ## step 4
 ## core metrics analysis
+import os
 
 
 rule pre_core_metrics_filter:
     input:
-        tax_filt = DATASET_DIR + "data/qiime/tax_filt.qza",
-        metadata = DATASET_DIR + METADATA
+        tax_filt = os.path.join(DATASET_DIR, "data/qiime/tax_filt.qza"),
+        metadata = os.path.join(DATASET_DIR, METADATA)
     output:
-        otu_table = DATASET_DIR + "data/qiime/otu_table.qza"
+        otu_table = os.path.join(DATASET_DIR, "data/qiime/otu_table.qza")
     conda:
-        "qiime2-2023.5"
+        QIIME
     shell:
         """
         qiime feature-table filter-samples \
@@ -21,13 +22,13 @@ rule pre_core_metrics_filter:
 
 rule core_metrics_analysis:
     input:
-        tree = DATASET_DIR + "data/qiime/tree.qza",
-        otu_table = DATASET_DIR + "data/qiime/otu_table.qza",
-        metadata = DATASET_DIR + METADATA
+        tree = os.path.join(DATASET_DIR, "data/qiime/tree.qza"),
+        otu_table = os.path.join(DATASET_DIR, "data/qiime/otu_table.qza"),
+        metadata = os.path.join(DATASET_DIR, METADATA)
     output:
-        output_dir = directory(DATASET_DIR + "data/core_outputs")
+        output_dir = directory(os.path.join(DATASET_DIR, "data/core_outputs"))
     conda:
-        "qiime2-2023.5"
+        QIIME
     params:
         sampling_depth=CORE_SAMPLING_DEPTH
     shell:
@@ -42,11 +43,11 @@ rule core_metrics_analysis:
 
 rule unzip_uw_distance_matrix:
     input:
-        DATASET_DIR + "data/core_outputs/unweighted_unifrac_distance_matrix.qza" 
+        os.path.join(DATASET_DIR, "data/core_outputs/unweighted_unifrac_distance_matrix.qza")
     output:
-        DATASET_DIR + "data/core_outputs/uw_dist_matrix.tsv"
+        os.path.join(DATASET_DIR, "data/core_outputs/uw_dist_matrix.tsv")
     conda:
-        "qiime2-2023.5"
+        QIIME
     params:
         location=DATASET_DIR
     shell:
@@ -65,11 +66,11 @@ rule unzip_uw_distance_matrix:
 
 rule unzip_w_distance_matrix:
     input:
-        DATASET_DIR + "data/core_outputs/weighted_unifrac_distance_matrix.qza"
+        os.path.join(DATASET_DIR, "data/core_outputs/weighted_unifrac_distance_matrix.qza")
     output:
-        DATASET_DIR + "data/core_outputs/w_dist_matrix.tsv"
+        os.path.join(DATASET_DIR, "data/core_outputs/w_dist_matrix.tsv")
     conda:
-        "qiime2-2023.5"
+        QIIME
     params:
         location=DATASET_DIR
     shell:
@@ -88,11 +89,11 @@ rule unzip_w_distance_matrix:
 
 rule unzip_shannon:
     input:
-        DATASET_DIR + "data/core_outputs/shannon_vector.qza"
+        os.path.join(DATASET_DIR, "data/core_outputs/shannon_vector.qza")
     output:
-        DATASET_DIR + "data/core_outputs/shannon_entropy.tsv"
+        os.path.join(DATASET_DIR, "data/core_outputs/shannon_entropy.tsv")
     conda:
-        "qiime2-2023.5"
+        QIIME
     params:
         location=DATASET_DIR
     shell:
@@ -111,11 +112,11 @@ rule unzip_shannon:
 
 rule unzip_faith_pd:
     input:
-        DATASET_DIR + "data/core_outputs/faith_pd_vector.qza"
+        os.path.join(DATASET_DIR, "data/core_outputs/faith_pd_vector.qza")
     output:
-        DATASET_DIR + "data/core_outputs/faith_pd.tsv"
+        os.path.join(DATASET_DIR, "data/core_outputs/faith_pd.tsv")
     conda:
-        "qiime2-2023.5"
+        QIIME
     params:
         location=DATASET_DIR
     shell:

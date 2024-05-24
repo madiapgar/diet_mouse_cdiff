@@ -2,19 +2,20 @@
 ## plots and stats in R for longitudinal datasets (measurements taken at multiple time points)
 
 ## ADD IN WHAT MULTIPLE MEASUREMENT VARIABLE IS CALLED!!
+import os
 
 rule alpha_diversity_plots:
     input:
-        metadata = DATASET_DIR + PROCESSED_META,
-        faith_pd = DATASET_DIR + "data/core_outputs/faith_pd.tsv",
-        shannon = DATASET_DIR + "data/core_outputs/shannon_entropy.tsv"
+        metadata = os.path.join(DATASET_DIR, PROCESSED_META),
+        faith_pd = os.path.join(DATASET_DIR, "data/core_outputs/faith_pd.tsv"),
+        shannon = os.path.join(DATASET_DIR, "data/core_outputs/shannon_entropy.tsv")
     output:
-        faith_plot = DATASET_DIR + "plots/faith_pd.pdf",
-        shannon_plot = DATASET_DIR + "plots/shannon_entropy.pdf"
+        faith_plot = os.path.join(DATASET_DIR, "plots/faith_pd.pdf"),
+        shannon_plot = os.path.join(DATASET_DIR, "plots/shannon_entropy.pdf")
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}alpha_div_plots.R --metadata {input.metadata} \
@@ -27,22 +28,22 @@ rule alpha_diversity_plots:
 
 rule alpha_diversity_stats:
     input:
-        metadata = DATASET_DIR + PROCESSED_META,
-        faith_pd = DATASET_DIR + "data/core_outputs/faith_pd.tsv",
-        shannon = DATASET_DIR + "data/core_outputs/shannon_entropy.tsv"
+        metadata = os.path.join(DATASET_DIR, PROCESSED_META),
+        faith_pd = os.path.join(DATASET_DIR, "data/core_outputs/faith_pd.tsv"),
+        shannon = os.path.join(DATASET_DIR, "data/core_outputs/shannon_entropy.tsv")
     output:
-        faith_lm = DATASET_DIR + "stats/faith_total_results.tsv",
-        faith_lm_sec = DATASET_DIR + "stats/faith_diet_results.tsv",
-        faith_dunn = DATASET_DIR + "stats/faith_dunn.tsv",
-        shannon_lm = DATASET_DIR + "stats/shannon_total_results.tsv",
-        shannon_lm_sec = DATASET_DIR + "stats/shannon_diet_results.tsv",
-        shannon_dunn = DATASET_DIR + "stats/shannon_dunn.tsv",
-        faith_plot = DATASET_DIR + "plots/faith_stat_vis.pdf",
-        shannon_plot = DATASET_DIR + "plots/shannon_stat_vis.pdf"
+        faith_lm = os.path.join(DATASET_DIR, "stats/faith_total_results.tsv"),
+        faith_lm_sec = os.path.join(DATASET_DIR, "stats/faith_diet_results.tsv"),
+        faith_dunn = os.path.join(DATASET_DIR, "stats/faith_dunn.tsv"),
+        shannon_lm = os.path.join(DATASET_DIR, "stats/shannon_total_results.tsv"),
+        shannon_lm_sec = os.path.join(DATASET_DIR, "stats/shannon_diet_results.tsv"),
+        shannon_dunn = os.path.join(DATASET_DIR, "stats/shannon_dunn.tsv"),
+        faith_plot = os.path.join(DATASET_DIR, "plots/faith_stat_vis.pdf"),
+        shannon_plot = os.path.join(DATASET_DIR, "plots/shannon_stat_vis.pdf")
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}alpha_div_stats.R --metadata {input.metadata} \
@@ -61,18 +62,18 @@ rule alpha_diversity_stats:
 
 rule beta_diversity_plots:
     input:
-        metadata = DATASET_DIR + PROCESSED_META,
-        unweighted_uni = DATASET_DIR + "data/core_outputs/unweighted_unifrac_pcoa_results.qza",
-        weighted_uni = DATASET_DIR + "data/core_outputs/weighted_unifrac_pcoa_results.qza",
-        faith_pd = DATASET_DIR + "data/core_outputs/faith_pd.tsv",
-        shannon = DATASET_DIR + "data/core_outputs/shannon_entropy.tsv"
+        metadata = os.path.join(DATASET_DIR, PROCESSED_META),
+        unweighted_uni = os.path.join(DATASET_DIR, "data/core_outputs/unweighted_unifrac_pcoa_results.qza"),
+        weighted_uni = os.path.join(DATASET_DIR, "data/core_outputs/weighted_unifrac_pcoa_results.qza"),
+        faith_pd = os.path.join(DATASET_DIR, "data/core_outputs/faith_pd.tsv"),
+        shannon = os.path.join(DATASET_DIR, "data/core_outputs/shannon_entropy.tsv")
     output:
-        unweighted_plot = DATASET_DIR + "plots/unweighted_unifrac_pcoa.pdf",
-        weighted_plot = DATASET_DIR + "plots/weighted_unifrac_pcoa.pdf"
+        unweighted_plot = os.path.join(DATASET_DIR, "plots/unweighted_unifrac_pcoa.pdf"),
+        weighted_plot = os.path.join(DATASET_DIR, "plots/weighted_unifrac_pcoa.pdf")
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}beta_div_plots.R --metadata {input.metadata} \
@@ -87,18 +88,18 @@ rule beta_diversity_plots:
 
 rule beta_diversity_stats:
     input:
-        metadata = DATASET_DIR + PROCESSED_META,
-        uw_dist = DATASET_DIR + "data/core_outputs/uw_dist_matrix.tsv",
-        w_dist = DATASET_DIR + "data/core_outputs/w_dist_matrix.tsv"
+        metadata = os.path.join(DATASET_DIR, PROCESSED_META),
+        uw_dist = os.path.join(DATASET_DIR, "data/core_outputs/uw_dist_matrix.tsv"),
+        w_dist = os.path.join(DATASET_DIR, "data/core_outputs/w_dist_matrix.tsv")
     output:
-        w_adonis = DATASET_DIR + "stats/w_adonis_results.tsv",
-        uw_adonis = DATASET_DIR + "stats/uw_adonis_results.tsv",
-        w_adonis_day = DATASET_DIR + "stats/w_adonis_by_day.tsv",
-        uw_adonis_day = DATASET_DIR + "stats/uw_adonis_by_day.tsv"
+        w_adonis = os.path.join(DATASET_DIR, "stats/w_adonis_results.tsv"),
+        uw_adonis = os.path.join(DATASET_DIR, "stats/uw_adonis_results.tsv"),
+        w_adonis_day = os.path.join(DATASET_DIR, "stats/w_adonis_by_day.tsv"),
+        uw_adonis_day = os.path.join(DATASET_DIR, "stats/uw_adonis_by_day.tsv")
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}beta_div_stats.R --metadata {input.metadata} \
@@ -113,16 +114,16 @@ rule beta_diversity_stats:
 
 rule family_abundance_plots:
     input:
-        otu_table = DATASET_DIR + "data/qiime/otu_table.qza",
-        taxonomy = DATASET_DIR + "data/qiime/taxonomy.qza",
-        metadata = DATASET_DIR + PROCESSED_META
+        otu_table = os.path.join(DATASET_DIR, "data/qiime/otu_table.qza"),
+        taxonomy = os.path.join(DATASET_DIR, "data/qiime/taxonomy.qza"),
+        metadata = os.path.join(DATASET_DIR, PROCESSED_META)
     output:
-        plot1 = DATASET_DIR + "plots/family_abun1.pdf",
-        plot2 = DATASET_DIR + "plots/family_abun2.pdf"
+        plot1 = os.path.join(DATASET_DIR, "plots/family_abun1.pdf"),
+        plot2 = os.path.join(DATASET_DIR, "plots/family_abun2.pdf")
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}family_abun_plots.R --metadata {input.metadata} \
@@ -135,17 +136,17 @@ rule family_abundance_plots:
 
 rule family_abundance_stats:
     input:
-       otu_table = DATASET_DIR + "data/qiime/otu_table.qza",
-       taxonomy = DATASET_DIR + "data/qiime/taxonomy.qza",
-       metadata = DATASET_DIR + PROCESSED_META
+       otu_table = os.path.join(DATASET_DIR, "data/qiime/otu_table.qza"),
+       taxonomy = os.path.join(DATASET_DIR, "data/qiime/taxonomy.qza"),
+       metadata = os.path.join(DATASET_DIR, PROCESSED_META)
     output:
-        lm = DATASET_DIR + "stats/family_abun_lm.tsv",
-        dunn = DATASET_DIR + "stats/family_abun_dunn.tsv",
-        stat_plot = DATASET_DIR + "plots/famAbun_stat_vis.pdf"
+        lm = os.path.join(DATASET_DIR, "stats/family_abun_lm.tsv"),
+        dunn = os.path.join(DATASET_DIR, "stats/family_abun_dunn.tsv"),
+        stat_plot = os.path.join(DATASET_DIR, "plots/famAbun_stat_vis.pdf")
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}family_abun_stats.R --metadata {input.metadata} \
@@ -160,22 +161,22 @@ rule family_abundance_stats:
 
 rule homogeneity:
     input:
-        metadata = DATASET_DIR + PROCESSED_META,
-        uu_dist = DATASET_DIR + "data/core_outputs/uw_dist_matrix.tsv",
-        wu_dist = DATASET_DIR + "data/core_outputs/w_dist_matrix.tsv"
+        metadata = os.path.join(DATASET_DIR, PROCESSED_META),
+        uu_dist = os.path.join(DATASET_DIR, "data/core_outputs/uw_dist_matrix.tsv"),
+        wu_dist = os.path.join(DATASET_DIR, "data/core_outputs/w_dist_matrix.tsv")
     output:
-        wu_lm = DATASET_DIR + "stats/wu_homogeneity.tsv",
-        wu_dunn = DATASET_DIR + "stats/wu_homog_dunn.tsv",
-        uu_lm = DATASET_DIR + "stats/uu_homogeneity.tsv",
-        uu_dunn = DATASET_DIR + "stats/uu_homog_dunn.tsv",
-        wu_plot = DATASET_DIR + "plots/wu_homogeneity.pdf",
-        wu_stat_plot = DATASET_DIR + "plots/wu_homog_stats.pdf",
-        uu_plot = DATASET_DIR + "plots/uu_homogeneity.pdf",
-        uu_stat_plot = DATASET_DIR + "plots/uu_homog_stats.pdf"
+        wu_lm = os.path.join(DATASET_DIR, "stats/wu_homogeneity.tsv"),
+        wu_dunn = os.path.join(DATASET_DIR, "stats/wu_homog_dunn.tsv"),
+        uu_lm = os.path.join(DATASET_DIR, "stats/uu_homogeneity.tsv"),
+        uu_dunn = os.path.join(DATASET_DIR, "stats/uu_homog_dunn.tsv"),
+        wu_plot = os.path.join(DATASET_DIR, "plots/wu_homogeneity.pdf"),
+        wu_stat_plot = os.path.join(DATASET_DIR, "plots/wu_homog_stats.pdf"),
+        uu_plot = os.path.join(DATASET_DIR, "plots/uu_homogeneity.pdf"),
+        uu_stat_plot = os.path.join(DATASET_DIR, "plots/uu_homog_stats.pdf")
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}homog_calc.R --metadata {input.metadata} \
@@ -194,22 +195,22 @@ rule homogeneity:
 
 rule resiliency:
     input:
-       metadata = DATASET_DIR + PROCESSED_META,
-       uu_dist = DATASET_DIR + "data/core_outputs/uw_dist_matrix.tsv",
-       wu_dist = DATASET_DIR + "data/core_outputs/w_dist_matrix.tsv"
+       metadata = os.path.join(DATASET_DIR, PROCESSED_META),
+       uu_dist = os.path.join(DATASET_DIR, "data/core_outputs/uw_dist_matrix.tsv"),
+       wu_dist = os.path.join(DATASET_DIR, "data/core_outputs/w_dist_matrix.tsv")
     output:
-        uu_lm = DATASET_DIR + "stats/uu_resiliency.tsv",
-        uu_dunn = DATASET_DIR + "stats/uu_resil_dunn.tsv",
-        wu_lm = DATASET_DIR + "stats/wu_resiliency.tsv",
-        wu_dunn = DATASET_DIR + "stats/wu_resil_dunn.tsv",
-        wu_plot = DATASET_DIR + "plots/wu_resiliency.pdf",
-        wu_stat_plot = DATASET_DIR + "plots/wu_resil_stats.pdf",
-        uu_plot = DATASET_DIR + "plots/uu_resiliency.pdf",
-        uu_stat_plot = DATASET_DIR + "plots/uu_resil_stats.pdf"
+        uu_lm = os.path.join(DATASET_DIR, "stats/uu_resiliency.tsv"),
+        uu_dunn = os.path.join(DATASET_DIR, "stats/uu_resil_dunn.tsv"),
+        wu_lm = os.path.join(DATASET_DIR, "stats/wu_resiliency.tsv"),
+        wu_dunn = os.path.join(DATASET_DIR, "stats/wu_resil_dunn.tsv"),
+        wu_plot = os.path.join(DATASET_DIR, "plots/wu_resiliency.pdf"),
+        wu_stat_plot = os.path.join(DATASET_DIR, "plots/wu_resil_stats.pdf"),
+        uu_plot = os.path.join(DATASET_DIR, "plots/uu_resiliency.pdf"),
+        uu_stat_plot = os.path.join(DATASET_DIR, "plots/uu_resil_stats.pdf")
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}resil_calc.R --metadata {input.metadata} \

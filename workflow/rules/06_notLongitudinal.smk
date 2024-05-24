@@ -3,17 +3,18 @@
 
 
 ## UPDATE BILE ACID AND HYPOXIA RULES!!
+import os
 
 rule sequencing_depth_calculation:
     input:
-        biom = DATASET_DIR + "data/qiime/filt_table.qza",
-        asvs = DATASET_DIR + "data/qiime/lactoOnly_rep_seqs.fasta"
+        biom = os.path.join(DATASET_DIR, "data/qiime/filt_table.qza"),
+        asvs = os.path.join(DATASET_DIR, "data/qiime/lactoOnly_rep_seqs.fasta")
     output:
-        table = DATASET_DIR + "data/misc/seq_depth.tsv"
+        table = os.path.join(DATASET_DIR, "data/misc/seq_depth.tsv")
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}seq_depth.R --biom {input.biom} \
@@ -23,16 +24,16 @@ rule sequencing_depth_calculation:
 
 rule metadata_processing:
     input:
-        metadata = DATASET_DIR + METADATA,
-        sampleID_key = DATASET_DIR + SAMPLEID_KEY,
-        seq_depth = DATASET_DIR + "data/misc/seq_depth.tsv",
-        id_file = DATASET_DIR + MOUSEID_FACIL_KEY
+        metadata = os.path.join(DATASET_DIR, METADATA),
+        sampleID_key = os.path.join(DATASET_DIR, SAMPLEID_KEY),
+        seq_depth = os.path.join(DATASET_DIR, "data/misc/seq_depth.tsv"),
+        id_file = os.path.join(DATASET_DIR, MOUSEID_FACIL_KEY)
     output:
-        table = DATASET_DIR + PROCESSED_META
+        table = os.path.join(DATASET_DIR, PROCESSED_META)
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}metadata_processing.R --metadata {input.metadata} \
@@ -45,15 +46,15 @@ rule metadata_processing:
 
 rule bile_acid_preProcessing:
     input:
-        bile_acid = DATASET_DIR + BILE_ACID,
-        sampleID_key = DATASET_DIR + SAMPLEID_KEY,
-        id_file = DATASET_DIR + MOUSEID_FACIL_KEY
+        bile_acid = os.path.join(DATASET_DIR, BILE_ACID),
+        sampleID_key = os.path.join(DATASET_DIR, SAMPLEID_KEY),
+        id_file = os.path.join(DATASET_DIR, MOUSEID_FACIL_KEY)
     output:
-        proc_bile_acid = DATASET_DIR + "data/misc/corrected_bile_acid.tsv"
+        proc_bile_acid = os.path.join(DATASET_DIR, "data/misc/corrected_bile_acid.tsv")
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}bile_acid_processing.R --bile_acid {input.bile_acid} \
@@ -65,22 +66,22 @@ rule bile_acid_preProcessing:
 
 rule toxin_metab_histo_bileAcid_processing:
     input:
-        metadata = DATASET_DIR + PROCESSED_META,
-        toxin = DATASET_DIR + TOXIN,
-        histo = DATASET_DIR + HISTO,
-        metab = DATASET_DIR + METAB,
-        bile_acid = DATASET_DIR + "data/misc/corrected_bile_acid.tsv"
+        metadata = os.path.join(DATASET_DIR, PROCESSED_META),
+        toxin = os.path.join(DATASET_DIR, TOXIN),
+        histo = os.path.join(DATASET_DIR, HISTO),
+        metab = os.path.join(DATASET_DIR, METAB),
+        bile_acid = os.path.join(DATASET_DIR, "data/misc/corrected_bile_acid.tsv")
     output:
-        proc_neat_toxin = DATASET_DIR + "data/misc/processed_neatToxin.tsv",
-        proc_dil_toxin = DATASET_DIR + "data/misc/processed_dilutedToxin.tsv",
-        proc_metab = DATASET_DIR + "data/misc/processed_metabolomics.tsv",
-        proc_histo = DATASET_DIR + "data/misc/processed_histopathology.tsv",
-        proc_bile_acid = DATASET_DIR + "data/misc/processed_bile_acid.tsv",
-        proc_bile_ratio = DATASET_DIR + "data/misc/processed_ratio_bileAcid.tsv"
+        proc_neat_toxin = os.path.join(DATASET_DIR, "data/misc/processed_neatToxin.tsv"),
+        proc_dil_toxin = os.path.join(DATASET_DIR, "data/misc/processed_dilutedToxin.tsv"),
+        proc_metab = os.path.join(DATASET_DIR, "data/misc/processed_metabolomics.tsv"),
+        proc_histo = os.path.join(DATASET_DIR, "data/misc/processed_histopathology.tsv"),
+        proc_bile_acid = os.path.join(DATASET_DIR, "data/misc/processed_bile_acid.tsv"),
+        proc_bile_ratio = os.path.join(DATASET_DIR, "data/misc/processed_ratio_bileAcid.tsv")
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}toxinMetab_histoBile_file_prep.R --metadata {input.metadata} \
@@ -99,16 +100,16 @@ rule toxin_metab_histo_bileAcid_processing:
 
 rule alpha_diversity_plots:
     input:
-        metadata = DATASET_DIR + PROCESSED_META,
-        faith_pd = DATASET_DIR + "data/core_outputs/faith_pd.tsv",
-        shannon = DATASET_DIR + "data/core_outputs/shannon_entropy.tsv"
+        metadata = os.path.join(DATASET_DIR, PROCESSED_META),
+        faith_pd = os.path.join(DATASET_DIR, "data/core_outputs/faith_pd.tsv"),
+        shannon = os.path.join(DATASET_DIR, "data/core_outputs/shannon_entropy.tsv")
     output:
-        faith_plot = DATASET_DIR + "plots/faith_pd.pdf",
-        shannon_plot = DATASET_DIR + "plots/shannon_entropy.pdf"
+        faith_plot = os.path.join(DATASET_DIR, "plots/faith_pd.pdf"),
+        shannon_plot = os.path.join(DATASET_DIR, "plots/shannon_entropy.pdf")
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}alpha_div_plots.R --metadata {input.metadata} \
@@ -121,20 +122,20 @@ rule alpha_diversity_plots:
 
 rule alpha_diversity_stats:
     input:
-        metadata = DATASET_DIR + PROCESSED_META,
-        faith_pd = DATASET_DIR + "data/core_outputs/faith_pd.tsv",
-        shannon = DATASET_DIR + "data/core_outputs/shannon_entropy.tsv"
+        metadata = os.path.join(DATASET_DIR, PROCESSED_META),
+        faith_pd = os.path.join(DATASET_DIR, "data/core_outputs/faith_pd.tsv"),
+        shannon = os.path.join(DATASET_DIR, "data/core_outputs/shannon_entropy.tsv")
     output:
-        faith_lm_sec = DATASET_DIR + "stats/faith_diet_results.tsv",
-        faith_dunn = DATASET_DIR + "stats/faith_dunn.tsv",
-        shannon_lm_sec = DATASET_DIR + "stats/shannon_diet_results.tsv",
-        shannon_dunn = DATASET_DIR + "stats/shannon_dunn.tsv",
-        faith_plot = DATASET_DIR + "plots/faith_stat_vis.pdf",
-        shannon_plot = DATASET_DIR + "plots/shannon_stat_vis.pdf"
+        faith_lm_sec = os.path.join(DATASET_DIR, "stats/faith_diet_results.tsv"),
+        faith_dunn = os.path.join(DATASET_DIR, "stats/faith_dunn.tsv"),
+        shannon_lm_sec = os.path.join(DATASET_DIR, "stats/shannon_diet_results.tsv"),
+        shannon_dunn = os.path.join(DATASET_DIR, "stats/shannon_dunn.tsv"),
+        faith_plot = os.path.join(DATASET_DIR, "plots/faith_stat_vis.pdf"),
+        shannon_plot = os.path.join(DATASET_DIR, "plots/shannon_stat_vis.pdf")
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}alpha_div_stats.R --metadata {input.metadata} \
@@ -151,18 +152,18 @@ rule alpha_diversity_stats:
 
 rule beta_diversity_plots:
     input:
-        metadata = DATASET_DIR + PROCESSED_META,
-        unweighted_uni = DATASET_DIR + "data/core_outputs/unweighted_unifrac_pcoa_results.qza",
-        weighted_uni = DATASET_DIR + "data/core_outputs/weighted_unifrac_pcoa_results.qza",
-        faith_pd = DATASET_DIR + "data/core_outputs/faith_pd.tsv",
-        shannon = DATASET_DIR + "data/core_outputs/shannon_entropy.tsv"
+        metadata = os.path.join(DATASET_DIR, PROCESSED_META),
+        unweighted_uni = os.path.join(DATASET_DIR, "data/core_outputs/unweighted_unifrac_pcoa_results.qza"),
+        weighted_uni = os.path.join(DATASET_DIR, "data/core_outputs/weighted_unifrac_pcoa_results.qza"),
+        faith_pd = os.path.join(DATASET_DIR, "data/core_outputs/faith_pd.tsv"),
+        shannon = os.path.join(DATASET_DIR, "data/core_outputs/shannon_entropy.tsv")
     output:
-        unweighted_plot = DATASET_DIR + "plots/unweighted_unifrac_pcoa.pdf",
-        weighted_plot = DATASET_DIR + "plots/weighted_unifrac_pcoa.pdf"
+        unweighted_plot = os.path.join(DATASET_DIR, "plots/unweighted_unifrac_pcoa.pdf"),
+        weighted_plot = os.path.join(DATASET_DIR, "plots/weighted_unifrac_pcoa.pdf")
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}beta_div_plots.R --metadata {input.metadata} \
@@ -177,16 +178,16 @@ rule beta_diversity_plots:
 
 rule beta_diversity_stats:
     input:
-        metadata = DATASET_DIR + PROCESSED_META,
-        uw_dist = DATASET_DIR + "data/core_outputs/uw_dist_matrix.tsv",
-        w_dist = DATASET_DIR + "data/core_outputs/w_dist_matrix.tsv"
+        metadata = os.path.join(DATASET_DIR, PROCESSED_META),
+        uw_dist = os.path.join(DATASET_DIR, "data/core_outputs/uw_dist_matrix.tsv"),
+        w_dist = os.path.join(DATASET_DIR, "data/core_outputs/w_dist_matrix.tsv")
     output:
-        w_adonis = DATASET_DIR + "stats/w_adonis_results.tsv",
-        uw_adonis = DATASET_DIR + "stats/uw_adonis_results.tsv"
+        w_adonis = os.path.join(DATASET_DIR, "stats/w_adonis_results.tsv"),
+        uw_adonis = os.path.join(DATASET_DIR, "stats/uw_adonis_results.tsv")
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}beta_div_stats.R --metadata {input.metadata} \
@@ -199,16 +200,16 @@ rule beta_diversity_stats:
 
 rule family_abundance_plots:
     input:
-        otu_table = DATASET_DIR + "data/qiime/otu_table.qza",
-        taxonomy = DATASET_DIR + "data/qiime/taxonomy.qza",
-        metadata = DATASET_DIR + PROCESSED_META
+        otu_table = os.path.join(DATASET_DIR, "data/qiime/otu_table.qza"),
+        taxonomy = os.path.join(DATASET_DIR, "data/qiime/taxonomy.qza"),
+        metadata = os.path.join(DATASET_DIR, PROCESSED_META)
     output:
-        plot1 = DATASET_DIR + "plots/family_abun1.pdf",
-        plot2 = DATASET_DIR + "plots/family_abun2.pdf"
+        plot1 = os.path.join(DATASET_DIR, "plots/family_abun1.pdf"),
+        plot2 = os.path.join(DATASET_DIR, "plots/family_abun2.pdf")
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}family_abun_plots.R --metadata {input.metadata} \
@@ -221,17 +222,17 @@ rule family_abundance_plots:
 
 rule family_abundance_stats:
     input:
-       otu_table = DATASET_DIR + "data/qiime/otu_table.qza",
-       taxonomy = DATASET_DIR + "data/qiime/taxonomy.qza",
-       metadata = DATASET_DIR + PROCESSED_META
+       otu_table = os.path.join(DATASET_DIR, "data/qiime/otu_table.qza"),
+       taxonomy = os.path.join(DATASET_DIR, "data/qiime/taxonomy.qza"),
+       metadata = os.path.join(DATASET_DIR, PROCESSED_META)
     output:
-        lm = DATASET_DIR + "stats/family_abun_lm.tsv",
-        dunn = DATASET_DIR + "stats/family_abun_dunn.tsv",
-        stat_plot = DATASET_DIR + "plots/famAbun_stat_vis.pdf"
+        lm = os.path.join(DATASET_DIR, "stats/family_abun_lm.tsv"),
+        dunn = os.path.join(DATASET_DIR, "stats/family_abun_dunn.tsv"),
+        stat_plot = os.path.join(DATASET_DIR, "plots/famAbun_stat_vis.pdf")
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}family_abun_stats.R --metadata {input.metadata} \
@@ -245,15 +246,15 @@ rule family_abundance_stats:
 
 rule histopathology:
     input:
-        histo = DATASET_DIR + "data/misc/processed_histopathology.tsv"
+        histo = os.path.join(DATASET_DIR, "data/misc/processed_histopathology.tsv")
     output:
-        plot = DATASET_DIR + "plots/histopathology.pdf",
-        lm = DATASET_DIR + "stats/histopathology_lm.tsv",
-        dunn = DATASET_DIR + "stats/histopathology_dunn.tsv"
+        plot = os.path.join(DATASET_DIR, "plots/histopathology.pdf"),
+        lm = os.path.join(DATASET_DIR, "stats/histopathology_lm.tsv"),
+        dunn = os.path.join(DATASET_DIR, "stats/histopathology_dunn.tsv")
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}histopathology.R --histo {input.histo} \
@@ -265,19 +266,19 @@ rule histopathology:
 
 rule toxin:
     input:
-        neat_toxin = DATASET_DIR + "data/misc/processed_neatToxin.tsv",
-        dil_toxin = DATASET_DIR + "data/misc/processed_dilutedToxin.tsv"
+        neat_toxin = os.path.join(DATASET_DIR, "data/misc/processed_neatToxin.tsv"),
+        dil_toxin = os.path.join(DATASET_DIR, "data/misc/processed_dilutedToxin.tsv")
     output:
-        neat_plot = DATASET_DIR + "plots/neat_toxin.pdf",
-        diluted_plot = DATASET_DIR + "plots/dil_toxin.pdf",
-        neat_kruskal = DATASET_DIR + "stats/neatToxin_kruskal_test.tsv",
-        neat_dunn = DATASET_DIR + "stats/neatToxin_dunn_test.tsv",
-        dil_kruskal = DATASET_DIR + "stats/dilToxin_kruskal_test.tsv",
-        dil_dunn = DATASET_DIR + "stats/dilToxin_dunn_test.tsv"
+        neat_plot = os.path.join(DATASET_DIR, "plots/neat_toxin.pdf"),
+        diluted_plot = os.path.join(DATASET_DIR, "plots/dil_toxin.pdf"),
+        neat_kruskal = os.path.join(DATASET_DIR, "stats/neatToxin_kruskal_test.tsv"),
+        neat_dunn = os.path.join(DATASET_DIR, "stats/neatToxin_dunn_test.tsv"),
+        dil_kruskal = os.path.join(DATASET_DIR, "stats/dilToxin_kruskal_test.tsv"),
+        dil_dunn = os.path.join(DATASET_DIR, "stats/dilToxin_dunn_test.tsv")
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}toxin.R --neat_toxin {input.neat_toxin} \
@@ -293,16 +294,16 @@ rule toxin:
 
 rule metabolomics:
     input:
-        metab = DATASET_DIR + "data/misc/processed_metabolomics.tsv"
+        metab = os.path.join(DATASET_DIR, "data/misc/processed_metabolomics.tsv")
     output:
-        metab_plot = DATASET_DIR + "plots/metabolomics.pdf",
-        metab_lm = DATASET_DIR + "stats/metab_linear_model.tsv",
-        metab_dunn = DATASET_DIR + "stats/metab_dunn_test.tsv",
-        metab_kruskal = DATASET_DIR + "stats/metab_kruskal_test.tsv"
+        metab_plot = os.path.join(DATASET_DIR, "plots/metabolomics.pdf"),
+        metab_lm = os.path.join(DATASET_DIR, "stats/metab_linear_model.tsv"),
+        metab_dunn = os.path.join(DATASET_DIR, "stats/metab_dunn_test.tsv"),
+        metab_kruskal = os.path.join(DATASET_DIR, "stats/metab_kruskal_test.tsv")
     conda:
         "r_env"
     params:
-        script_location=DATASET_DIR + R_SCRIPT_DIR
+        script_location=os.path.join(DATASET_DIR, R_SCRIPT_DIR)
     shell:
         """
         Rscript {params.script_location}metab.R --metab {input.metab} \

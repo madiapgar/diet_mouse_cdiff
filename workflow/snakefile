@@ -1,7 +1,7 @@
 import os
 
 ## master snakefile
-configfile: "workflow/config.yml"
+configfile: "workflow/newExp_config.yml"
 
 ## setting environmental variables
 DATASET_DIR = config["dataset_dir"]

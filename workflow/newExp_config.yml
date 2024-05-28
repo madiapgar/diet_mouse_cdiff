@@ -1,0 +1,41 @@
+## overall config file
+## set to cecal dataset right now
+
+dataset_dir: "new_experiments/"
+qiime_env: "qiime2-2023.5"
+
+## options: yes and no
+raw_sequences: "no"
+
+## 01: demux and dada2
+raw_seq_dir: "data/SEQ088/"
+raw_seqs: "raw_seqs"
+barcodes: "data/SEQ088/newExp_d15-d3_metadata.txt"
+dada2_trim_left_for: 13
+dada2_trim_left_rev: 13
+dada2_trunc_len_for: 230
+dada2_trunc_len_rev: 160
+
+## 02/03: phylogeny and total sum scaling
+r_script_dir: "scripts/"
+biom_table: "data/qiime/newExp_d15-d3_filt_table.qza"
+rep_seqs: "data/qiime/newExp_d15-d3_rep_seqs.qza"
+
+## 04: core metrics analysis
+metadata: "data/misc/newExp_d15-d3_metadata.txt"
+core_metrics_sampling_depth: 99631
+
+## 05: longitudinal dataset plots/stats in R (you NEED to have measurements at different time points)
+## options: yes, no, or no downstream
+## currently set to "no" because I don't have the metadata for downstream processing available
+longitudinal_dataset: "no"
+processed_metadata: "data/misc/proc_newExp_d15-d3_metadata.tsv"
+
+## 06: non-longitudinal dataset plots/stats in R (measurements at only ONE time point)
+sampleID_key: NA
+mouseID_facil_key: NA
+bile_acid: NA
+toxin: NA
+histo: NA
+metab: NA
+hypoxia: NA

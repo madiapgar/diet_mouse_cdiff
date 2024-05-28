@@ -17,6 +17,7 @@ library(ggh4x)
 library(cowplot)
 library(magrittr)
 library(glue)
+library(apppleplots)
 ```
 
 **Functions**

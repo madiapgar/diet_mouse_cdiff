@@ -19,6 +19,7 @@ library(cowplot)
 library(vegan)
 library(viridis)
 library(argparse)
+library(apppleplots)
 ```
 
 **Functions**
@@ -62,48 +63,6 @@ family_abun_file_prep <- function(metadata_fp,
                   AbundanceTable = abun_filt)
   return(my_list)
 }
-
-## 2 
-abun_plots <- function(abundance_table){
-  ## first plot
-  abundance_table %>%
-    filter(!is.na(diet)) %>% 
-    ggplot(aes(x = Family, y = rel_abund)) +
-    scale_y_continuous(trans = 'log10') +
-    geom_boxplot(aes(group = Family), outlier.shape = NA) +
-    geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
-    theme_bw(base_size = 16) +
-    facet_grid(~diet, labeller = labeller(diet = diet_labs)) +
-    theme(strip.text.y = element_text(angle = 0),
-          axis.text.x = element_text(angle = 45, hjust = 1)) +
-    ggtitle("Cecal Microbe Family Relative Abundance at Day 3") +
-    ylab("Relative Abundance") +
-    xlab("Family") -> family_abun1
-  ## second plot
-  abundance_table %>%
-    filter(!is.na(diet)) %>% 
-    ggplot(aes(x = diet, y = rel_abund)) +
-    scale_y_continuous(trans = 'log10') +
-    geom_boxplot(aes(group = diet), outlier.shape = NA) +
-    geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
-    scale_x_discrete(labels = c("Chow",
-                                "HFt/HFb",
-                                "HFt/LFb",
-                                "LFt/HFb",
-                                "LFt/LFb")) +
-    theme_bw(base_size = 16) +
-    facet_wrap(~Family,
-               ncol = 1,
-               strip.position = "right") +
-    theme(strip.text.y = element_text(angle = 0)) +
-    ggtitle("Cecal Microbe Family Relative Abundance at Day 3") +
-    ylab("Relative Abundance") +
-    xlab("Diet") -> family_abun2
-  ## creating a list of my two plots
-  my_list <- list(FamilyAbundance1 = family_abun1,
-                  FamilyAbundance2 = family_abun2)
-  return(my_list)
-}
 ```
 
 **File Paths**
@@ -134,6 +93,11 @@ wanted_family <- c('Enterobacteriaceae',
                    'Bacteroidaceae', 
                    'Marinifilaceae', 
                    'Ruminococcaceae')
+diet_x_labs <- c("Chow",
+                 "HFt/\nHFb",
+                 "HFt/\nLFb",
+                 "LFt/\nHFb",
+                 "LFt/\nLFb")
 ```
 
 **Data Wrangling for Plot**
@@ -151,13 +115,54 @@ abun_filt <- abun_files$AbundanceTable
 
 **Plots**
 ```{r, fig.height=17, fig.width=11}
-family_abun_plots <- abun_plots(abun_filt)
-
 ## scatter plot by wanted microbe families and diet at day 3 in the cecum 
-abun1 <- family_abun_plots$FamilyAbundance1
-## scatter plot faceted by wanted microbe families with diet on the x-axis for visual comparisons by diet 
-abun2 <- family_abun_plots$FamilyAbundance2
+abun1 <- apppleplots::facet_once_plots(input_table = abun_filt,
+                                       stat_on_plot = FALSE,
+                                       x_value = 'Family',
+                                       y_value = 'rel_abund',
+                                       x_value_type = NULL,
+                                       grouped_by = 'Family',
+                                       point_alpha = 0.4,
+                                       x_labels = NULL,
+                                       facet_by = 'diet',
+                                       facet_labels = diet_labs,
+                                       stat_table = NULL,
+                                       x_name = 'Family',
+                                       y_name = 'Relative Abundance',
+                                       title_content = "Cecal Microbe Family Relative Abundance at Day 3")
 
+abun1 <- abun1 +
+          theme_bw(base_size = 16) +
+          theme(strip.text.y = element_text(angle = 0),
+                axis.text.x = element_text(angle = 45, hjust = 1)) +
+          scale_y_continuous(trans = 'log10')
+
+## scatter plot faceted by wanted microbe families with diet on the x-axis for visual comparisons by diet
+abun2 <- apppleplots::facet_once_plots(input_table = abun_filt,
+                                       stat_on_plot = FALSE,
+                                       x_value = 'diet',
+                                       y_value = 'rel_abund',
+                                       x_value_type = 'discrete',
+                                       grouped_by = 'diet',
+                                       point_alpha = 0.4,
+                                       x_labels = diet_x_labs,
+                                       facet_by = 'Family',
+                                       facet_labels = NULL,
+                                       stat_table = NULL,
+                                       x_name = 'Diet',
+                                       y_name = 'Relative Abundance',
+                                       title_content = "Cecal Microbe Family Relative Abundance at Day 3")
+
+abun2 <- abun2 +
+          facet_wrap(~Family,
+                     ncol = 1,
+                     strip.position = 'right') +
+          theme_bw(base_size = 16) +
+          theme(strip.text.y.right = element_text(angle = 0)) +
+          scale_y_continuous(trans = 'log10')
+
+
+abun1
 abun2
 ```
 

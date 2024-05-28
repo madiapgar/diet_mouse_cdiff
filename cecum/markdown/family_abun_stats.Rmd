@@ -66,13 +66,12 @@ family_abun_file_prep <- function(metadata_fp,
 }
 
 ## 2 
-## runs statistics on the large assembled data table for stat visualization
+## editing my dunn's post hoc test to include the difference in means between groups 
 abun_stats <- function(filtered_table,
                        first_group,
                        second_group,
                        mean_value,
                        dunn_test){
-  ## editing my dunn's post hoc test to include the difference in means between groups 
   filtered_table %>% 
     group_by(.data[[first_group]], .data[[second_group]]) %>% 
     summarise(mean = mean(.data[[mean_value]])) -> mean_table

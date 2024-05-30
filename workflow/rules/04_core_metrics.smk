@@ -26,21 +26,28 @@ rule core_metrics_analysis:
         otu_table = os.path.join(DATASET_DIR, "data/qiime/otu_table.qza"),
         metadata = os.path.join(DATASET_DIR, METADATA)
     output:
-        output_dir = directory(os.path.join(DATASET_DIR, "data/core_outputs"))
+        ##output_dir = directory(os.path.join(DATASET_DIR, "data/core_outputs")),
+        uu_out = os.path.join(DATASET_DIR, "data/core_outputs/unweighted_unifrac_distance_matrix.qza"),
+        wu_out = os.path.join(DATASET_DIR, "data/core_outputs/weighted_unifrac_distance_matrix.qza"),
+        shannon_out = os.path.join(DATASET_DIR, "data/core_outputs/shannon_vector.qza"),
+        faith_out = os.path.join(DATASET_DIR, "data/core_outputs/faith_pd_vector.qza")
     conda:
         QIIME
     params:
-        sampling_depth=CORE_SAMPLING_DEPTH
+        sampling_depth=CORE_SAMPLING_DEPTH,
+        output_dir = directory(os.path.join(DATASET_DIR, "data/core_outputs"))
     shell:
         """
         qiime diversity core-metrics-phylogenetic \
             --i-phylogeny {input.tree} \
-            --i-table {input.meta_filt_tax} \
+            --i-table {input.otu_table} \
             --p-sampling-depth  {params.sampling_depth} \
             --m-metadata-file {input.metadata} \
-            --output-dir {output.output_dir}
+            --output-dir {params.output_dir}
         """
 
+## these rules are giving me issues!! not really sure why but they are, need to figure this out since they are needed for
+## downstream analysis!
 rule unzip_uw_distance_matrix:
     input:
         os.path.join(DATASET_DIR, "data/core_outputs/unweighted_unifrac_distance_matrix.qza")
@@ -60,7 +67,7 @@ rule unzip_uw_distance_matrix:
         ./{params.location}data/core_outputs/uw_dist_matrix/uw_dist_matrix.tsv
 
         mv ./{params.location}data/core_outputs/uw_dist_matrix/uw_dist_matrix.tsv \
-        ./{params.location}data/core_outputs/
+        ./{params.location}data/core_outputs/uw_dist_matrix.tsv
         """
 
 
@@ -83,7 +90,7 @@ rule unzip_w_distance_matrix:
         ./{params.location}data/core_outputs/w_dist_matrix/w_dist_matrix.tsv
 
         mv ./{params.location}data/core_outputs/w_dist_matrix/w_dist_matrix.tsv \
-        ./{params.location}data/core_outputs/ 
+        ./{params.location}data/core_outputs/w_dist_matrix.tsv 
         """
 
 
@@ -106,7 +113,7 @@ rule unzip_shannon:
         ./{params.location}data/core_outputs/shannon_entropy/shannon_entropy.tsv
 
         mv ./{params.location}data/core_outputs/shannon_entropy/shannon_entropy.tsv \
-        ./{params.location}data/core_outputs/
+        ./{params.location}data/core_outputs/shannony_entropy.tsv
         """
 
 
@@ -129,5 +136,5 @@ rule unzip_faith_pd:
         ./{params.location}data/core_outputs/faith_pd/faith_pd.tsv
 
         mv ./{params.location}data/core_outputs/faith_pd/faith_pd.tsv \
-        ./{params.location}data/core_outputs/
+        ./{params.location}data/core_outputs/faith_pd.tsv
         """

@@ -8,10 +8,12 @@ rule get_reference_databases:
     output:
         os.path.join(DATASET_DIR, "databases/sepp-refs-silva-128.qza"),
         os.path.join(DATASET_DIR, "databases/silva-138-99-515-806-nb-classifier.qza")
+    params:
+        location=DATASET_DIR
     shell:
         """
-        wget https://data.qiime2.org/2023.5/common/sepp-refs-silva-128.qza -P ./databases/
-        wget https://data.qiime2.org/2023.5/common/silva-138-99-515-806-nb-classifier.qza -P ./databases/
+        wget https://data.qiime2.org/2023.5/common/sepp-refs-silva-128.qza -P ./{params.location}databases/
+        wget https://data.qiime2.org/2023.5/common/silva-138-99-515-806-nb-classifier.qza -P ./{params.location}databases/
         """
 
 
@@ -120,17 +122,22 @@ rule create_lacto_table:
 
 rule convert_to_fasta:
     input:
-        lacto_rep_seqs = os.path.join(DATASET_DIR, "data/qiime/lacto_rep_seqs.qza")
+        os.path.join(DATASET_DIR, "data/qiime/lacto_rep_seqs.qza")
     output:
-        output_path = os.path.join(DATASET_DIR, "data/qiime/dna-sequences.fasta"),
-        lacto_fasta = os.path.join(DATASET_DIR, "data/qiime/lactoOnly_rep_seqs.fasta")
+        os.path.join(DATASET_DIR, "data/qiime/lactoOnly_rep_seqs.fasta")
     conda:
         QIIME
+    params:
+        location=DATASET_DIR
     shell:
         """
         qiime tools export \
-            --input-path {input.lacto_rep_seqs} \
-            --output-path {output.output_path}
+            --input-path ./{params.location}data/qiime/lacto_rep_seqs.qza \
+            --output-path ./{params.location}data/qiime/fasta_files
         
-        mv {output.output_path} {output.lacto_fasta}
+        mv ./{params.location}data/qiime/fasta_files/dna-sequences.fasta \
+        ./{params.location}data/qiime/fasta_files/lactoOnly_rep_seqs.fasta
+
+        mv ./{params.location}data/qiime/fasta_files/lactoOnly_rep_seqs.fasta \
+        ./{params.location}data/qiime/lactoOnly_rep_seqs.fasta
         """

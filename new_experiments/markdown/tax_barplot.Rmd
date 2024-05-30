@@ -136,8 +136,8 @@ microshades_tax_barplot <- function(meta_fp,
 **File Paths**
 ```{r}
 metadata_FP <- '../data/misc/proc_blood_culture_meta.tsv'
-tax_FP <- '../data/bloodCulture_qiime/taxonomy.qza'
-otu_table_FP <- '../data/bloodCulture_qiime/filt_otu_table.qza'
+tax_FP <- '../data/qiime/bc_taxonomy.qza'
+otu_table_FP <- '../data/qiime/filt_bc_otu_table.qza'
 bc_tax_rank <- "Phylum"
 bc_tax_subgroup <- "Genus"
 bc_title <- 'Blood Culture Taxa Barplot'

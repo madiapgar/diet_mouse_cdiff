@@ -151,8 +151,8 @@ colony_stats_plot <- function(colony_table){
 
 **File Paths**
 ```{r}
-otu_table_FP <- '../data/bloodCulture_qiime/filt_otu_table.qza'
-tax_FP <- '../data/bloodCulture_qiime/taxonomy.qza'
+otu_table_FP <- '../data/qiime/filt_bc_otu_table.qza'
+tax_FP <- '../data/qiime/bc_taxonomy.qza'
 metadata_FP <- '../data/misc/proc_blood_culture_meta.tsv'
 colony_FP <- '../data/misc/proc_colony_count.tsv'
 

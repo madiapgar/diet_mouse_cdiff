@@ -53,20 +53,20 @@ rule tss_biom2qza:
             --output-path {output}
         """
 
-
-rule rep_seqs2fasta:
-    input:
-        os.path.join(DATASET_DIR, REP_SEQS)
-    output:
-        os.path.join(DATASET_DIR, "data/qiime/fasta_files/dna-sequences.fasta")
-    conda:
-        QIIME
-    shell:
-        """
-        qiime tools export \
-            --input-path {input} \
-            --output-path {output}
-        """
+## idk if I even need this rule 
+##rule rep_seqs2fasta:
+    ##input:
+        ##os.path.join(DATASET_DIR, REP_SEQS)
+    ##output:
+        ##os.path.join(DATASET_DIR, "data/qiime/fasta_files/dna-sequences.fasta")
+    ##conda:
+        ##QIIME
+    ##shell:
+       ##"""
+        ##qiime tools export \
+           ##--input-path {input} \
+            ##--output-path {output}
+        ##"""
 
 
 rule sepp_ASV_filtering2:

@@ -84,14 +84,14 @@ base_input = ["databases/sepp-refs-silva-128.qza",
               "data/qiime/tax_filt.qza",
               "data/qiime/tax_filt.qzv",
               "data/qiime/otu_table.qza",
-              "data/core_outputs/unweighted_unifrac_distance_matrix.qza",
-              "data/core_outputs/uw_dist_matrix.tsv",
-              "data/core_outputs/weighted_unifrac_distance_matrix.qza",
-              "data/core_outputs/w_dist_matrix.tsv",
-              "data/core_outputs/shannon_vector.qza",
-              "data/core_outputs/shannon_entropy.tsv",
-              "data/core_outputs/faith_pd_vector.qza",
-              "data/core_outputs/faith_pd.tsv"]
+              "data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza",
+              "data/qiime/core_outputs/uw_dist_matrix.tsv",
+              "data/qiime/core_outputs/weighted_unifrac_distance_matrix.qza",
+              "data/qiime/core_outputs/w_dist_matrix.tsv",
+              "data/qiime/core_outputs/shannon_vector.qza",
+              "data/qiime/core_outputs/shannon_entropy.tsv",
+              "data/qiime/core_outputs/faith_pd_vector.qza",
+              "data/qiime/core_outputs/faith_pd.tsv"]
 
 
 rule_all_input_list = [comb_filepaths(DATASET_DIR, filepath) for filepath in base_input]
@@ -117,24 +117,24 @@ longitudinal = ["plots/faith_pd.pdf",
                 "plots/family_abun2.pdf",
                 "stats/family_abun_lm.tsv",
                 "stats/family_abun_dunn.tsv",
-                "plots/famAbun_stat_vis.pdf",
-                "stats/wu_homogeneity.tsv",
-                "stats/wu_homog_dunn.tsv",
-                "stats/uu_homogeneity.tsv",
-                "stats/uu_homog_dunn.tsv",
-                "plots/wu_homogeneity.pdf",
-                "plots/wu_homog_stats.pdf",
-                "plots/uu_homogeneity.pdf",
-                "plots/uu_homog_stats.pdf",
-                "stats/uu_resiliency.tsv",
-                "stats/uu_resil_dunn.tsv",
-                "stats/wu_resiliency.tsv",
-                "stats/wu_resil_dunn.tsv",
-                "plots/wu_resiliency.pdf",
-                "plots/wu_resil_stats.pdf",
-                "plots/uu_resiliency.pdf",
-                "plots/uu_resil_stats.pdf"]
-
+                "plots/famAbun_stat_vis.pdf"]
+#                "stats/wu_homogeneity.tsv",
+#                "stats/wu_homog_dunn.tsv",
+#                "stats/uu_homogeneity.tsv",
+#                "stats/uu_homog_dunn.tsv",
+#                "plots/wu_homogeneity.pdf",
+#                "plots/wu_homog_stats.pdf",
+#                "plots/uu_homogeneity.pdf",
+#                "plots/uu_homog_stats.pdf",
+#                "stats/uu_resiliency.tsv",
+#                "stats/uu_resil_dunn.tsv",
+#                "stats/wu_resiliency.tsv",
+#                "stats/wu_resil_dunn.tsv",
+#                "plots/wu_resiliency.pdf",
+#                "plots/wu_resil_stats.pdf",
+#                "plots/uu_resiliency.pdf",
+#                "plots/uu_resil_stats.pdf"]
+#
 rule_all_longitudinal = [comb_filepaths(DATASET_DIR, filepath) for filepath in longitudinal]
 
 ## includes outputs from step 6 (not longitudinal only)
@@ -194,7 +194,7 @@ if RUN_DEMUX_DADA2 == 'yes' and LONGITUDINAL == 'yes':
     print("Running demux, DADA2, and longitudinal analysis!")
 
 else:
-    print("Running alternate pathway of analysis")
+    print(" ")
 
 
 
@@ -209,7 +209,7 @@ if RUN_DEMUX_DADA2 == 'yes' and LONGITUDINAL == 'no':
 
     print("Running demux and DADA2, but NOT longitudinal analysis!")
 else:
-    print("Running alternate pathway of analysis")
+    print(" ")
 
 
 
@@ -222,7 +222,7 @@ if RUN_DEMUX_DADA2 == 'yes' and LONGITUDINAL == 'no downstream':
     print("Running upper qiime analysis ONLY!")
 
 else:
-    print("Running alternate pathway of analysis")
+    print(" ")
 
 
 
@@ -234,7 +234,7 @@ if RUN_DEMUX_DADA2 == 'no' and LONGITUDINAL == 'yes':
 
     print("Running longitudinal-based analysis but not demux and DADA2!")
 else: 
-    print("Running alternate pathway of analysis")
+    print(" ")
 
 
 
@@ -246,7 +246,7 @@ if RUN_DEMUX_DADA2 == 'no' and LONGITUDINAL == 'no':
     print("Running phylogenetic classification, core metrics, and total sum scaling!")
 
 else:
-    print("Running alternate pathway of analysis")
+    print(" ")
 
 
 

@@ -17,7 +17,7 @@ dada2_trunc_len_for: NA
 dada2_trunc_len_rev: NA
 
 ## 02/03: phylogeny and total sum scaling
-r_script_dir: "scripts/newExp_comp_scripts/"
+r_script_dir: "scripts/"
 biom_table: "data/qiime/newExp_comp_d15_table.qza"
 rep_seqs: "data/qiime/newExp_comp_d15_rep_seqs.qza"
 

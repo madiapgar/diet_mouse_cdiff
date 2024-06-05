@@ -34,10 +34,6 @@ parser$add_argument("-flm",
                     "--faith_lm",
                     dest = "faith_lm_FP",
                     help = "Filepath to Faith's PD total linear model results in .tsv format.")
-parser$add_argument("-flms",
-                    "--faith_lm_sec",
-                    dest = "faith_lm_sec_FP",
-                    help = "Filepath to Faith's PD sectioned linear model results in .tsv format.")
 parser$add_argument("-fd",
                     "--faith_dunn",
                     dest = "faith_dunn_FP",
@@ -46,10 +42,6 @@ parser$add_argument("-slm",
                     "--shannon_lm",
                     dest = "shannon_lm_FP",
                     help = "Filepath to Shannon Entropy total linear model results in .tsv format.")
-parser$add_argument("-slms",
-                    "--shannon_lm_sec",
-                    dest = "shannon_lm_sec_FP",
-                    help = "Filepath to Shannon Entropy sectioned linear model results in .tsv format.")
 parser$add_argument("-sd",
                     "--shannon_dunn",
                     dest = "shannon_dunn_FP",
@@ -317,11 +309,9 @@ new_shannon_dunn <- stat_plot_prep(shannon,
 shannon_stat_vis <- stat_plot(new_shannon_dunn)
 
 ## writing out results as a .tsv file 
-write_tsv(faith_lm, args$faith_lm_FP)
-write_tsv(sectioned_faith_lm, args$faith_lm_sec_FP)
+write_tsv(sectioned_faith_lm, args$faith_lm_FP)
 write_tsv(new_faith_dunn, args$faith_dunn_FP)
-write_tsv(shannon_lm, args$shannon_lm_FP)
-write_tsv(sectioned_shannon_lm, args$shannon_lm_sec_FP)
+write_tsv(sectioned_shannon_lm, args$shannon_lm_FP)
 write_tsv(new_shannon_dunn, args$shannon_dunn_FP)
 
 ## saving my statistical visualizations

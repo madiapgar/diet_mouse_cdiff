@@ -5,8 +5,13 @@ library(tidyverse)
 library(readr)
 library(magrittr)
 
-## reading in metadata file
-pre_meta <- read_tsv('./new_experiments/data/misc/newExp_d15-d3_metadata.txt')
+## file paths
+meta_fp <- './new_experiments/data/misc/newExp_d15-d3_metadata.txt'
+seq_depth_fp <- './new_experiments/data/misc/newExp_d15-d3_seq_depth.tsv'
+
+## reading in metadata file and sequencing depth
+pre_meta <- read_tsv(meta_fp)
+seq_depth <- read_tsv(seq_depth_fp)
 
 ## data wrangling/processing
 pre_meta %>% 
@@ -59,7 +64,9 @@ pre_meta %>%
         purified_diet = case_when(
           diet == 'Chow' ~ 0,
           .default = 1
-        )) -> metadata
+        )) %>% 
+  left_join(seq_depth,
+            by = 'sampleid') -> metadata
 
 ## saving processed metadata file as a .tsv
 write_tsv(metadata,

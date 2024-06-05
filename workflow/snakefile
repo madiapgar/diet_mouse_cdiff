@@ -1,7 +1,7 @@
 import os
+import pandas as pd
 
 ## master snakefile
-configfile: "workflow/newExp_config.yml"
 
 ## setting environmental variables
 DATASET_DIR = config["dataset_dir"]
@@ -44,6 +44,8 @@ def comb_filepaths(filepath1,
                    filepath2):
     return os.path.join(filepath1, filepath2)
 
+proc_meta = pd.read_csv(os.path.join(DATASET_DIR, PROCESSED_META), sep = '\t')
+
 
 ## creating lists of inputs for rule_all
 ## includes outputs from step 1 (these look funky bc I'm using wildcards)
@@ -84,6 +86,7 @@ base_input = ["databases/sepp-refs-silva-128.qza",
               "data/qiime/tax_filt.qza",
               "data/qiime/tax_filt.qzv",
               "data/qiime/otu_table.qza",
+              "data/qiime/tax_barplot.qzv",
               "data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza",
               "data/qiime/core_outputs/uw_dist_matrix.tsv",
               "data/qiime/core_outputs/weighted_unifrac_distance_matrix.qza",
@@ -99,11 +102,9 @@ rule_all_input_list = [comb_filepaths(DATASET_DIR, filepath) for filepath in bas
 ## includes outputs from step 5 (longitudinal outputs only)
 longitudinal = ["plots/faith_pd.pdf",
                 "plots/shannon_entropy.pdf",
-                "stats/faith_total_results.tsv",
-                "stats/faith_diet_results.tsv",
+                "stats/faith_lm.tsv",
                 "stats/faith_dunn.tsv",
-                "stats/shannon_total_results.tsv",
-                "stats/shannon_diet_results.tsv",
+                "stats/shannon_lm.tsv",
                 "stats/shannon_dunn.tsv",
                 "plots/faith_stat_vis.pdf",
                 "plots/shannon_stat_vis.pdf",
@@ -111,30 +112,36 @@ longitudinal = ["plots/faith_pd.pdf",
                 "plots/weighted_unifrac_pcoa.pdf",
                 "stats/w_adonis_results.tsv",
                 "stats/uw_adonis_results.tsv",
-                "stats/w_adonis_by_day.tsv",
-                "stats/uw_adonis_by_day.tsv",
                 "plots/family_abun1.pdf",
                 "plots/family_abun2.pdf",
                 "stats/family_abun_lm.tsv",
                 "stats/family_abun_dunn.tsv",
                 "plots/famAbun_stat_vis.pdf"]
-#                "stats/wu_homogeneity.tsv",
-#                "stats/wu_homog_dunn.tsv",
-#                "stats/uu_homogeneity.tsv",
-#                "stats/uu_homog_dunn.tsv",
-#                "plots/wu_homogeneity.pdf",
-#                "plots/wu_homog_stats.pdf",
-#                "plots/uu_homogeneity.pdf",
-#                "plots/uu_homog_stats.pdf",
-#                "stats/uu_resiliency.tsv",
-#                "stats/uu_resil_dunn.tsv",
-#                "stats/wu_resiliency.tsv",
-#                "stats/wu_resil_dunn.tsv",
-#                "plots/wu_resiliency.pdf",
-#                "plots/wu_resil_stats.pdf",
-#                "plots/uu_resiliency.pdf",
-#                "plots/uu_resil_stats.pdf"]
-#
+
+resil_homog_outList = ["stats/wu_homogeneity.tsv",
+                       "stats/wu_homog_dunn.tsv",
+                       "stats/uu_homogeneity.tsv",
+                       "stats/uu_homog_dunn.tsv",
+                       "plots/wu_homogeneity.pdf",
+                       "plots/wu_homog_stats.pdf",
+                       "plots/uu_homogeneity.pdf",
+                       "plots/uu_homog_stats.pdf",
+                       "stats/uu_resiliency.tsv",
+                       "stats/uu_resil_dunn.tsv",
+                       "stats/wu_resiliency.tsv",
+                       "stats/wu_resil_dunn.tsv",
+                       "plots/wu_resiliency.pdf",
+                       "plots/wu_resil_stats.pdf",
+                       "plots/uu_resiliency.pdf",
+                       "plots/uu_resil_stats.pdf"]
+
+## snakemake gets upset if resil and homog rules aren't run bc the outputs aren't made
+## so I'm fixing that w this ifelse statement
+if proc_meta.query('day_post_inf == -8').shape[0] > 0 == True:
+    longitudinal.append(resil_homog_outList)
+else:
+    longitudinal
+
 rule_all_longitudinal = [comb_filepaths(DATASET_DIR, filepath) for filepath in longitudinal]
 
 ## includes outputs from step 6 (not longitudinal only)

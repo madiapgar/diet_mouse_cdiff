@@ -20,6 +20,25 @@ rule pre_core_metrics_filter:
         """
 
 
+rule make_taxa_barplot:
+    input:
+        otu_table = os.path.join(DATASET_DIR, "data/qiime/otu_table.qza"),
+        taxonomy = os.path.join(DATASET_DIR, "data/qiime/taxonomy.qza"),
+        metadata = os.path.join(DATASET_DIR, METADATA)
+    output:
+        tax_barplot = os.path.join(DATASET_DIR, "data/qiime/tax_barplot.qzv")
+    conda:
+        QIIME
+    shell:
+        """
+        qiime taxa barplot \
+            --i-table {input.otu_table} \
+            --i-taxonomy {input.taxonomy} \
+            --m-metadata-file {input.metadata} \
+            --o-visualization {output.tax_barplot}
+        """
+
+
 rule core_metrics_analysis:
     input:
         tree = os.path.join(DATASET_DIR, "data/qiime/tree.qza"),
@@ -49,8 +68,7 @@ rule core_metrics_analysis:
         ./{params.location}data/qiime/core_outputs/
         """
 
-## these rules are giving me issues!! not really sure why but they are, need to figure this out since they are needed for
-## downstream analysis!
+
 rule unzip_uw_distance_matrix:
     input:
         os.path.join(DATASET_DIR, "data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza")

@@ -153,10 +153,10 @@ shannon_entropy_plot <- shannon_plot(args$shannon_FP,
 ## saving my plot outputs to the plots folder
 ggsave(args$output_faith_FP,
        plot = faith_plot, 
-       width = 6, 
-       height = 4.5)
+       width = 10, 
+       height = 5)
 
 ggsave(args$output_shannon_FP,
        plot = shannon_entropy_plot, 
-       width = 6, 
-       height = 4.5)
+       width = 10, 
+       height = 5)

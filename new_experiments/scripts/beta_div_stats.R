@@ -39,14 +39,6 @@ parser$add_argument("-wa",
                     "--wu_adonis",
                     dest = "wu_adonis_fp",
                     help = "Filepath to Weighted UniFrac Adonis test results in .tsv format.")
-parser$add_argument("-ud",
-                    "--uu_adonis_day",
-                    dest = "uu_adonis_day_fp",
-                    help = "Filepath to Unweighted UniFrac Adonis test by day results in .tsv format.")
-parser$add_argument("-wd",
-                    "--wu_adonis_day",
-                    dest = "wu_adonis_day_fp",
-                    help = "Filepath to Weighted UniFrac Adonis test by day results in .tsv format.")
 
 args <- parser$parse_args()
 
@@ -181,7 +173,5 @@ unweighted_by_day <- adonis_for_loop(stat_meta,
                                      day_strat)
 
 ## writing results out as a .tsv file 
-write_tsv(w_adonis, args$wu_adonis_fp)
-write_tsv(uw_adonis, args$uu_adonis_fp)
-write_tsv(unweighted_by_day, args$uu_adonis_day_fp)
-write_tsv(weighted_by_day, args$wu_adonis_day_fp)
+write_tsv(weighted_by_day, args$wu_adonis_fp)
+write_tsv(unweighted_by_day, args$uu_adonis_fp)

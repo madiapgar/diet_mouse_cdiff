@@ -39,24 +39,9 @@ parser$add_argument("-wa",
                     "--wu_adonis",
                     dest = "wu_adonis_fp",
                     help = "Filepath to Weighted UniFrac Adonis test results in .tsv format.")
-parser$add_argument("-ud",
-                    "--uu_adonis_day",
-                    dest = "uu_adonis_day_fp",
-                    help = "Filepath to Unweighted UniFrac Adonis test by day results in .tsv format.")
-parser$add_argument("-wd",
-                    "--wu_adonis_day",
-                    dest = "wu_adonis_day_fp",
-                    help = "Filepath to Weighted UniFrac Adonis test by day results in .tsv format.")
 
 args <- parser$parse_args()
 
-## input file paths
-# metadata_FP <- './data/misc/processed_metadata.tsv'
-# uw_dist_fp <- './data/qiime/core_outputs/uw_dist_matrix.tsv'
-# w_dist_fp <- './data/qiime/core_outputs/w_dist_matrix.tsv'
-
-## for adonis for loop function
-day_strat <- 'day_post_inf'
 
 
 ## functions in order of usage 
@@ -95,55 +80,19 @@ dist_matrix_prep <- function(metadata_file,
 ## beta diversity adonis2 testing function
 adonis_test <- function(dist_matrix,
                         metadata_file){
-  adonis_results <- adonis2(as.dist(dist_matrix) ~ (purified_diet * high_fat * high_fiber) + study,
+  adonis_results <- adonis2(as.dist(dist_matrix) ~ experiment_set + vendor + mouse_sex,
                             data = metadata_file,
                             permutations = 999, 
                             parallel = 4)
   adonis_results <- tidy(adonis_results)
   adonis_results['signif'] <- symnum(adonis_results$p.value,
-                                     cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                     symbols = c("****", "***", "**", "*", "+", "ns"),
+                                     cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                     symbols = c("****", "***", "**", "*", "ns"),
                                      abbr.colnames = FALSE,
                                      na = "")
   return(adonis_results)
 }
 
-## 3
-## to run an adonis test by day relative to infection
-adonis_per_day <- function(metadata_file,
-                           day_filter,
-                           dist_fp){
-  metadata_file %>% 
-    filter(day_post_inf == day_filter) -> day_metadata
-  dist_files <- dist_matrix_prep(day_metadata,
-                                 dist_fp)
-  dist <- dist_files$DistanceMatrix
-  filt_meta <- dist_files$Metadata
-  adonis_results <- adonis_test(dist,
-                                filt_meta)
-  adonis_results$day_post_inf <- day_filter
-  return(adonis_results)
-}
-
-## 4 
-## function that will run a for loop to stratify the adonis test by a certain variable
-adonis_for_loop <- function(metadata_file,
-                            dist_matrix_fp,
-                            strat_column){
-  output <- list()
-  for (i in unique(unlist(metadata_file[strat_column]))) {
-    tmp_output <- adonis_per_day(metadata_file,
-                                 i,
-                                 dist_matrix_fp)
-    tmp_output[strat_column] <- i
-    
-    # if we're appending a higher dimensional object (df, matrix, vector,) 
-    # to a list, we need to wrap it in a list() within the append function.
-    output <- append(output, list(tmp_output))
-  }
-  output <- bind_rows(output)
-  return(output)
-}
 
 ## actually using the functions
 ## reading in metadata file 
@@ -161,11 +110,6 @@ w_adonis <- adonis_test(w_dist,
                         stat_meta)
 
 
-weighted_by_day <- adonis_for_loop(stat_meta,
-                                   args$wu_dist_fp,
-                                   day_strat)
-
-
 ## unweighted unifrac
 uw_dist_files <- dist_matrix_prep(meta,
                                   args$uu_dist_fp)
@@ -176,12 +120,7 @@ stat_meta <- uw_dist_files$Metadata
 uw_adonis <- adonis_test(uw_dist,
                          stat_meta)
 
-unweighted_by_day <- adonis_for_loop(stat_meta,
-                                     args$uu_dist_fp,
-                                     day_strat)
 
 ## writing results out as a .tsv file 
 write_tsv(w_adonis, args$wu_adonis_fp)
 write_tsv(uw_adonis, args$uu_adonis_fp)
-write_tsv(unweighted_by_day, args$uu_adonis_day_fp)
-write_tsv(weighted_by_day, args$wu_adonis_day_fp)

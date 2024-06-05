@@ -41,25 +41,11 @@ parser$add_argument("-p2",
 
 args <- parser$parse_args()
 
-## input file paths and others
-# otu_table_FP <- './data/qiime/taxonomy_filtered.qza'
-# tax_FP <- './data/qiime/taxonomy.qza'
-# metadata_FP <- './data/misc/processed_metadata.tsv'
-diet_labs <- 
-  c('Chow', 
-    'High Fat / High Fiber', 
-    'High Fat / Low Fiber', 
-    'Low Fat / High Fiber', 
-    'Low Fat / Low Fiber')
-names(diet_labs) <- c('Chow', 
-                      'HF/HF', 
-                      'HF/LF', 
-                      'LF/HF', 
-                      'LF/LF')
+
+
 wanted_level <- 'Family'
 wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
-                   'Staphylococcaceae', 'Tannerellaceae', 'Muribaculaceae', 'Bacteroidaceae', 
-                   'Marinifilaceae', 'Ruminococcaceae')
+                   'Staphylococcaceae', 'Bacteroidaceae', 'Ruminococcaceae')
 
 ## functions in order of usage 
 ## 1
@@ -88,13 +74,12 @@ family_abun_file_prep <- function(metadata_fp,
     left_join(metadata, by = 'sampleid') %>% 
     left_join(taxonomy, by = 'asv') -> abun_table
   abun_table %>% 
-    group_by(sampleid, day_post_inf, diet, mouse_id, 
-             purified_diet, high_fat, high_fiber, 
+    group_by(sampleid, diet, mouse_id,
+             experiment_set, vendor, mouse_sex,
              seq_depth, .data[[tax_level]]) %>% 
     summarise(rel_abund = sum(rel_abun)) %>% 
     filter(.data[[tax_level]] %in% wanted_tax) %>% 
-    mutate(mouse_fact = as.factor(mouse_id),
-           day_fact = as.factor(day_post_inf)) -> abun_filt
+    mutate(mouse_fact = as.factor(mouse_id)) -> abun_filt
   ## creating a list for my outputs
   my_list <- list(Metadata = metadata,
                   Taxonomy = taxonomy,
@@ -104,44 +89,34 @@ family_abun_file_prep <- function(metadata_fp,
 }
 
 ## 2 
-abun_plots <- function(abundance_table){
+abun_plots <- function(input_table,
+                       x_axis,
+                       y_axis,
+                       x_group_by,
+                       fill_by,
+                       facet_by,
+                       title,
+                       x_name,
+                       y_name){
   ## first plot
-  abundance_table %>%
-    filter(!is.na(diet)) %>% 
-    ggplot(aes(x = day_post_inf, y = rel_abund)) +
+  input_table %>%
+    ggplot(aes(x = .data[[x_axis]], y = .data[[y_axis]])) +
     scale_y_continuous(trans = 'log10') +
-    scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
-    geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
-    geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
-    geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
-    geom_line(aes(group = mouse_id), alpha = 0.1) +
-    geom_smooth(se = FALSE) +
-    geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
-    theme_bw(base_size = 16) +
-    facet_grid(Family~diet, labeller = labeller(diet = diet_labs)) +
-    theme(strip.text.y = element_text(angle = 0)) +
-    ggtitle("Microbe Family Relative Abundance") +
-    ylab("Relative Abundance") +
-    xlab("Days Relative to Infection") -> family_abun1
-  ## second plot
-  abun_filt %>%
-    filter(!is.na(diet)) %>% 
-    ggplot(aes(x = mouse_fact, y = day_fact)) +
-    geom_tile(aes(fill = rel_abund), alpha = 0.5) +
-    scale_fill_viridis(option = "H", name = 'Relative\nAbundance') +
-    theme_bw(base_size = 16) +
-    facet_grid(Family~diet, scales = 'free',
-               labeller = labeller(diet = diet_labs)) +
-    theme(strip.text.y = element_text(angle = 0),
-          axis.text.x = element_blank()) + 
-    xlab("Mouse ID") +
-    ylab("Days Relative to Infection") +
-    scale_y_discrete(limits = rev) -> family_abun2
-  ## creating a list of my two plots
-  my_list <- list(FamilyAbundance1 = family_abun1,
-                  FamilyAbundance2 = family_abun2)
-  return(my_list)
+    geom_boxplot(aes(group = .data[[x_group_by]]), outlier.shape = NA) +
+    geom_jitter(aes(fill = .data[[fill_by]]), width = 0.1, height = 0, alpha = 0.7, pch = 21, size = 2) +
+    scale_fill_brewer(palette = 'Pastel1', 
+                      name = 'Vendor',
+                      labels = c('Charles River',
+                                 'Taconic')) +
+    theme_bw(base_size = 20) +
+    facet_grid(~.data[[facet_by]]) +
+    ggtitle(title) +
+    ylab(y_name) +
+    xlab(x_name) -> plot
+  
+  return(plot)
 }
+
 
 ## family abundance table prep 
 abun_files <- family_abun_file_prep(args$metadata_FP,
@@ -150,26 +125,62 @@ abun_files <- family_abun_file_prep(args$metadata_FP,
                                     wanted_level,
                                     wanted_family)
 
+exp_x_labs <- c('New Anschutz (2024)',
+                'U of Arizona')
+
+exp_labs <- c('New Anschutz (2024)',
+              'U of Arizona')
+
+names(exp_labs) <- c('new_exp_anschutz',
+                     'second_set_arizona')
+
 ## pulling the abundance table out, you can also take metadata, otu table, and taxonomic info
 ## out of the list output 
 abun_filt <- abun_files$AbundanceTable
 
 ## generating the plots
-family_abun_plots <- abun_plots(abun_filt)
+abun1 <- abun_plots(input_table = abun_filt,
+                    x_axis = 'Family',
+                    y_axis = 'rel_abund',
+                    x_group_by = 'Family',
+                    fill_by = 'vendor',
+                    facet_by = 'experiment_set',
+                    title = 'New Exp v AZ Exp Microbes at Day -15',
+                    x_name = 'Family',
+                    y_name = 'Relative Abundance (log10)')
 
-## scatter plot/ line graph by mouse id and wanted microbe families
-abun1 <- family_abun_plots$FamilyAbundance1
-## heat map by days relative to infection and mouse id for wanted microbe families 
-abun2 <- family_abun_plots$FamilyAbundance2
+abun1 <- abun1 +
+          theme(strip.text.y = element_text(angle = 0),
+                axis.text.x = element_text(angle = 45, hjust = 1)) +
+          facet_wrap(~experiment_set,
+                     labeller = labeller(experiment_set = exp_labs))
+
+
+## scatter plot faceted by wanted microbe families with diet on the x-axis for visual comparisons by diet
+abun2 <- abun_plots(input_table = abun_filt,
+                    x_axis = 'experiment_set',
+                    y_axis = 'rel_abund',
+                    x_group_by = 'experiment_set',
+                    fill_by = 'vendor',
+                    facet_by = 'Family',
+                    title = 'New Exp v AZ Exp Microbes at Day -15',
+                    x_name = 'Experiment',
+                    y_name = 'Relative Abundance (log10)')
+
+abun2 <- abun2 +
+  theme(strip.text.y = element_text(angle = 0),
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_x_discrete(labels = exp_x_labs)
+
 
 ## saving my plot outputs
 ## option #1
 ggsave(args$plot1_FP,
        plot = abun1, 
-       width = 17, 
-       height = 15)
+       width = 18, 
+       height = 7)
 ## option #2
 ggsave(args$plot2_FP,
        plot = abun2, 
-       width = 25, 
-       height = 10)
+       width = 20, 
+       height = 7)

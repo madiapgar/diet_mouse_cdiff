@@ -16,6 +16,7 @@ library(vegan)
 library(ggh4x)
 library(viridis)
 library(argparse)
+library(ggforce)
 
 ## using argparse for my file paths
 ## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
@@ -51,13 +52,6 @@ parser$add_argument("-ow",
 
 args <- parser$parse_args()
 
-
-## input file paths
-# metadata_FP <- './data/misc/processed_metadata.tsv'
-# unweighted_FP <- './data/qiime/core_outputs/unweighted_unifrac_pcoa_results.qza'
-# weighted_FP <- './data/qiime/core_outputs/weighted_unifrac_pcoa_results.qza'
-# faith_pd_FP <- './data/qiime/core_outputs/faith_pd.tsv'
-# shannon_FP <- './data/qiime/core_outputs/shannon_entropy.tsv'
 
 diet_labs <- 
   c('Chow', 
@@ -127,27 +121,27 @@ pcoa_ax_lab <- function(unifrac_var, col_name){
 ## pcoa plot function
 ## xlab and ylab are outputs from pcoa_ax_lab function
 pcoa_plot <- function(biom_file,
-                      labels,
-                      names_labels,
+                      fill_by,
+                      # facet_by,
+                      # facet_labs,
                       xlab,
                       ylab,
                       title){
-  ## what you want the grid labels to be (list)
-  labs <- (labels) 
-  ## what grid labels currently are (list)
-  names(labs) <- (names_labels) 
   biom_file %>% 
-    filter(!is.na(diet)) %>% 
     ggplot(aes(x = PC1, y = PC2)) +
-    geom_point(aes(fill = faith_pd), pch = 21, alpha = 0.7) +
-    theme_bw(base_size = 14) +
-    scale_fill_distiller(palette = 'Spectral', name = "Faith's PD") +
-    facet_grid(day_post_inf~diet, 
-               labeller = labeller(diet = labs)) +
-    theme(legend.text = element_text(size = 8.5),
-          strip.text.y = element_text(angle = 0)) +
+    geom_mark_ellipse(aes(group = .data[[fill_by]])) +
+    geom_point(aes(fill = .data[[fill_by]]), pch = 21, alpha = 0.7, size = 2) +
+    scale_fill_brewer(palette = 'Dark2',
+                      labels = c('New Anschutz (2024)',
+                                 'U of Arizona'),
+                      name = 'Experiment') +
+    theme_bw(base_size = 20) +
+    # facet_wrap(~.data[[facet_by]],
+    #            labeller = labeller(.cols = facet_labs)) +
+    theme(strip.text.y = element_text(angle = 0)) +
     ggtitle(title) +
-    labs(x = xlab, y = ylab) -> pcoa
+    labs(x = xlab, 
+         y = ylab) -> pcoa
   return(pcoa)
 }
 
@@ -155,6 +149,17 @@ pcoa_plot <- function(biom_file,
 ## metadata file prep
 metadata <- read_tsv(args$metadata_FP)
 names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
+
+vendor_labs <- c('Charles River',
+                 'Taconic')
+names(vendor_labs) <- c('charles_river',
+                        'taconic')
+
+exp_labs <- c('New Anschutz (2024)',
+              'U of Arizona')
+
+names(exp_labs) <- c('new_exp_anschutz',
+                     'second_set_arizona')
 
 ## preparing core beta diversity files for ggplot
 core_files <- biom_table_prep(args$unweighted_FP,
@@ -172,11 +177,12 @@ weighted_biom <- core_files$WeightedBiom
 uw_uni_xlab <- pcoa_ax_lab(uw_var, 'PC1')
 uw_uni_ylab <- pcoa_ax_lab(uw_var, 'PC2')
 
-uw_title <- 'Unweighted UniFrac PCoA Plot'
+uw_title <- 'New Exp v AZ Exp Unweighted UniFrac PCoA Plot'
 
 unweighted_pcoa <- pcoa_plot(unweighted_biom,
-                             diet_labs,
-                             diet_names_labels,
+                             'experiment_set',
+                             # 'experiment_set',
+                             # exp_labs,
                              uw_uni_xlab,
                              uw_uni_ylab,
                              uw_title)
@@ -184,11 +190,12 @@ unweighted_pcoa <- pcoa_plot(unweighted_biom,
 w_uni_xlab <- pcoa_ax_lab(w_var, 'PC1')
 w_uni_ylab <- pcoa_ax_lab(w_var, 'PC2')
 
-w_title <- 'Weighted UniFrac PCoA Plot'
+w_title <- 'New Exp v AZ Exp Weighted UniFrac PCoA Plot'
 
 weighted_pcoa <- pcoa_plot(weighted_biom,
-                           diet_labs,
-                           diet_names_labels,
+                           'experiment_set',
+                           # 'experiment_set',
+                           # exp_labs,
                            w_uni_xlab,
                            w_uni_ylab,
                            w_title)
@@ -196,10 +203,10 @@ weighted_pcoa <- pcoa_plot(weighted_biom,
 ## saving my plot outputs to the plots folder
 ggsave(args$output_uu_FP,
        plot = unweighted_pcoa, 
-       width = 17, 
-       height = 8.5)
+       width = 16, 
+       height = 8)
 
 ggsave(args$output_wu_FP,
        plot = weighted_pcoa, 
-       width = 17, 
-       height = 8.5)
+       width = 16, 
+       height = 8)

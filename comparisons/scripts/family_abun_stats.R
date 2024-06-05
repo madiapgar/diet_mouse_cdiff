@@ -14,6 +14,7 @@ library(vegan)
 library(viridis)
 library(rstatix)
 library(argparse)
+library(glue)
 
 ## using argparse for my file paths
 ## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
@@ -45,14 +46,12 @@ parser$add_argument("-d",
 
 args <- parser$parse_args()
 
-## input file paths and others
-# otu_table_FP <- './data/qiime/taxonomy_filtered.qza'
-# tax_FP <- './data/qiime/taxonomy.qza'
-# metadata_FP <- './data/misc/processed_metadata.tsv'
 wanted_level <- 'Family'
 wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
-                   'Staphylococcaceae', 'Tannerellaceae', 'Muribaculaceae', 'Bacteroidaceae', 
-                   'Marinifilaceae', 'Ruminococcaceae')
+                   'Staphylococcaceae', 'Bacteroidaceae', 'Ruminococcaceae')
+
+group1_labs <- c('New Anschutz (2024)')
+names(group1_labs) <- c('new_exp_anschutz')
 
 ## function 1
 family_abun_file_prep <- function(metadata_fp,
@@ -80,13 +79,12 @@ family_abun_file_prep <- function(metadata_fp,
     left_join(metadata, by = 'sampleid') %>% 
     left_join(taxonomy, by = 'asv') -> abun_table
   abun_table %>% 
-    group_by(sampleid, day_post_inf, diet, mouse_id, 
-             purified_diet, high_fat, high_fiber, 
+    group_by(sampleid, diet, mouse_id,
+             experiment_set, vendor, mouse_sex,
              seq_depth, .data[[tax_level]]) %>% 
     summarise(rel_abund = sum(rel_abun)) %>% 
     filter(.data[[tax_level]] %in% wanted_tax) %>% 
-    mutate(mouse_fact = as.factor(mouse_id),
-           day_fact = as.factor(day_post_inf)) -> abun_filt
+    mutate(mouse_fact = as.factor(mouse_id)) -> abun_filt
   ## creating a list for my outputs
   my_list <- list(Metadata = metadata,
                   Taxonomy = taxonomy,
@@ -96,113 +94,212 @@ family_abun_file_prep <- function(metadata_fp,
 }
 
 ## 2 
-## runs statistics on the large assembled data table for stat visualization
-abun_stats <- function(filtered_table,
-                       tax_level){
-  ## linear modeling 
-  filtered_table %>%
-    na.omit() %>% 
-    filter(day_post_inf > -15) %>% 
-    group_by(.data[[tax_level]], day_post_inf) %>% 
-    do(glance(lm(rel_abund ~ (purified_diet * seq_depth) + high_fat * high_fiber,
-                 data =.))) %>% 
-    ungroup() %>% 
-    na.omit() %>% 
-    mutate(adj.p = p.adjust(p.value, 
-                            method = "BH"),
-           test_id = paste(.data[[tax_level]], day_post_inf, sep = "_")) %>% 
-    filter(adj.p <= 0.05) -> lm_full
-  filtered_table %>%
-    na.omit() %>% 
-    group_by(.data[[tax_level]], day_post_inf) %>% 
-    mutate(test_id = paste(.data[[tax_level]], day_post_inf, sep = "_")) %>% 
-    filter(test_id %in% lm_full$test_id) %>% 
-    do(tidy(lm(rel_abund ~ (purified_diet * seq_depth) + high_fat * high_fiber,
-               data =.))) %>% 
-    na.omit() %>% 
-    filter(term != '(Intercept)') -> linear_model
-  linear_model['signif'] <- symnum(linear_model$p.value,
-                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                   symbols = c("****", "***", "**", "*", "+", "ns"),
-                                   abbr.colnames = FALSE,
-                                   na = "")
-  ## kruskal wallis test 
-  filtered_table %>% 
-    na.omit() %>% 
-    group_by(.data[[tax_level]], day_post_inf) %>% 
-    do(tidy(kruskal.test(rel_abund ~ diet,
-                         data = .))) %>% 
-    ungroup() %>% 
-    arrange(p.value) %>% 
-    mutate(p.adj = p.adjust(p.value,
-                            method = "BH"),
-           test_id = paste(.data[[tax_level]], day_post_inf, sep = "_")) %>% 
-    filter(p.adj <= 0.05) -> kruskal
-  ## dunn's post hoc test
-  filtered_table %>% 
-    na.omit() %>% 
-    group_by(.data[[tax_level]], day_post_inf) %>%
-    mutate(test_id = paste(.data[[tax_level]], day_post_inf, sep = "_")) %>% 
-    filter(test_id %in% kruskal$test_id) %>% 
-    dunn_test(rel_abund ~ diet,
-              p.adjust.method = 'BH',
-              data = .) -> dunn
-  ## editing my dunn's post hoc test to include the difference in means between groups 
-  filtered_table %>% 
-    group_by(diet, .data[[tax_level]], day_post_inf) %>% 
-    summarise(mean_rel_abund = mean(rel_abund)) -> mean_abun
-  dunn %>% 
-    merge(mean_abun, 
-          by.x = c('group1',
-                   'day_post_inf',
-                   'Family'),
-          by.y = c('diet',
-                   'day_post_inf',
-                   'Family')) %>% 
-    rename('group1_rel_abun' = 'mean_rel_abund') %>% 
-    merge(mean_abun,
-          by.x = c('group2',
-                   'day_post_inf',
-                   'Family'),
-          by.y = c('diet',
-                   'day_post_inf',
-                   'Family')) %>% 
-    rename('group2_rel_abun' = 'mean_rel_abund') %>% 
-    mutate(diff_means = (group1_rel_abun - group2_rel_abun),
-           stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
-  ## creating a list of my outputs
-  my_list <- list(LinearModel = linear_model,
-                  KruskalTest = kruskal,
-                  DunnPostHoc = new_dunn)
-  return(my_list)
+## linear model calculations
+linear_model <- function(input_table,
+                         grouped_by,
+                         adjust_method,
+                         filter_adj_p_value = FALSE,
+                         formula_left,
+                         formula_right){
+  ## linear modeling
+  funky_formula <- paste(formula_left, formula_right, sep = "~")
+  pre_lm <- input_table %>%
+    na.omit() %>%
+    group_by(input_table[grouped_by]) %>%
+    do(glance(lm(as.formula(funky_formula),
+                 data = .))) %>%
+    ungroup() %>%
+    na.omit() %>%
+    mutate(p.adj = p.adjust(.data$p.value,
+                            method = adjust_method))
+  
+  if (length(grouped_by) > 1) {
+    mini_pre_lm <- pre_lm %>%
+      select(grouped_by)
+    
+    pre_lm <- cbind(pre_lm, test_id=do.call(paste, c(mini_pre_lm, sep = "_")))
+    
+    mini_input <- input_table %>%
+      select(grouped_by)
+    
+    alt_input <- cbind(input_table, test_id=do.call(paste, c(mini_input, sep = "_")))
+    
+  } else {
+    pre_lm <- pre_lm %>%
+      mutate(test_id = paste(.data[[grouped_by[1]]]))
+    
+    alt_input <- input_table %>%
+      mutate(test_id = paste(.data[[grouped_by[1]]]))
+  }
+  
+  if (filter_adj_p_value == TRUE) {
+    pre_lm <- pre_lm %>%
+      filter(.data$p.adj <= 0.05)
+    
+    linear_model_results <- alt_input %>%
+      na.omit() %>%
+      group_by(input_table[grouped_by]) %>%
+      filter(.data$test_id %in% pre_lm$test_id) %>%
+      do(tidy(lm(as.formula(funky_formula),
+                 data = .))) %>%
+      na.omit() %>%
+      filter(term != '(Intercept)')
+  } else {
+    pre_lm
+    
+    linear_model_results <- alt_input %>%
+      na.omit() %>%
+      group_by(input_table[grouped_by]) %>%
+      filter(.data$test_id %in% pre_lm$test_id) %>%
+      do(tidy(lm(as.formula(funky_formula),
+                 data = .))) %>%
+      na.omit() %>%
+      filter(term != '(Intercept)')
+  }
+  
+  ## assigning p-value significance
+  linear_model_results['signif'] <- symnum(linear_model_results$p.value,
+                                           cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                           symbols = c("****", "***", "**", "*", "ns"),
+                                           abbr.colnames = FALSE,
+                                           na = "")
+  return(linear_model_results)
 }
 
 
 ## 3 
+## kruskal wallis and dunns post hoc test calculations
+kruskal_dunn_stats <- function(input_table,
+                               grouped_by,
+                               adjust_method,
+                               filter_adj_p_value = FALSE,
+                               formula_left,
+                               formula_right){
+  # kruskal test
+  kruskal_results <- input_table %>%
+    group_by(input_table[grouped_by]) %>%
+    do(tidy(kruskal.test(.data[[formula_left]] ~ .data[[formula_right]],
+                         data = .))) %>%
+    ungroup() %>%
+    arrange(.data$p.value) %>%
+    mutate(p.adj = p.adjust(.data$p.value,
+                            method = adjust_method))
+  
+  
+  if (length(grouped_by) > 1) {
+    mini_kruskal_results <- kruskal_results %>%
+      select(grouped_by)
+    
+    kruskal_results <- cbind(kruskal_results, test_id=do.call(paste, c(mini_kruskal_results,
+                                                                       sep = "_")))
+    
+    mini_input <- input_table %>%
+      select(grouped_by)
+    
+    alt_input <- cbind(input_table, test_id=do.call(paste, c(mini_input, sep = "_")))
+    
+  } else {
+    kruskal_results <- kruskal_results %>%
+      mutate(test_id = paste(.data[[grouped_by[1]]]))
+    
+    alt_input <- input_table %>%
+      mutate(test_id = paste(.data[[grouped_by[1]]]))
+  }
+  
+  ## dunns post hoc test
+  ## need to use reformulate/glue to have function variables work with the dunn test formula
+  rightSide_name <- formula_right
+  funky_formula <- reformulate(glue("{rightSide_name}"),
+                               glue("{formula_left}"))
+  
+  if (filter_adj_p_value == TRUE) {
+    kruskal_results <- kruskal_results %>%
+      filter(.data$p.adj <= 0.05)
+    
+    dunn_results <- alt_input %>%
+      group_by(alt_input[grouped_by]) %>%
+      filter(.data$test_id %in% kruskal_results$test_id) %>%
+      dunn_test(funky_formula,
+                p.adjust.method = adjust_method,
+                data = .) %>%
+      add_xy_position(scales = 'free',
+                      fun = 'max')
+  } else {
+    kruskal_results
+    
+    dunn_results <- alt_input %>%
+      group_by(alt_input[grouped_by]) %>%
+      dunn_test(funky_formula,
+                p.adjust.method = adjust_method,
+                data = .) %>%
+      add_xy_position(scales = 'free',
+                      fun = 'max')
+  }
+  
+  ## list of outputs
+  my_list <- list(KruskalTest = kruskal_results,
+                  DunnTest = dunn_results)
+  return(my_list)
+}
+
+
+## 4 
+## preps dunns post hoc results for statistical visualization
+stat_plot_prep <- function(filtered_table,
+                           first_group,
+                           second_group,
+                           mean_value,
+                           dunn_test){
+  filtered_table %>% 
+    group_by(.data[[first_group]], .data[[second_group]]) %>%
+    summarise(mean = mean(.data[[mean_value]])) -> mean_table
+  
+  dunn_test %>% 
+    merge(mean_table, 
+          by.x = c('group1',
+                   second_group),
+          by.y = c(first_group,
+                   second_group)) %>%
+    rename_with(~paste0('group1_', mean_value, recycle0 = TRUE), contains('mean')) %>% 
+    merge(mean_table,
+          by.x = c('group2',
+                   second_group),
+          by.y = c(first_group,
+                   second_group)) %>%
+    rename_with(~paste0('group2_', mean_value, recycle0 = TRUE), contains('mean')) -> int_dunn
+  
+  group1_col <- paste0('group1_', mean_value)
+  group2_col <- paste0('group2_', mean_value)
+  
+  int_dunn %>% 
+    mutate(diff_means = (.data[[group1_col]] - .data[[group2_col]]),
+           stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
+  
+  return(new_dunn)
+}
+
+
+## 5 
 ## statistical visualization 
 stat_plot <- function(new_dunn,
-                      tax_level){
+                      title){
   new_dunn %>% 
-    filter(day_post_inf != -15) %>% 
-    ggplot(aes(x = group1, y = group2)) +
+    ggplot(aes(x = .data[[wanted_level]], y = group2)) +
     geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
     scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
     geom_text(aes(label = p.adj.signif)) +
-    scale_x_discrete(labels = c('Chow',
-                                'HFt/\nHFb',
-                                'HFt/\nLFb',
-                                'LFt/\nHFb')) +
-    scale_y_discrete(labels = c('HFt / HFb',
-                                'HFt / LFb',
-                                'LFt / HFb',
-                                'LFt / LFb')) +
-    facet_grid(.data[[tax_level]]~day_post_inf,
-               scales = 'free_x') +
+    facet_wrap(~group1,
+               labeller = labeller(group1 = group1_labs)) +
     theme_bw(base_size = 20) +
-    theme(strip.text.y = element_text(angle = 0)) +
-    xlab('Group 1') +
-    ylab('Group 2') -> stat_plot
-  return(stat_plot)
+    ggtitle(label = title,
+            subtitle = 'Group 1') +
+    theme(strip.text.y = element_text(angle = 0),
+          plot.subtitle = element_text(hjust = 0.5),
+          axis.text.x = element_text(angle = 45, hjust = 1)) +
+    scale_y_discrete(labels = c('U of Arizona')) +
+    xlab('Family') +
+    ylab('Group 2') -> stat_vis
+  return(stat_vis)
 }
 
 ## prepping the file needed to run the linear model
@@ -216,17 +313,32 @@ abun_files <- family_abun_file_prep(args$metadata_FP,
 abun_filt <- abun_files$AbundanceTable
 
 ## performing statistical analysis
-abun_stats <- abun_stats(abun_filt,
-                         wanted_level)
+family_abun_lm <- linear_model(input_table = abun_filt,
+                               grouped_by = wanted_level,
+                               adjust_method = 'BH',
+                               filter_adj_p_value = FALSE,
+                               formula_left = 'rel_abund',
+                               formula_right = 'experiment_set + vendor + mouse_sex')
 
-kruskal_test <- abun_stats$KruskalTest
-new_dunn_test <- abun_stats$DunnPostHoc
-family_abun_lm <- abun_stats$LinearModel
+abun_stats <- kruskal_dunn_stats(input_table = abun_filt,
+                                 grouped_by = wanted_level,
+                                 adjust_method = 'BH',
+                                 filter_adj_p_value = FALSE,
+                                 formula_left = 'rel_abund',
+                                 formula_right = 'experiment_set')
 
+abun_kruskal_test <- abun_stats$KruskalTest
+abun_dunn_test <- abun_stats$DunnTest
 
-## putting together the statistical visualization based on dunns post hoc test
+new_dunn_test <- stat_plot_prep(filtered_table = abun_filt,
+                                first_group = 'experiment_set',
+                                second_group = wanted_level,
+                                mean_value = 'rel_abund',
+                                dunn_test = abun_dunn_test)
+
 abun_stat_vis <- stat_plot(new_dunn_test,
-                           wanted_level)
+                           "New Exp v AZ Exp Microbe Relative Abundance")
+
 
 ## saving my outputs as a .tsv
 write_tsv(family_abun_lm,
@@ -238,4 +350,4 @@ write_tsv(new_dunn_test,
 ggsave(args$stat_plot_FP,
        plot = abun_stat_vis, 
        width = 17, 
-       height = 15)
+       height = 5)

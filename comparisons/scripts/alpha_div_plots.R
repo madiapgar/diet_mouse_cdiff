@@ -11,6 +11,7 @@ library(qiime2R)
 library(tidyverse)
 library(broom)
 library(cowplot)
+library(vegan)
 library(viridis)
 library(argparse)
 
@@ -40,123 +41,83 @@ parser$add_argument("-os",
 
 args <- parser$parse_args()
 
-## input file paths 
-# metadata_FP <- './data/misc/processed_metadata.tsv'
-# faith_pd_FP <- './data/qiime/core_outputs/faith_pd.tsv'
-# shannon_FP <- './data/qiime/core_outputs/shannon_entropy.tsv'
-
-diet_labs <- 
-  c('Chow', 
-    'High Fat / High Fiber', 
-    'High Fat / Low Fiber', 
-    'Low Fat / High Fiber', 
-    'Low Fat / Low Fiber')
-
-diet_names_labels <- c('Chow', 
-                       'HF/HF', 
-                       'HF/LF', 
-                       'LF/HF', 
-                       'LF/LF')
 
 ## needed functions (in order)
 ## 1
-## faith's pd plot 
-## assumes that the files is a .tsv
-faith_pd_plot <- function(faith_fp,
-                          metadata_file,
-                          labels,
-                          names_labels,
-                          title){
-  faith <- read_tsv(faith_fp)
-  names(faith)[names(faith) == '#SampleID'] <- 'sampleid'
+make_plot <- function(input_table,
+                      metadata_file,
+                      x_axis,
+                      y_axis,
+                      x_group_by,
+                      x_labels,
+                      fill_by,
+                      x_name,
+                      y_name,
+                      title){
   metadata_file %>% 
-    left_join(faith, by = 'sampleid') -> faith_pd
-  ## what you want the grid labels to be (list)
-  labs <- (labels) 
-  ## what grid labels currently are (list)
-  names(labs) <- (names_labels) 
-  faith_pd %>%
-    filter(!is.na(diet)) %>% 
-    ggplot(aes(x = day_post_inf, y = faith_pd)) +
-    geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
-    geom_line(aes(group = mouse_id), alpha = 0.1) +
-    geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
-    geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
-    geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
-    scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
-    geom_smooth(se = FALSE) +
-    theme_bw(base_size = 16) +
-    facet_grid(~diet, labeller = labeller(diet = labs) ) +
+    left_join(input_table, by = 'sampleid') -> plot_table
+  
+  plot_table %>%
+    ggplot(aes(x = .data[[x_axis]], y = .data[[y_axis]])) +
+    geom_boxplot(aes(group = .data[[x_group_by]]), outlier.shape = NA) +
+    geom_jitter(aes(fill = .data[[fill_by]]), width = 0.1, height = 0, alpha = 0.7, size = 2, pch = 21) +
+    scale_fill_brewer(palette = 'Pastel1', 
+                      name = 'Vendor',
+                      labels = c('Charles River',
+                                 'Taconic')) +
+    scale_x_discrete(labels = x_labels) +
+    theme_bw(base_size = 20) +
     ggtitle(title) +
-    xlab('Days Relative to Infection') +
-    ylab("Faith's PD") -> faith_plot
-  return(faith_plot)
-}
-
-## 2
-## shannon entropy plot
-## assumes that the file is a .tsv
-shannon_plot <- function(shannon_fp,
-                         metadata_file,
-                         labels,
-                         names_labels,
-                         title){
-  shannon <- read_tsv(shannon_fp)
-  names(shannon)[names(shannon) == '...1'] <- 'sampleid'
-  metadata_file %>% 
-    left_join(shannon, by = 'sampleid') -> shannon_entropy
-  ## what you want the grid labels to be (list)
-  labs <- (labels) 
-  ## what grid labels currently are (list)
-  names(labs) <- (names_labels) 
-  shannon_entropy %>%
-    filter(!is.na(diet)) %>% 
-    ggplot(aes(x = day_post_inf, y = shannon_entropy)) +
-    geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
-    geom_line(aes(group = mouse_id), alpha = 0.1) +
-    geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
-    geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
-    geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
-    scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
-    geom_smooth(se = FALSE) +
-    theme_bw(base_size = 16) +
-    facet_grid(~diet, labeller = labeller(diet = labs) ) +
-    ggtitle(title) +
-    xlab('Days Relative to Infection') +
-    ylab("Shannon Entropy") -> shannon_plot
-  return(shannon_plot)
+    xlab(x_name) +
+    ylab(y_name) -> plot
+  return(plot)
 }
 
 ## core metrics file prep
-## metadata file prep
+## reading in files
 metadata <- read_tsv(args$metadata_FP)
 names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
 
-## faith's pd plot 
-faith_title <- "Faith's Phylogenetic Diversity"
+faith <- read_tsv(args$faith_pd_FP)
+names(faith)[names(faith) == '#SampleID'] <- 'sampleid'
 
-faith_plot <- faith_pd_plot(args$faith_pd_FP,
-                            metadata,
-                            diet_labs,
-                            diet_names_labels,
-                            faith_title)
+shannon <- read_tsv(args$shannon_FP)
+names(shannon)[names(shannon) == '...1'] <- 'sampleid'
+
+exp_x_labs <- c('New Anschutz (2024)',
+                'U of Arizona')
+
+## faith's pd plot 
+faith_plot <- make_plot(input_table = faith,
+                        metadata_file = metadata,
+                        x_axis = 'experiment_set',
+                        y_axis = 'faith_pd',
+                        x_group_by = 'experiment_set',
+                        x_labels = exp_x_labs,
+                        fill_by = 'vendor',
+                        x_name = 'Experiment',
+                        y_name = "Faith's PD",
+                        title = "New Exp v AZ Exp Faith's Phylogenetic Diversity")
 
 ## shannon entropy plot 
-shannon_title <- "Shannon Entropy"
-
-shannon_entropy_plot <- shannon_plot(args$shannon_FP,
-                                     metadata,
-                                     diet_labs,
-                                     diet_names_labels,
-                                     shannon_title)
+shannon_plot <- make_plot(input_table = shannon,
+                          metadata_file = metadata,
+                          x_axis = 'experiment_set',
+                          y_axis = 'shannon_entropy',
+                          x_group_by = 'experiment_set',
+                          x_labels = exp_x_labs,
+                          fill_by = 'vendor',
+                          x_name = 'Experiment',
+                          y_name = "Shannon Entropy",
+                          title = "New Exp v AZ Exp Shannon Entropy")
 
 ## saving my plot outputs to the plots folder
 ggsave(args$output_faith_FP,
        plot = faith_plot, 
-       width = 14, 
-       height = 4.5)
+       width = 12, 
+       height = 7)
 
 ggsave(args$output_shannon_FP,
-       plot = shannon_entropy_plot, 
-       width = 14, 
-       height = 4.5)
+       plot = shannon_plot, 
+       width = 12, 
+       height = 7)

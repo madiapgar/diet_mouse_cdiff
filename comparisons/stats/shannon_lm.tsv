@@ -1,0 +1,3 @@
+sample_type	term	estimate	std.error	statistic	p.value	signif
+colon	experiment_setsecond_set_arizona	-0.63271825370269	0.15003806424981214	-4.217051565322913	4.234832928986718e-5	****
+colon	vendortaconic	1.108732575399237	0.19069505160786587	5.814165423018787	3.469800601145406e-8	****

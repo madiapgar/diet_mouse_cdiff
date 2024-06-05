@@ -14,6 +14,7 @@ library(rstatix)
 library(ggh4x)
 library(vegan)
 library(argparse)
+library(glue)
 
 ## using argparse for my file paths
 ## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
@@ -33,10 +34,6 @@ parser$add_argument("-s",
 parser$add_argument("-flm",
                     "--faith_lm",
                     dest = "faith_lm_FP",
-                    help = "Filepath to Faith's PD total linear model results in .tsv format.")
-parser$add_argument("-flms",
-                    "--faith_lm_sec",
-                    dest = "faith_lm_sec_FP",
                     help = "Filepath to Faith's PD sectioned linear model results in .tsv format.")
 parser$add_argument("-fd",
                     "--faith_dunn",
@@ -45,10 +42,6 @@ parser$add_argument("-fd",
 parser$add_argument("-slm",
                     "--shannon_lm",
                     dest = "shannon_lm_FP",
-                    help = "Filepath to Shannon Entropy total linear model results in .tsv format.")
-parser$add_argument("-slms",
-                    "--shannon_lm_sec",
-                    dest = "shannon_lm_sec_FP",
                     help = "Filepath to Shannon Entropy sectioned linear model results in .tsv format.")
 parser$add_argument("-sd",
                     "--shannon_dunn",
@@ -65,21 +58,21 @@ parser$add_argument("-sp",
 
 args <- parser$parse_args()
 
-## input file paths
-# metadata_FP <- './data/misc/processed_metadata.tsv'
-# faith_pd_FP <- './data/qiime/core_outputs/faith_pd.tsv'
-# shannon_FP <- './data/qiime/core_outputs/shannon_entropy.tsv'
+## file paths
+# metadata_FP <- './comparisons/data/misc/newExp_comp_d15_metadata.tsv'
+# faith_pd_FP <- './comparisons/data/qiime/core_outputs/faith_pd.tsv'
+# shannon_FP <- './comparisons/data/qiime/core_outputs/shannon_entropy.tsv'
 
 
 ## functions in order that they're used
 ## 1
 ## alpha diversity file prep 
 ## alpha diversity file prep 
-alpha_div_prep <- function(file_path1,
-                           file_path2,
+alpha_div_prep <- function(faith_fp,
+                           shannon_fp,
                            metadata_fp){
   ## faith's pd 
-  faith_pd <- read_tsv(file_path1)
+  faith_pd <- read_tsv(faith_fp)
   names(faith_pd)[names(faith_pd) == '#SampleID'] <- 'sampleid'
   ## metadata file for both
   stat_meta <- read_tsv(metadata_fp)
@@ -90,7 +83,7 @@ alpha_div_prep <- function(file_path1,
     left_join(faith_pd, by = 'sampleid') %>% 
     filter(!is.na(diet)) -> faith_biom
   ## shannon entropy
-  shannon <- read_tsv(file_path2)
+  shannon <- read_tsv(shannon_fp)
   names(shannon)[names(shannon) == '...1'] <- 'sampleid'
   ## joining shannon and metadata file together into one table 
   stat_meta %>% 
@@ -105,183 +98,200 @@ alpha_div_prep <- function(file_path1,
 }
 
 ## 2
-## stats calculations
-## faith's pd 
-faith_div_stats <- function(biom_table){
-  ## sectioned out by diet 
-  biom_table %>% 
-    filter(day_post_inf != -15) %>%
-    group_by(day_post_inf) %>% 
-    do(glance(lm(faith_pd ~ (purified_diet * seq_depth) + high_fat * high_fiber + study,
-                 data = .))) %>% 
-    ungroup() %>% 
-    na.omit() %>% 
-    mutate(adj.p = p.adjust(p.value, 
-                            method = "BH"),
-           test_id = paste(day_post_inf)) %>% 
-    filter(adj.p <= 0.05) -> lm_full
-  biom_table %>% 
-    group_by(day_post_inf) %>% 
-    mutate(test_id = paste(day_post_inf)) %>% 
-    filter(test_id %in% lm_full$test_id) %>% 
-    do(tidy(lm(faith_pd ~ (purified_diet * seq_depth) + high_fat * high_fiber + study,
-               data = .))) %>%
-    filter(term != '(Intercept)') -> sectioned_lm
-  sectioned_lm['signif'] <- symnum(sectioned_lm$p.value,
-                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                   symbols = c("****", "***", "**", "*", "+", "ns"),
-                                   abbr.colnames = FALSE,
-                                   na = "")
-  ## not sectioned out by diet 
-  ## haven't used these results much so decided not to do anything to this
-  biom_table %>%
-    group_by(day_post_inf) %>% 
-    do(tidy(lm(faith_pd ~ diet * seq_depth,
-               data = .))) -> not_sectioned_lm
-  not_sectioned_lm %>% 
-    filter(day_post_inf != -15) %>% 
-    filter(p.value <= 0.05) -> not_sectioned_lm
-  ## kruskal wallis and dunns post hoc tests
-  biom_table %>% 
-    na.omit() %>% 
-    group_by(day_post_inf) %>% 
-    do(tidy(kruskal.test(faith_pd ~ diet,
-                         data = .))) %>% 
-    ungroup() %>% 
-    arrange(p.value) %>% 
+## linear model calculations
+linear_model <- function(input_table,
+                         grouped_by,
+                         adjust_method,
+                         filter_adj_p_value = FALSE,
+                         formula_left,
+                         formula_right){
+  ## linear modeling
+  funky_formula <- paste(formula_left, formula_right, sep = "~")
+  pre_lm <- input_table %>%
+    na.omit() %>%
+    group_by(input_table[grouped_by]) %>%
+    do(glance(lm(as.formula(funky_formula),
+                 data = .))) %>%
+    ungroup() %>%
+    na.omit() %>%
     mutate(p.adj = p.adjust(p.value,
-                            method = "BH"),
-           test_id = paste(day_post_inf)) %>%
-    filter(p.adj <= 0.05) -> kruskal
-  biom_table %>% 
-    na.omit() %>% 
-    group_by(day_post_inf) %>% 
-    mutate(test_id = paste(day_post_inf)) %>% 
-    filter(test_id %in% kruskal$test_id) %>% 
-    dunn_test(faith_pd ~ diet,
-              p.adjust.method = 'BH',
-              data = .) -> dunn
-  ## creating a list 
-  my_list <- list(DietSpecific = sectioned_lm,
-                  OverallDiet = not_sectioned_lm,
-                  KruskalTest = kruskal,
-                  DunnPostHoc = dunn)
+                            method = adjust_method))
+  
+  if (length(grouped_by) > 1) {
+    mini_pre_lm <- pre_lm %>%
+      select(grouped_by)
+    
+    pre_lm <- cbind(pre_lm, test_id=do.call(paste, c(mini_pre_lm, sep = "_")))
+    
+    mini_input <- input_table %>%
+      select(grouped_by)
+    
+    alt_input <- cbind(input_table, test_id=do.call(paste, c(mini_input, sep = "_")))
+    
+  } else {
+    pre_lm <- pre_lm %>%
+      mutate(test_id = paste(.data[[grouped_by[1]]]))
+    
+    alt_input <- input_table %>%
+      mutate(test_id = paste(.data[[grouped_by[1]]]))
+  }
+  
+  if (filter_adj_p_value == TRUE) {
+    pre_lm <- pre_lm %>%
+      filter(p.adj <= 0.05)
+    
+    linear_model_results <- alt_input %>%
+      na.omit() %>%
+      group_by(input_table[grouped_by]) %>%
+      filter(test_id %in% pre_lm$test_id) %>%
+      do(tidy(lm(as.formula(funky_formula),
+                 data = .))) %>%
+      na.omit() %>%
+      filter(term != '(Intercept)')
+  } else {
+    pre_lm
+    
+    linear_model_results <- alt_input %>%
+      na.omit() %>%
+      group_by(input_table[grouped_by]) %>%
+      filter(test_id %in% pre_lm$test_id) %>%
+      do(tidy(lm(as.formula(funky_formula),
+                 data = .))) %>%
+      na.omit() %>%
+      filter(term != '(Intercept)')
+  }
+  
+  ## assigning p-value significance
+  linear_model_results['signif'] <- symnum(linear_model_results$p.value,
+                                           cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                           symbols = c("****", "***", "**", "*", "ns"),
+                                           abbr.colnames = FALSE,
+                                           na = "")
+  return(linear_model_results)
+}
+
+
+## 3 
+## kruskal wallis and dunns post hoc test calculations
+kruskal_dunn_stats <- function(input_table,
+                               grouped_by,
+                               adjust_method,
+                               filter_adj_p_value = FALSE,
+                               formula_left,
+                               formula_right){
+  # kruskal test
+  kruskal_results <- input_table %>%
+    group_by(input_table[grouped_by]) %>%
+    do(tidy(kruskal.test(.data[[formula_left]] ~ .data[[formula_right]],
+                          data = .))) %>%
+    ungroup() %>%
+    arrange(p.value) %>%
+    mutate(p.adj = p.adjust(p.value,
+                            method = adjust_method))
+  
+  
+  if (length(grouped_by) > 1) {
+    mini_kruskal_results <- kruskal_results %>%
+      select(grouped_by)
+    
+    kruskal_results <- cbind(kruskal_results, test_id=do.call(paste, c(mini_kruskal_results,
+                                                                       sep = "_")))
+    
+    mini_input <- input_table %>%
+      select(grouped_by)
+    
+    alt_input <- cbind(input_table, test_id=do.call(paste, c(mini_input, sep = "_")))
+    
+  } else {
+    kruskal_results <- kruskal_results %>%
+      mutate(test_id = paste(.data[[grouped_by[1]]]))
+    
+    alt_input <- input_table %>%
+      mutate(test_id = paste(.data[[grouped_by[1]]]))
+  }
+  
+  ## dunns post hoc test
+  ## need to use reformulate/glue to have function variables work with the dunn test formula
+  rightSide_name <- formula_right
+  funky_formula <- reformulate(glue("{rightSide_name}"),
+                               glue("{formula_left}"))
+  
+  if (filter_adj_p_value == TRUE) {
+    kruskal_results <- kruskal_results %>%
+      filter(p.adj <= 0.05)
+    
+    dunn_results <- alt_input %>%
+      group_by(alt_input[grouped_by]) %>%
+      filter(test_id %in% kruskal_results$test_id) %>%
+      dunn_test(funky_formula,
+                p.adjust.method = adjust_method,
+                data = .) %>%
+      add_xy_position(scales = 'free',
+                      fun = 'max')
+  } else {
+    kruskal_results
+    
+    dunn_results <- alt_input %>%
+      group_by(alt_input[grouped_by]) %>%
+      dunn_test(funky_formula,
+                p.adjust.method = adjust_method,
+                data = .) %>%
+      add_xy_position(scales = 'free',
+                               fun = 'max')
+  }
+  
+  ## list of outputs
+  my_list <- list(KruskalTest = kruskal_results,
+                  DunnTest = dunn_results)
   return(my_list)
 }
 
-## 3
-## shannon entropy 
-shannon_div_stats <- function(biom_table){
-  ## alpha_cat is what the alpha div column is called (faith_pd or shannon_entropy)
-  ## sectioned out by diet 
-  biom_table %>% 
-    filter(day_post_inf != -15) %>% 
-    group_by(day_post_inf) %>% 
-    do(glance(lm(shannon_entropy ~ (purified_diet * seq_depth) + high_fat * high_fiber + study,
-                 data = .))) %>% 
-    ungroup() %>% 
-    na.omit() %>% 
-    mutate(adj.p = p.adjust(p.value, 
-                            method = "BH"),
-           test_id = paste(day_post_inf)) %>% 
-    filter(adj.p <= 0.05) -> lm_full
-  biom_table %>% 
-    group_by(day_post_inf) %>% 
-    mutate(test_id = paste(day_post_inf)) %>% 
-    filter(test_id %in% lm_full$test_id) %>% 
-    do(tidy(lm(shannon_entropy ~ (purified_diet * seq_depth) + high_fat * high_fiber + study,
-               data = .))) %>%
-    filter(term != '(Intercept)') -> sectioned_lm
-  sectioned_lm['signif'] <- symnum(sectioned_lm$p.value,
-                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                   symbols = c("****", "***", "**", "*", "+", "ns"),
-                                   abbr.colnames = FALSE,
-                                   na = "")
-  ## not sectioned out by diet 
-  biom_table %>%
-    group_by(day_post_inf) %>% 
-    do(tidy(lm(shannon_entropy ~ diet * seq_depth,
-               data = .))) -> not_sectioned_lm
-  not_sectioned_lm %>% 
-    filter(day_post_inf != -15) %>% 
-    filter(p.value <= 0.05) -> not_sectioned_lm
-  ## kruskal wallis and dunns post hoc tests
-  biom_table %>% 
-    na.omit() %>% 
-    group_by(day_post_inf) %>% 
-    do(tidy(kruskal.test(shannon_entropy ~ diet,
-                         data = .))) %>% 
-    ungroup() %>% 
-    arrange(p.value) %>% 
-    mutate(p.adj = p.adjust(p.value,
-                            method = "BH"),
-           test_id = paste(day_post_inf)) %>%
-    filter(p.adj <= 0.05) -> kruskal
-  biom_table %>% 
-    na.omit() %>% 
-    group_by(day_post_inf) %>% 
-    mutate(test_id = paste(day_post_inf)) %>% 
-    filter(test_id %in% kruskal$test_id) %>% 
-    dunn_test(shannon_entropy ~ diet,
-              p.adjust.method = 'BH',
-              data = .) -> dunn
-  ## creating a list 
-  my_list <- list(DietSpecific = sectioned_lm,
-                  OverallDiet = not_sectioned_lm,
-                  KruskalTest = kruskal,
-                  DunnPostHoc = dunn)
-  return(my_list)
-}
 
 ## 4 
 ## preps dunns post hoc results for statistical visualization
-stat_plot_prep <- function(biom_table,
-                           dunn_test,
-                           value){
-  biom_table %>% 
-    group_by(diet, day_post_inf) %>% 
-    summarise(means = mean(.data[[value]])) -> mean_table
+stat_plot_prep <- function(filtered_table,
+                           first_group,
+                           mean_value,
+                           dunn_test){
+  filtered_table %>% 
+    group_by(.data[[first_group]]) %>% 
+    summarise(mean = mean(.data[[mean_value]])) -> mean_table
+  
   dunn_test %>% 
     merge(mean_table, 
-          by.x = c('group1',
-                   'day_post_inf'),
-          by.y = c('diet',
-                   'day_post_inf')) %>% 
-    rename('group1_means' = 'means') %>% 
+          by.x = c('group1'),
+          by.y = c(first_group)) %>% 
+    rename_with(~paste0('group1_', mean_value, recycle0 = TRUE), contains('mean')) %>% 
     merge(mean_table,
-          by.x = c('group2',
-                   'day_post_inf'),
-          by.y = c('diet',
-                   'day_post_inf')) %>% 
-    rename('group2_means' = 'means') %>% 
-    mutate(diff_means = (group1_means - group2_means),
+          by.x = c('group2'),
+          by.y = c(first_group)) %>% 
+    rename_with(~paste0('group2_', mean_value, recycle0 = TRUE), contains('mean')) -> int_dunn
+  
+  group1_col <- paste0('group1_', mean_value)
+  group2_col <- paste0('group2_', mean_value)
+  
+  int_dunn %>% 
+    mutate(diff_means = (.data[[group1_col]] - .data[[group2_col]]),
            stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
+  
   return(new_dunn)
 }
 
+
 ## 5 
 ## statistical visualization 
-stat_plot <- function(new_dunn){
+stat_plot <- function(new_dunn,
+                      title){
   new_dunn %>% 
-    filter(day_post_inf != -15) %>%
     ggplot(aes(x = group1, y = group2)) +
     geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
     scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
     geom_text(aes(label = p.adj.signif)) +
-    scale_x_discrete(labels = c('Chow',
-                                'HFt/\nHFb',
-                                'HFt/\nLFb',
-                                'LFt/\nHFb')) +
-    scale_y_discrete(labels = c('HFt / HFb',
-                                'HFt / LFb',
-                                'LFt / HFb',
-                                'LFt / LFb')) +
-    facet_grid(~day_post_inf,
-               scales = 'free_x') +
-    theme_bw(base_size = 16) +
+    theme_bw(base_size = 20) +
     theme(strip.text.y = element_text(angle = 0)) +
     xlab('Group 1') +
-    ylab('Group 2') -> stat_vis
+    ylab('Group 2') +
+    ggtitle(title) -> stat_vis
   return(stat_vis)
 }
 
@@ -296,46 +306,70 @@ shannon <- alpha_files$Shannon
 metadata <- alpha_files$Metadata
 
 ## faith's pd stats and visualization
-faith_stats <- faith_div_stats(faith)
-sectioned_faith_lm <- faith_stats$DietSpecific
-faith_lm <- faith_stats$OverallDiet
+faith_lm <- linear_model(input_table = faith,
+                         grouped_by = 'sample_type',
+                         adjust_method = 'BH',
+                         filter_adj_p_value = FALSE,
+                         formula_left = 'faith_pd',
+                         formula_right = 'experiment_set + vendor')
+
+faith_stats <- kruskal_dunn_stats(input_table = faith,
+                                  grouped_by = 'sample_type',
+                                  adjust_method = 'BH',
+                                  filter_adj_p_value = FALSE,
+                                  formula_left = 'faith_pd',
+                                  formula_right = 'experiment_set')
+
 faith_kruskal <- faith_stats$KruskalTest
-faith_dunn <- faith_stats$DunnPostHoc
+faith_dunn <- faith_stats$DunnTest
 
-new_faith_dunn <- stat_plot_prep(faith,
-                                 faith_dunn,
-                                 'faith_pd')
+new_faith_dunn <- stat_plot_prep(filtered_table = faith,
+                                 first_group = 'experiment_set',
+                                 mean_value = 'faith_pd',
+                                 dunn_test = faith_dunn)
 
-faith_stat_vis <- stat_plot(new_faith_dunn)
+faith_stat_vis <- stat_plot(new_faith_dunn,
+                            "New Exp v AZ Exp Faith's PD")
 
 ## shannon entropy stats and visualization 
-shannon_stats <- shannon_div_stats(shannon)
-sectioned_shannon_lm <- shannon_stats$DietSpecific
-shannon_lm <- shannon_stats$OverallDiet
+shannon_lm <- linear_model(input_table = shannon,
+                           grouped_by = 'sample_type',
+                           adjust_method = 'BH',
+                           filter_adj_p_value = FALSE,
+                           formula_left = 'shannon_entropy',
+                           formula_right = 'experiment_set + vendor + mouse_sex')
+
+shannon_stats <- kruskal_dunn_stats(input_table = shannon,
+                                    grouped_by = 'sample_type',
+                                    adjust_method = 'BH',
+                                    filter_adj_p_value = FALSE,
+                                    formula_left = 'shannon_entropy',
+                                    formula_right = 'experiment_set')
+
 shannon_kruskal <- shannon_stats$KruskalTest
-shannon_dunn <- shannon_stats$DunnPostHoc
+shannon_dunn <- shannon_stats$DunnTest
 
-new_shannon_dunn <- stat_plot_prep(shannon,
-                                   shannon_dunn,
-                                   'shannon_entropy')
+new_shannon_dunn <- stat_plot_prep(filtered_table = shannon,
+                                   first_group = 'experiment_set',
+                                   mean_value = 'shannon_entropy',
+                                   dunn_test = shannon_dunn)
 
-shannon_stat_vis <- stat_plot(new_shannon_dunn)
+shannon_stat_vis <- stat_plot(new_shannon_dunn,
+                              "New Exp v AZ Exp Shannon Entropy")
 
 ## writing out results as a .tsv file 
 write_tsv(faith_lm, args$faith_lm_FP)
-write_tsv(sectioned_faith_lm, args$faith_lm_sec_FP)
 write_tsv(new_faith_dunn, args$faith_dunn_FP)
 write_tsv(shannon_lm, args$shannon_lm_FP)
-write_tsv(sectioned_shannon_lm, args$shannon_lm_sec_FP)
 write_tsv(new_shannon_dunn, args$shannon_dunn_FP)
 
 ## saving my statistical visualizations
 ggsave(args$faith_plot_FP,
        plot = faith_stat_vis, 
-       width = 13, 
-       height = 3)
+       width = 9, 
+       height = 4)
 
 ggsave(args$shannon_plot_FP,
        plot = shannon_stat_vis, 
-       width = 13, 
-       height = 3)
+       width = 9, 
+       height = 4)

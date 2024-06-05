@@ -1,0 +1,562 @@
+---
+title: "micro_abun_correlations"
+output: html_document
+date: "2023-10-11"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(qiime2R)
+library(cowplot)
+library(magrittr)
+library(rstatix)
+library(vegan)
+library(broom)
+library(ANCOMBC)
+library(microViz)
+library(phyloseq)
+library(cowplot)
+```
+
+**Functions**
+```{r}
+## ancombc file prep and running it function
+run_ancombc <- function(otu_fp,
+                        tax_fp,
+                        metadata_table,
+                        wanted_tax_level,
+                        formula,
+                        adj_method,
+                        baseline = NULL){
+  ## metadata table 
+  metadata <- as.data.frame(metadata_table)
+  rownames(metadata) <- metadata$sampleid
+  ## otu table
+  otu_table <- read_qza(otu_fp)$data
+  otu_table %>% 
+    as_tibble(rownames = 'taxon') %>% 
+    gather(-taxon, key = sampleid, value = abun) %>% 
+    filter(sampleid %in% metadata$sampleid) %>% 
+    spread(sampleid, abun) -> otu_table
+
+  otu_table <- as.data.frame(otu_table)
+  rownames(otu_table) <- otu_table$taxon
+  proc_otu <- subset(otu_table,
+                     select = -taxon)
+  metadata %>% 
+    filter(metadata$sampleid %in% colnames(proc_otu)) -> metadata
+  ## taxonomy table
+  tax_table <- read_qza(tax_fp)$data %>% 
+    parse_taxonomy()
+  tax_table %>% 
+    filter(rownames(tax_table) %in% rownames(proc_otu)) -> tax_table
+  ## creating phyloseq object
+  pseq <- phyloseq::phyloseq(otu_table(proc_otu, taxa_are_rows = TRUE),
+                             tax_table(as.matrix(tax_table)),
+                             sample_data(metadata))
+  sample_data(pseq)$diet <- as.factor(sample_data(pseq)$diet)
+  sample_data(pseq)$diet <- relevel(sample_data(pseq)$diet, baseline)
+  ## running ancombc
+  ## everything but data (pseq) can be a string
+  ancombc_res <- ancombc2(data = pseq,
+                          tax_level = wanted_tax_level,
+                          fix_formula = formula,
+                          p_adj_method = adj_method)
+                          # group = "diet",
+                          # pairwise = TRUE,
+                          # dunnet = TRUE)
+  ## pulling wanted results out
+  results <- ancombc_res$res
+  ## creating a list of outputs
+  my_list <- list(ANCOMBCResults = results,
+                  Metadata = metadata,
+                  OTUTable = proc_otu,
+                  Taxonomy = tax_table,
+                  Pseq = pseq)
+  return(my_list)
+}
+
+## mini metadata filtering function
+meta_day_filter <- function(metadata_table,
+                            day_filter){
+  metadata_table %>% 
+    filter(day_post_inf == day_filter) -> day_metadata
+  return(day_metadata)
+}
+
+## creating a for loop to run ancombc on each day_post_inf and then put all the tables together into one giant table
+ancom_day_for_loop <- function(otu_fp,
+                                tax_fp,
+                                metadata_table,
+                                wanted_tax_level,
+                                formula,
+                                adj_method,
+                                baseline,
+                                strat_column){
+  output <- list()
+  for (i in unique(unlist(metadata_table[strat_column]))) {
+    new_metadata <- meta_day_filter(metadata_table,
+                                    i)
+    ancombc_results <- run_ancombc(otu_fp,
+                                    tax_fp,
+                                    new_metadata,
+                                    wanted_tax_level,
+                                    formula,
+                                    adj_method,
+                                    baseline)
+    tmp_output <- ancombc_results$ANCOMBCResults
+    tmp_output[strat_column] <- i
+    output <- append(output, list(tmp_output))
+  }
+  output <- bind_rows(output)
+  return(output)
+}
+
+## function to put together plots of lfc by day for each diet baseline 
+baseline_plot <- function(baseline_table,
+                          facet_labs,
+                          names_of_labs,
+                          title){
+  names(facet_labs) <- names_of_labs
+  baseline_table %>% 
+    ggplot(aes(x = day_post_inf, y = taxon)) +
+    geom_tile(aes(fill = lfc), color = 'black') +
+    scale_fill_gradient2(low = 'blue', high = 'red', limits = c(-6.5, 6.5)) +
+    geom_text(aes(label = lfc), size = 3) +
+    theme_bw(base_size = 16) +
+    scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
+    facet_grid(~diet,
+               labeller = labeller(diet = facet_labs)) +
+    theme(axis.title.x = element_blank(),
+          axis.title.y = element_blank(),
+          legend.title = element_blank(),
+          plot.title = element_text(face = "bold")) +
+    ggtitle(title) -> plot
+  return(plot)
+}
+```
+
+**Input File Paths**
+```{r}
+otu_table_FP <- '../data/comp_qiime/tax_s1_filt.qza'
+tax_FP <- '../data/comp_qiime/taxonomy.qza'
+metadata_FP <- '../data/misc/s1_filt_comp_metadata.tsv'
+
+ftFb_col_names <- c('taxon',
+                    'high_fat',
+                    'high_fiber',
+                    'purified_diet')
+
+diet_col_names <- c('taxon',
+                    'HF/HF',
+                    'HF/LF',
+                    'LF/HF',
+                    'LF/LF')
+
+day_strat <- 'day_post_inf'
+
+day_col_names <- c('taxon',
+                   'day_post_inf',
+                    'HF/HF',
+                    'HF/LF',
+                    'LF/HF',
+                    'LF/LF')
+```
+
+**Reading in Metadata File**
+```{r}
+metadata <- read_tsv(metadata_FP)
+names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
+
+## filtering out day 3 because it was causing problems
+# metadata %>% 
+#   filter(day_post_inf != 3) -> metadata
+```
+
+## **ANCOMBC results for ASV by Diet - These were Run in R**
+
+**Trying out changing diet baseline**
+Going to rbind these together for a plot.
+```{r, warning=FALSE}
+## HF/HF baseline
+hftHfb_baseline <- ancom_day_for_loop(otu_table_FP,
+                                     tax_FP,
+                                     metadata,
+                                     'Family',
+                                     'diet',
+                                     'BH',
+                                    'HF/HF',
+                                     day_strat)
+hftHfb_baseline %>% 
+  mutate(baseline_diet = "HF/HF") -> hftHfb_baseline
+
+hftHfb_baseline %>% 
+  filter(diff_dietChow == TRUE | `diff_dietHF/LF` == TRUE | `diff_dietLF/HF` == TRUE | `diff_dietLF/LF` == TRUE) %>% 
+  mutate(lfc_chow_corr = (lfc_dietChow * diff_dietChow),
+         lfc_hftLfb_corr = (`lfc_dietHF/LF` * `diff_dietHF/LF`),
+         lfc_lftHfb_corr = (`lfc_dietLF/HF` * `diff_dietLF/HF`),
+         lfc_lftLfb_corr = (`lfc_dietLF/LF` * `diff_dietLF/LF`)) %>% 
+  select(taxon, day_post_inf, contains('corr'), baseline_diet) -> hftHfb_lfc
+
+colnames(hftHfb_lfc) <- c('taxon',
+                          'day_post_inf',
+                          'Chow',
+                          'HF/LF',
+                          'LF/HF',
+                          'LF/LF',
+                          'baseline_diet')
+
+hftHfb_lfc %>%
+  gather(!c(taxon, day_post_inf, baseline_diet), key = diet, value = lfc) %>% 
+  mutate(lfc = round(lfc, 2)) -> hftHfb_lfc
+```
+
+```{r, warning=FALSE}
+## HF/LF baseline
+hftLfb_baseline <- ancom_day_for_loop(otu_table_FP,
+                                     tax_FP,
+                                     metadata,
+                                     'Family',
+                                     'diet',
+                                     'BH',
+                                    'HF/LF',
+                                     day_strat)
+hftLfb_baseline %>% 
+  mutate(baseline_diet = "HF/LF") -> hftLfb_baseline
+
+hftLfb_baseline %>% 
+  filter(diff_dietChow == TRUE | `diff_dietHF/HF` == TRUE | `diff_dietLF/HF` == TRUE | `diff_dietLF/LF` == TRUE) %>% 
+  mutate(lfc_chow_corr = (lfc_dietChow * diff_dietChow),
+         lfc_hftHfb_corr = (`lfc_dietHF/HF` * `diff_dietHF/HF`),
+         lfc_lftHfb_corr = (`lfc_dietLF/HF` * `diff_dietLF/HF`),
+         lfc_lftLfb_corr = (`lfc_dietLF/LF` * `diff_dietLF/LF`)) %>% 
+  select(taxon, day_post_inf, contains('corr'), baseline_diet) -> hftLfb_lfc
+
+colnames(hftLfb_lfc) <- c('taxon',
+                          'day_post_inf',
+                          'Chow',
+                          'HF/HF',
+                          'LF/HF',
+                          'LF/LF',
+                          'baseline_diet')
+
+hftLfb_lfc %>%
+  gather(!c(taxon, day_post_inf, baseline_diet), key = diet, value = lfc) %>% 
+  mutate(lfc = round(lfc, 2)) -> hftLfb_lfc
+```
+
+```{r, warning=FALSE}
+## LF/HF baseline
+lftHfb_baseline <- ancom_day_for_loop(otu_table_FP,
+                                     tax_FP,
+                                     metadata,
+                                     'Family',
+                                     'diet',
+                                     'BH',
+                                    'LF/HF',
+                                     day_strat)
+lftHfb_baseline %>% 
+  mutate(baseline_diet = "LF/HF") -> lftHfb_baseline
+
+lftHfb_baseline %>% 
+  filter(diff_dietChow == TRUE | `diff_dietHF/HF` == TRUE | `diff_dietHF/LF` == TRUE | `diff_dietLF/LF` == TRUE) %>% 
+  mutate(lfc_chow_corr = (lfc_dietChow * diff_dietChow),
+         lfc_hftHfb_corr = (`lfc_dietHF/HF` * `diff_dietHF/HF`),
+         lfc_hftLfb_corr = (`lfc_dietHF/LF` * `diff_dietHF/LF`),
+         lfc_lftLfb_corr = (`lfc_dietLF/LF` * `diff_dietLF/LF`)) %>% 
+  select(taxon, day_post_inf, contains('corr'), baseline_diet) -> lftHfb_lfc
+
+colnames(lftHfb_lfc) <- c('taxon',
+                          'day_post_inf',
+                          'Chow',
+                          'HF/HF',
+                          'HF/LF',
+                          'LF/LF',
+                          'baseline_diet')
+
+lftHfb_lfc %>%
+  gather(!c(taxon, day_post_inf, baseline_diet), key = diet, value = lfc) %>% 
+  mutate(lfc = round(lfc, 2)) -> lftHfb_lfc
+```
+
+```{r, warning=FALSE}
+## LF/LF baseline
+lftLfb_baseline <- ancom_day_for_loop(otu_table_FP,
+                                     tax_FP,
+                                     metadata,
+                                     'Family',
+                                     'diet',
+                                     'BH',
+                                    'LF/LF',
+                                     day_strat)
+lftLfb_baseline %>% 
+  mutate(baseline_diet = "LF/LF") -> lftLfb_baseline
+
+lftLfb_baseline %>% 
+  filter(diff_dietChow == TRUE | `diff_dietHF/HF` == TRUE | `diff_dietHF/LF` == TRUE | `diff_dietLF/HF` == TRUE) %>% 
+  mutate(lfc_chow_corr = (lfc_dietChow * diff_dietChow),
+         lfc_hftHfb_corr = (`lfc_dietHF/HF` * `diff_dietHF/HF`),
+         lfc_hftLfb_corr = (`lfc_dietHF/LF` * `diff_dietHF/LF`),
+         lfc_lftHfb_corr = (`lfc_dietLF/HF` * `diff_dietLF/HF`)) %>% 
+  select(taxon, day_post_inf, contains('corr'), baseline_diet) -> lftLfb_lfc
+
+colnames(lftLfb_lfc) <- c('taxon',
+                          'day_post_inf',
+                          'Chow',
+                          'HF/HF',
+                          'HF/LF',
+                          'LF/HF',
+                          'baseline_diet')
+
+lftLfb_lfc %>%
+  gather(!c(taxon, day_post_inf, baseline_diet), key = diet, value = lfc) %>% 
+  mutate(lfc = round(lfc, 2)) -> lftLfb_lfc
+```
+
+```{r, warning=FALSE}
+## chow baseline
+chow_baseline <- ancom_day_for_loop(otu_table_FP,
+                                     tax_FP,
+                                     metadata,
+                                     'Family',
+                                     'diet',
+                                     'BH',
+                                    'Chow',
+                                     day_strat)
+chow_baseline %>% 
+  mutate(baseline_diet = "Chow") -> chow_baseline
+
+chow_baseline %>% 
+  filter(`diff_dietHF/HF` == TRUE | `diff_dietHF/LF` == TRUE | `diff_dietLF/HF` == TRUE | `diff_dietLF/LF` == TRUE) %>% 
+  mutate(lfc_hftHfb_corr = (`lfc_dietHF/HF` * `diff_dietHF/HF`),
+         lfc_hftLfb_corr = (`lfc_dietHF/LF` * `diff_dietHF/LF`),
+         lfc_lftHfb_corr = (`lfc_dietLF/HF` * `diff_dietLF/HF`),
+         lfc_lftLfb_corr = (`lfc_dietLF/LF` * `diff_dietLF/LF`)) %>% 
+  select(taxon, day_post_inf, contains('corr'), baseline_diet) -> chow_lfc
+
+colnames(chow_lfc) <- c('taxon',
+                          'day_post_inf',
+                          'HF/HF',
+                          'HF/LF',
+                          'LF/HF',
+                          'LF/LF',
+                          'baseline_diet')
+
+chow_lfc %>%
+  gather(!c(taxon, day_post_inf, baseline_diet), key = diet, value = lfc) %>% 
+  mutate(lfc = round(lfc, 2)) -> chow_lfc
+```
+
+**Putting all baseline LFC tables together**
+```{r}
+rbind(chow_lfc,
+      hftHfb_lfc,
+      hftLfb_lfc,
+      lftHfb_lfc,
+      lftLfb_lfc) -> all_diet_lfc
+```
+
+**Optional: getting rid of big things so R isn't slow!**
+```{r}
+rm(chow_baseline,
+   hftHfb_baseline,
+   hftLfb_baseline,
+   lftHfb_baseline,
+   lftLfb_baseline)
+```
+
+
+**Plots!!**
+```{r, fig.width=15, fig.height=10}
+## chow 
+chow_facet_labs <- c('High Fat / High Fiber',
+                     'High Fat / Low Fiber',
+                     'Low Fat / High Fiber',
+                     'Low Fat / Low Fiber')
+
+chow_names_labs <- c('HF/HF',
+                     'HF/LF',
+                     'LF/HF',
+                     'LF/LF')
+chow_plot <- baseline_plot(chow_lfc,
+                           chow_facet_labs,
+                           chow_names_labs,
+                           'Chow Baseline')
+
+## HF/HF
+hftHfb_facet_labs <- c('Chow',
+                     'High Fat / Low Fiber',
+                     'Low Fat / High Fiber',
+                     'Low Fat / Low Fiber')
+
+hftHfb_names_labs <- c('Chow',
+                     'HF/LF',
+                     'LF/HF',
+                     'LF/LF')
+hftHfb_plot <- baseline_plot(hftHfb_lfc,
+                             hftHfb_facet_labs,
+                             hftHfb_names_labs,
+                             'High-Fat/High-Fiber Baseline')
+
+## HF/LF
+hftLfb_facet_labs <- c('Chow',
+                     'High Fat / High Fiber',
+                     'Low Fat / High Fiber',
+                     'Low Fat / Low Fiber')
+
+hftLfb_names_labs <- c('Chow',
+                     'HF/HF',
+                     'LF/HF',
+                     'LF/LF')
+hftLfb_plot <- baseline_plot(hftLfb_lfc,
+                             hftLfb_facet_labs,
+                             hftLfb_names_labs,
+                             'High-Fat/Low-Fiber Baseline')
+
+## LF/HF
+lftHfb_facet_labs <- c('Chow',
+                     'High Fat / High Fiber',
+                     'High Fat / Low Fiber',
+                     'Low Fat / Low Fiber')
+
+lftHfb_names_labs <- c('Chow',
+                     'HF/HF',
+                     'HF/LF',
+                     'LF/LF')
+lftHfb_plot <- baseline_plot(lftHfb_lfc,
+                             lftHfb_facet_labs,
+                             lftHfb_names_labs,
+                             'Low-Fat/High-Fiber Baseline')
+
+## LF/LF
+lftLfb_facet_labs <- c('Chow',
+                     'High Fat / High Fiber',
+                     'High Fat / Low Fiber',
+                     'Low Fat / High Fiber')
+
+lftLfb_names_labs <- c('Chow',
+                     'HF/HF',
+                     'HF/LF',
+                     'LF/HF')
+lftLfb_plot <- baseline_plot(lftLfb_lfc,
+                             lftLfb_facet_labs,
+                             lftLfb_names_labs,
+                             'Low-Fat/Low-Fiber Baseline')
+
+chow_plot
+hftHfb_plot
+hftLfb_plot
+lftHfb_plot
+lftLfb_plot
+```
+
+**Putting my Plots Together**
+```{r, fig.width=27, fig.height=27}
+title <- ggdraw() +
+          draw_label('Log Fold Changes Compared to the Diet Baseline (Combined Dataset)',
+                     size = 28,
+                     fontface = "bold",
+                     hjust = 1)
+plot_grid(chow_plot,
+          hftHfb_plot,
+          hftLfb_plot,
+          lftHfb_plot,
+          lftLfb_plot,
+          labels = c('a)', 'b)', 'c)', 'd)', 'e)'),
+          label_fontface = 'bold',
+          label_size = 20,
+          # label_x = 0.15,
+          label_y = 0.99,
+          align = c('hv'),
+          axis = c('tblr'),
+          nrow = 3) -> all_lfc
+
+plot_grid(title,
+          all_lfc,
+          ncol = 1,
+          rel_heights = c(0.05, 1),
+          align = c('hv'),
+          axis = c('tblr')) -> diet_base_plot
+
+diet_base_plot
+```
+
+
+## **ANCOMBC results for ASV by Dietary Content - These were Run in R**
+
+**Running ANCOMBC**
+```{r}
+ft_fb_res <- run_ancombc(otu_table_FP,
+                         tax_FP,
+                         metadata,
+                         'Family',
+                         'high_fat + high_fiber + purified_diet',
+                         'BH')
+
+ft_fb_actualRes <- ft_fb_res$ANCOMBCResults
+```
+
+**File prep for Log Fold Change plot**
+```{r}
+ft_fb_actualRes %>% 
+  filter(diff_high_fat == TRUE | diff_high_fiber == TRUE | diff_purified_diet == TRUE) %>% 
+  mutate(lfc_high_fat_corr = (lfc_high_fat * diff_high_fat),
+         lfc_high_fiber_corr = (lfc_high_fiber * diff_high_fiber),
+         lfc_purified_diet_corr = (lfc_purified_diet * diff_purified_diet)) %>% 
+  select(taxon, contains('corr')) -> ft_fb_lfc
+
+colnames(ft_fb_lfc) <- ftFb_col_names
+
+ft_fb_lfc %>% 
+  gather(!c(taxon), key = component, value = lfc) %>% 
+  mutate(lfc = round(lfc, 2)) -> ft_fb_lfc
+```
+
+**Log Fold Change Plot!**
+- go in and change zeros to 'ns' so that's more clear 
+- interaction term manually: combine the purified column to the other column you want to see the interaction with (paste two binary terms with a sep as "_")
+ - high fat pasted with purified diet
+ - high fiber pasted with purified diet
+ - include regular diet column 
+ - put these in the formula
+- ancombc formula 
+  -pairwise = TRUE
+  -dunnet = TRUE
+  -group = "diet"
+- run this on subsetted data by days relative to infection instead of the previous plot 
+```{r, fig.width=6.5, fig.height=9.5}
+ft_fb_lfc %>% 
+  ggplot(aes(x = component, y = taxon)) +
+  geom_tile(aes(fill = lfc), color = 'black') +
+  scale_fill_gradient2(low = 'blue', high = 'red') +
+  geom_text(aes(label = lfc), size = 3) +
+  theme_bw() +
+  scale_x_discrete(labels = c('High Fat',
+                              'High Fiber',
+                              'Purified Diet')) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.title = element_blank()) +
+  ggtitle('Log Fold Changes by Diet Composition\n(Combined Dataset)') -> ftFb_lfc_plot
+
+ftFb_lfc_plot
+```
+
+**Saving my Outputs**
+```{r}
+ggsave('diet_baseline_plot.pdf',
+       plot = diet_base_plot,
+       width = 27, 
+       height = 27, 
+       path = '../plots')
+ggsave('diet_composition_lfc.pdf',
+       plot = ftFb_lfc_plot,
+       width = 6.5, 
+       height = 9.5, 
+       path = '../plots')
+```
+

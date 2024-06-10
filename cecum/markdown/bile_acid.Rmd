@@ -20,130 +20,6 @@ library(glue)
 library(apppleplots)
 ```
 
-**Functions**
-```{r}
-## statistical analysis function
-bile_stats <- function(big_bile_table,
-                       group_cols,
-                       conc_value){
-  ## kruskal test
-  big_bile_table %>% 
-    group_by(big_bile_table[unlist(group_cols)]) %>% 
-    do(tidy(kruskal.test(.data[[conc_value]] ~ diet,
-               data = .))) %>% 
-    ungroup() %>% 
-    arrange(p.value) %>% 
-    mutate(p.adj = p.adjust(p.value,
-                            method = "BH")) -> kruskal_test
-  ## dunns post hoc test
-  diet_name <- 'diet'
-  test <- reformulate(glue("{diet_name}"),glue("{conc_value}"))
-  
-  big_bile_table %>% 
-    group_by(big_bile_table[unlist(group_cols)]) %>% 
-    dunn_test(test,
-              p.adjust.method = 'BH',
-              data = .) %>% 
-    add_y_position(scales = 'free',
-                   fun = 'max',
-                   y.trans = log10) -> dunn_test
-  # ## creating a list of outputs
-  my_list <- list(KruskalTest = kruskal_test,
-                  DunnPostHoc = dunn_test)
-  return(my_list)
-}
-
-## creating plots
-bile_plots <- function(big_bile_table,
-                       x_labs,
-                       non_bile_dunn,
-                       bile_dunn){
-  ## plot not faceted by bile acid
-  big_bile_table %>% 
-    ggplot(aes(x = diet, y = conc_normalized)) +
-      geom_boxplot(aes(group = diet), outlier.shape = NA) +
-      geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-      scale_x_discrete(labels = x_labs) +
-      theme_bw() +
-      facet_wrap(~c_diff_effect,
-                 labeller = labeller(c_diff_effect = cdiff_effect_labs)) +
-      scale_y_log10() +
-      stat_pvalue_manual(non_bile_dunn,
-                         tip.length = 0.01,
-                         step.increase = 0.05,
-                         label = 'p.adj.signif',
-                         hide.ns = TRUE) +
-      labs(x = 'Diet',
-           y = 'Concentration (pmol/mg) (log10)',
-           title = 'Cecal Bile Acid Concentration') -> overall_bile_plot
-  ## plot faceted by bile acid
-  big_bile_acid %>% 
-    ggplot(aes(x = diet, y = conc_normalized)) +
-      geom_boxplot(aes(group = diet), outlier.shape = NA) +
-      geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-      scale_x_discrete(labels = x_labs) +
-      facet_nested_wrap(~c_diff_effect + bile_acid,
-                        labeller = labeller(c_diff_effect = cdiff_effect_labs,
-                                            bile_acid = bile_labs),
-                        nrow = 2) +
-      theme_bw() +
-      scale_y_log10() +
-      stat_pvalue_manual(dunn_bile,
-                         tip.length = 0.01,
-                         step.increase = 0.05,
-                         label = 'p.adj.signif',
-                         hide.ns = TRUE) +
-    labs(x = 'Diet',
-         y = 'Concentration (pmol/mg) (log10)',
-         title = 'Cecal Bile Acid Concentration') -> bile_include_plot
-  ## creating list of outputs
-  my_list <- list(NoFacetBilePlot = overall_bile_plot,
-                  FacetBilePlot = bile_include_plot)
-  return(my_list)
-}
-
-## promoter to inhibitor ratio file prep, stats, and plot function
-bile_ratio_func <- function(ratio_table){
-  ## stats
-  ## kruskal test
-  ratio_table %>% 
-    do(tidy(kruskal.test(ratio ~ diet,
-                         data = .))) %>% 
-    arrange(p.value) %>% 
-    mutate(p.adj = p.adjust(p.value,
-                            method = 'BH')) -> ratio_kruskal
-  ## dunns test
-  ratio_table %>% 
-    dunn_test(ratio ~ diet,
-              p.adjust.method = 'BH',
-              data = .) %>% 
-    add_y_position(scales = 'free_y',
-                   fun = 'max') -> ratio_dunn
-  ## plot
-  ratio_table %>% 
-    ggplot(aes(x = diet, y = ratio)) +
-      geom_boxplot(aes(group = diet), outlier.shape = NA) +
-      geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
-      theme_bw() +
-      scale_x_discrete(labels = diet_x_labs) +
-      facet_wrap(~ratio_label) +
-      stat_pvalue_manual(ratio_dunn,
-                         tip.length = 0.01,
-                         step.increase = 0.05,
-                         label = 'p.adj.signif',
-                         hide.ns = TRUE) +
-      labs(x = 'Diet',
-           y = 'Ratio',
-           title = 'Cecal Bile Acid Ratio') -> ratio_bile_plot
-  ## creating a list of my outputs
-  my_list <- list(RatioTable = ratio_table,
-                  RatioKruskal = ratio_kruskal,
-                  RatioDunn = ratio_dunn,
-                  RatioPlot = ratio_bile_plot)
-  return(my_list)
-}
-```
-
 **File Paths**
 ```{r}
 bile_acid_FP <- '../data/misc/processed_bile_acid.tsv'
@@ -190,47 +66,125 @@ bile_ratio <- read_tsv(bile_ratio_FP)
 Had to filter out CDCA and UDCA from the 'inhibitors' category because the dunn_test wouldn't run - I think it's because they're all zeroes so there aren't any pairwise comparisons to do between diets for them. Maybe include T-CDCA and T-DCA as inhibitors instead?
 ```{r}
 ## not faceted by bile acid
-no_bile_stat_files <- bile_stats(big_bile_acid,
-                                 non_bile_groups,
-                                 'conc_normalized')
+no_bile_krDunn <- apppleplots::kruskal_dunn_stats(input_table = big_bile_acid,
+                                                  grouped_by = non_bile_groups,
+                                                  adjust_method = 'BH',
+                                                  filter_adj_p_value = FALSE,
+                                                  formula_left = 'conc_normalized',
+                                                  formula_right = 'diet')
+kruskal <- no_bile_krDunn$KruskalTest
+dunn <- no_bile_krDunn$DunnTest
 
-kruskal <- no_bile_stat_files$KruskalTest
-dunn <- no_bile_stat_files$DunnPostHoc
+dunn <- dunn %>% 
+          add_y_position(scales = 'free',
+                         fun = 'max',
+                         y.trans = log10)
 
 ## faceted by bile acid 
-bile_stat_files <- bile_stats(big_bile_acid,
-                              bile_groups,
-                              'conc_normalized')
+bile_krDunn <- apppleplots::kruskal_dunn_stats(input_table = big_bile_acid,
+                                               grouped_by = bile_groups,
+                                               adjust_method = 'BH',
+                                               filter_adj_p_value = FALSE,
+                                               formula_left = 'conc_normalized',
+                                               formula_right = 'diet')
 
-kruskal_bile <- bile_stat_files$KruskalTest
-dunn_bile <- bile_stat_files$DunnPostHoc
+kruskal_bile <- bile_krDunn$KruskalTest
+dunn_bile <- bile_krDunn$DunnTest
+
+dunn_bile <- dunn_bile %>% 
+              add_y_position(scales = 'free',
+                             fun = 'max',
+                             y.trans = log10)
 ```
 
 **Plots**
 ```{r, fig.width=6, fig.height=3.5}
-all_bile_plots <- bile_plots(big_bile_acid,
-                             diet_x_labs,
-                             dunn,
-                             dunn_bile)
+overall_plot <- apppleplots::facet_once_plots(input_table = big_bile_acid,
+                                              stat_on_plot = FALSE,
+                                              x_value = 'diet',
+                                              y_value = 'conc_normalized',
+                                              x_value_type = 'discrete',
+                                              grouped_by = 'diet',
+                                              point_alpha = 0.4,
+                                              x_labels = diet_x_labs,
+                                              facet_by = 'c_diff_effect',
+                                              facet_labels = cdiff_effect_labs,
+                                              stat_table = NA,
+                                              x_name = 'Diet',
+                                              y_name = 'Concentration (pmol/mg) (log10)',
+                                              title_content = 'Cecal Bile Acid Concentration')
 
-overall_plot <- all_bile_plots$NoFacetBilePlot
-bile_plot <- all_bile_plots$FacetBilePlot
+overall_plot <- overall_plot +
+                  scale_y_continuous(trans = 'log10') +
+                  stat_pvalue_manual(dunn,
+                                     tip.length = 0.01,
+                                     step.increase = 0.05,
+                                     label = 'p.adj.signif',
+                                     hide.ns = TRUE)
 
 overall_plot
 ```
 
 ```{r, fig.width=8, fig.height=6}
+bile_plot <- apppleplots::facet_once_plots(input_table = big_bile_acid,
+                                              stat_on_plot = FALSE,
+                                              x_value = 'diet',
+                                              y_value = 'conc_normalized',
+                                              x_value_type = 'discrete',
+                                              grouped_by = 'diet',
+                                              point_alpha = 0.4,
+                                              x_labels = diet_x_labs,
+                                              facet_by = 'c_diff_effect',
+                                              facet_labels = cdiff_effect_labs,
+                                              stat_table = NA,
+                                              x_name = 'Diet',
+                                              y_name = 'Concentration (pmol/mg) (log10)',
+                                              title_content = 'Cecal Bile Acid Concentration')
+
+bile_plot <- bile_plot +
+              scale_y_continuous(trans = 'log10') +
+              facet_nested_wrap(~c_diff_effect + bile_acid,
+                        labeller = labeller(c_diff_effect = cdiff_effect_labs,
+                                            bile_acid = bile_labs),
+                        nrow = 2) +
+              stat_pvalue_manual(dunn_bile,
+                                 tip.length = 0.01,
+                                 step.increase = 0.05,
+                                 label = 'p.adj.signif',
+                                 hide.ns = TRUE)
 bile_plot
 ```
 
 **Ratio of C. difficile Promoter:Inhibitor**
 ```{r, fig.width=5, fig.height=3.5}
-ratio_files <- bile_ratio_func(bile_ratio)
+## stats
+ratio_krDunn <- apppleplots::kruskal_dunn_stats(input_table = bile_ratio,
+                                                grouped_by = 'ratio_label',
+                                                adjust_method = 'BH',
+                                                filter_adj_p_value = FALSE,
+                                                formula_left = 'ratio',
+                                                formula_right = 'diet')
+ratio_kruskal <- ratio_krDunn$KruskalTest
+ratio_dunn <- ratio_krDunn$DunnTest
 
-bile_ratio <- ratio_files$RatioTable
-ratio_kruskal <- ratio_files$RatioKruskal
-ratio_dunn <- ratio_files$RatioDunn
-ratio_bile_plot <- ratio_files$RatioPlot
+ratio_dunn <- ratio_dunn %>% 
+                add_y_position(scales = 'free_y',
+                               fun = 'max')
+## plot
+ratio_bile_plot <- apppleplots::facet_once_plots(input_table = bile_ratio,
+                                                 stat_on_plot = TRUE,
+                                                 x_value = 'diet',
+                                                 y_value = 'ratio',
+                                                 x_value_type = 'discrete',
+                                                 grouped_by = 'diet',
+                                                 point_alpha = 0.4,
+                                                 x_labels = diet_x_labs,
+                                                 facet_by = 'ratio_label',
+                                                 facet_labels = NULL,
+                                                 stat_table = ratio_dunn,
+                                                 x_name = 'Diet',
+                                                 y_name = 'Ratio',
+                                                 title_content = 'Cecal Bile Acid Ratio')
 
 ratio_bile_plot
 ```

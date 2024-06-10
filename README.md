@@ -1,4 +1,4 @@
-# Effects of Dietary Fat and Fiber on the Gut Microbiome in the context of antibiotic-induced *C. difficle* Infection
+# The effects of dietary fat and fiber on the gut microbiome in the context of antibiotic-induced *C. difficle* infection
 
 This repository includes all files produced through QIIME2 microbiome profiling of 16S rDNA sequencing FASTQ files along with visualizations and statistical analysis run in R. Analysis was optimized through a pipeline generated in Snakemake, associated files are contained in the workflow directory. 
 

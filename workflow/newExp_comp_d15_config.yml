@@ -27,7 +27,6 @@ core_metrics_sampling_depth: 99631
 
 ## 05: longitudinal dataset plots/stats in R (you NEED to have measurements at different time points)
 ## options: yes, no, or no downstream
-## currently set to "no" because I don't have the metadata for downstream processing available
 longitudinal_dataset: "yes"
 processed_metadata: "data/misc/newExp_comp_d15_metadata.tsv"
 

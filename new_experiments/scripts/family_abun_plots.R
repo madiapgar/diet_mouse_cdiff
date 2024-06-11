@@ -59,6 +59,10 @@ names(diet_labs) <- c('Chow',
 wanted_level <- 'Family'
 wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
                    'Staphylococcaceae', 'Bacteroidaceae', 'Ruminococcaceae')
+vendor_labs <- c('Charles River',
+                 'Taconic')
+names(vendor_labs) <- c('charles_river',
+                        'taconic')
 
 ## functions in order of usage 
 ## 1
@@ -87,7 +91,7 @@ family_abun_file_prep <- function(metadata_fp,
     left_join(metadata, by = 'sampleid') %>% 
     left_join(taxonomy, by = 'asv') -> abun_table
   abun_table %>% 
-    group_by(sampleid, day_post_inf, diet, mouse_id, 
+    group_by(sampleid, day_post_inf, diet, mouse_id, vendor,
              purified_diet, high_fat, high_fiber, 
              .data[[tax_level]]) %>% 
     summarise(rel_abund = sum(rel_abun)) %>% 
@@ -123,19 +127,28 @@ abun_plots <- function(abundance_table){
     ylab("Relative Abundance") +
     xlab("Days Relative to Infection") -> family_abun1
   ## second plot
-  abun_filt %>%
+  abundance_table %>%
     filter(!is.na(diet)) %>% 
-    ggplot(aes(x = mouse_fact, y = day_fact)) +
-    geom_tile(aes(fill = rel_abund), alpha = 0.5) +
-    scale_fill_viridis(option = "H", name = 'Relative\nAbundance') +
+    ggplot(aes(x = vendor, y = rel_abund)) +
+    scale_y_continuous(trans = 'log10') +
+    geom_boxplot(aes(group = vendor), outlier.shape = NA) +
+    geom_jitter(aes(fill = diet), width = 0.1, height = 0, alpha = 0.7, size = 2, pch = 21) +
+    scale_fill_viridis(option = 'H',
+                       discrete = TRUE,
+                      name = 'Diet',
+                      labels = c('Chow',
+                                 'HFt/HFb',
+                                 'HFt/LFb',
+                                 'LFt/HFb',
+                                 'LFt/LFb')) +
     theme_bw(base_size = 16) +
-    facet_grid(Family~diet, scales = 'free',
-               labeller = labeller(diet = diet_labs)) +
-    theme(strip.text.y = element_text(angle = 0),
-          axis.text.x = element_blank()) + 
-    xlab("Mouse ID") +
-    ylab("Days Relative to Infection") +
-    scale_y_discrete(limits = rev) -> family_abun2
+    facet_grid(Family~day_post_inf) +
+    theme(strip.text.y = element_text(angle = 0)) +
+    scale_x_discrete(labels = c('Charles River',
+                                'Taconic')) +
+    ggtitle("Microbe Family Relative Abundance (Vendor)") +
+    ylab("Relative Abundance") +
+    xlab("Vendor") -> family_abun2
   ## creating a list of my two plots
   my_list <- list(FamilyAbundance1 = family_abun1,
                   FamilyAbundance2 = family_abun2)
@@ -171,4 +184,4 @@ ggsave(args$plot1_FP,
 ggsave(args$plot2_FP,
        plot = abun2, 
        width = 12, 
-       height = 8)
+       height = 10)

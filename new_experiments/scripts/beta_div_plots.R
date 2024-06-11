@@ -139,10 +139,10 @@ pcoa_plot <- function(biom_file,
   biom_file %>% 
     filter(!is.na(diet)) %>% 
     ggplot(aes(x = PC1, y = PC2)) +
-    geom_point(aes(fill = vendor), pch = 21, alpha = 0.7, size = 2) +
+    geom_point(aes(fill = faith_pd), pch = 21, alpha = 0.7, size = 2) +
     theme_bw(base_size = 14) +
-    scale_fill_brewer(palette = 'Dark2', name = 'Vendor') +
-    #scale_fill_distiller(palette = 'Spectral', name = "Faith's PD") +
+    #scale_fill_brewer(palette = 'Dark2', name = 'Vendor') +
+    scale_fill_distiller(palette = 'Spectral', name = "Faith's PD") +
     facet_grid(day_post_inf~diet, 
                labeller = labeller(diet = labs)) +
     theme(legend.text = element_text(size = 8.5),

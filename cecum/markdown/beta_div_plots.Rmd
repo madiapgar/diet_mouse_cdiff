@@ -22,6 +22,7 @@ library(vegan)
 library(ggh4x)
 library(viridis)
 library(argparse)
+library(apppleplots)
 ```
 
 **Functions**
@@ -75,34 +76,6 @@ pcoa_ax_lab <- function(unifrac_var, col_name){
   uni_lab <- paste0(col_name, ' - ', uni_lab, '%')
   return(uni_lab)
 }
-
-## 3
-## pcoa plot function
-## xlab and ylab are outputs from pcoa_ax_lab function
-pcoa_plot <- function(biom_file,
-                      labels,
-                      names_labels,
-                      xlab,
-                      ylab,
-                      title){
-  ## what you want the grid labels to be (list)
-  labs <- (labels) 
-  ## what grid labels currently are (list)
-  names(labs) <- (names_labels) 
-  biom_file %>% 
-    filter(!is.na(diet)) %>% 
-    ggplot(aes(x = PC1, y = PC2)) +
-    geom_point(aes(fill = faith_pd), pch = 21, alpha = 0.7, size = 2) +
-    theme_bw(base_size = 14) +
-    scale_fill_distiller(palette = 'Spectral', name = "Faith's PD") +
-    facet_grid(~diet,
-               labeller = labeller(diet = labs)) +
-    theme(legend.text = element_text(size = 8.5),
-          strip.text.y = element_text(angle = 0)) +
-    ggtitle(title) +
-    labs(x = xlab, y = ylab) -> pcoa
-  return(pcoa)
-}
 ```
 
 **File Paths**
@@ -120,19 +93,18 @@ diet_labs <-
     'Low Fat / High Fiber', 
     'Low Fat / Low Fiber')
 
-diet_names_labels <- c('Chow', 
+names(diet_labs) <- c('Chow', 
                        'HF/HF', 
                        'HF/LF', 
                        'LF/HF', 
                        'LF/LF')
 ```
 
-**Metadata File**
-```{r}
-metadata <- read_tsv(metadata_FP)
-```
 **Data Wrangling for my Files**
 ```{r}
+## metadata 
+metadata <- read_tsv(metadata_FP)
+
 ## preparing core beta diversity files for ggplot
 core_files <- biom_table_prep(unweighted_FP,
                               weighted_FP,
@@ -154,12 +126,28 @@ uw_uni_ylab <- pcoa_ax_lab(uw_var, 'PC2')
 
 uw_title <- 'Cecal Sample Unweighted UniFrac PCoA Plot'
 
-unweighted_pcoa <- pcoa_plot(unweighted_biom,
-                             diet_labs,
-                             diet_names_labels,
-                             uw_uni_xlab,
-                             uw_uni_ylab,
-                             uw_title)
+unweighted_pcoa <- apppleplots::pcoa_plots(input_table = unweighted_biom,
+                                           x_value = 'PC1',
+                                           y_value = 'PC2',
+                                           facet_once = TRUE,
+                                           facet_twice = FALSE,
+                                           point_fill = 'faith_pd',
+                                           point_alpha = 0.7,
+                                           point_size = 2,
+                                           fill_type = 'continuous',
+                                           palette = 'Spectral',
+                                           facet_rows = NULL,
+                                           facet_cols = 'diet',
+                                           row_labs = NULL,
+                                           col_labs = diet_labs,
+                                           legend_name = "Faith's PD",
+                                           x_name = uw_uni_xlab,
+                                           y_name = uw_uni_ylab,
+                                           title_content = uw_title)
+  
+unweighted_pcoa <- unweighted_pcoa +
+                    theme_bw(base_size = 14)
+
 unweighted_pcoa
 ```
 
@@ -170,12 +158,28 @@ w_uni_ylab <- pcoa_ax_lab(w_var, 'PC2')
 
 w_title <- 'Cecal Sample Weighted UniFrac PCoA Plot'
 
-weighted_pcoa <- pcoa_plot(weighted_biom,
-                           diet_labs,
-                           diet_names_labels,
-                           w_uni_xlab,
-                           w_uni_ylab,
-                           w_title)
+weighted_pcoa <- apppleplots::pcoa_plots(input_table = weighted_biom,
+                                         x_value = 'PC1',
+                                         y_value = 'PC2',
+                                         facet_once = TRUE,
+                                         facet_twice = FALSE,
+                                         point_fill = 'faith_pd',
+                                         point_alpha = 0.7,
+                                         point_size = 2,
+                                         fill_type = 'continuous',
+                                         palette = 'Spectral',
+                                         facet_rows = NULL,
+                                         facet_cols = 'diet',
+                                         row_labs = NULL,
+                                         col_labs = diet_labs,
+                                         legend_name = "Faith's PD",
+                                         x_name = w_uni_xlab,
+                                         y_name = w_uni_ylab,
+                                         title_content = w_title)
+  
+weighted_pcoa <- weighted_pcoa +
+                    theme_bw(base_size = 14)
+  
 weighted_pcoa
 ```
 

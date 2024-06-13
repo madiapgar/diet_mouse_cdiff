@@ -21,6 +21,7 @@ library(rstatix)
 library(ggh4x)
 library(vegan)
 library(argparse)
+library(apppleplots)
 ```
 
 **Functions**
@@ -39,7 +40,8 @@ alpha_div_prep <- function(file_path1,
   stat_meta %>% 
     filter(sampleid %in% faith_pd$sampleid) %>% 
     left_join(faith_pd, by = 'sampleid') %>% 
-    filter(!is.na(diet)) -> faith_biom
+    filter(!is.na(diet)) %>% 
+    mutate(plot_label = paste("Faith's PD by Diet")) -> faith_biom
   ## shannon entropy
   shannon <- read_tsv(file_path2)
   names(shannon)[names(shannon) == '...1'] <- 'sampleid'
@@ -47,7 +49,8 @@ alpha_div_prep <- function(file_path1,
   stat_meta %>% 
     filter(sampleid %in% shannon$sampleid) %>% 
     left_join(shannon, by = 'sampleid') %>% 
-    filter(!is.na(diet)) -> shannon_biom
+    filter(!is.na(diet)) %>% 
+    mutate(plot_label = paste('Shannon Entropy by Diet')) -> shannon_biom
   ## creating a list for outputs 
   my_list <- list(FaithPD = faith_biom,
                   Shannon = shannon_biom, 
@@ -56,104 +59,6 @@ alpha_div_prep <- function(file_path1,
 }
 
 ## 2
-## stats calculations
-## faith's pd 
-faith_div_stats <- function(biom_table){
-  ## sectioned out by diet 
-  biom_table %>% 
-    do(glance(lm(faith_pd ~ (purified_diet * seq_depth) + high_fat * high_fiber + study,
-                 data = .))) %>% 
-    ungroup() %>% 
-    na.omit() %>% 
-    mutate(adj.p = p.adjust(p.value, 
-                            method = "BH")) %>% 
-    filter(adj.p <= 0.05) -> lm_full
-  biom_table %>%
-    # mutate(test_id = paste(day_post_inf)) %>% 
-    # filter(test_id %in% lm_full$test_id) %>% 
-    do(tidy(lm(faith_pd ~ (purified_diet * seq_depth) + high_fat * high_fiber + study,
-               data = .))) %>%
-    filter(term != '(Intercept)') -> sectioned_lm
-  sectioned_lm['signif'] <- symnum(sectioned_lm$p.value,
-                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                   symbols = c("****", "***", "**", "*", "+", "ns"),
-                                   abbr.colnames = FALSE,
-                                   na = "")
-  ## kruskal wallis and dunns post hoc tests
-  biom_table %>% 
-    na.omit() %>% 
-    do(tidy(kruskal.test(faith_pd ~ diet,
-                         data = .))) %>% 
-    ungroup() %>% 
-    arrange(p.value) %>% 
-    mutate(p.adj = p.adjust(p.value,
-                            method = "BH")) %>%
-    filter(p.adj <= 0.05) -> kruskal
-  biom_table %>% 
-    na.omit() %>% 
-    # mutate(test_id = paste(day_post_inf)) %>% 
-    # filter(test_id %in% kruskal$test_id) %>% 
-    dunn_test(faith_pd ~ diet,
-              p.adjust.method = 'BH',
-              data = .) -> dunn
-  ## creating a list 
-  my_list <- list(DietSpecific = sectioned_lm,
-                  KruskalTest = kruskal,
-                  DunnPostHoc = dunn)
-  return(my_list)
-}
-
-## 3
-## shannon entropy 
-shannon_div_stats <- function(biom_table){
-  ## alpha_cat is what the alpha div column is called (faith_pd or shannon_entropy)
-  ## sectioned out by diet 
-  biom_table %>% 
-    do(glance(lm(shannon_entropy ~ (purified_diet * seq_depth) + high_fat * high_fiber + study,
-                 data = .))) %>% 
-    ungroup() %>% 
-    na.omit() %>% 
-    mutate(adj.p = p.adjust(p.value, 
-                            method = "BH")) %>% 
-    filter(adj.p <= 0.05) -> lm_full
-  biom_table %>% 
-    # group_by(day_post_inf) %>% 
-    # mutate(test_id = paste(day_post_inf)) %>% 
-    # filter(test_id %in% lm_full$test_id) %>% 
-    do(tidy(lm(shannon_entropy ~ (purified_diet * seq_depth) + high_fat * high_fiber + study,
-               data = .))) %>%
-    filter(term != '(Intercept)') -> sectioned_lm
-  sectioned_lm['signif'] <- symnum(sectioned_lm$p.value,
-                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                   symbols = c("****", "***", "**", "*", "+", "ns"),
-                                   abbr.colnames = FALSE,
-                                   na = "")
-  ## kruskal wallis and dunns post hoc tests
-  biom_table %>% 
-    na.omit() %>% 
-    do(tidy(kruskal.test(shannon_entropy ~ diet,
-                         data = .))) %>% 
-    ungroup() %>% 
-    arrange(p.value) %>% 
-    mutate(p.adj = p.adjust(p.value,
-                            method = "BH")) %>%
-    filter(p.adj <= 0.05) -> kruskal
-  biom_table %>% 
-    na.omit() %>% 
-    # group_by(day_post_inf) %>% 
-    # mutate(test_id = paste(day_post_inf)) %>% 
-    # filter(test_id %in% kruskal$test_id) %>% 
-    dunn_test(shannon_entropy ~ diet,
-              p.adjust.method = 'BH',
-              data = .) -> dunn
-  ## creating a list 
-  my_list <- list(DietSpecific = sectioned_lm,
-                  KruskalTest = kruskal,
-                  DunnPostHoc = dunn)
-  return(my_list)
-}
-
-## 4 
 ## preps dunns post hoc results for statistical visualization
 stat_plot_prep <- function(biom_table,
                            dunn_test,
@@ -174,33 +79,6 @@ stat_plot_prep <- function(biom_table,
            stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
   return(new_dunn)
 }
-
-## 5 
-## statistical visualization 
-stat_plot <- function(new_dunn,
-                      title){
-  new_dunn %>% 
-    ggplot(aes(x = group1, y = group2)) +
-    geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
-    scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
-    geom_text(aes(label = p.adj.signif)) +
-    scale_x_discrete(labels = c('Chow',
-                                'HFt/\nHFb',
-                                'HFt/\nLFb',
-                                'LFt/\nHFb')) +
-    scale_y_discrete(labels = c('HFt / HFb',
-                                'HFt / LFb',
-                                'LFt / HFb',
-                                'LFt / LFb')) +
-    # facet_grid(~day_post_inf,
-    #            scales = 'free_x') +
-    theme_bw(base_size = 16) +
-    theme(strip.text.y = element_text(angle = 0)) +
-    xlab('Group 1') +
-    ylab('Group 2') +
-    ggtitle(title) -> stat_vis
-  return(stat_vis)
-}
 ```
 
 **File Paths**
@@ -208,6 +86,17 @@ stat_plot <- function(new_dunn,
 metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
 faith_pd_FP <- '../data/core_outputs/faith_pd.tsv'
 shannon_FP <- '../data/core_outputs/shannon_entropy.tsv'
+
+
+diet_x_labs <- c('Chow',
+                 'HFt/\nHFb',
+                 'HFt/\nLFb',
+                 'LFt/\nHFb')
+
+diet_y_labs <- c('HFt / HFb',
+                 'HFt / LFb',
+                 'LFt / HFb',
+                 'LFt / LFb')
 ```
 
 **Data Wrangling for Stats**
@@ -223,33 +112,105 @@ metadata <- alpha_files$Metadata
 
 **Faith's PD**
 ```{r}
-faith_stats <- faith_div_stats(faith)
-sectioned_faith_lm <- faith_stats$DietSpecific
-faith_kruskal <- faith_stats$KruskalTest
-faith_dunn <- faith_stats$DunnPostHoc
+## kruskal-wallis and dunns post hoc test
+faith_krDunn <- apppleplots::kruskal_dunn_stats(input_table = faith,
+                                                grouped_by = 'plot_label',
+                                                adjust_method = 'BH',
+                                                filter_adj_p_value = FALSE,
+                                                formula_left = 'faith_pd',
+                                                formula_right = 'diet')
+faith_kruskal <- faith_krDunn$KruskalTest
+faith_dunn <- faith_krDunn$DunnTest
 
 new_faith_dunn <- stat_plot_prep(faith,
                                  faith_dunn,
                                  'faith_pd')
 
-faith_stat_vis <- stat_plot(new_faith_dunn,
-                            "Cecal Sample Faith's PD")
+## linear model
+sectioned_faith_lm <- apppleplots::linear_model(input_table = faith,
+                                                grouped_by = 'plot_label',
+                                                adjust_method = 'BH',
+                                                filter_adj_p_value = FALSE,
+                                                formula_left = 'faith_pd',
+                                                formula_right = '(purified_diet * seq_depth) + high_fat * high_fiber + study')
+
+faith_stat_vis <- apppleplots::stat_heat_plot(input_table = new_faith_dunn,
+                                              x_value = 'group1',
+                                              y_value = 'group2',
+                                              x_value_type = 'discrete',
+                                              y_value_type = 'discrete',
+                                              pairwise = FALSE,
+                                              correlation = TRUE,
+                                              tile_fill = 'stat_diff_means',
+                                              tile_outline_color = 'black',
+                                              tile_alpha = 0.6,
+                                              text_value = 'p.adj.signif',
+                                              low_color = 'blue',
+                                              high_color = 'green',
+                                              legend_name = 'Correlation\nCoefficient',
+                                              x_labels = diet_x_labs,
+                                              y_labels = diet_y_labs,
+                                              facet_by = 'plot_label',
+                                              facet_labels = NULL,
+                                              x_name = 'Group 1',
+                                              y_name = 'Group 2',
+                                              title_content = "Cecal Sample Faith's PD")
+  
+faith_stat_vis <- faith_stat_vis +
+                    theme_bw(base_size = 16)
+
 faith_stat_vis
 ```
 
 **Shannon Entropy**
 ```{r}
-shannon_stats <- shannon_div_stats(shannon)
-sectioned_shannon_lm <- shannon_stats$DietSpecific
-shannon_kruskal <- shannon_stats$KruskalTest
-shannon_dunn <- shannon_stats$DunnPostHoc
+## kruskal-wallis and dunns post hoc test
+shannon_krDunn <- apppleplots::kruskal_dunn_stats(input_table = shannon,
+                                                  grouped_by = 'plot_label',
+                                                  adjust_method = 'BH',
+                                                  filter_adj_p_value = FALSE,
+                                                  formula_left = 'shannon_entropy',
+                                                  formula_right = 'diet')
+shannon_kruskal <- shannon_krDunn$KruskalTest
+shannon_dunn <- shannon_krDunn$DunnTest
 
 new_shannon_dunn <- stat_plot_prep(shannon,
                                    shannon_dunn,
                                    'shannon_entropy')
 
-shannon_stat_vis <- stat_plot(new_shannon_dunn,
-                              "Cecal Sample Shannon Entropy")
+## linear model
+sectioned_shannon_lm <- apppleplots::linear_model(input_table = shannon,
+                                                  grouped_by = 'plot_label',
+                                                  adjust_method = 'BH',
+                                                  filter_adj_p_value = FALSE,
+                                                  formula_left = 'shannon_entropy',
+                                                  formula_right = '(purified_diet * seq_depth) + high_fat * high_fiber + study')
+
+shannon_stat_vis <- apppleplots::stat_heat_plot(input_table = new_shannon_dunn,
+                                                x_value = 'group1',
+                                                y_value = 'group2',
+                                                x_value_type = 'discrete',
+                                                y_value_type = 'discrete',
+                                                pairwise = FALSE,
+                                                correlation = TRUE,
+                                                tile_fill = 'stat_diff_means',
+                                                tile_outline_color = 'black',
+                                                tile_alpha = 0.6,
+                                                text_value = 'p.adj.signif',
+                                                low_color = 'blue',
+                                                high_color = 'green',
+                                                legend_name = 'Correlation\nCoefficient',
+                                                x_labels = diet_x_labs,
+                                                y_labels = diet_y_labs,
+                                                facet_by = 'plot_label',
+                                                facet_labels = NULL,
+                                                x_name = 'Group 1',
+                                                y_name = 'Group 2',
+                                                title_content = "Cecal Sample Shannon Entropy")
+  
+shannon_stat_vis <- shannon_stat_vis +
+                      theme_bw(base_size = 16)
+
 shannon_stat_vis
 ```
 

@@ -18,55 +18,10 @@ library(naniar)
 library(ggpubr)
 library(rstatix)
 library(viridis)
+library(apppleplots)
 ```
-
 **Functions**
 ```{r}
-## histo plot comparison function
-comp_plot <- function(base_table,
-                      ## names associated with the score/concentration value on the y-axis
-                      base_table_col_select1,
-                      ## score/concentration value that you want on the y-axis
-                      base_table_col_select2,
-                      ## toxin or metabolomics?
-                       wanted_table,
-                       ## this is what you want your x axis to be (neat, diluted, or concentration)? 
-                       wanted_x,
-                       ## this is toxin/metabolite column you want to filter by (neat or diluted)?
-                       wanted_y=NULL,
-                       ## what is the toxin/metabolite you want to filter by called in the table?
-                       wanted_y_name=NULL,
-                       diet_labels,
-                       row_labels,
-                       y_label,
-                       x_label,
-                       title){
-  ## putting tables together
-  base_table %>% 
-    select(mouse_id, .data[[base_table_col_select1]], .data[[base_table_col_select2]]) %>% 
-    left_join(wanted_table, by = 'mouse_id') %>% 
-    na.omit() -> compiled_table
-  ## constructing plot
-  compiled_table %>% 
-    # filter(.data[[wanted_y]] == wanted_y_name) %>%
-    na.omit() %>% 
-    ggplot(aes(x = .data[[wanted_x]], y = .data[[base_table_col_select2]])) +
-    scale_x_continuous(trans = 'log10') +
-    # scale_y_continuous(trans = 'log10') +
-    geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
-    geom_smooth(method = 'lm', se = FALSE) +
-    facet_grid(.data[[base_table_col_select1]]~diet,
-               labeller = labeller(.rows = row_labels,
-                                   diet = diet_labels),
-               scales = 'free_y') +
-    theme_bw() +
-    theme(strip.text.y = element_text(angle = 0)) +
-    xlab(x_label) +
-    ylab(y_label) +
-    ggtitle(title) -> plot
-  return(plot)
-}
-
 ## runs linear modeling on the table, diet, location, and toxin/metabolite wanted and returns full results 
 ## along with a table containing the r2 and p-value 
 ## this goes into the following function with a for loop 
@@ -132,32 +87,10 @@ r2_value_for_loop <- function(biom_table,
   }
   return(output)
 }
-
-## statistical visualization plot function
-stat_plot <- function(stat_table,
-                      wanted_labels,
-                      x_lab_list,
-                      y_lab_list,
-                      x_axis_label,
-                      title){
-  stat_table %>% 
-    ggplot(aes(x = comp_col, y = diet)) +
-    geom_tile(aes(fill = r_direct), color = 'black', alpha = 0.6) +
-    geom_text(aes(label = signif)) +
-    scale_fill_gradient2(low = 'blue', high = 'green', name = "Correlation\nCoefficient") +
-    scale_x_discrete(labels = x_lab_list) +
-    scale_y_discrete(labels = y_lab_list) +
-    facet_wrap(~tox_metab,
-               labeller = labeller(tox_metab = wanted_labels)) +
-    theme_bw() +
-    xlab(x_axis_label) +
-    ylab("Diet") +
-    ggtitle(title) -> plot
-  return(plot)
-}
 ```
 
 **Bile Acid Ratio Stats Functions**
+I'm too lazy to make my r2 value function and for loop for for everything so I have two separate sets of functions lol
 ```{r}
 ratio_r2_value <- function(biom_table,
                      wanted_diet,
@@ -211,27 +144,6 @@ ratio_r2_value_for_loop <- function(biom_table,
     }
   return(output)
 }
-
-## statistical visualization plot function
-ratio_stat_plot <- function(stat_table,
-                      y_lab_list,
-                      x_lab_list,
-                      x_label,
-                      title){
-  stat_table %>% 
-    ggplot(aes(x = category, y = diet)) +
-    geom_tile(aes(fill = r_direct), color = 'black', alpha = 0.6) +
-    geom_text(aes(label = signif)) +
-    scale_fill_gradient2(low = 'blue', high = 'green', name = "Correlation\nCoefficient") +
-    scale_y_discrete(labels = y_lab_list) +
-    scale_x_discrete(labels = x_lab_list) +
-    facet_wrap(~ratio_label) +
-    theme_bw() +
-    xlab(x_label) +
-    ylab("Diet") +
-    ggtitle(title) -> plot
-  return(plot)
-}
 ```
 
 
@@ -272,6 +184,9 @@ metab_labs <- c('Acetic Acid',
 names(metab_labs) <- c('Acetic Acid (ug/g)',
                        'Propanoic Acid (ug/g)',
                        'n-Butanoic Acid (ug/g)')
+metab_x_labs <- c('Acetic\nAcid',
+                  'n-Butanoic\nAcid',
+                  'Propanoic\nAcid')
 
 neat_labs <- c('TcdA', 'TcdB')
 names(neat_labs) <- c('Total TcA Neat', 'Total TcB Neat')
@@ -306,34 +221,55 @@ ratio_bile_acid <- read_tsv(bile_acidRatio_FP)
 ratio_bile_acid %>% 
   select(!c(inhibitor, promoter)) -> ratio_bile_acid
 ```
+# **Histopathology Comparisons**
 
-**Histopathology/Bile Acid Comparison Plot**
+**Plots**
 ```{r, warning=FALSE, fig.width=9, fig.height=4}
-histo_inhibitors_plot <- comp_plot(histo,
-                                   'tissue',
-                                   'score',
-                                   bile_acid,
-                                   'conc_normalized',
-                                   'c_diff_effect',
-                                   'inhibitor',
-                                   diet_labs,
-                                   tissue_labs,
-                                   'Score',
-                                   'Concentration (log10)',
-                                   'Histopathology Score Against Bile Acid Inhibitors')
+## secondary bile acid cdiff growth/pathogenicity inhibitors 
+histo %>% 
+  select(tissue, score, mouse_id) %>% 
+  left_join(bile_acid, by = 'mouse_id') %>% 
+  filter(c_diff_effect == 'inhibitor') %>% 
+  na.omit() -> histo_bileAcid_inhib
 
-histo_promoters_plot <- comp_plot(histo,
-                                  'tissue',
-                                  'score',
-                                   bile_acid,
-                                   'conc_normalized',
-                                   'c_diff_effect',
-                                   'promoter',
-                                   diet_labs,
-                                   tissue_labs,
-                                   'Score',
-                                   'Concentration (log10)',
-                                   'Histopathology Score Against Bile Acid Promoters')
+histo_inhibitors_plot <- apppleplots::correlation_plots(input_table = histo_bileAcid_inhib,
+                                                        x_value = 'conc_normalized',
+                                                        y_value = 'score',
+                                                        x_transform = TRUE,
+                                                        y_transform = FALSE,
+                                                        point_alpha = 0.4,
+                                                        regression_method = 'lm',
+                                                        facet_rows = 'tissue',
+                                                        facet_cols = 'diet',
+                                                        row_labs = tissue_labs,
+                                                        col_labs = diet_labs,
+                                                        x_name = 'Concentration (log10)',
+                                                        y_name = 'Score',
+                                                        title_content = 'Histopathology Score Against Bile Acid Inhibitors')
+  
+  
+  
+## secondary bile acid cdiff growth/pathogenicity promoters
+histo %>% 
+  select(tissue, score, mouse_id) %>% 
+  left_join(bile_acid, by = 'mouse_id') %>% 
+  filter(c_diff_effect == 'promoter') %>% 
+  na.omit() -> histo_bileAcid_promot
+
+histo_promoters_plot <- apppleplots::correlation_plots(input_table = histo_bileAcid_promot,
+                                                        x_value = 'conc_normalized',
+                                                        y_value = 'score',
+                                                        x_transform = TRUE,
+                                                        y_transform = FALSE,
+                                                        point_alpha = 0.4,
+                                                        regression_method = 'lm',
+                                                        facet_rows = 'tissue',
+                                                        facet_cols = 'diet',
+                                                        row_labs = tissue_labs,
+                                                        col_labs = diet_labs,
+                                                        x_name = 'Concentration (log10)',
+                                                        y_name = 'Score',
+                                                        title_content = 'Histopathology Score Against Bile Acid Promoters')
 
 histo_inhibitors_plot
 histo_promoters_plot
@@ -344,9 +280,9 @@ histo_promoters_plot
 histo %>% 
   select(mouse_id, tissue, score) %>% 
   left_join(bile_acid, by = 'mouse_id') %>% 
-  na.omit() -> histo_bile_acid
+  na.omit() -> histo_bileAcid
 
-histo_bile_stats <- r2_value_for_loop(histo_bile_acid,
+histo_bile_stats <- r2_value_for_loop(histo_bileAcid,
                                       'tissue',
                                       'score',
                                       'c_diff_effect',
@@ -359,12 +295,27 @@ histo_bile_stats['signif'] <- symnum(histo_bile_stats$p_value,
                                      abbr.colnames = FALSE,
                                      na = "")
 
-histo_bile_stat_plot <- stat_plot(histo_bile_stats,
-                                  bile_facet_labs,
-                                  tissue_labs,
-                                  stat_diet_y_labs,
-                                  'Tissue',
-                                  'Histopathology Score and Bile Acid\nConcentration Comparisons')
+histo_bile_stat_plot <- apppleplots::stat_heat_plot(input_table = histo_bile_stats,
+                                                    x_value = 'comp_col',
+                                                    y_value = 'diet',
+                                                    x_value_type = 'discrete',
+                                                    y_value_type = 'discrete',
+                                                    pairwise = FALSE,
+                                                    correlation = TRUE,
+                                                    tile_fill = 'r_direct',
+                                                    tile_outline_color = 'black',
+                                                    tile_alpha = 0.6,
+                                                    text_value = 'signif',
+                                                    low_color = 'blue',
+                                                    high_color = 'green',
+                                                    legend_name = 'Correlation\nCoefficient',
+                                                    x_labels = tissue_labs,
+                                                    y_labels = stat_diet_y_labs,
+                                                    facet_by = 'tox_metab',
+                                                    facet_labels = bile_facet_labs,
+                                                    x_name = 'Tissue',
+                                                    y_name = 'Diet',
+                                                    title_content = 'Histopathology Score and Bile Acid\nConcentration Comparisons')
 
 histo_bile_stat_plot
 ```
@@ -382,32 +333,34 @@ plot_grid(histo_inhibitors_plot,
 histo_bile_plots_together
 ```
 
-**Histopathology/Bile Acid Ratio Comparison Plots**
+**Ratio Plots**
 ```{r, warning=FALSE, fig.width=8, fig.height=3.5}
-histo_ratio_plot <- comp_plot(histo,
-                              'tissue',
-                              'score',
-                              ratio_bile_acid,
-                              'ratio',
-                              NULL,
-                              NULL,
-                              diet_labs,
-                              tissue_labs,
-                              'Score',
-                              'Ratio',
-                              'Histopathology Score Against Bile Acid Growth Ratio')
+histo %>% 
+  select(mouse_id, tissue, score) %>% 
+  left_join(ratio_bile_acid, by = 'mouse_id') %>% 
+  na.omit() -> histo_bileRatio
+
+histo_ratio_plot <- apppleplots::correlation_plots(input_table = histo_bileRatio,
+                                                   x_value = 'ratio',
+                                                   y_value = 'score',
+                                                   x_transform = TRUE,
+                                                   y_transform = FALSE,
+                                                   point_alpha = 0.4,
+                                                   regression_method = 'lm',
+                                                   facet_rows = 'tissue',
+                                                   facet_cols = 'diet',
+                                                   row_labs = tissue_labs,
+                                                   col_labs = diet_labs,
+                                                   x_name = 'Ratio',
+                                                   y_name = 'Score',
+                                                   title_content = 'Histopathology Score Against Bile Acid Growth Ratio')
 
 histo_ratio_plot
 ```
 
-**Stats**
+**Ratio Stats**
 ```{r, warning=FALSE, fig.height=3, fig.width=5}
-histo %>% 
-  select(mouse_id, tissue, score) %>% 
-  left_join(ratio_bile_acid, by = 'mouse_id') %>% 
-  na.omit() -> histo_ratio
-
-histo_ratio_stats <- ratio_r2_value_for_loop(histo_ratio,
+histo_ratio_stats <- ratio_r2_value_for_loop(histo_bileRatio,
                                               'tissue',
                                              'score',
                                               'ratio')
@@ -422,16 +375,32 @@ histo_ratio_stats['signif'] <- symnum(histo_ratio_stats$p_value,
 histo_ratio_stats %>% 
   mutate(ratio_label = paste('Promoter:Inhibitor')) -> histo_ratio_stats
 
-histo_ratio_stat_plot <- ratio_stat_plot(histo_ratio_stats,
-                                         stat_diet_y_labs,
-                                        tissue_labs,
-                                        'Tissue',
-                                         'Histopathology Score and Bile Acid\nRatio Comparisons')
+histo_ratio_stat_plot <- apppleplots::stat_heat_plot(input_table = histo_ratio_stats,
+                                                    x_value = 'category',
+                                                    y_value = 'diet',
+                                                    x_value_type = 'discrete',
+                                                    y_value_type = 'discrete',
+                                                    pairwise = FALSE,
+                                                    correlation = TRUE,
+                                                    tile_fill = 'r_direct',
+                                                    tile_outline_color = 'black',
+                                                    tile_alpha = 0.6,
+                                                    text_value = 'signif',
+                                                    low_color = 'blue',
+                                                    high_color = 'green',
+                                                    legend_name = 'Correlation\nCoefficient',
+                                                    x_labels = tissue_labs,
+                                                    y_labels = stat_diet_y_labs,
+                                                    facet_by = 'ratio_label',
+                                                    facet_labels = NULL,
+                                                    x_name = 'Tissue',
+                                                    y_name = 'Diet',
+                                                    title_content = 'Histopathology Score and Bile Acid\nRatio Comparisons')
 
 histo_ratio_stat_plot
 ```
 
-**Plots Together**
+**Ratio Plots Together**
 ```{r, warning=FALSE, fig.height=3.5, fig.width=15}
 plot_grid(histo_ratio_plot,
           histo_ratio_stat_plot,
@@ -444,33 +413,54 @@ histo_ratio_plots_together
 ```
 
 
-**Metabolomics/Bile Acid Comparison Plot**
-```{r, warning=FALSE, fig.width=10, fig.height=4}
-metab_inhibitors_plot <- comp_plot(metab,
-                                   'metabolite',
-                                   'metab_conc_norm',
-                                   bile_acid,
-                                   'conc_normalized',
-                                   'c_diff_effect',
-                                   'inhibitor',
-                                   diet_labs,
-                                   metab_labs,
-                                   'Metabolite Concentration',
-                                   'Bile Acid Concentration',
-                                   'Metabolites Against Bile Acid C. difficile Growth Inhibitors')
+# **Metabolite Comparisons**
 
-metab_promoters_plot <- comp_plot(metab,
-                                  'metabolite',
-                                  'metab_conc_norm',
-                                   bile_acid,
-                                   'conc_normalized',
-                                   'c_diff_effect',
-                                   'promoter',
-                                   diet_labs,
-                                   metab_labs,
-                                   'Metabolite Concentration',
-                                   'Bile Acid Concentration',
-                                   'Metabolites Against Bile Acid C. difficile Growth Promoters')
+**Plots**
+```{r, warning=FALSE, fig.width=10, fig.height=4}
+## secondary bile acid cdiff growth/pathogenicity inhibitors 
+metab %>% 
+  select(metabolite, metab_conc_norm, mouse_id) %>% 
+  left_join(bile_acid, by = 'mouse_id') %>% 
+  filter(c_diff_effect == 'inhibitor') %>% 
+  na.omit() -> metab_bileAcid_inhib
+
+metab_inhibitors_plot <- apppleplots::correlation_plots(input_table = metab_bileAcid_inhib,
+                                                        x_value = 'conc_normalized',
+                                                        y_value = 'metab_conc_norm',
+                                                        x_transform = TRUE,
+                                                        y_transform = TRUE,
+                                                        point_alpha = 0.4,
+                                                        regression_method = 'lm',
+                                                        facet_rows = 'metabolite',
+                                                        facet_cols = 'diet',
+                                                        row_labs = metab_labs,
+                                                        col_labs = diet_labs,
+                                                        x_name = 'Bile Acid Concentration (log10)',
+                                                        y_name = 'Metabolite Concentration (log10)',
+                                                        title_content = 'Metabolites Against Bile Acid C. difficile Growth Inhibitors')
+  
+## secondary bile acid cdiff growth/pathogenicity inhibitors 
+metab %>% 
+  select(metabolite, metab_conc_norm, mouse_id) %>% 
+  left_join(bile_acid, by = 'mouse_id') %>% 
+  filter(c_diff_effect == 'promoter') %>% 
+  na.omit() -> metab_bileAcid_promot
+
+metab_promoters_plot <- apppleplots::correlation_plots(input_table = metab_bileAcid_promot,
+                                                        x_value = 'conc_normalized',
+                                                        y_value = 'metab_conc_norm',
+                                                        x_transform = TRUE,
+                                                        y_transform = TRUE,
+                                                        point_alpha = 0.4,
+                                                        regression_method = 'lm',
+                                                        facet_rows = 'metabolite',
+                                                        facet_cols = 'diet',
+                                                        row_labs = metab_labs,
+                                                        col_labs = diet_labs,
+                                                        x_name = 'Bile Acid Concentration (log10)',
+                                                        y_name = 'Metabolite Concentration (log10)',
+                                                        title_content = 'Metabolites Against Bile Acid C. difficile Growth Promoters')
+  
 
 metab_inhibitors_plot
 metab_promoters_plot
@@ -478,15 +468,12 @@ metab_promoters_plot
 
 **Stats**
 ```{r, warning=FALSE, fig.height=4, fig.width=8}
-metab_x_labs <- c('Acetic\nAcid',
-                  'n-Butanoic\nAcid',
-                  'Propanoic\nAcid')
 metab %>% 
   select(mouse_id, metabolite, metab_conc_norm) %>% 
   left_join(bile_acid, by = 'mouse_id') %>% 
-  na.omit() -> metab_bile_acid
+  na.omit() -> metab_bileAcid
 
-metab_bile_stats <- r2_value_for_loop(metab_bile_acid,
+metab_bile_stats <- r2_value_for_loop(metab_bileAcid,
                                       'metabolite',
                                       'metab_conc_norm',
                                       'c_diff_effect',
@@ -499,12 +486,28 @@ metab_bile_stats['signif'] <- symnum(metab_bile_stats$p_value,
                                      abbr.colnames = FALSE,
                                      na = "")
 
-metab_bile_stat_plot <- stat_plot(metab_bile_stats,
-                                  bile_facet_labs,
-                                  metab_x_labs,
-                                  stat_diet_y_labs,
-                                  'Metabolite',
-                                  'Metabolite and Bile Acid\nConcentration Comparisons')
+metab_bile_stat_plot <- apppleplots::stat_heat_plot(input_table = metab_bile_stats,
+                                                    x_value = 'comp_col',
+                                                    y_value = 'diet',
+                                                    x_value_type = 'discrete',
+                                                    y_value_type = 'discrete',
+                                                    pairwise = FALSE,
+                                                    correlation = TRUE,
+                                                    tile_fill = 'r_direct',
+                                                    tile_outline_color = 'black',
+                                                    tile_alpha = 0.6,
+                                                    text_value = 'signif',
+                                                    low_color = 'blue',
+                                                    high_color = 'green',
+                                                    legend_name = 'Correlation\nCoefficient',
+                                                    x_labels = metab_x_labs,
+                                                    y_labels = stat_diet_y_labs,
+                                                    facet_by = 'tox_metab',
+                                                    facet_labels = bile_facet_labs,
+                                                    x_name = 'Metabolite',
+                                                    y_name = 'Diet',
+                                                    title_content = 'Metabolite and Bile Acid\nConcentration Comparisons')
+  
 
 metab_bile_stat_plot
 ```
@@ -524,33 +527,53 @@ metab_bile_plots_together
 ```
 
 
-**Neat Toxin/Bile Acid Comparison Plots**
-```{r, fig.width=9, fig.height=4, warning=FALSE}
-toxin_inhibitors_plot <- comp_plot(neat_tox,
-                                   'neat_toxin',
-                                   'neat_conc_norm',
-                                   bile_acid,
-                                   'conc_normalized',
-                                   'c_diff_effect',
-                                   'inhibitor',
-                                   diet_labs,
-                                   neat_labs,
-                                   'Toxin Concentration',
-                                   'Bile Acid Concentration',
-                                   'Toxin Against Bile Acid C. difficile Growth Inhibitors')
+# **Toxin Comparisons**
 
-toxin_promoters_plot <- comp_plot(neat_tox,
-                                  'neat_toxin',
-                                  'neat_conc_norm',
-                                   bile_acid,
-                                   'conc_normalized',
-                                   'c_diff_effect',
-                                   'promoter',
-                                   diet_labs,
-                                   neat_labs,
-                                   'Toxin Concentration',
-                                   'Bile Acid Concentration',
-                                   'Toxin Against Bile Acid C. difficile Growth Promoters')
+**Plots**
+```{r, fig.width=9, fig.height=4, warning=FALSE}
+## secondary bile acid cdiff growth/pathogenicity inhibitors 
+neat_tox %>% 
+  select(neat_toxin, neat_conc_norm, mouse_id) %>% 
+  left_join(bile_acid, by = 'mouse_id') %>% 
+  filter(c_diff_effect == 'inhibitor') %>% 
+  na.omit() -> tox_bileAcid_inhib
+
+toxin_inhibitors_plot <- apppleplots::correlation_plots(input_table = tox_bileAcid_inhib,
+                                                        x_value = 'conc_normalized',
+                                                        y_value = 'neat_conc_norm',
+                                                        x_transform = TRUE,
+                                                        y_transform = TRUE,
+                                                        point_alpha = 0.4,
+                                                        regression_method = 'lm',
+                                                        facet_rows = 'neat_toxin',
+                                                        facet_cols = 'diet',
+                                                        row_labs = neat_labs,
+                                                        col_labs = diet_labs,
+                                                        x_name = 'Bile Acid Concentration (log10)',
+                                                        y_name = 'Toxin Concentration (log10)',
+                                                        title_content = 'Toxin Against Bile Acid C. difficile Growth Inhibitors')
+
+## secondary bile acid cdiff growth/pathogenicity inhibitors 
+neat_tox %>% 
+  select(neat_toxin, neat_conc_norm, mouse_id) %>% 
+  left_join(bile_acid, by = 'mouse_id') %>% 
+  filter(c_diff_effect == 'promoter') %>% 
+  na.omit() -> tox_bileAcid_promot
+
+toxin_promoters_plot <- apppleplots::correlation_plots(input_table = tox_bileAcid_promot,
+                                                        x_value = 'conc_normalized',
+                                                        y_value = 'neat_conc_norm',
+                                                        x_transform = TRUE,
+                                                        y_transform = TRUE,
+                                                        point_alpha = 0.4,
+                                                        regression_method = 'lm',
+                                                        facet_rows = 'neat_toxin',
+                                                        facet_cols = 'diet',
+                                                        row_labs = neat_labs,
+                                                        col_labs = diet_labs,
+                                                        x_name = 'Bile Acid Concentration (log10)',
+                                                        y_name = 'Toxin Concentration (log10)',
+                                                        title_content = 'Toxin Against Bile Acid C. difficile Growth Promoters')
 
 toxin_inhibitors_plot
 toxin_promoters_plot
@@ -561,27 +584,42 @@ toxin_promoters_plot
 neat_tox %>% 
   select(mouse_id, neat_toxin, neat_conc_norm) %>% 
   left_join(bile_acid, by = 'mouse_id') %>% 
-  na.omit() -> tox_bile_acid
+  na.omit() -> tox_bileAcid
 
-tox_bile_stats <- r2_value_for_loop(tox_bile_acid,
-                                      'neat_toxin',
-                                      'neat_conc_norm',
-                                      'c_diff_effect',
-                                      'conc_normalized')
+tox_bile_stats <- r2_value_for_loop(tox_bileAcid,
+                                    'neat_toxin',
+                                    'neat_conc_norm',
+                                    'c_diff_effect',
+                                    'conc_normalized')
 
 ## assigning p value significance
 tox_bile_stats['signif'] <- symnum(tox_bile_stats$p_value,
-                                     cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
-                                     symbols = c("****", "***", "**", "*", "ns"),
-                                     abbr.colnames = FALSE,
-                                     na = "")
+                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                   symbols = c("****", "***", "**", "*", "ns"),
+                                   abbr.colnames = FALSE,
+                                   na = "")
 
-tox_bile_stat_plot <- stat_plot(tox_bile_stats,
-                                  bile_facet_labs,
-                                  neat_labs,
-                                  stat_diet_y_labs,
-                                  'Toxin',
-                                  'C. difficile Toxin and Bile Acid\nConcentration Comparisons')
+tox_bile_stat_plot <- apppleplots::stat_heat_plot(input_table = tox_bile_stats,
+                                                    x_value = 'comp_col',
+                                                    y_value = 'diet',
+                                                    x_value_type = 'discrete',
+                                                    y_value_type = 'discrete',
+                                                    pairwise = FALSE,
+                                                    correlation = TRUE,
+                                                    tile_fill = 'r_direct',
+                                                    tile_outline_color = 'black',
+                                                    tile_alpha = 0.6,
+                                                    text_value = 'signif',
+                                                    low_color = 'blue',
+                                                    high_color = 'green',
+                                                    legend_name = 'Correlation\nCoefficient',
+                                                    x_labels = neat_labs,
+                                                    y_labels = stat_diet_y_labs,
+                                                    facet_by = 'tox_metab',
+                                                    facet_labels = bile_facet_labs,
+                                                    x_name = 'Toxin',
+                                                    y_name = 'Diet',
+                                                    title_content = 'C. difficile Toxin and Bile Acid\nConcentration Comparisons')
 
 tox_bile_stat_plot
 ```
@@ -628,18 +666,25 @@ tox_bile_plots_together
 
 **Ratio/Toxin Comparisons**
 ```{r, fig.width=9, fig.height=4, warning=FALSE}
-tox_ratio_plot <- comp_plot(neat_tox,
-                              'neat_toxin',
-                              'neat_conc_norm',
-                              ratio_bile_acid,
-                              'ratio',
-                              NULL,
-                              NULL,
-                              diet_labs,
-                              neat_labs,
-                              'Toxin Concentration',
-                              'Ratio',
-                              'Toxin Against Bile Acid Growth Ratio')
+neat_tox %>% 
+  select(mouse_id, neat_toxin, neat_conc_norm) %>% 
+  left_join(ratio_bile_acid, by = 'mouse_id') %>% 
+  na.omit() -> tox_bileRatio
+
+tox_ratio_plot <- apppleplots::correlation_plots(input_table = tox_bileRatio,
+                                                   x_value = 'ratio',
+                                                   y_value = 'neat_conc_norm',
+                                                   x_transform = TRUE,
+                                                   y_transform = TRUE,
+                                                   point_alpha = 0.4,
+                                                   regression_method = 'lm',
+                                                   facet_rows = 'neat_toxin',
+                                                   facet_cols = 'diet',
+                                                   row_labs = neat_labs,
+                                                   col_labs = diet_labs,
+                                                   x_name = 'Ratio',
+                                                   y_name = 'Toxin Concentration',
+                                                   title_content = 'Toxin Against Bile Acid Growth Ratio')
 
 tox_ratio_plot
 ```
@@ -652,25 +697,41 @@ neat_tox %>%
   na.omit() -> tox_ratio
 
 tox_ratio_stats <- ratio_r2_value_for_loop(tox_ratio,
-                                              'neat_toxin',
+                                           'neat_toxin',
                                            'neat_conc_norm',
-                                              'ratio')
+                                           'ratio')
 
 ## assigning p value significance
 tox_ratio_stats['signif'] <- symnum(tox_ratio_stats$p_value,
-                                     cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
-                                     symbols = c("****", "***", "**", "*", "ns"),
-                                     abbr.colnames = FALSE,
-                                     na = "")
+                                    cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                    symbols = c("****", "***", "**", "*", "ns"),
+                                    abbr.colnames = FALSE,
+                                    na = "")
 
 tox_ratio_stats %>% 
   mutate(ratio_label = paste('Promoter:Inhibitor')) -> tox_ratio_stats
 
-tox_ratio_stat_plot <- ratio_stat_plot(tox_ratio_stats,
-                                         stat_diet_y_labs,
-                                        neat_labs,
-                                       'Toxin',
-                                         'Toxin Concentration and Bile Acid\nRatio Comparisons')
+tox_ratio_stat_plot <- apppleplots::stat_heat_plot(input_table = tox_ratio_stats,
+                                                    x_value = 'category',
+                                                    y_value = 'diet',
+                                                    x_value_type = 'discrete',
+                                                    y_value_type = 'discrete',
+                                                    pairwise = FALSE,
+                                                    correlation = TRUE,
+                                                    tile_fill = 'r_direct',
+                                                    tile_outline_color = 'black',
+                                                    tile_alpha = 0.6,
+                                                    text_value = 'signif',
+                                                    low_color = 'blue',
+                                                    high_color = 'green',
+                                                    legend_name = 'Correlation\nCoefficient',
+                                                    x_labels = neat_labs,
+                                                    y_labels = stat_diet_y_labs,
+                                                    facet_by = 'ratio_label',
+                                                    facet_labels = NULL,
+                                                    x_name = 'Toxin',
+                                                    y_name = 'Diet',
+                                                    title_content = 'Toxin Concentration and Bile Acid\nRatio Comparisons')
 
 tox_ratio_stat_plot
 ```
@@ -709,6 +770,7 @@ tox_ratio_plots_together
 ```
 
 
+# **Saving Results**
 
 **Saving my Outputs**
 ```{r}

@@ -71,3 +71,21 @@ pre_meta %>%
 ## saving processed metadata file as a .tsv
 write_tsv(metadata,
           './new_experiments/data/misc/proc_newExp_d15-d3_metadata.tsv')
+
+
+## checking to make sure that diet and vendor classification is consistent between the sampleid and 
+## actual columns 
+pre_meta %>% 
+  separate_wider_delim(cols = 'SampleID',
+                       delim = '.',
+                       names = c('sampID_exp',
+                                 'sampID_vendor',
+                                 'sampID_diet',
+                                 'sampID_num1',
+                                 'sampID_num2'),
+                       cols_remove = FALSE) %>% 
+  mutate(sampID_vendor = ifelse(sampID_vendor == 'Tc', 'Taconic', 'CharlesRiver')) -> test_me
+
+test_me %>% 
+  group_by(SampleID) %>% 
+  filter(sampID_diet != Diet)

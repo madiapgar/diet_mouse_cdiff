@@ -95,11 +95,14 @@ pcoa_plot <- function(biom_file,
     ggplot(aes(x = PC1, y = PC2)) +
     geom_point(aes(fill = faith_pd), pch = 21, alpha = 0.7, size = 2) +
     theme_bw(base_size = 16) +
-    # scale_fill_brewer(palette = 'Dark2', name = 'Replicate') +
+    # scale_fill_brewer(palette = 'Accent', 
+    #                   name = 'Barrier\nFacility',
+    #                   labels = c('Barrier 1',
+    #                              'Barrier 2')) +
     scale_fill_distiller(palette = 'Spectral', name = "Faith's PD") +
     facet_grid(day_post_inf~diet,
                labeller = labeller(diet = labs)) +
-    theme(legend.text = element_text(size = 12),
+    theme(legend.text = element_text(size = 14),
           strip.text.y = element_text(angle = 0)) +
     ggtitle(title) +
     labs(x = xlab, y = ylab) -> pcoa
@@ -116,7 +119,7 @@ faith_pd_FP <- '../data/s1_filt_core/faith_pd.tsv'
 shannon_FP <- '../data/s1_filt_core/shannon_entropy.tsv'
 
 ## day 3 filtered out of stool "colon" samples
-filt_metadata_FP <- '../data/misc/filt_comp_metadata.tsv'
+filt_metadata_FP <- '../data/misc/d3_filt_comp_metadata.tsv'
 filt_unweighted_FP <- '../data/day3_filt_core/unweighted_unifrac_pcoa_results.qza'
 filt_weighted_FP <- '../data/day3_filt_core/weighted_unifrac_pcoa_results.qza'
 filt_faith_pd_FP <- '../data/day3_filt_core/faith_pd.tsv'
@@ -251,12 +254,12 @@ filt_weighted_pcoa
 
 **Saving my Outputs**
 ```{r}
-ggsave('../day3_filt_plots/unweighted_unifrac_pcoa.pdf',
+ggsave('../plots/d3_filt_uu_pcoa.pdf',
        plot = filt_unweighted_pcoa, 
        width = 13, 
        height = 7)
 
-ggsave('../day3_filt_plots/weighted_unifrac_pcoa.pdf',
+ggsave('../plots/d3_filt_wu_pcoa.pdf',
        plot = filt_weighted_pcoa, 
        width = 13, 
        height = 7)

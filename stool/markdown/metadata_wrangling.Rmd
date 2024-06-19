@@ -22,6 +22,7 @@ cecum_meta_fp <- '../../cecum/data/misc/cecal_processed_metadata.tsv'
 preProc_cecum_fp <- '../../cecum/data/misc/cecal_metadata.tsv'
 updated_meta_fp <- '../../cecum/data/misc/updated_cecal_metadata.tsv'
 preProc_colon_fp <- '../data/misc/updated_metadata.tsv'
+newExp_meta_fp <- '../../new_experiments/data/misc/proc_newExp_d15-d3_metadata.tsv'
 ```
 
 **Reading in Files**
@@ -31,6 +32,7 @@ cecum_meta <- read_tsv(cecum_meta_fp)
 preProc_cecum <- read_tsv(preProc_cecum_fp)
 updated_meta <- read_tsv(updated_meta_fp)
 preProc_colon <- read_tsv(preProc_colon_fp)
+newExp_meta <- read_tsv(newExp_meta_fp)
 ```
 
 **Putting together cecum and colon processed metadata files**
@@ -97,6 +99,27 @@ rbind(cecum_for_q,
 names(filt_comp_metadata)[names(filt_comp_metadata) == 'sampleid'] <- '#SampleID'
 ```
 
+**Combining metadata for the U of Arizona experiments and the new experiments (2024)**
+These are filtered to only have day -15 in the timeline for baseline microbiome comparisons!
+```{r}
+filt_comp_metadata %>% 
+  filter(day_post_inf == -15) %>% 
+  mutate(mouse_sex = paste('Male'),
+         experiment_set = paste('second_set_arizona'),
+         vendor = paste('charles_river')) %>% 
+  select(-facility) -> prep_comp_metadata
+
+newExp_meta %>% 
+  filter(day_post_inf == -15) %>% 
+  mutate(mouse_sex = paste('Female')) %>% 
+  select(!c('experiment', 'experiment_day')) -> prep_newExp_meta
+
+names(prep_newExp_meta)[names(prep_newExp_meta) == 'sampleid'] <- '#SampleID'
+
+rbind(prep_comp_metadata,
+      prep_newExp_meta) -> newExp_comp_d15_metadata
+```
+
 
 **Saving my outputs**
 ```{r}
@@ -109,6 +132,8 @@ write_tsv(new_updated_meta,
 write_tsv(comp_metadata,
           '../../comparisons/data/misc/comp_metadata.tsv')
 write_tsv(filt_comp_metadata,
-          '../../comparisons/data/misc/s1filt_comp_metadata.tsv')
+          '../../comparisons/data/misc/s1_filt_comp_metadata.tsv')
+write_tsv(newExp_comp_d15_metadata,
+          '../../comparisons/data/misc/newExp_comp_d15_metadata.tsv')
 ```
 

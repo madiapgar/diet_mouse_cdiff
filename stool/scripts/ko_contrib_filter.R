@@ -25,7 +25,7 @@ args <- parser$parse_args()
 
 ## input file paths and others
 # ko_in <- './data/picrust/out_pipeline/KO_metagenome_out/pred_metagenome_contrib.tsv.gz'
-# ko_out <- './data/picrust/tss3_meta_contrib.tsv'
+# ko_out <- './data/picrust/meta_contrib.tsv'
 wanted_kos <- c('K00929', 'K01034','K15873', 'K15874')
 
 ## function

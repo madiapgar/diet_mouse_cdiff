@@ -32,7 +32,7 @@ colnames(pre_meta) <- new_colnames
 pre_meta %>% 
   mutate(separate_me = sampleid,
          experiment_set = 'new_exp_anschutz',
-         mouse_sex = 'F',
+         mouse_sex = 'Female',
          study = 2,
          diet = ifelse(diet == 'HFLF', 'HF/LF', diet),
          diet = ifelse(diet == 'LFLF', 'LF/LF', diet),
@@ -86,6 +86,10 @@ pre_meta %>%
                        cols_remove = FALSE) %>% 
   mutate(sampID_vendor = ifelse(sampID_vendor == 'Tc', 'Taconic', 'CharlesRiver')) -> test_me
 
-test_me %>% 
-  group_by(SampleID) %>% 
-  filter(sampID_diet != Diet)
+
+metadata %>% 
+  group_by(vendor) %>% 
+  count(diet, day_post_inf) -> why_missing
+
+write_tsv(why_missing,
+          'why_missing.tsv')

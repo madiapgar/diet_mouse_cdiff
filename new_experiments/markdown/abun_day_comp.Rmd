@@ -70,8 +70,8 @@ tax_FP <- '../data/qiime/taxonomy.qza'
 otu_FP <- '../data/qiime/otu_table.qza'
 
 wanted_level <- 'Family'
-wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
-                   'Staphylococcaceae', 'Bacteroidaceae', 'Ruminococcaceae')
+wanted_family <- c('Enterobacteriaceae', 'Morganellaceae', 'Lachnospiraceae', 'Enterococcaceae',
+                   'Tannerellaceae', 'Bacteroidaceae', 'Ruminococcaceae', 'Peptostreptococcaceae')
 
 vendor_x_labs <- c('Charles\nRiver',
                    'Taconic')
@@ -119,15 +119,15 @@ day_abun_table <- day_abun_table %>%
 
 ## creating mini tables bc having all the data on one plot is super confusing 
 obAn_day_abun_table <- day_abun_table %>% 
-                        filter(Family == 'Lachnospiraceae' | Family == 'Ruminococcaceae' | Family == 'Bacteroidaceae')
+                        filter(Family == 'Lachnospiraceae' | Family == 'Ruminococcaceae' | Family == 'Bacteroidaceae' | Family == 'Tannerellaceae' | Family == 'Peptostreptococcaceae')
 
 facAn_day_abun_table <- day_abun_table %>% 
                           filter(Family == 'Enterobacteriaceae' | Family == 'Enterococcaceae' | 
-                                   Family == 'Staphylococcaceae' | Family == 'Lactobacillaceae')
+                                   Family == 'Morganellaceae' | Family == 'Lactobacillaceae')
 ```
 
 **Obligate Anaerobe Plot**
-```{r, fig.height=7, fig.width=15, warning=FALSE}
+```{r, fig.height=9, fig.width=16, warning=FALSE}
 obAn_deltas_plot <- apppleplots::facet_twice_plots(input_table = obAn_day_abun_table,
                                                    x_value = 'vendor',
                                                    y_value = 'diff_abun',
@@ -142,7 +142,7 @@ obAn_deltas_plot <- apppleplots::facet_twice_plots(input_table = obAn_day_abun_t
                                                    row_labs = NULL,
                                                    col_labs = diet_labs,
                                                    x_name = 'Vendor',
-                                                   y_name = 'Deltas? (Day -15 - Day 3)',
+                                                   y_name = 'Deltas (Day -15 - Day 3)',
                                                    title_content = 'Difference in Obligate Anaerobe Relative Abundance')
 obAn_deltas_plot <- obAn_deltas_plot +
                       theme_bw(base_size = 20) +
@@ -167,7 +167,7 @@ facAn_deltas_plot <- apppleplots::facet_twice_plots(input_table = facAn_day_abun
                                                     row_labs = NULL,
                                                     col_labs = diet_labs,
                                                     x_name = 'Vendor',
-                                                    y_name = 'Deltas? (Day -15 - Day 3)',
+                                                    y_name = 'Deltas (Day -15 - Day 3)',
                                                     title_content = 'Difference in Facultative Anaerobe Relative Abundance')
 
 facAn_deltas_plot <- facAn_deltas_plot +
@@ -181,8 +181,8 @@ facAn_deltas_plot
 ```{r}
 ggsave('../plots/obAn_deltas_plot.pdf',
        plot = obAn_deltas_plot,
-       width = 15,
-       height = 7)
+       width = 16,
+       height = 9)
 ggsave('../plots/facAn_deltas_plot.pdf',
        plot = facAn_deltas_plot,
        width = 15,

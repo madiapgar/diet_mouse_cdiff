@@ -57,8 +57,8 @@ names(diet_labs) <- c('Chow',
                       'LF/HF', 
                       'LF/LF')
 wanted_level <- 'Family'
-wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
-                   'Staphylococcaceae', 'Bacteroidaceae', 'Ruminococcaceae')
+wanted_family <- c('Enterobacteriaceae', 'Morganellaceae', 'Lachnospiraceae', 'Enterococcaceae',
+                   'Tannerellaceae', 'Bacteroidaceae', 'Ruminococcaceae', 'Peptostreptococcaceae')
 vendor_labs <- c('Charles River',
                  'Taconic')
 names(vendor_labs) <- c('charles_river',

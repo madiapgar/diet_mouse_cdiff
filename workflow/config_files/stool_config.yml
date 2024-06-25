@@ -1,0 +1,39 @@
+## config file for arizona experiments stool sample dataset
+
+dataset_dir: "stool/"
+qiime_env: "qiime2-2023.5"
+
+## options: yes and no
+raw_sequences: "no"
+
+## 01: demux and dada2
+raw_seq_dir: NA
+raw_seqs: NA
+barcodes: NA
+dada2_trim_left_for: NA
+dada2_trim_left_rev: NA
+dada2_trunc_len_for: NA
+dada2_trunc_len_rev: NA
+
+## 02/03: phylogeny and total sum scaling
+r_script_dir: "scripts/"
+biom_table: "data/misc/euk_filt_mergedDietAim1table_051523-Copy1.qza"
+rep_seqs: "data/misc/euk_filt-mergedDietAim1rep-seqs_051523-Copy1.qza"
+
+## 04: core metrics analysis
+metadata: "data/misc/updated_metadata.tsv"
+core_metrics_sampling_depth: 99631
+
+## 05: longitudinal dataset plots/stats in R (you NEED to have measurements at different time points)
+## options: yes, no, or no downstream
+longitudinal_dataset: "yes"
+processed_metadata: "data/misc/processed_metadata.tsv"
+
+## 06: non-longitudinal dataset plots/stats in R (measurements at only ONE time point)
+sampleID_key: NA
+mouseID_facil_key: NA
+bile_acid: NA
+toxin: NA
+histo: NA
+metab: NA
+hypoxia: NA

@@ -1,5 +1,4 @@
-## overall config file
-## set to cecal dataset right now
+## overall config file for new anschutz experiments stool sample dataset
 
 dataset_dir: "new_experiments/"
 qiime_env: "qiime2-2023.5"

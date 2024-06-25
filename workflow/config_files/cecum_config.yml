@@ -1,5 +1,4 @@
-## overall config file
-## set to cecal dataset right now
+## config file for arizona experiments cecal sample dataset
 
 dataset_dir: "cecum/"
 qiime_env: "qiime2-2023.5"

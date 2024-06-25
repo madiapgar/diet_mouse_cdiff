@@ -1,7 +1,8 @@
-## overall config file
-## set to cecal dataset right now
+## config file for arizona experiment stool and cecal sample combined dataset
+## (datasets were combined due to a lack of stool samples at day 3)
+## metadata is for batch 1 and day 3 of the stool samples filtered out
 
-dataset_dir: "comparisons/"
+dataset_dir: "az_exp_combined/"
 qiime_env: "qiime2-2023.5"
 
 ## options: yes and no
@@ -18,17 +19,17 @@ dada2_trunc_len_rev: NA
 
 ## 02/03: phylogeny and total sum scaling
 r_script_dir: "scripts/"
-biom_table: "data/qiime/newExp_comp_d15_table.qza"
-rep_seqs: "data/qiime/newExp_comp_d15_rep_seqs.qza"
+biom_table: "data/misc/comp_table.qza"
+rep_seqs: "data/misc/comp_rep_seqs.qza"
 
 ## 04: core metrics analysis
-metadata: "data/misc/newExp_comp_d15_metadata.tsv"
+metadata: "data/misc/s1_filt_comp_metadata/tsv"
 core_metrics_sampling_depth: 99631
 
 ## 05: longitudinal dataset plots/stats in R (you NEED to have measurements at different time points)
 ## options: yes, no, or no downstream
 longitudinal_dataset: "yes"
-processed_metadata: "data/misc/newExp_comp_d15_metadata.tsv"
+processed_metadata: "data/misc/s1_filt_comp_metadata.tsv"
 
 ## 06: non-longitudinal dataset plots/stats in R (measurements at only ONE time point)
 sampleID_key: NA

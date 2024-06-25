@@ -1,0 +1,54 @@
+## config file template
+## if you need additional examples for how to handle your config file, check out the workflow/config_files directory!
+
+dataset_dir: "the directory the data you're analyzing lives in (this should NOT be in the workflow directory)"
+qiime_env: "which QIIME2 environment did you install?"
+
+## options: yes and no
+raw_sequences: "are you starting the analysis with raw 16S fasta files?"
+
+## 01: demux and dada2
+raw_seq_dir: "the subdirectory(s) that your raw 16S fasta files live in"
+raw_seqs: "a list of file and/or directory names/prefixes of your raw sequences (if you have more than one) - these are wildcards"
+"ex: ["seq1_run/seq1_", "seq2_run/seq2_", "seq3_run/seq3_"]"
+barcodes: "this will most likely be the same as your raw_seqs entry, I just had my barcode files named differently"
+## where do you want to trim and truncate your sequences during DADA2?
+## pro tip: make sure these values are the same for every set sequencing experiments that you want to compare!
+dada2_trim_left_for: 0
+dada2_trim_left_rev: 0
+dada2_trunc_len_for: 0
+dada2_trunc_len_rev: 0
+
+## 02/03: phylogeny and total sum scaling
+r_script_dir: "the subdirectory that holds the r scripts you want snakemake to reference"
+## if you ran raw sequences, your biom_table and rep_seqs will be under the file path/names below
+## if not, you need to tell snakemake the file path to your biom_table and rep_seqs
+biom_table: "data/qiime/merged_table.qza"
+rep_seqs: "data/qiime/merged_rep_seqs.qza"
+
+## 04: core metrics analysis
+metadata: "what is your QIIME2-approved metadata file called?"
+## what sampling depth do you want to use for your core metrics analysis? 
+## if you're not sure, I'd consult data/qiime/taxonomy_filtered.qzv
+core_metrics_sampling_depth: 0
+
+## 05: longitudinal dataset plots/stats in R (you NEED to have measurements at different time points)
+## options: yes, no, or no downstream
+longitudinal_dataset: "was data collected at multiple time points and do you have a column for that in your metadata?"
+## if you're running the cecal sample/non-longitudinal analysis, it will generate a processed metadata file for you so
+## you just need to say what you want it to be called
+processed_metadata: "what is/what do you want your processed metadata file called? - metadata doesn't need to be processed, but I use 
+processed metadata files"
+
+## 06: non-longitudinal dataset plots/stats in R (measurements at only ONE time point)
+## the non-longitudinal dataset delim is mainly for my cecal sample dataset and is extremely tailored to it rn
+## I had to do some funky metadata wrangling and that's what these files are for
+sampleID_key: NA
+mouseID_facil_key: NA
+## raw data files for desired quantified substances/inflammatory measures
+## these get processed all nicely for you as well
+bile_acid: NA
+toxin: NA
+histo: NA
+metab: NA
+hypoxia: NA

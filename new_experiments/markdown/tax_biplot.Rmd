@@ -9,6 +9,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
+library(rmarkdown)
 library(ggpubr)
 library(ggplot2)
 library(qiime2R)

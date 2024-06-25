@@ -1,6 +1,6 @@
 ---
 title: "tax_biplot"
-output: html_document
+output: github_document
 date: "2024-06-12"
 ---
 
@@ -153,6 +153,7 @@ wu_biplot_FP <- '../data/qiime/core_outputs/wu_biplot_matrix.qza'
 
 vendor_labs <- c('Charles River',
                  'Taconic')
+test_biplot <- read_qza(uu_biplot_FP)
 ```
 
 # **PC1 and PC2**
@@ -239,8 +240,6 @@ wu_biplot <- make_my_biplot(x_axis = 'PC1',
 uu_biplot
 wu_biplot
 ```
-
-
 
 # **PC2 and PC3**
 

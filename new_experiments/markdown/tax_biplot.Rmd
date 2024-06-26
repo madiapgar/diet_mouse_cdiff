@@ -154,7 +154,6 @@ wu_biplot_FP <- '../data/qiime/core_outputs/wu_biplot_matrix.qza'
 
 vendor_labs <- c('Charles River',
                  'Taconic')
-test_biplot <- read_qza(uu_biplot_FP)
 ```
 
 # **PC1 and PC2**
@@ -243,13 +242,13 @@ wu_biplot
 ```
 
 # **PC2 and PC3**
-
 **Data Wrangling**
 ```{r}
 ## unweighted unifrac
 uu_files2_3 <- prep_my_biplot_files(biplot_fp = uu_biplot_FP,
                                  metadata_fp = metadata_FP,
                                  tax_fp = tax_FP,
+                                 parse_tax = TRUE,
                                  top_tax_n = 10,
                                  dist_pc_axis = 'dist_origin2to3',
                                  lines_longer_by = 4)
@@ -272,6 +271,7 @@ uu_y_lab2_3 <- pcoa_ax_lab(unifrac_var = uu_pcoa_var2_3,
 wu_files2_3 <- prep_my_biplot_files(biplot_fp = wu_biplot_FP,
                                    metadata_fp = metadata_FP,
                                    tax_fp = tax_FP,
+                                   parse_tax = TRUE,
                                    top_tax_n = 10,
                                    dist_pc_axis = 'dist_origin2to3',
                                    lines_longer_by = 9)
@@ -327,7 +327,91 @@ uu_biplot2_3
 wu_biplot2_3
 ```
 
+# **PC3 and PC4**
+**Data Wrangling**
+```{r}
+## unweighted unifrac
+uu_files3_4 <- prep_my_biplot_files(biplot_fp = uu_biplot_FP,
+                                 metadata_fp = metadata_FP,
+                                 tax_fp = tax_FP,
+                                 parse_tax = TRUE,
+                                 top_tax_n = 10,
+                                 dist_pc_axis = 'dist_origin3to4',
+                                 lines_longer_by = 4)
 
+uu_biplot_points3_4 <- uu_files3_4$DFPoints %>% 
+                      mutate(day_post_inf = as.factor(day_post_inf))
+
+uu_biplot_lines3_4 <- uu_files3_4$DFLines
+uu_pcoa_var3_4 <- uu_files3_4$PCvar
+
+## making x and y axis labels
+uu_x_lab3_4 <- pcoa_ax_lab(unifrac_var = uu_pcoa_var3_4,
+                           col_name = 'PC3')
+uu_y_lab3_4 <- pcoa_ax_lab(unifrac_var = uu_pcoa_var3_4,
+                           col_name = 'PC4')
+```
+
+```{r}
+## weighted unifrac 
+wu_files3_4 <- prep_my_biplot_files(biplot_fp = wu_biplot_FP,
+                                   metadata_fp = metadata_FP,
+                                   tax_fp = tax_FP,
+                                   parse_tax = TRUE,
+                                   top_tax_n = 10,
+                                   dist_pc_axis = 'dist_origin3to4',
+                                   lines_longer_by = 9)
+
+wu_biplot_points3_4 <- wu_files3_4$DFPoints %>% 
+                        mutate(day_post_inf = as.factor(day_post_inf))
+
+wu_biplot_lines3_4 <- wu_files3_4$DFLines
+wu_pcoa_var3_4 <- wu_files3_4$PCvar
+
+## making x and y axis labels
+wu_x_lab3_4 <- pcoa_ax_lab(unifrac_var = wu_pcoa_var3_4,
+                           col_name = 'PC3')
+wu_y_lab3_4 <- pcoa_ax_lab(unifrac_var = wu_pcoa_var3_4,
+                           col_name = 'PC4')
+```
+
+**Plots**
+```{r, fig.width=15, fig.height=10}
+## unweighted unifrac 
+uu_biplot3_4 <- make_my_biplot(x_axis = 'PC3',
+                              y_axis = 'PC4',
+                              points_df = uu_biplot_points3_4,
+                              points_color = 'day_post_inf',
+                              points_shape = 'vendor',
+                              color_name = 'Days Relative\nto Infection',
+                              shape_labels = vendor_labs,
+                              lines_df = uu_biplot_lines3_4,
+                              lines_label = 'Family',
+                              lines_label_size = 5,
+                              x_name = uu_x_lab3_4,
+                              y_name = uu_y_lab3_4,
+                              shape_name = 'Vendor',
+                              title_content = 'Unweighted UniFrac Biplot (PC3-PC4)')
+
+## weighted unifrac
+wu_biplot3_4 <- make_my_biplot(x_axis = 'PC3',
+                              y_axis = 'PC4',
+                              points_df = wu_biplot_points3_4,
+                              points_color = 'day_post_inf',
+                              points_shape = 'vendor',
+                              color_name = 'Days Relative\nto Infection',
+                              shape_labels = vendor_labs,
+                              lines_df = wu_biplot_lines3_4,
+                              lines_label = 'Family',
+                              lines_label_size = 5,
+                              x_name = wu_x_lab3_4,
+                              y_name = wu_y_lab3_4,
+                              shape_name = 'Vendor',
+                              title_content = 'Weighted UniFrac Biplot (PC3-PC4)')
+
+uu_biplot3_4
+wu_biplot3_4
+```
 
 # **Saving my Outputs**
 

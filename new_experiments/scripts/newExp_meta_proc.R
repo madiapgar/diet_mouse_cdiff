@@ -43,14 +43,14 @@ pre_meta %>%
          sample_type = 'colon') %>% 
   separate_wider_delim(cols = 'separate_me',
                        delim = '.',
-                       names = c('take_out1',
-                                 'mouse1',
+                       names = c('mouse1',
                                  'mouse2',
                                  'mouse3',
-                                 'take_out2'),
+                                 'mouse4',
+                                 'take_out'),
                        cols_remove = FALSE) %>% 
-  mutate(mouse_id = paste(mouse1, mouse2, mouse3, sep = '.')) %>% 
-  select(!c('take_out1', 'take_out2', 'mouse1', 'mouse2', 'mouse3', 'separate_me')) %>% 
+  mutate(mouse_id = paste(mouse1, mouse2, mouse3, mouse4, sep = '.')) %>% 
+  select(!c('take_out', 'mouse1', 'mouse2', 'mouse3', 'mouse4', 'separate_me')) %>% 
   mutate(high_fat = case_when(
           diet == 'HF/HF' ~ 1,
           diet == 'HF/LF' ~ 1,

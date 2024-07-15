@@ -416,12 +416,28 @@ wu_biplot3_4
 # **Saving my Outputs**
 
 ```{r}
-ggsave('../plots/uu_biplot.pdf',
+ggsave('../plots/uu_biplot1_2.pdf',
        plot = uu_biplot,
        width = 15,
        height = 10)
-ggsave('../plots/wu_biplot.pdf',
+ggsave('../plots/wu_biplot1_2.pdf',
        plot = wu_biplot,
+       width = 15,
+       height = 10)
+ggsave('../plots/uu_biplot2_3.pdf',
+       plot = uu_biplot2_3,
+       width = 15,
+       height = 10)
+ggsave('../plots/wu_biplot2_3.pdf',
+       plot = wu_biplot2_3,
+       width = 15,
+       height = 10)
+ggsave('../plots/uu_biplot3_4.pdf',
+       plot = uu_biplot3_4,
+       width = 15,
+       height = 10)
+ggsave('../plots/wu_biplot3_4.pdf',
+       plot = wu_biplot3_4,
        width = 15,
        height = 10)
 ```

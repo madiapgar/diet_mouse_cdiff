@@ -39,11 +39,18 @@ make_plot <- function(input_table,
                       y_name,
                       wanted_title,
                       wanted_subtitle){
-  plot <- input_table %>% 
-            mutate(microbe_presence = as.factor(microbe_presence)) %>% 
-            na.omit() %>% 
-            filter(experiment == wanted_experiment,
-                   vendor == wanted_vendor) %>% 
+  ifelse(class(wanted_experiment) == "character", 
+         filt_input_table <- input_table %>% 
+                        mutate(microbe_presence = as.factor(microbe_presence)) %>% 
+                        na.omit() %>% 
+                        filter(experiment == wanted_experiment,
+                               vendor == wanted_vendor),
+         filt_input_table <- input_table %>% 
+                        mutate(microbe_presence = as.factor(microbe_presence)) %>% 
+                        na.omit() %>% 
+                        filter(vendor == wanted_vendor))
+  
+  plot <- filt_input_table %>% 
             ggplot(aes(x = .data[[x_axis]], y = .data[[y_axis]], alpha = .data[[alpha_value]])) +
             theme_bw(base_size = 20) +
             theme(axis.text.x = element_blank()) +
@@ -60,6 +67,29 @@ make_plot <- function(input_table,
                  title = wanted_title, 
                  subtitle = wanted_subtitle)
   return(plot)
+}
+
+put_plots_together <- function(plot1,
+                               plot2,
+                               y_axis_label){
+  legend <- cowplot::get_legend(plot1)
+  pre_plot <- plot_grid(plot1 +
+                          xlab(' ') +
+                          ylab(' ') +
+                          theme(legend.position = 'none'),
+                        plot2 +
+                          ggtitle(' ') +
+                          ylab(' ') +
+                          theme(legend.position = 'none'),
+                        ncol = 1)
+  plots_together <- plot_grid(pre_plot, legend,
+                              rel_widths = c(1, 0.5))
+  plots_together_y <- textGrob(y_axis_label,
+                               gp = gpar(fontsize = 20),
+                               rot = 90)
+  plots_together <- grid.arrange(arrangeGrob(plots_together, left = plots_together_y))
+  
+  return(plots_together)
 }
 ```
 
@@ -244,81 +274,90 @@ cdd03_cr_plot
 cdd03_tc_plot
 ```
 
+**Putting all experiments together in one plot**
+```{r, fig.width=15, fig.height=5}
+## ordering the diet column so all samples of the same diet are next to each other
+ordered_proc_cfuCount <- proc_cfu_count[order(proc_cfu_count$diet),]
+ordered_proc_cfuCount <- ordered_proc_cfuCount %>% 
+  mutate(ord_mouse_id = fct_reorder(mouse_id, diet))
+
+## plots
+allExp_cr_plot <- make_plot(input_table = ordered_proc_cfuCount,
+                           wanted_experiment = NULL,
+                           wanted_vendor = 'charles_river',
+                           x_axis = 'ord_mouse_id',
+                           y_axis = 'location',
+                           alpha_value = 'microbe_presence',
+                           fill_value = 'diet',
+                           point_size = 6,
+                           y_labels = location_y_labs,
+                           fill_legend_title = 'Diet',
+                           fill_labels = diet_fill_labs,
+                           alpha_legend_title = 'Bacterial CFUs',
+                           alpha_labels = presAbs_labs,
+                           x_name = 'Mouse',
+                           y_name = 'Location',
+                           wanted_title = 'All Experiment Results',
+                           wanted_subtitle = 'Charles River Mice')
+
+allExp_tc_plot <- make_plot(input_table = ordered_proc_cfuCount,
+                           wanted_experiment = NULL,
+                           wanted_vendor = 'taconic',
+                           x_axis = 'ord_mouse_id',
+                           y_axis = 'location',
+                           alpha_value = 'microbe_presence',
+                           fill_value = 'diet',
+                           point_size = 6,
+                           y_labels = location_y_labs,
+                           fill_legend_title = 'Diet',
+                           fill_labels = diet_fill_labs,
+                           alpha_legend_title = 'Bacterial CFUs',
+                           alpha_labels = presAbs_labs,
+                           x_name = 'Mouse',
+                           y_name = 'Location',
+                           wanted_title = 'All Experiment Results',
+                           wanted_subtitle = 'Taconic Mice')
+
+allExp_cr_plot
+allExp_tc_plot
+```
+
 **CDD01 Plots Together**
-for comparison
 ```{r, fig.width=10, fig.height=5.5}
-cdd01_legend <- cowplot::get_legend(cdd01_cr_plot)
-cdd01_pre <- plot_grid(cdd01_cr_plot +
-                              xlab(' ') +
-                              ylab(' ') +
-                              theme(legend.position = 'none'),
-                            cdd01_tc_plot +
-                              ggtitle(' ') +
-                              ylab(' ') +
-                              theme(legend.position = 'none'),
-                            ncol = 1)
-
-cdd01_together <- plot_grid(cdd01_pre, cdd01_legend,
-                            rel_widths = c(1, 0.5))
-
-cdd01_together_y <- textGrob('Location',
-                             gp = gpar(fontsize = 20),
-                             rot = 90)
-
-cdd01_together <- grid.arrange(arrangeGrob(cdd01_together, left = cdd01_together_y))
+cdd01_together <- put_plots_together(plot1 = cdd01_cr_plot,
+                                     plot2 = cdd01_tc_plot,
+                                     y_axis_label = 'Location')
 
 cdd01_together
 ```
 
 **CDD02 Plots Together**
 ```{r, fig.width=11, fig.height=6}
-cdd02_legend <- cowplot::get_legend(cdd02_cr_plot)
-cdd02_pre <- plot_grid(cdd02_cr_plot +
-                              xlab(' ') +
-                              ylab(' ') +
-                              theme(legend.position = 'none'),
-                            cdd02_tc_plot +
-                              ggtitle(' ') +
-                              ylab(' ') +
-                              theme(legend.position = 'none'),
-                            ncol = 1)
-
-cdd02_together <- plot_grid(cdd02_pre, cdd02_legend,
-                            rel_widths = c(1, 0.5))
-
-cdd02_together_y <- textGrob('Location',
-                             gp = gpar(fontsize = 20),
-                             rot = 90)
-
-cdd02_together <- grid.arrange(arrangeGrob(cdd02_together, left = cdd02_together_y))
+cdd02_together <- put_plots_together(plot1 = cdd02_cr_plot,
+                                     plot2 = cdd02_tc_plot,
+                                     y_axis_label = 'Location')
 
 cdd02_together
 ```
 
 **CDD03 Plots Together**
 ```{r, fig.width=11, fig.height=6}
-cdd03_legend <- cowplot::get_legend(cdd03_cr_plot)
-cdd03_pre <- plot_grid(cdd03_cr_plot +
-                              xlab(' ') +
-                              ylab(' ') +
-                              theme(legend.position = 'none'),
-                            cdd03_tc_plot +
-                              ggtitle(' ') +
-                              ylab(' ') +
-                              theme(legend.position = 'none'),
-                            ncol = 1)
-
-cdd03_together <- plot_grid(cdd03_pre, cdd03_legend,
-                            rel_widths = c(1, 0.5))
-
-cdd03_together_y <- textGrob('Location',
-                             gp = gpar(fontsize = 20),
-                             rot = 90)
-
-cdd03_together <- grid.arrange(arrangeGrob(cdd03_together, left = cdd03_together_y))
+cdd03_together <- put_plots_together(plot1 = cdd03_cr_plot,
+                                     plot2 = cdd03_tc_plot,
+                                     y_axis_label = 'Location')
 
 cdd03_together
 ```
+
+**All experiments plots together**
+```{r, fig.width=17, fig.height=7}
+allExp_together <- put_plots_together(plot1 = allExp_cr_plot,
+                                      plot2 = allExp_tc_plot,
+                                      y_axis_label = 'Location')
+
+allExp_together
+```
+
 
 **Saving my Outputs**
 ```{r}
@@ -334,5 +373,13 @@ ggsave('../plots/cdd03_culture_results.pdf',
        plot = cdd03_together,
        width = 11,
        height = 6)
+ggsave('../plots/allExp_culture_results.pdf',
+       plot = allExp_together,
+       width = 17,
+       height = 7)
+
+## saving processed cfu count table as a .tsv for later analysis
+write_tsv(proc_cfu_count,
+          '../data/misc/proc_combined_CDD_cfuCounts.tsv')
 ```
 

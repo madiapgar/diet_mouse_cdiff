@@ -148,12 +148,17 @@ make_my_biplot <- function(x_axis,
 **File Paths**
 ```{r}
 metadata_FP <- '../data/misc/proc_newExp_d15-d3_metadata.tsv'
+cfu_count_FP <- '../data/misc/proc_combined_CDD_cfuCounts.tsv'
 tax_FP <- '../data/qiime/taxonomy.qza'
 uu_biplot_FP <- '../data/qiime/core_outputs/uu_biplot_matrix.qza'
 wu_biplot_FP <- '../data/qiime/core_outputs/wu_biplot_matrix.qza'
 
 vendor_labs <- c('Charles River',
                  'Taconic')
+
+cfuCount_table <- read_tsv(cfu_count_FP) %>% 
+  select(mouse_id, location, microbe_presence) %>% 
+  spread(key = 'location', value = 'microbe_presence')
 ```
 
 # **PC1 and PC2**
@@ -169,7 +174,12 @@ uu_files <- prep_my_biplot_files(biplot_fp = uu_biplot_FP,
                                  lines_longer_by = 4)
 
 uu_biplot_points <- uu_files$DFPoints %>% 
-                      mutate(day_post_inf = as.factor(day_post_inf))
+                      left_join(cfuCount_table, by = 'mouse_id') %>% 
+                      mutate(day_post_inf = as.factor(day_post_inf),
+                             spleen = as.factor(spleen),
+                             liver = as.factor(liver),
+                             blood = as.factor(blood)) %>% 
+                      na.omit()
 
 uu_biplot_lines <- uu_files$DFLines
 uu_pcoa_var <- uu_files$PCvar
@@ -192,7 +202,12 @@ wu_files <- prep_my_biplot_files(biplot_fp = wu_biplot_FP,
                                  lines_longer_by = 9)
 
 wu_biplot_points <- wu_files$DFPoints %>% 
-                      mutate(day_post_inf = as.factor(day_post_inf))
+                      left_join(cfuCount_table, by = 'mouse_id') %>% 
+                      mutate(day_post_inf = as.factor(day_post_inf),
+                             spleen = as.factor(spleen),
+                             liver = as.factor(liver),
+                             blood = as.factor(blood)) %>% 
+                      na.omit()
 
 wu_biplot_lines <- wu_files$DFLines
 wu_pcoa_var <- wu_files$PCvar
@@ -209,9 +224,9 @@ wu_y_lab <- pcoa_ax_lab(unifrac_var = wu_pcoa_var,
 uu_biplot <- make_my_biplot(x_axis = 'PC1',
                             y_axis = 'PC2',
                             points_df = uu_biplot_points,
-                            points_color = 'day_post_inf',
+                            points_color = 'liver',
                             points_shape = 'vendor',
-                            color_name = 'Days Relative\nto Infection',
+                            color_name = 'Microbes Present\nin Liver',
                             shape_labels = vendor_labs,
                             lines_df = uu_biplot_lines,
                             lines_label = 'Family',
@@ -225,9 +240,9 @@ uu_biplot <- make_my_biplot(x_axis = 'PC1',
 wu_biplot <- make_my_biplot(x_axis = 'PC1',
                             y_axis = 'PC2',
                             points_df = wu_biplot_points,
-                            points_color = 'day_post_inf',
+                            points_color = 'liver',
                             points_shape = 'vendor',
-                            color_name = 'Days Relative\nto Infection',
+                            color_name = 'Microbes Present\nin Liver',
                             shape_labels = vendor_labs,
                             lines_df = wu_biplot_lines,
                             lines_label = 'Family',

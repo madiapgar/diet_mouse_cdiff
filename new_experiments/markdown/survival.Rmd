@@ -1,0 +1,216 @@
+---
+title: "survival"
+output: html_document
+date: "2024-07-23"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(survminer)
+require(survival)
+library(readr)
+library(magrittr)
+library(viridis)
+```
+
+**Functions**
+angry bc survminer doesn't like to be put in a function and I don't have it in me rn to deal with it 
+```{r}
+fit_survival <- function(survival_table,
+                         survival_day_col,
+                         survival_results_col,
+                         test_between_col){
+  
+  wanted_fit <- surv_fit(formula = Surv(survival_table$survival_day_col, 
+                                        survival_table$survival_results_col) ~ survival_table$test_between_col,
+                          data = survival_table)
+  return(wanted_fit)
+}
+
+```
+
+**File Paths**
+```{r}
+unproc_surv_fp <- '../data/misc/unproc_survival_data.tsv'
+
+diet_labels <- c('Chow',
+                 'High Fat / High Fiber', 
+                 'High Fat / Low Fiber',
+                 'Low Fat / High Fiber',
+                 'Low Fat / Low Fiber')
+names(diet_labels) <- c('Chow',
+                        'HF/HF',
+                        'HF/LF',
+                        'LF/HF',
+                        'LF/LF')
+
+vendor_labels <- c('Charles River',
+                   'Taconic')
+names(vendor_labels) <- c('charles_river',
+                          'taconic')
+```
+
+**Reading in File**
+```{r}
+unproc_surv_table <- read_tsv(unproc_surv_fp,
+                              col_types = cols(vendor = col_character(),
+                                                mouse_id = col_character(),
+                                                experiment = col_character(),
+                                                mouse_sex = col_character(),
+                                                diet = col_character(),
+                                                sac_exptDay = col_integer(),
+                                                day_post_inf = col_integer(),
+                                                survival = col_integer()))
+```
+
+**Ugh data wrangling again**
+```{r}
+unproc_surv_table <- unproc_surv_table %>% 
+                        mutate(test_surv = ifelse(day_post_inf == 14, 0, survival))
+```
+
+**Fitting Survival Data**
+survminer gets pissed off if you don't have the data exactly their way so idk how to make this more concise (i.e. I cant put it in a function at all so what the hell survminer)
+```{r}
+diet_surv_fit <- surv_fit(formula = Surv(day_post_inf, test_surv) ~ diet,
+                          data = unproc_surv_table)
+
+vendor_surv_fit <- surv_fit(formula = Surv(day_post_inf, test_surv) ~ vendor,
+                            data = unproc_surv_table)
+
+experiment_surv_fit <- surv_fit(formula = Surv(day_post_inf, test_surv) ~ experiment,
+                                data = unproc_surv_table)
+```
+
+**Attempting to make a plot**
+```{r, fig.width=10, fig.height=7}
+diet_base_plot <- ggsurvplot(diet_surv_fit,
+                             data = unproc_surv_table,
+                             palette = "Dark2",
+                             ggtheme = theme_bw(base_size = 20),
+                             legend = "none",
+                             conf.int = TRUE,
+                             xlab = 'Days Post Infection',
+                             ylab = 'Survival Probability',
+                             title = 'New Experiments Survival by Diet')
+
+diet_base_plot$plot +
+    facet_wrap(~factor(diet, levels = c('Chow',
+                                        'HF/HF',
+                                        'HF/LF',
+                                        'LF/HF',
+                                        'LF/LF')),
+               labeller = labeller(.cols = diet_labels),
+               nrow = 2) -> diet_plot_final
+
+diet_base_plot
+diet_plot_final
+```
+
+```{r, fig.width=10, fig.height=7}
+vendor_base_plot <- ggsurvplot(vendor_surv_fit,
+                             data = unproc_surv_table,
+                             palette = "Dark2",
+                             ggtheme = theme_bw(base_size = 20),
+                             legend = "none",
+                             conf.int = TRUE,
+                             xlab = 'Days Post Infection',
+                             ylab = 'Survival Probability',
+                             title = 'New Experiments Survival by Vendor')
+
+vendor_base_plot$plot +
+    facet_wrap(~factor(vendor, levels = c('charles_river',
+                                          'taconic')),
+               labeller = labeller(.cols = vendor_labels),
+               nrow = 1) -> vendor_plot_final
+
+vendor_base_plot
+vendor_plot_final
+```
+
+```{r, fig.width=15, fig.height=5}
+experiment_base_plot <- ggsurvplot(experiment_surv_fit,
+                                   data = unproc_surv_table,
+                                   palette = "Dark2",
+                                   ggtheme = theme_bw(base_size = 20),
+                                   legend = "none",
+                                   conf.int = TRUE,
+                                   xlab = 'Days Post Infection',
+                                   ylab = 'Survival Probability',
+                                   title = 'New Experiments Survival by Experiment')
+
+experiment_base_plot$plot +
+    facet_wrap(~factor(experiment, levels = c('CDD01',
+                                              'CDD02',
+                                              'CDD03')),
+               nrow = 1) -> experiment_plot_final
+
+experiment_base_plot
+experiment_plot_final
+```
+
+**Stats**
+```{r}
+## diet
+diet_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, test_surv) ~ diet,
+                                   data = unproc_surv_table,
+                                   p.adjust.method = "BH")
+
+diet_pvalue <- as_tibble(diet_pairwise$p.value,
+                         rownames = 'diet')
+diet_pvalue %>% 
+  gather(-diet, key = diet2, value = p.value) %>% 
+  na.omit() -> diet_pvalue
+
+names(diet_pvalue)[names(diet_pvalue) == 'diet'] <- 'diet1'
+
+
+diet_pvalue['signif'] <- symnum(diet_pvalue$p.value,
+                                cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                symbols = c("****", "***", "**", "*", "+", "ns"),
+                                abbr.colnames = FALSE,
+                                na = "")
+
+## vendor
+vendor_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, test_surv) ~ vendor,
+                                     data = unproc_surv_table,
+                                     p.adjust.method = "BH")
+
+vendor_pvalue <- as_tibble(vendor_pairwise$p.value,
+                           rownames = 'vendor')
+vendor_pvalue %>% 
+  gather(-vendor, key = vendor2, value = p.value) -> vendor_pvalue
+
+names(vendor_pvalue)[names(vendor_pvalue) == 'vendor'] <- 'vendor1'
+
+
+vendor_pvalue['signif'] <- symnum(vendor_pvalue$p.value,
+                                  cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                  symbols = c("****", "***", "**", "*", "+", "ns"),
+                                  abbr.colnames = FALSE,
+                                  na = "")
+
+## experiment
+experiment_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, test_surv) ~ experiment,
+                                         data = unproc_surv_table,
+                                         p.adjust.method = "BH")
+
+experiment_pvalue <- as_tibble(experiment_pairwise$p.value,
+                         rownames = 'experiment')
+experiment_pvalue %>% 
+  gather(-experiment, key = experiment2, value = p.value) %>% 
+  na.omit() -> experiment_pvalue
+
+names(experiment_pvalue)[names(experiment_pvalue) == 'experiment'] <- 'experiment1'
+
+experiment_pvalue['signif'] <- symnum(experiment_pvalue$p.value,
+                                      cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                      symbols = c("****", "***", "**", "*", "+", "ns"),
+                                      abbr.colnames = FALSE,
+                                      na = "")
+```
+

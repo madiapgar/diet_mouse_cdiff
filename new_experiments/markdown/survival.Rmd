@@ -18,17 +18,27 @@ library(viridis)
 ```
 
 **Functions**
-angry bc survminer doesn't like to be put in a function and I don't have it in me rn to deal with it 
+FOR FIT_SURVIVAL:
+- column names don't need to be passed in as a string because I'm using *substitute* in the function 
+- *substitute* is literally the only way I can pass variables in a function to *Surv()* bc it hates me 
+- I use *eval.parent()* instead of *return()* in this function because I'm creating an unevaluated expression with *substitute()*. *eval.parent()* evaluates the expression I create in the function (so in this case, the survival curve fit) and returns it to me. 
 ```{r}
 fit_survival <- function(survival_table,
                          survival_day_col,
                          survival_results_col,
-                         test_between_col){
+                         test_between_col1,
+                         test_between_col2){
   
-  wanted_fit <- surv_fit(formula = Surv(survival_table$survival_day_col, 
-                                        survival_table$survival_results_col) ~ survival_table$test_between_col,
-                          data = survival_table)
-  return(wanted_fit)
+  params <- list(survival_table = substitute(survival_table),
+                 survival_day_col = substitute(survival_day_col),
+                 survival_results_col = substitute(survival_results_col),
+                 test_between_col1 = substitute(test_between_col1),
+                 test_between_col2 = substitute(test_between_col2))
+  
+  wanted_fit <- substitute(surv_fit(formula = Surv(survival_day_col, survival_results_col) ~ test_between_col1 +
+                                      test_between_col2,
+                          data = survival_table), params)
+  eval.parent(wanted_fit)
 }
 
 ```
@@ -70,93 +80,73 @@ unproc_surv_table <- read_tsv(unproc_surv_fp,
 **Ugh data wrangling again**
 ```{r}
 unproc_surv_table <- unproc_surv_table %>% 
-                        mutate(test_surv = ifelse(day_post_inf == 14, 0, survival))
+                        mutate(test_surv = ifelse(day_post_inf == 14, 0, survival)) %>% 
+                        filter(experiment != 'CDD01')
 ```
 
-**Fitting Survival Data**
-survminer gets pissed off if you don't have the data exactly their way so idk how to make this more concise (i.e. I cant put it in a function at all so what the hell survminer)
-```{r}
-diet_surv_fit <- surv_fit(formula = Surv(day_post_inf, test_surv) ~ diet,
-                          data = unproc_surv_table)
+**Diet and Vendor Survival Curve**
+```{r, fig.width=17, fig.height=7}
+## fitting data
+diet_surv_fit <- fit_survival(survival_table = unproc_surv_table,
+                              survival_day_col = day_post_inf,
+                              survival_results_col = test_surv,
+                              test_between_col1 = diet,
+                              test_between_col2 = vendor)
 
-vendor_surv_fit <- surv_fit(formula = Surv(day_post_inf, test_surv) ~ vendor,
-                            data = unproc_surv_table)
-
-experiment_surv_fit <- surv_fit(formula = Surv(day_post_inf, test_surv) ~ experiment,
-                                data = unproc_surv_table)
-```
-
-**Attempting to make a plot**
-```{r, fig.width=10, fig.height=7}
+## plot
 diet_base_plot <- ggsurvplot(diet_surv_fit,
                              data = unproc_surv_table,
-                             palette = "Dark2",
+                             color = "black",
                              ggtheme = theme_bw(base_size = 20),
                              legend = "none",
                              conf.int = TRUE,
                              xlab = 'Days Post Infection',
                              ylab = 'Survival Probability',
-                             title = 'New Experiments Survival by Diet')
+                             title = 'Survival by Diet and Vendor')
 
 diet_base_plot$plot +
-    facet_wrap(~factor(diet, levels = c('Chow',
-                                        'HF/HF',
-                                        'HF/LF',
-                                        'LF/HF',
-                                        'LF/LF')),
-               labeller = labeller(.cols = diet_labels),
-               nrow = 2) -> diet_plot_final
+    facet_grid(cols = vars(diet),
+               rows = vars(vendor),
+               labeller = labeller(.cols = diet_labels,
+                                   .rows = vendor_labels)) +
+  theme(strip.text.y.right = element_text(angle = 0)) -> diet_plot_final
 
-diet_base_plot
 diet_plot_final
 ```
 
-```{r, fig.width=10, fig.height=7}
-vendor_base_plot <- ggsurvplot(vendor_surv_fit,
-                             data = unproc_surv_table,
-                             palette = "Dark2",
-                             ggtheme = theme_bw(base_size = 20),
-                             legend = "none",
-                             conf.int = TRUE,
-                             xlab = 'Days Post Infection',
-                             ylab = 'Survival Probability',
-                             title = 'New Experiments Survival by Vendor')
+**Experiment and Vendor Survial Curve**
+```{r, fig.width=10, fig.height=6}
+## fitting data
+experiment_surv_fit <- fit_survival(survival_table = unproc_surv_table,
+                                    survival_day_col = day_post_inf,
+                                    survival_results_col = test_surv,
+                                    test_between_col1 = experiment,
+                                    test_between_col2 = vendor)
 
-vendor_base_plot$plot +
-    facet_wrap(~factor(vendor, levels = c('charles_river',
-                                          'taconic')),
-               labeller = labeller(.cols = vendor_labels),
-               nrow = 1) -> vendor_plot_final
-
-vendor_base_plot
-vendor_plot_final
-```
-
-```{r, fig.width=15, fig.height=5}
+## plot
 experiment_base_plot <- ggsurvplot(experiment_surv_fit,
                                    data = unproc_surv_table,
-                                   palette = "Dark2",
+                                   color = "black",
                                    ggtheme = theme_bw(base_size = 20),
                                    legend = "none",
                                    conf.int = TRUE,
                                    xlab = 'Days Post Infection',
                                    ylab = 'Survival Probability',
-                                   title = 'New Experiments Survival by Experiment')
+                                   title = 'Survival by Experiment and Vendor')
 
 experiment_base_plot$plot +
-    facet_wrap(~factor(experiment, levels = c('CDD01',
-                                              'CDD02',
-                                              'CDD03')),
-               nrow = 1) -> experiment_plot_final
+    facet_grid(cols = vars(experiment),
+               rows = vars(vendor),
+               labeller = labeller(.rows = vendor_labels)) +
+    theme(strip.text.y.right = element_text(angle = 0)) -> experiment_plot_final
 
-experiment_base_plot
 experiment_plot_final
 ```
 
 **Stats**
 ```{r}
 ## diet
-diet_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, test_surv) ~ diet,
+diet_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, test_surv) ~ diet + vendor,
                                    data = unproc_surv_table,
                                    p.adjust.method = "BH")
 
@@ -174,28 +164,11 @@ diet_pvalue['signif'] <- symnum(diet_pvalue$p.value,
                                 symbols = c("****", "***", "**", "*", "+", "ns"),
                                 abbr.colnames = FALSE,
                                 na = "")
+```
 
-## vendor
-vendor_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, test_surv) ~ vendor,
-                                     data = unproc_surv_table,
-                                     p.adjust.method = "BH")
-
-vendor_pvalue <- as_tibble(vendor_pairwise$p.value,
-                           rownames = 'vendor')
-vendor_pvalue %>% 
-  gather(-vendor, key = vendor2, value = p.value) -> vendor_pvalue
-
-names(vendor_pvalue)[names(vendor_pvalue) == 'vendor'] <- 'vendor1'
-
-
-vendor_pvalue['signif'] <- symnum(vendor_pvalue$p.value,
-                                  cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                  symbols = c("****", "***", "**", "*", "+", "ns"),
-                                  abbr.colnames = FALSE,
-                                  na = "")
-
+```{r}
 ## experiment
-experiment_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, test_surv) ~ experiment,
+experiment_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, test_surv) ~ experiment + vendor,
                                          data = unproc_surv_table,
                                          p.adjust.method = "BH")
 
@@ -212,5 +185,17 @@ experiment_pvalue['signif'] <- symnum(experiment_pvalue$p.value,
                                       symbols = c("****", "***", "**", "*", "+", "ns"),
                                       abbr.colnames = FALSE,
                                       na = "")
+```
+
+**Saving my Outputs**
+```{r}
+ggsave('../plots/dietVendor_survival.pdf',
+       plot = diet_plot_final,
+       width = 17,
+       height = 7)
+ggsave('../plots/experimentVendor_survival.pdf',
+       plot = experiment_plot_final,
+       width = 10,
+       height = 6)
 ```
 

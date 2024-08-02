@@ -15,7 +15,7 @@ cfuCount_table <- read_tsv(cfu_count_FP)
 ## data wrangling
 ## 0: alive (or alive until the end)
 ## 1: dead
-pre_surv <- cfuCount_table %>% 
+surv <- cfuCount_table %>% 
               spread(key = 'location', value = 'microbe_presence') %>% 
               select(!c('spleen', 'liver', 'blood')) %>% 
               mutate(survival = ifelse(sac_exptDay == 30, 0, 1),
@@ -29,8 +29,9 @@ pre_surv <- cfuCount_table %>%
                        sac_exptDay == 23 ~ 8,
                        sac_exptDay == 29 ~ 14,
                        sac_exptDay == 30 ~ 15
-                     )) 
+                     ),
+                     actual_surv = ifelse(day_post_inf == 14, 0, survival))
 
 ## mini version bc idek what I'm doing with this its humbling
-write_tsv(pre_surv,
-          './new_experiments/data/misc/unproc_survival_data.tsv')
+write_tsv(surv,
+          './new_experiments/data/misc/survival_data.tsv')

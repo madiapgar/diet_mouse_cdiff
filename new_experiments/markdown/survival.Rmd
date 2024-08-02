@@ -41,11 +41,27 @@ fit_survival <- function(survival_table,
   eval.parent(wanted_fit)
 }
 
+## to take p-values calculated and put them into a nice table
+pretty_pvalue <- function(pairwise_results){
+  
+  pvalue_table <- as_tibble(pairwise_results$p.value,
+                            rownames = 'group1')
+  pvalue_table %>% 
+    gather(-group1, key = group2, value = p.value) %>% 
+    na.omit() -> pvalue_table
+  
+  pvalue_table['signif'] <- symnum(pvalue_table$p.value,
+                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                   symbols = c("****", "***", "**", "*", "ns"),
+                                   abbr.colnames = FALSE,
+                                   na = "")
+  return(pvalue_table)
+}
 ```
 
 **File Paths**
 ```{r}
-unproc_surv_fp <- '../data/misc/unproc_survival_data.tsv'
+surv_fp <- '../data/misc/survival_data.tsv'
 
 diet_labels <- c('Chow',
                  'High Fat / High Fiber', 
@@ -66,136 +82,174 @@ names(vendor_labels) <- c('charles_river',
 
 **Reading in File**
 ```{r}
-unproc_surv_table <- read_tsv(unproc_surv_fp,
-                              col_types = cols(vendor = col_character(),
-                                                mouse_id = col_character(),
-                                                experiment = col_character(),
-                                                mouse_sex = col_character(),
-                                                diet = col_character(),
-                                                sac_exptDay = col_integer(),
-                                                day_post_inf = col_integer(),
-                                                survival = col_integer()))
+surv_table <- read_tsv(surv_fp,
+                       col_types = cols(vendor = col_character(),
+                                        mouse_id = col_character(),
+                                        experiment = col_character(),
+                                        mouse_sex = col_character(),
+                                        diet = col_character(),
+                                        sac_exptDay = col_integer(),
+                                        day_post_inf = col_integer(),
+                                        survival = col_integer()))
+
+## filtering out the first set of experiments since it could skew the results
+surv_table <- surv_table %>% 
+                filter(experiment != 'CDD01')
 ```
 
-**Ugh data wrangling again**
-```{r}
-unproc_surv_table <- unproc_surv_table %>% 
-                        mutate(test_surv = ifelse(day_post_inf == 14, 0, survival)) %>% 
-                        filter(experiment != 'CDD01')
-```
+
+**IN THESE PLOTS:**
+- Day 0 on the x-axis is the day that the mice are infected with C. diff, so the day that the mice start dying is how soon after CDI that they succumb
 
 **Diet and Vendor Survival Curve**
 ```{r, fig.width=17, fig.height=7}
 ## fitting data
-diet_surv_fit <- fit_survival(survival_table = unproc_surv_table,
-                              survival_day_col = day_post_inf,
-                              survival_results_col = test_surv,
-                              test_between_col1 = diet,
-                              test_between_col2 = vendor)
-
-## plot
-diet_base_plot <- ggsurvplot(diet_surv_fit,
-                             data = unproc_surv_table,
-                             color = "black",
-                             ggtheme = theme_bw(base_size = 20),
-                             legend = "none",
-                             conf.int = TRUE,
-                             xlab = 'Days Post Infection',
-                             ylab = 'Survival Probability',
-                             title = 'Survival by Diet and Vendor')
-
-diet_base_plot$plot +
-    facet_grid(cols = vars(diet),
-               rows = vars(vendor),
-               labeller = labeller(.cols = diet_labels,
-                                   .rows = vendor_labels)) +
-  theme(strip.text.y.right = element_text(angle = 0)) -> diet_plot_final
-
-diet_plot_final
-```
-
-**Experiment and Vendor Survial Curve**
-```{r, fig.width=10, fig.height=6}
-## fitting data
-experiment_surv_fit <- fit_survival(survival_table = unproc_surv_table,
+dietVendor_surv_fit <- fit_survival(survival_table = surv_table,
                                     survival_day_col = day_post_inf,
-                                    survival_results_col = test_surv,
-                                    test_between_col1 = experiment,
+                                    survival_results_col = actual_surv,
+                                    test_between_col1 = diet,
                                     test_between_col2 = vendor)
 
 ## plot
-experiment_base_plot <- ggsurvplot(experiment_surv_fit,
-                                   data = unproc_surv_table,
+dietVendor_base_plot <- ggsurvplot(dietVendor_surv_fit,
+                                   data = surv_table,
                                    color = "black",
                                    ggtheme = theme_bw(base_size = 20),
                                    legend = "none",
                                    conf.int = TRUE,
                                    xlab = 'Days Post Infection',
                                    ylab = 'Survival Probability',
-                                   title = 'Survival by Experiment and Vendor')
+                                   title = 'Survival by Diet and Vendor')
 
-experiment_base_plot$plot +
+dietVendor_base_plot$plot +
+    facet_grid(cols = vars(diet),
+               rows = vars(vendor),
+               labeller = labeller(.cols = diet_labels,
+                                   .rows = vendor_labels)) +
+  theme(strip.text.y.right = element_text(angle = 0)) -> dietVendor_plot
+
+dietVendor_plot
+```
+
+**Diet and Experiment Survival Curve**
+```{r, fig.width=17, fig.height=7}
+## fitting data
+dietExp_surv_fit <- fit_survival(survival_table = surv_table,
+                                 survival_day_col = day_post_inf,
+                                 survival_results_col = actual_surv,
+                                 test_between_col1 = diet,
+                                 test_between_col2 = experiment)
+
+## plot
+dietExp_base_plot <- ggsurvplot(dietExp_surv_fit,
+                                data = surv_table,
+                                color = "black",
+                                ggtheme = theme_bw(base_size = 20),
+                                legend = "none",
+                                conf.int = TRUE,
+                                xlab = 'Days Post Infection',
+                                ylab = 'Survival Probability',
+                                title = 'Survival by Diet and Experiment')
+
+dietExp_base_plot$plot +
+    facet_grid(cols = vars(diet),
+               rows = vars(experiment),
+               labeller = labeller(.cols = diet_labels)) +
+  theme(strip.text.y.right = element_text(angle = 0)) -> dietExp_plot
+
+dietExp_plot
+```
+
+**Experiment and Vendor Survial Curve**
+```{r, fig.width=10, fig.height=6}
+## fitting data
+expVendor_surv_fit <- fit_survival(survival_table = surv_table,
+                                   survival_day_col = day_post_inf,
+                                   survival_results_col = actual_surv,
+                                   test_between_col1 = experiment,
+                                   test_between_col2 = vendor)
+
+## plot
+expVendor_base_plot <- ggsurvplot(expVendor_surv_fit,
+                                  data = surv_table,
+                                  color = "black",
+                                  ggtheme = theme_bw(base_size = 20),
+                                  legend = "none",
+                                  conf.int = TRUE,
+                                  xlab = 'Days Post Infection',
+                                  ylab = 'Survival Probability',
+                                  title = 'Survival by Experiment and Vendor')
+
+expVendor_base_plot$plot +
     facet_grid(cols = vars(experiment),
                rows = vars(vendor),
                labeller = labeller(.rows = vendor_labels)) +
-    theme(strip.text.y.right = element_text(angle = 0)) -> experiment_plot_final
+    theme(strip.text.y.right = element_text(angle = 0)) -> expVendor_plot
 
-experiment_plot_final
+expVendor_plot
 ```
 
 **Stats**
 ```{r}
-## diet
-diet_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, test_surv) ~ diet + vendor,
-                                   data = unproc_surv_table,
-                                   p.adjust.method = "BH")
+## diet and vendor stats
+dietVendor_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, actual_surv) ~ diet + vendor,
+                                         data = surv_table,
+                                         p.adjust.method = "BH")
 
-diet_pvalue <- as_tibble(diet_pairwise$p.value,
-                         rownames = 'diet')
-diet_pvalue %>% 
-  gather(-diet, key = diet2, value = p.value) %>% 
-  na.omit() -> diet_pvalue
-
-names(diet_pvalue)[names(diet_pvalue) == 'diet'] <- 'diet1'
-
-
-diet_pvalue['signif'] <- symnum(diet_pvalue$p.value,
-                                cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                symbols = c("****", "***", "**", "*", "+", "ns"),
-                                abbr.colnames = FALSE,
-                                na = "")
+dietVendor_pvalue <- pretty_pvalue(pairwise_results = dietVendor_pairwise)
 ```
 
 ```{r}
-## experiment
-experiment_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, test_surv) ~ experiment + vendor,
-                                         data = unproc_surv_table,
+## just overall diet stats
+diet_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, actual_surv) ~ diet,
+                                   data = surv_table,
+                                   p.adjust.method = "BH")
+
+diet_pvalue <- pretty_pvalue(pairwise_results = diet_pairwise)
+```
+
+```{r}
+## diet and experiment stats
+dietExp_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, actual_surv) ~ diet + experiment,
+                                      data = surv_table,
+                                      p.adjust.method = "BH")
+
+dietExp_pvalue <- pretty_pvalue(pairwise_results = dietExp_pairwise)
+```
+
+```{r}
+## experiment and vendor stats
+expVendor_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, actual_surv) ~ experiment + vendor,
+                                         data = surv_table,
                                          p.adjust.method = "BH")
 
-experiment_pvalue <- as_tibble(experiment_pairwise$p.value,
-                         rownames = 'experiment')
-experiment_pvalue %>% 
-  gather(-experiment, key = experiment2, value = p.value) %>% 
-  na.omit() -> experiment_pvalue
-
-names(experiment_pvalue)[names(experiment_pvalue) == 'experiment'] <- 'experiment1'
-
-experiment_pvalue['signif'] <- symnum(experiment_pvalue$p.value,
-                                      cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                      symbols = c("****", "***", "**", "*", "+", "ns"),
-                                      abbr.colnames = FALSE,
-                                      na = "")
+expVendor_pvalue <- pretty_pvalue(pairwise_results = expVendor_pairwise)
 ```
 
 **Saving my Outputs**
 ```{r}
+## plots
 ggsave('../plots/dietVendor_survival.pdf',
-       plot = diet_plot_final,
+       plot = dietVendor_plot,
+       width = 17,
+       height = 7)
+ggsave('../plots/dietExp_survival.pdf',
+       plot = dietExp_plot,
        width = 17,
        height = 7)
 ggsave('../plots/experimentVendor_survival.pdf',
-       plot = experiment_plot_final,
+       plot = expVendor_plot,
        width = 10,
        height = 6)
+
+## stats
+write_tsv(dietVendor_pvalue,
+          '../stats/surv_dietVendor.tsv')
+write_tsv(diet_pvalue,
+          '../stats/surv_diet.tsv')
+write_tsv(dietExp_pvalue,
+          '../stats/surv_dietExp.tsv')
+write_tsv(expVendor_pvalue,
+          '../stats/surv_expVendor.tsv')
 ```
 

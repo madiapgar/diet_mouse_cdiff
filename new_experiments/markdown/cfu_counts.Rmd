@@ -29,12 +29,15 @@ make_plot <- function(input_table,
                       y_axis,
                       alpha_value,
                       fill_value,
+                      shape_value,
                       point_size,
                       y_labels,
                       fill_legend_title,
                       fill_labels,
                       alpha_legend_title,
                       alpha_labels,
+                      shape_legend_title,
+                      shape_labels,
                       x_name,
                       y_name,
                       wanted_title,
@@ -54,14 +57,17 @@ make_plot <- function(input_table,
             ggplot(aes(x = .data[[x_axis]], y = .data[[y_axis]], alpha = .data[[alpha_value]])) +
             theme_bw(base_size = 20) +
             theme(axis.text.x = element_blank()) +
-            geom_point(aes(fill = .data[[fill_value]]), size = point_size, pch = 21) +
+            geom_point(aes(color = .data[[fill_value]], shape = .data[[shape_value]]), 
+                       size = point_size) +
             scale_y_discrete(labels = y_labels) +
-            scale_fill_viridis(option = 'H', 
+            scale_color_viridis(option = 'H', 
                                name = fill_legend_title,
                                discrete = TRUE,
                                labels = fill_labels) +
             scale_alpha_discrete(name = alpha_legend_title,
                                  labels = alpha_labels) +
+            scale_shape_discrete(name = shape_legend_title,
+                                 labels = shape_labels) +
             labs(x = x_name,
                  y = y_name, 
                  title = wanted_title, 
@@ -97,6 +103,7 @@ put_plots_together <- function(plot1,
 ```{r}
 metadata_fp <- '../data/misc/proc_newExp_d15-d3_metadata.tsv'
 cfu_count_fp <- '../data/misc/combined_CDD_cfuCounts.txt'
+surv_status_fp <- '../data/misc/survival_status.tsv'
 
 location_y_labs <- c('Blood',
                      'Liver',
@@ -110,12 +117,15 @@ short_diet_fill_labs <- c('Chow',
                           'LFt/LFb')
 presAbs_labs <- c('Absent',
                   'Present')
+surv_labs <- c("Didn't Survive",
+               'Survived')
 ```
 
 **Reading in Files**
 ```{r}
 meta <- read_tsv(metadata_fp)
 cfu_count_table <- read_tsv(cfu_count_fp)
+surv_status <- read_tsv(surv_status_fp)
 ```
 **Data Wrangling**
 ```{r}
@@ -144,7 +154,8 @@ proc_cfu_count <- cfu_count_table %>%
          diet = ifelse(diet == 'HFLF', 'HF/LF', diet), 
          diet = ifelse(diet == 'HFHF', 'HF/HF', diet),
          vendor = ifelse(vendor == 'CR', 'charles_river', 'taconic')) %>% 
-  rename('mouse_sex' = 'sex')
+  rename('mouse_sex' = 'sex') %>% 
+  left_join(surv_status, by = "mouse_id")
 ```
 
 **CDD01 Plots**
@@ -156,12 +167,15 @@ cdd01_cr_plot <- make_plot(input_table = proc_cfu_count,
                            y_axis = 'location',
                            alpha_value = 'microbe_presence',
                            fill_value = 'diet',
+                           shape_value = 'status',
                            point_size = 6,
                            y_labels = location_y_labs,
                            fill_legend_title = 'Diet',
                            fill_labels = short_diet_fill_labs,
                            alpha_legend_title = 'Bacterial CFUs',
                            alpha_labels = presAbs_labs,
+                           shape_legend_title = 'Survival Status',
+                           shape_labels = surv_labs,
                            x_name = 'Mouse',
                            y_name = 'Location',
                            wanted_title = 'CDD01 Results',
@@ -174,12 +188,15 @@ cdd01_tc_plot <- make_plot(input_table = proc_cfu_count,
                            y_axis = 'location',
                            alpha_value = 'microbe_presence',
                            fill_value = 'diet',
+                           shape_value = 'status',
                            point_size = 6,
                            y_labels = location_y_labs,
                            fill_legend_title = 'Diet',
                            fill_labels = short_diet_fill_labs,
                            alpha_legend_title = 'Bacterial CFUs',
                            alpha_labels = presAbs_labs,
+                           shape_legend_title = 'Survival Status',
+                           shape_labels = surv_labs,
                            x_name = 'Mouse',
                            y_name = 'Location',
                            wanted_title = 'CDD01 Results',
@@ -188,7 +205,6 @@ cdd01_tc_plot <- make_plot(input_table = proc_cfu_count,
 cdd01_cr_plot
 cdd01_tc_plot
 ```
-
 
 **CDD02 Plots**
 ```{r, fig.width=10, fig.height=5}
@@ -199,12 +215,15 @@ cdd02_cr_plot <- make_plot(input_table = proc_cfu_count,
                            y_axis = 'location',
                            alpha_value = 'microbe_presence',
                            fill_value = 'diet',
+                           shape_value = 'status',
                            point_size = 6,
                            y_labels = location_y_labs,
                            fill_legend_title = 'Diet',
                            fill_labels = diet_fill_labs,
                            alpha_legend_title = 'Bacterial CFUs',
                            alpha_labels = presAbs_labs,
+                           shape_legend_title = 'Survival Status',
+                           shape_labels = surv_labs,
                            x_name = 'Mouse',
                            y_name = 'Location',
                            wanted_title = 'CDD02 Results',
@@ -217,12 +236,15 @@ cdd02_tc_plot <- make_plot(input_table = proc_cfu_count,
                            y_axis = 'location',
                            alpha_value = 'microbe_presence',
                            fill_value = 'diet',
+                           shape_value = 'status',
                            point_size = 6,
                            y_labels = location_y_labs,
                            fill_legend_title = 'Diet',
                            fill_labels = diet_fill_labs,
                            alpha_legend_title = 'Bacterial CFUs',
                            alpha_labels = presAbs_labs,
+                           shape_legend_title = 'Survival Status',
+                           shape_labels = surv_labs,
                            x_name = 'Mouse',
                            y_name = 'Location',
                            wanted_title = 'CDD02 Results',
@@ -241,12 +263,15 @@ cdd03_cr_plot <- make_plot(input_table = proc_cfu_count,
                            y_axis = 'location',
                            alpha_value = 'microbe_presence',
                            fill_value = 'diet',
+                           shape_value = 'status',
                            point_size = 6,
                            y_labels = location_y_labs,
                            fill_legend_title = 'Diet',
                            fill_labels = diet_fill_labs,
                            alpha_legend_title = 'Bacterial CFUs',
                            alpha_labels = presAbs_labs,
+                           shape_legend_title = 'Survival Status',
+                           shape_labels = surv_labs,
                            x_name = 'Mouse',
                            y_name = 'Location',
                            wanted_title = 'CDD03 Results',
@@ -259,12 +284,15 @@ cdd03_tc_plot <- make_plot(input_table = proc_cfu_count,
                            y_axis = 'location',
                            alpha_value = 'microbe_presence',
                            fill_value = 'diet',
+                           shape_value = 'status',
                            point_size = 6,
                            y_labels = location_y_labs,
                            fill_legend_title = 'Diet',
                            fill_labels = diet_fill_labs,
                            alpha_legend_title = 'Bacterial CFUs',
                            alpha_labels = presAbs_labs,
+                           shape_legend_title = 'Survival Status',
+                           shape_labels = surv_labs,
                            x_name = 'Mouse',
                            y_name = 'Location',
                            wanted_title = 'CDD03 Results',
@@ -289,12 +317,15 @@ allExp_cr_plot <- make_plot(input_table = ordered_proc_cfuCount,
                            y_axis = 'location',
                            alpha_value = 'microbe_presence',
                            fill_value = 'diet',
+                           shape_value = 'status',
                            point_size = 6,
                            y_labels = location_y_labs,
                            fill_legend_title = 'Diet',
                            fill_labels = diet_fill_labs,
                            alpha_legend_title = 'Bacterial CFUs',
                            alpha_labels = presAbs_labs,
+                           shape_legend_title = 'Survival Status',
+                           shape_labels = surv_labs,
                            x_name = 'Mouse',
                            y_name = 'Location',
                            wanted_title = 'All Experiment Results',
@@ -307,12 +338,15 @@ allExp_tc_plot <- make_plot(input_table = ordered_proc_cfuCount,
                            y_axis = 'location',
                            alpha_value = 'microbe_presence',
                            fill_value = 'diet',
+                           shape_value = 'status',
                            point_size = 6,
                            y_labels = location_y_labs,
                            fill_legend_title = 'Diet',
                            fill_labels = diet_fill_labs,
                            alpha_legend_title = 'Bacterial CFUs',
                            alpha_labels = presAbs_labs,
+                           shape_legend_title = 'Survival Status',
+                           shape_labels = surv_labs,
                            x_name = 'Mouse',
                            y_name = 'Location',
                            wanted_title = 'All Experiment Results',
@@ -350,7 +384,7 @@ cdd03_together
 ```
 
 **All experiments plots together**
-```{r, fig.width=17, fig.height=7}
+```{r, fig.width=17.5, fig.height=7}
 allExp_together <- put_plots_together(plot1 = allExp_cr_plot,
                                       plot2 = allExp_tc_plot,
                                       y_axis_label = 'Location')
@@ -375,7 +409,7 @@ ggsave('../plots/cdd03_culture_results.pdf',
        height = 6)
 ggsave('../plots/allExp_culture_results.pdf',
        plot = allExp_together,
-       width = 17,
+       width = 17.5,
        height = 7)
 
 ## saving processed cfu count table as a .tsv for later analysis

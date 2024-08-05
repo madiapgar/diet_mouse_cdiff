@@ -32,6 +32,12 @@ surv <- cfuCount_table %>%
                      ),
                      actual_surv = ifelse(day_post_inf == 14, 0, survival))
 
+status_df <- surv %>% 
+              mutate(status = ifelse(actual_surv == 0, 'survived', 'didnt_survive')) %>% 
+              select(mouse_id, status)
+
 ## mini version bc idek what I'm doing with this its humbling
 write_tsv(surv,
           './new_experiments/data/misc/survival_data.tsv')
+write_tsv(status_df,
+          './new_experiments/data/misc/survival_status.tsv')

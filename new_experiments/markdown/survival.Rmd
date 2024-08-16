@@ -15,6 +15,7 @@ require(survival)
 library(readr)
 library(magrittr)
 library(viridis)
+library(apppleplots)
 ```
 
 **Functions**
@@ -119,7 +120,8 @@ dietVendor_base_plot <- ggsurvplot(dietVendor_surv_fit,
                                    conf.int = TRUE,
                                    xlab = 'Days Post Infection',
                                    ylab = 'Survival Probability',
-                                   title = 'Survival by Diet and Vendor')
+                                   title = 'Mouse Survival After Infection by Diet and Vendor',
+                                   subtitle = 'New Experiments')
 
 dietVendor_base_plot$plot +
     facet_grid(cols = vars(diet),
@@ -199,6 +201,22 @@ dietVendor_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, actual_sur
 dietVendor_pvalue <- pretty_pvalue(pairwise_results = dietVendor_pairwise)
 ```
 
+idk why i didn't just run normal stats on this data bc I don't need the surminer package to do them 
+```{r}
+dietVendor_stat_list <- kruskal_dunn_stats(input_table = surv_table,
+                                           grouped_by = c("diet"),
+                                           adjust_method = "BH",
+                                           filter_adj_p_value = FALSE,
+                                           formula_left = "actual_surv",
+                                           formula_right = "vendor")
+
+dietVendor_kruskal <- dietVendor_stat_list$KruskalTest
+dietVendor_dunn <- dietVendor_stat_list$DunnTest
+
+dietVendor_dunn
+```
+
+
 ```{r}
 ## just overall diet stats
 diet_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, actual_surv) ~ diet,
@@ -245,6 +263,8 @@ ggsave('../plots/experimentVendor_survival.pdf',
 ## stats
 write_tsv(dietVendor_pvalue,
           '../stats/surv_dietVendor.tsv')
+write_tsv(dietVendor_dunn,
+          '../stats/surv_dietVendor_dunn.tsv')
 write_tsv(diet_pvalue,
           '../stats/surv_diet.tsv')
 write_tsv(dietExp_pvalue,

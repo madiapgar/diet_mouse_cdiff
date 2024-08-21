@@ -60,7 +60,8 @@ make_plot <- function(input_table,
             theme(axis.text.x = element_blank()) +
             geom_point(aes(color = .data[[color_value]], shape = .data[[shape_value]],
                            alpha = .data[[alpha_value]]), 
-                       size = point_size) +
+                       size = point_size,
+                       stroke = 2) +
             scale_y_discrete(labels = y_labels) +
             scale_color_viridis(option = 'H', 
                                name = color_legend_title,
@@ -207,18 +208,20 @@ proc_cfu_count <- cfu_count_table %>%
 ```
 
 **Testing**
-```{r, fig.width=28, fig.height=5}
+```{r, fig.width=20, fig.height=8}
 proc_cfu_count %>% 
   na.omit() %>% 
   ggplot(aes(x = mouse_id, y = location)) +
   theme_bw(base_size = 20) +
   theme(axis.text.x = element_blank()) +
-  geom_point(aes(shape = status_microbePres, alpha = status_microbePres), size = 6) +
+  geom_point(aes(shape = status_microbePres, alpha = status_microbePres), size = 6, 
+             stroke = 2) +
   scale_y_discrete(labels = location_y_labs) +
-  facet_nested(~diet + vendor,
-               scales = "free_x",
-               labeller = labeller(diet = diet_labs,
-                                   vendor = vendor_labs)) +
+  facet_nested_wrap(~diet + vendor,
+                    scales = "free_x",
+                    labeller = labeller(diet = diet_labs,
+                                        vendor = vendor_labs),
+                    nrow = 2) +
   scale_shape_manual(values = c(4, 4, 16, 16),
                      name = surv_presAbs_title,
                      labels = surv_presAbs_labs) +
@@ -460,7 +463,7 @@ cdd03_together
 ```
 
 **All experiments plots together**
-```{r, fig.width=17.5, fig.height=7}
+```{r, fig.width=20, fig.height=8}
 allExp_together <- put_plots_together(plot1 = allExp_cr_plot,
                                       plot2 = allExp_tc_plot,
                                       y_axis_label = 'Location')
@@ -506,12 +509,12 @@ ggsave('../plots/cdd03_culture_results.pdf',
        height = 6)
 ggsave('../plots/allExp_culture_results.pdf',
        plot = allExp_together,
-       width = 17.5,
-       height = 7)
+       width = 20,
+       height = 8)
 ggsave('../plots/allExp_culture_futureTest.pdf',
        plot = future_plot_test,
-       width = 28,
-       height = 5)
+       width = 20,
+       height = 8)
 
 ## saving processed cfu count table as a .tsv for later analysis
 write_tsv(proc_cfu_count,

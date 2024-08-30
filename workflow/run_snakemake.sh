@@ -6,4 +6,4 @@ snakemake \
     -c 7 \
     --use-conda \
     --keep-going \
-    --configfile workflow/config_files/newExp_config.yml
+    --configfile workflow/config_files/firstExp_config.yml

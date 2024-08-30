@@ -222,11 +222,11 @@ else:
 
 if RUN_DEMUX_DADA2 == 'yes' and LONGITUDINAL == 'no downstream':
 
-    rule_all_input_list.extend(raw_seq_rule_all)
+    rule_all_input_list = raw_seq_rule_all
 
     include: "rules/01_demux_dada2.smk"
 
-    print("Running upper qiime analysis ONLY!")
+    print("Running demux and dada2 in qiime ONLY!")
 
 else:
     print(" ")

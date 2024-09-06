@@ -492,6 +492,18 @@ for(i in unique(unlist(variable_list))) {
 cfuSurvival_counts
 ```
 
+**Putting together a table of whether there was a positive culture result (regardless of location) or not**
+```{r}
+pos_culture_table <- cfu_count_table %>% 
+                      select(mouse_id, presence_spleen, presence_liver, presence_blood) %>% 
+                      mutate(pos_culture = ifelse(presence_spleen == TRUE | presence_liver == TRUE | presence_blood == TRUE,
+                                                  1, 0)) %>% 
+                      select(mouse_id, pos_culture) %>% 
+                      na.omit()
+
+pos_culture_table
+```
+
 
 **Saving my Outputs**
 ```{r}
@@ -519,5 +531,7 @@ ggsave('../plots/allExp_culture_futureTest.pdf',
 ## saving processed cfu count table as a .tsv for later analysis
 write_tsv(proc_cfu_count,
           '../data/misc/proc_combined_CDD_cfuCounts.tsv')
+write_tsv(pos_culture_table,
+          '../data/misc/pos_culture_status.tsv')
 ```
 

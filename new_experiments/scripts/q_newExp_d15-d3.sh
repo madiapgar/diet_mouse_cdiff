@@ -2,7 +2,7 @@
 
 ##echo "making an EMP Paired End Sequences object out of raw fastq files for QIIME2 analysis!"
 ##qiime tools import \
-    ##--type EMPPairedEndSequences \
+    ##--type EMPPairedEndSequences \ 
     ##--input-path raw_seqs \
     ##--output-path newExp_d15-d3_paired_end.qza
 

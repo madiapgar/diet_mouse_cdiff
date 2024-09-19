@@ -1,4 +1,4 @@
-## overall config file for new anschutz experiments stool sample dataset
+## overall config file for first set of experiments stool sample dataset
 
 dataset_dir: "new_experiments/"
 qiime_env: "qiime2-2023.5"
@@ -11,40 +11,40 @@ raw_sequences: "no" ## options: yes and no
 tax_class: "yes" ## options: yes and no, default is yes 
 
 ## does your data need to go through total sum scaling? chances are that it doesn't
-total_sum_scaling: "yes" ## options: yes and no
+total_sum_scaling: "no" ## options: yes and no
 
 ## do you want to run core metrics analysis on your data to get alpha/beta diversity? you HAVE to run this if you want the microbiome R outputs
-core_metrics: "yes" ## options: yes and no
+core_metrics: "no" ## options: yes and no
 
 ## would you like basic R plots/stats for your microbiome data? if so, this requires you to edit your R scripts directory for the exact visualizations you want
 ## (see more in the tutorial)
-microbiome_r_outputs: "yes" ## options: yes, no, or no downstream 
+microbiome_r_outputs: "no" ## options: yes, no, or no downstream 
 ## -------------------
 
 ## --NEEDED FILE PATHS--
 ## include if raw_sequences = "yes"
-raw_seq_dir: NA
-raw_seqs: NA ## assumes that everything after this is "_paired_end_seqs.qza"
-barcodes: NA ## assumes that everything after this is "_barcodes.txt"
-dada2_trim_left_for: NA
-dada2_trim_left_rev: NA
-dada2_trunc_len_for: NA
-dada2_trunc_len_rev: NA
+raw_seq_dir: "data/new_culture_seqs/"
+raw_seqs: "culture_mock" ## assumes that everything after this is "_paired_end_seqs.qza"
+barcodes: "culture_mock" ## assumes that everything after this is "_barcodes.txt"
+dada2_trim_left_for: 13
+dada2_trim_left_rev: 13
+dada2_trunc_len_for: 230
+dada2_trunc_len_rev: 160
 
 ## include if tax_class = "yes"
-biom_table: "data/qiime/newExp_d15-d3_allBatch_table.qza"
-rep_seqs: "data/qiime/newExp_d15-d3_allBatch_seqs.qza"
-metadata: "data/misc/proc_newExp_d15-d3_metadata.tsv"
+biom_table: "data/qiime/culture_mock_table.qza"
+rep_seqs: "data/qiime/culture_mock_rep_seqs.qza"
+metadata: "data/new_culture_seqs/culture_mock_barcodes.txt"
 
 ## include if total_sum_scaling = "yes"
 r_script_dir: "scripts/"
 
 ## include if core_metrics = "yes"
-core_metrics_sampling_depth: 97683 ## might need a new sampling depth!
+core_metrics_sampling_depth: 957 ## might need a new sampling depth!
 
 ## include if microbiome_r_outputs = "yes"
 ## r script directory if you haven't already (r_script_dir: "scripts/")
-processed_metadata: "data/misc/proc_newExp_d15-d3_metadata.tsv"
+processed_metadata: "data/new_culture_seqs/culture_mock_barcodes.txt"
 ## ---------------------
 
 ## madis cecal dataset plots/stats in R (measurements at only ONE time point) - you will NOT use this 
@@ -57,4 +57,3 @@ toxin: NA
 histo: NA
 metab: NA
 hypoxia: NA
-

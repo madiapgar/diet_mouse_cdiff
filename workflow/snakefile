@@ -5,10 +5,19 @@ import pandas as pd
 
 ## setting environmental variables
 DATASET_DIR = config["dataset_dir"]
-LONGITUDINAL = config["longitudinal_dataset"]
 RUN_DEMUX_DADA2 = config["raw_sequences"]
+TAX_CLASS = config["tax_class"]
+TOTAL_SUM_SCALING = config["total_sum_scaling"]
+CORE_METRICS = config["core_metrics"]
+MICROBIOME_R_OUT = config["microbiome_r_outputs"]
 R_SCRIPT_DIR = config["r_script_dir"]
 QIIME = config["qiime_env"]
+
+## dealing with diverging workflows (if you run/don't run total sum scaling) creating the same output to feed into core metrics analysis
+if TOTAL_SUM_SCALING == 'yes':
+    WHICH_OTU = "data/qiime/total_sum_otu_table.qza"
+else:
+    WHICH_OTU = "data/qiime/taxOnly_otu_table.qza"
 
 ## step 1
 RAW_SEQ_DIR = config["raw_seq_dir"]
@@ -28,7 +37,7 @@ METADATA = config["metadata"]
 CORE_SAMPLING_DEPTH = config["core_metrics_sampling_depth"]
 PROCESSED_META = config["processed_metadata"]
 
-## step 6 (non-longitudinal)
+## step 6 (madis cecal analysis)
 SAMPLEID_KEY = config["sampleID_key"]
 MOUSEID_FACIL_KEY = config["mouseID_facil_key"]
 BILE_ACID = config["bile_acid"]
@@ -65,58 +74,66 @@ raw_seq_rule_all = [expand(os.path.join(DATASET_DIR, RAW_SEQ_DIR, "{run}_demux.q
                     os.path.join(DATASET_DIR, "data/qiime/merged_rep_seqs.qza")]
 
 
-## includes outputs from steps 2, 3, and 4
-base_input = ["databases/sepp-refs-silva-128.qza",
-              "databases/silva-138-99-515-806-nb-classifier.qza",
-              "data/qiime/tree.qza",
-              "data/qiime/placements.qza",
-              "data/qiime/filt_table.qza",
-              "data/qiime/rem_table.qza",
-              "data/qiime/taxonomy.qza",
-              "data/qiime/taxonomy_filtered.qza",
-              "data/qiime/taxonomy_filtered.qzv",
-              "data/qiime/lacto_cecal_table.qza",
-              "data/qiime/lacto_rep_seqs.qza",
-              "data/qiime/lactoOnly_rep_seqs.fasta",
-              "data/qiime/total_sum_scaling.tsv",
-              "data/qiime/total_sum_scaling.biom",
-              "data/qiime/total_sum_scaling.qza",
-              "data/qiime/total_sum_filt_table.qza",
-              "data/qiime/total_sum_rem_table.qza",
-              "data/qiime/tax_filt.qza",
-              "data/qiime/tax_filt.qzv",
-              "data/qiime/otu_table.qza",
-              "data/qiime/tax_barplot.qzv",
-              "data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza",
-              "data/qiime/core_outputs/uw_dist_matrix.tsv",
-              "data/qiime/core_outputs/weighted_unifrac_distance_matrix.qza",
-              "data/qiime/core_outputs/w_dist_matrix.tsv",
-              "data/qiime/core_outputs/shannon_vector.qza",
-              "data/qiime/core_outputs/shannon_entropy.tsv",
-              "data/qiime/core_outputs/faith_pd_vector.qza",
-              "data/qiime/core_outputs/faith_pd.tsv"]
+## taxonomic classification steps
+tax_outs = ["databases/sepp-refs-silva-128.qza",
+            "databases/silva-138-99-515-806-nb-classifier.qza",
+            "data/qiime/tree.qza",
+            "data/qiime/placements.qza",
+            "data/qiime/filt_table.qza",
+            "data/qiime/rem_table.qza",
+            "data/qiime/taxonomy.qza",
+            "data/qiime/taxonomy_filtered.qza",
+            "data/qiime/taxonomy_filtered.qzv",
+            "data/qiime/taxOnly_otu_table.qza",
+            "data/qiime/tax_barplot.qzv"]
 
+tax_rule_all = [comb_filepaths(DATASET_DIR, filepath) for filepath in tax_outs] 
 
-rule_all_input_list = [comb_filepaths(DATASET_DIR, filepath) for filepath in base_input]
+## whether to put your data through total sum scaling or not
+total_sum_outs = ["data/qiime/lacto_cecal_table.qza",
+                  "data/qiime/lacto_rep_seqs.qza",
+                  "data/qiime/lactoOnly_rep_seqs.fasta",
+                  "data/qiime/total_sum_scaling.tsv",
+                  "data/qiime/total_sum_scaling.biom",
+                  "data/qiime/total_sum_scaling.qza",
+                  "data/qiime/total_sum_filt_table.qza",
+                  "data/qiime/total_sum_rem_table.qza",
+                  "data/qiime/total_sum_tax_filt.qza",
+                  "data/qiime/total_sum_tax_filt.qzv",
+                  "data/qiime/total_sum_otu_table.qza"]
+
+total_sum_rule_all = [comb_filepaths(DATASET_DIR, filepath) for filepath in total_sum_outs] 
+
+## do you want to run core metrics analysis? 
+core_metrics_outs = ["data/qiime/core_outputs/unweighted_unifrac_distance_matrix.qza",
+                     "data/qiime/core_outputs/uw_dist_matrix.tsv",
+                     "data/qiime/core_outputs/weighted_unifrac_distance_matrix.qza",
+                     "data/qiime/core_outputs/w_dist_matrix.tsv",
+                     "data/qiime/core_outputs/shannon_vector.qza",
+                     "data/qiime/core_outputs/shannon_entropy.tsv",
+                     "data/qiime/core_outputs/faith_pd_vector.qza",
+                     "data/qiime/core_outputs/faith_pd.tsv"]
+
+core_metrics_rule_all = [comb_filepaths(DATASET_DIR, filepath) for filepath in core_metrics_outs] 
 
 ## includes outputs from step 5 (longitudinal outputs only)
-longitudinal = ["plots/faith_pd.pdf",
-                "plots/shannon_entropy.pdf",
-                "stats/faith_lm.tsv",
-                "stats/faith_dunn.tsv",
-                "stats/shannon_lm.tsv",
-                "stats/shannon_dunn.tsv",
-                "plots/faith_stat_vis.pdf",
-                "plots/shannon_stat_vis.pdf",
-                "plots/unweighted_unifrac_pcoa.pdf",
-                "plots/weighted_unifrac_pcoa.pdf",
-                "stats/w_adonis_results.tsv",
-                "stats/uw_adonis_results.tsv",
-                "plots/family_abun1.pdf",
-                "plots/family_abun2.pdf",
-                "stats/family_abun_lm.tsv",
-                "stats/family_abun_dunn.tsv",
-                "plots/famAbun_stat_vis.pdf"]
+microbiome_r_outputs = ["plots/faith_pd.pdf",
+                        "plots/shannon_entropy.pdf",
+                        "stats/faith_lm.tsv",
+                        "stats/faith_dunn.tsv",
+                        "stats/shannon_lm.tsv",
+                        "stats/shannon_dunn.tsv",
+                        "plots/faith_stat_vis.pdf",
+                        "plots/shannon_stat_vis.pdf",
+                        "plots/unweighted_unifrac_pcoa.pdf",
+                        "plots/weighted_unifrac_pcoa.pdf",
+                        "stats/w_adonis_results.tsv",
+                        "stats/uw_adonis_results.tsv",
+                        "plots/family_abun1.pdf",
+                        "plots/family_abun2.pdf",
+                        "stats/family_abun_lm.tsv",
+                        "stats/family_abun_dunn.tsv",
+                        "plots/famAbun_stat_vis.pdf"]
 
 resil_homog_outList = ["stats/wu_homogeneity.tsv",
                        "stats/wu_homog_dunn.tsv",
@@ -137,137 +154,93 @@ resil_homog_outList = ["stats/wu_homogeneity.tsv",
 
 ## snakemake gets upset if resil and homog rules aren't run bc the outputs aren't made
 ## so I'm fixing that w this ifelse statement
-if proc_meta.query('day_post_inf == -8').shape[0] > 0 == True:
-    longitudinal.append(resil_homog_outList)
-else:
-    longitudinal
-
-rule_all_longitudinal = [comb_filepaths(DATASET_DIR, filepath) for filepath in longitudinal]
-
-## includes outputs from step 6 (not longitudinal only)
-not_longitudinal = ["data/misc/seq_depth.tsv",
-                    PROCESSED_META,
-                    "data/misc/corrected_bile_acid.tsv",
-                    "data/misc/processed_neatToxin.tsv",
-                    "data/misc/processed_dilutedToxin.tsv",
-                    "data/misc/processed_metabolomics.tsv",
-                    "data/misc/processed_histopathology.tsv",
-                    "data/misc/processed_bile_acid.tsv",
-                    "data/misc/processed_ratio_bileAcid.tsv",
-                    "plots/faith_pd.pdf",
-                    "plots/shannon_entropy.pdf",
-                    "stats/faith_diet_results.tsv",
-                    "stats/faith_dunn.tsv",
-                    "stats/shannon_diet_results.tsv",
-                    "stats/shannon_dunn.tsv",
-                    "plots/faith_stat_vis.pdf",
-                    "plots/shannon_stat_vis.pdf",
-                    "plots/unweighted_unifrac_pcoa.pdf",
-                    "plots/weighted_unifrac_pcoa.pdf",
-                    "stats/w_adonis_results.tsv",
-                    "stats/uw_adonis_results.tsv",
-                    "plots/family_abun1.pdf",
-                    "plots/family_abun2.pdf",
-                    "stats/family_abun_lm.tsv",
-                    "stats/family_abun_dunn.tsv",
-                    "plots/famAbun_stat_vis.pdf",
-                    "plots/histopathology.pdf",
-                    "stats/histopathology_lm.tsv",
-                    "stats/histopathology_dunn.tsv",
-                    "plots/neat_toxin.pdf",
-                    "plots/dil_toxin.pdf",
-                    "stats/neatToxin_kruskal_test.tsv",
-                    "stats/neatToxin_dunn_test.tsv",
-                    "stats/dilToxin_kruskal_test.tsv",
-                    "stats/dilToxin_dunn_test.tsv",
-                    "plots/metabolomics.pdf",
-                    "stats/metab_linear_model.tsv",
-                    "stats/metab_dunn_test.tsv",
-                    "stats/metab_kruskal_test.tsv"]
-
-rule_all_not_longitudinal = [comb_filepaths(DATASET_DIR, filepath) for filepath in not_longitudinal]
+meta_cols = list(proc_meta.columns)
+if "day_post_inf" not in meta_cols:
+    microbiome_r_outputs
+elif proc_meta.query('day_post_inf == -8').shape[0] > 0 == True:
+    microbiome_r_outputs.append(resil_homog_outList)
 
 
-## if else statements for which rules to run (include various rule snakemake files here...I think)
-if RUN_DEMUX_DADA2 == 'yes' and LONGITUDINAL == 'yes':
+rule_all_microbiome_r_outputs = [comb_filepaths(DATASET_DIR, filepath) for filepath in microbiome_r_outputs]
 
-    rule_all_input_list.extend(raw_seq_rule_all)
+## includes outputs from step 6 - which is basically just my cecal analysis for the diet mouse cdiff dataset so it shouldn't be applicable to others
+madis_cecal_analysis = ["data/misc/seq_depth.tsv",
+                        PROCESSED_META,
+                        "data/misc/corrected_bile_acid.tsv",
+                        "data/misc/processed_neatToxin.tsv",
+                        "data/misc/processed_dilutedToxin.tsv",
+                        "data/misc/processed_metabolomics.tsv",
+                        "data/misc/processed_histopathology.tsv",
+                        "data/misc/processed_bile_acid.tsv",
+                        "data/misc/processed_ratio_bileAcid.tsv",
+                        "plots/faith_pd.pdf",
+                        "plots/shannon_entropy.pdf",
+                        "stats/faith_diet_results.tsv",
+                        "stats/faith_dunn.tsv",
+                        "stats/shannon_diet_results.tsv",
+                        "stats/shannon_dunn.tsv",
+                        "plots/faith_stat_vis.pdf",
+                        "plots/shannon_stat_vis.pdf",
+                        "plots/unweighted_unifrac_pcoa.pdf",
+                        "plots/weighted_unifrac_pcoa.pdf",
+                        "stats/w_adonis_results.tsv",
+                        "stats/uw_adonis_results.tsv",
+                        "plots/family_abun1.pdf",
+                        "plots/family_abun2.pdf",
+                        "stats/family_abun_lm.tsv",
+                        "stats/family_abun_dunn.tsv",
+                        "plots/famAbun_stat_vis.pdf",
+                        "plots/histopathology.pdf",
+                        "stats/histopathology_lm.tsv",
+                        "stats/histopathology_dunn.tsv",
+                        "plots/neat_toxin.pdf",
+                        "plots/dil_toxin.pdf",
+                        "stats/neatToxin_kruskal_test.tsv",
+                        "stats/neatToxin_dunn_test.tsv",
+                        "stats/dilToxin_kruskal_test.tsv",
+                        "stats/dilToxin_dunn_test.tsv",
+                        "plots/metabolomics.pdf",
+                        "stats/metab_linear_model.tsv",
+                        "stats/metab_dunn_test.tsv",
+                        "stats/metab_kruskal_test.tsv"]
 
-    rule_all_input_list.append(rule_all_longitudinal)
-
-    include: "rules/01_demux_dada2.smk"
-    include: "rules/05_longitudinal.smk"
-
-    print("Running demux, DADA2, and longitudinal analysis!")
-
-else:
-    print(" ")
-
-
-
-if RUN_DEMUX_DADA2 == 'yes' and LONGITUDINAL == 'no':
-
-    rule_all_input_list.extend(raw_seq_rule_all)
-
-    rule_all_input_list.append(rule_all_not_longitudinal)
-
-    include: "rules/01_demux_dada2.smk"
-    include: "rules/06_notLongitudinal.smk"
-
-    print("Running demux and DADA2, but NOT longitudinal analysis!")
-else:
-    print(" ")
-
-
-
-if RUN_DEMUX_DADA2 == 'yes' and LONGITUDINAL == 'no downstream':
-
-    rule_all_input_list = raw_seq_rule_all
-
-    include: "rules/01_demux_dada2.smk"
-
-    print("Running demux and dada2 in qiime ONLY!")
-
-else:
-    print(" ")
-
-
-
-if RUN_DEMUX_DADA2 == 'no' and LONGITUDINAL == 'yes':
-
-    rule_all_input_list.append(rule_all_longitudinal)
-
-    include: "rules/05_longitudinal.smk"
-
-    print("Running longitudinal-based analysis but not demux and DADA2!")
-else: 
-    print(" ")
+rule_all_madis_cecal_analysis = [comb_filepaths(DATASET_DIR, filepath) for filepath in madis_cecal_analysis]
 
 
+## identifying which sections of the overall workflow to run based on the config_file (runs anything that says "yes")
+## dictionary has which sections to run and what they're called
+variable_dict = {"RUN_DEMUX_DADA2": RUN_DEMUX_DADA2,
+                 "TAX_CLASS": TAX_CLASS,
+                 "TOTAL_SUM_SCALING": TOTAL_SUM_SCALING,
+                 "CORE_METRICS": CORE_METRICS,
+                 "MICROBIOME_R_OUT": MICROBIOME_R_OUT}
+
+## dictionary has the wanted output file paths for the associated sections that can be put together 
+output_fps = {"RUN_DEMUX_DADA2": raw_seq_rule_all,
+              "TAX_CLASS": tax_rule_all,
+              "TOTAL_SUM_SCALING": total_sum_rule_all,
+              "CORE_METRICS": core_metrics_rule_all,
+              "MICROBIOME_R_OUT": rule_all_microbiome_r_outputs}
+
+## dictionary has the snakemake sub-workflows associated with each section to select to include in the analysis
+rules_dict = {"RUN_DEMUX_DADA2": "rules/01_demux_dada2.smk",
+              "TAX_CLASS": "rules/02_phylogeny.smk",
+              "TOTAL_SUM_SCALING": "rules/03_tss.smk",
+              "CORE_METRICS": "rules/04_core_metrics.smk",
+              "MICROBIOME_R_OUT": "rules/05_microbiome_r.smk"}
 
 
-if RUN_DEMUX_DADA2 == 'no' and LONGITUDINAL == 'no':
+rule_all_input_list = []
+for section, answer in variable_dict.items():
+    if answer == 'yes':
+        fps = output_fps[section]
+        rule_all_input_list.append(fps)
 
-    rule_all_input_list
-
-    print("Running phylogenetic classification, core metrics, and total sum scaling!")
-
-else:
-    print(" ")
-
+        sub_snake = rules_dict[section]
+        include: sub_snake
 
 
 ## rule all
 rule all:
     input:
         data = rule_all_input_list
-
-
-
-
-## loading in needed rules for all
-include: "rules/02_phylogeny.smk"
-include: "rules/03_tss.smk"
-include: "rules/04_core_metrics.smk"
-
-

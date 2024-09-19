@@ -4,6 +4,54 @@
 ## uses same biom table and rep seqs inputs as step 2!!
 import os
 
+rule create_lacto_table:
+    input:
+        filt_table = os.path.join(DATASET_DIR, "data/qiime/filt_table.qza"),
+        taxonomy = os.path.join(DATASET_DIR, "data/qiime/taxonomy.qza"),
+        seqs = os.path.join(DATASET_DIR, REP_SEQS)
+    output:
+        lacto_table = os.path.join(DATASET_DIR, "data/qiime/lacto_cecal_table.qza"),
+        lacto_rep_seqs = os.path.join(DATASET_DIR, "data/qiime/lacto_rep_seqs.qza")
+    conda:
+        QIIME
+    shell:
+        """
+        qiime taxa filter-table \
+            --i-table {input.filt_table} \
+            --i-taxonomy {input.taxonomy} \
+            --p-include Lactococcus \
+            --o-filtered-table {output.lacto_table}
+        
+        qiime feature-table filter-seqs \
+            --i-data {input.seqs} \
+            --i-table {output.lacto_table} \
+            --o-filtered-data {output.lacto_rep_seqs}
+        """
+
+
+rule convert_to_fasta:
+    input:
+        os.path.join(DATASET_DIR, "data/qiime/lacto_rep_seqs.qza")
+    output:
+        os.path.join(DATASET_DIR, "data/qiime/lactoOnly_rep_seqs.fasta")
+    conda:
+        QIIME
+    params:
+        location=DATASET_DIR
+    shell:
+        """
+        qiime tools export \
+            --input-path ./{params.location}data/qiime/lacto_rep_seqs.qza \
+            --output-path ./{params.location}data/qiime/fasta_files
+        
+        mv ./{params.location}data/qiime/fasta_files/dna-sequences.fasta \
+        ./{params.location}data/qiime/fasta_files/lactoOnly_rep_seqs.fasta
+
+        mv ./{params.location}data/qiime/fasta_files/lactoOnly_rep_seqs.fasta \
+        ./{params.location}data/qiime/lactoOnly_rep_seqs.fasta
+        """
+
+
 rule total_sum_scaling:
     input:
         biom = os.path.join(DATASET_DIR, BIOM),
@@ -78,7 +126,7 @@ rule filter_taxonomy2:
         table = os.path.join(DATASET_DIR, "data/qiime/total_sum_scaling.qza"),
         taxonomy = os.path.join(DATASET_DIR, "data/qiime/taxonomy.qza")
     output:
-        tax_filt = os.path.join(DATASET_DIR, "data/qiime/tax_filt.qza")
+        tax_filt = os.path.join(DATASET_DIR, "data/qiime/total_sum_tax_filt.qza")
     conda:
         QIIME
     shell:
@@ -94,9 +142,9 @@ rule filter_taxonomy2:
 
 rule filter_taxonomy_vis2:
     input:
-        os.path.join(DATASET_DIR, "data/qiime/tax_filt.qza")
+        os.path.join(DATASET_DIR, "data/qiime/total_sum_tax_filt.qza")
     output:
-        os.path.join(DATASET_DIR, "data/qiime/tax_filt.qzv")
+        os.path.join(DATASET_DIR, "data/qiime/total_sum_tax_filt.qzv")
     conda:
         QIIME
     shell:
@@ -104,4 +152,21 @@ rule filter_taxonomy_vis2:
         qiime feature-table summarize \
             --i-table {input} \
             --o-visualization {output}
+        """
+
+
+rule pre_core_metrics_filter:
+    input:
+        tax_filt = os.path.join(DATASET_DIR, "data/qiime/total_sum_tax_filt.qza"),
+        metadata = os.path.join(DATASET_DIR, METADATA)
+    output:
+        otu_table = os.path.join(DATASET_DIR, "data/qiime/total_sum_otu_table.qza")
+    conda:
+        QIIME
+    shell:
+        """
+        qiime feature-table filter-samples \
+            --i-table {input.tax_filt} \
+            --m-metadata-file {input.metadata} \
+            --o-filtered-table {output.otu_table}
         """

@@ -4,14 +4,30 @@
 dataset_dir: "the directory the data you're analyzing lives in (this should NOT be in the workflow directory)"
 qiime_env: "which QIIME2 environment did you install?"
 
-## options: yes and no
-raw_sequences: "are you starting the analysis with raw 16S fasta files?"
+## --GLOBAL OPTIONS--
+## are you starting with raw 16S sequences?
+raw_sequences: "no" ## options: yes and no 
 
-## 01: demux and dada2
+## do you want to run taxonomic classification? chances are yes since you're running this workflow
+tax_class: "yes" ## options: yes and no, default is yes 
+
+## does your data need to go through total sum scaling? chances are that it doesn't
+total_sum_scaling: "yes" ## options: yes and no
+
+## do you want to run core metrics analysis on your data to get alpha/beta diversity? you HAVE to run this if you want the microbiome R outputs
+core_metrics: "yes" ## options: yes and no
+
+## would you like basic R plots/stats for your microbiome data? if so, this requires you to edit your R scripts directory for the exact visualizations you want
+## (see more in the tutorial)
+microbiome_r_outputs: "yes" ## options: yes and no
+## -------------------
+
+## --NEEDED FILE PATHS--
+## include if raw_sequences = "yes"
 raw_seq_dir: "the subdirectory(s) that your raw 16S fasta files live in"
 raw_seqs: "a list of file and/or directory names/prefixes of your raw sequences (if you have more than one) - these are wildcards"
-"ex: ["seq1_run/seq1_", "seq2_run/seq2_", "seq3_run/seq3_"]"
-barcodes: "this will most likely be the same as your raw_seqs entry, I just had my barcode files named differently"
+"ex: ["seq1_run/seq1_", "seq2_run/seq2_", "seq3_run/seq3_"]" ## assumes that everything after this is "_paired_end_seqs.qza"
+barcodes: "this will most likely be the same as your raw_seqs entry, I just had my barcode files named differently" ## assumes that everything after this is "_barcodes.txt"
 ## where do you want to trim and truncate your sequences during DADA2?
 ## pro tip: make sure these values are the same for every set sequencing experiments that you want to compare!
 dada2_trim_left_for: 0
@@ -19,34 +35,32 @@ dada2_trim_left_rev: 0
 dada2_trunc_len_for: 0
 dada2_trunc_len_rev: 0
 
-## 02/03: phylogeny and total sum scaling
-r_script_dir: "the subdirectory that holds the r scripts you want snakemake to reference"
+## include if tax_class = "yes"
 ## if you ran raw sequences, your biom_table and rep_seqs will be under the file path/names below
 ## if not, you need to tell snakemake the file path to your biom_table and rep_seqs
 biom_table: "data/qiime/merged_table.qza"
 rep_seqs: "data/qiime/merged_rep_seqs.qza"
-
-## 04: core metrics analysis
 metadata: "what is your QIIME2-approved metadata file called?"
+
+## include if total_sum_scaling = "yes"
+r_script_dir: "the subdirectory that holds the r scripts you want snakemake to reference"
+
+## include if core_metrics = "yes"
 ## what sampling depth do you want to use for your core metrics analysis? 
 ## if you're not sure, I'd consult data/qiime/taxonomy_filtered.qzv
 core_metrics_sampling_depth: 0
 
-## 05: longitudinal dataset plots/stats in R (you NEED to have measurements at different time points)
-## options: yes, no, or no downstream
-longitudinal_dataset: "was data collected at multiple time points and do you have a column for that in your metadata?"
-## if you're running the cecal sample/non-longitudinal analysis, it will generate a processed metadata file for you so
-## you just need to say what you want it to be called
+## include if microbiome_r_outputs = "yes"
+## r script directory if you haven't already (r_script_dir: "scripts/")
 processed_metadata: "what is/what do you want your processed metadata file called? - metadata doesn't need to be processed, but I use 
 processed metadata files"
+## -------------------
 
-## 06: non-longitudinal dataset plots/stats in R (measurements at only ONE time point)
-## the non-longitudinal dataset delim is mainly for my cecal sample dataset and is extremely tailored to it rn
-## I had to do some funky metadata wrangling and that's what these files are for
+## madis cecal dataset plots/stats in R (measurements at only ONE time point) - you will NOT use this 
+## include if running that analysis 
+madis_cecal_analysis: "no"
 sampleID_key: NA
 mouseID_facil_key: NA
-## raw data files for desired quantified substances/inflammatory measures
-## these get processed all nicely for you as well
 bile_acid: NA
 toxin: NA
 histo: NA

@@ -107,7 +107,7 @@ rule beta_diversity_stats:
 
 rule family_abundance_plots:
     input:
-        otu_table = os.path.join(DATASET_DIR, "data/qiime/otu_table.qza"),
+        otu_table = os.path.join(DATASET_DIR, WHICH_OTU),
         taxonomy = os.path.join(DATASET_DIR, "data/qiime/taxonomy.qza"),
         metadata = os.path.join(DATASET_DIR, PROCESSED_META)
     output:
@@ -129,7 +129,7 @@ rule family_abundance_plots:
 
 rule family_abundance_stats:
     input:
-       otu_table = os.path.join(DATASET_DIR, "data/qiime/otu_table.qza"),
+       otu_table = os.path.join(DATASET_DIR, WHICH_OTU),
        taxonomy = os.path.join(DATASET_DIR, "data/qiime/taxonomy.qza"),
        metadata = os.path.join(DATASET_DIR, PROCESSED_META)
     output:

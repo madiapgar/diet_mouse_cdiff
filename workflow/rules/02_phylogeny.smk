@@ -95,49 +95,40 @@ rule filter_taxonomy:
             --o-visualization {output.tax_filt_vis}
         """
 
-rule create_lacto_table:
+## idk if this step is necessary tbh
+rule pre_tax_barplot_filter:
     input:
-        filt_table = os.path.join(DATASET_DIR, "data/qiime/filt_table.qza"),
+        tax_filt = os.path.join(DATASET_DIR, "data/qiime/taxonomy_filtered.qza"),
+        metadata = os.path.join(DATASET_DIR, METADATA)
+    output:
+        otu_table = os.path.join(DATASET_DIR, "data/qiime/taxOnly_otu_table.qza")
+    conda:
+        QIIME
+    shell:
+        """
+        qiime feature-table filter-samples \
+            --i-table {input.tax_filt} \
+            --m-metadata-file {input.metadata} \
+            --o-filtered-table {output.otu_table}
+        """
+
+
+rule make_taxa_barplot:
+    input:
+        otu_table = os.path.join(DATASET_DIR, "data/qiime/taxOnly_otu_table.qza"),
         taxonomy = os.path.join(DATASET_DIR, "data/qiime/taxonomy.qza"),
-        seqs = os.path.join(DATASET_DIR, REP_SEQS)
+        metadata = os.path.join(DATASET_DIR, METADATA)
     output:
-        lacto_table = os.path.join(DATASET_DIR, "data/qiime/lacto_cecal_table.qza"),
-        lacto_rep_seqs = os.path.join(DATASET_DIR, "data/qiime/lacto_rep_seqs.qza")
+        tax_barplot = os.path.join(DATASET_DIR, "data/qiime/tax_barplot.qzv")
     conda:
         QIIME
     shell:
         """
-        qiime taxa filter-table \
-            --i-table {input.filt_table} \
+        qiime taxa barplot \
+            --i-table {input.otu_table} \
             --i-taxonomy {input.taxonomy} \
-            --p-include Lactococcus \
-            --o-filtered-table {output.lacto_table}
-        
-        qiime feature-table filter-seqs \
-            --i-data {input.seqs} \
-            --i-table {output.lacto_table} \
-            --o-filtered-data {output.lacto_rep_seqs}
+            --m-metadata-file {input.metadata} \
+            --o-visualization {output.tax_barplot}
         """
 
 
-rule convert_to_fasta:
-    input:
-        os.path.join(DATASET_DIR, "data/qiime/lacto_rep_seqs.qza")
-    output:
-        os.path.join(DATASET_DIR, "data/qiime/lactoOnly_rep_seqs.fasta")
-    conda:
-        QIIME
-    params:
-        location=DATASET_DIR
-    shell:
-        """
-        qiime tools export \
-            --input-path ./{params.location}data/qiime/lacto_rep_seqs.qza \
-            --output-path ./{params.location}data/qiime/fasta_files
-        
-        mv ./{params.location}data/qiime/fasta_files/dna-sequences.fasta \
-        ./{params.location}data/qiime/fasta_files/lactoOnly_rep_seqs.fasta
-
-        mv ./{params.location}data/qiime/fasta_files/lactoOnly_rep_seqs.fasta \
-        ./{params.location}data/qiime/lactoOnly_rep_seqs.fasta
-        """

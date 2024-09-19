@@ -169,7 +169,7 @@ tss_barplot_files <- microshades_tax_barplot(metadata_FP,
 **Messing with the Taxa Barplot Outputs**
 ```{r, warning=FALSE, fig.height=7.5, fig.width=20}
 ## pulling the tax barplot out of the named list output of the microshades_tax_barplot function
-main_barplot <- tss_barplot_files$TaxBarplot
+main_barplot <- tss_barplot_files$TaxBarplot 
 
 main_barplot + 
   facet_grid2(day_post_inf~diet, scales="free_x", independent = "x",

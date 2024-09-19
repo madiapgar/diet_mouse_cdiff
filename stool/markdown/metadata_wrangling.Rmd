@@ -21,7 +21,7 @@ colon_meta_fp <- '../data/misc/processed_metadata.tsv'
 cecum_meta_fp <- '../../cecum/data/misc/cecal_processed_metadata.tsv'
 preProc_cecum_fp <- '../../cecum/data/misc/cecal_metadata.tsv'
 updated_meta_fp <- '../../cecum/data/misc/updated_cecal_metadata.tsv'
-preProc_colon_fp <- '../data/misc/updated_metadata.tsv'
+preProc_colon_fp <- '../data/misc/updated_stool_metadata.tsv'
 newExp_meta_fp <- '../../new_experiments/data/misc/proc_newExp_d15-d3_metadata.tsv'
 ```
 

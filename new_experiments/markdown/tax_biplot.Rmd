@@ -37,7 +37,8 @@ prep_my_biplot_files <- function(biplot_fp,
   biplot_lines <- read_qza(biplot_fp)$data$Species
   
   ## metadata and taxonomy
-  meta <- read_tsv(metadata_fp)
+  meta <- read_tsv(metadata_fp) %>% 
+            rename(sampleid = `#SampleID`)
   
   ifelse(parse_tax == TRUE, 
          taxonomy <- read_qza(tax_fp)$data %>% 
@@ -56,14 +57,14 @@ prep_my_biplot_files <- function(biplot_fp,
                         mutate(dist_origin1to2 = sqrt(PC1^2 + PC2^2),
                                dist_origin2to3 = sqrt(PC2^2 + PC3^2),
                                dist_origin3to4 = sqrt(PC3^2 + PC4^2)) %>% 
-                        top_n(top_tax_n, .data[[dist_pc_axis]]) %>% 
+                        slice_max(.data[[dist_pc_axis]], n = top_tax_n) %>% 
                         mutate(PC1 = (PC1 * 0.3)*lines_longer_by,
                                PC2 = (PC2 * 0.3)*lines_longer_by,
                                PC3 = (PC3 * 0.3)*lines_longer_by,
                                PC4 = (PC4 * 0.3)*lines_longer_by,) %>% 
                         rename(asv = FeatureID) %>% 
                         select(asv, PC1, PC2, PC3, PC4) %>% 
-                        left_join(taxonomy, by = 'asv')
+                        left_join(taxonomy, by = 'asv') 
   
   ## list of outputs
   my_list <- list(PCvar = pcoa_var,

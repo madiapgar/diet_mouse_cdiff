@@ -25,10 +25,10 @@ library(rstatix)
 ```{r}
 ## 1
 abun_file_prep <- function(metadata_fp,
-                                  tax_fp,
-                                  otu_table_fp,
-                                  tax_level,
-                                  wanted_tax){
+                           tax_fp,
+                           otu_table_fp,
+                           tax_level,
+                           wanted_tax){
   ## metadata
   metadata <- read_tsv(metadata_fp)
   ## taxonomy
@@ -151,6 +151,7 @@ colony_stats_plot <- function(colony_table){
 
 **File Paths**
 ```{r}
+## cdd01
 otu_table_FP <- '../data/qiime/filt_bc_otu_table.qza'
 tax_FP <- '../data/qiime/bc_taxonomy.qza'
 metadata_FP <- '../data/misc/proc_blood_culture_meta.tsv'

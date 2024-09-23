@@ -29,7 +29,8 @@ family_abun_file_prep <- function(metadata_fp,
                                   tax_level,
                                   wanted_tax){
   ## metadata
-  metadata <- read_tsv(metadata_fp)
+  metadata <- read_tsv(metadata_fp) %>% 
+            rename(sampleid = `#SampleID`)
   ## taxonomy
   taxonomy <- read_qza(tax_fp)$data %>% 
     parse_taxonomy() %>% 
@@ -67,7 +68,7 @@ family_abun_file_prep <- function(metadata_fp,
 ```{r}
 metadata_FP <- '../data/misc/proc_newExp_d15-d3_metadata.tsv'
 tax_FP <- '../data/qiime/taxonomy.qza'
-otu_FP <- '../data/qiime/otu_table.qza'
+otu_FP <- '../data/qiime/total_sum_otu_table.qza'
 
 wanted_level <- 'Family'
 wanted_family <- c('Enterobacteriaceae', 'Morganellaceae', 'Lachnospiraceae', 'Enterococcaceae',

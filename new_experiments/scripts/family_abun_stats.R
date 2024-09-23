@@ -46,12 +46,12 @@ parser$add_argument("-d",
 args <- parser$parse_args()
 
 ## input file paths and others
-# otu_table_FP <- './data/qiime/taxonomy_filtered.qza'
-# tax_FP <- './data/qiime/taxonomy.qza'
-# metadata_FP <- './data/misc/processed_metadata.tsv'
+# otu_table_FP <- './new_experiments/data/qiime/total_sum_otu_table.qza'
+# tax_FP <- './new_experiments/data/qiime/taxonomy.qza'
+# metadata_FP <- './new_experiments/data/misc/proc_newExp_d15-d3_metadata.tsv'
 wanted_level <- 'Family'
-wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
-                   'Staphylococcaceae', 'Bacteroidaceae', 'Ruminococcaceae')
+wanted_family <- c('Enterobacteriaceae', 'Morganellaceae', 'Lachnospiraceae', 'Enterococcaceae',
+                   'Tannerellaceae', 'Bacteroidaceae', 'Ruminococcaceae', 'Peptostreptococcaceae')
 
 ## function 1
 family_abun_file_prep <- function(metadata_fp,
@@ -61,7 +61,7 @@ family_abun_file_prep <- function(metadata_fp,
                                   wanted_tax){
   ## metadata
   metadata <- read_tsv(metadata_fp)
-  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
+  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'                                        
   ## taxonomy
   taxonomy <- read_qza(tax_fp)$data %>% 
     parse_taxonomy() %>% 
@@ -120,8 +120,8 @@ abun_stats <- function(filtered_table,
     na.omit() %>% 
     filter(term != '(Intercept)') -> linear_model
   linear_model['signif'] <- symnum(linear_model$p.value,
-                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
-                                   symbols = c("****", "***", "**", "*", "+", "ns"),
+                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                   symbols = c("****", "***", "**", "*", "ns"),
                                    abbr.colnames = FALSE,
                                    na = "")
   ## kruskal wallis test 

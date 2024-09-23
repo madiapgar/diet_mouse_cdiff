@@ -1,0 +1,209 @@
+---
+title: "bc_abun_plots"
+output: html_document
+date: "2024-03-14"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggpubr)
+library(ggplot2)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+library(broom)
+library(cowplot)
+library(vegan)
+library(viridis)
+library(rstatix)
+```
+
+**Functions**
+```{r}
+## 1
+abun_file_prep <- function(metadata_file,
+                           tax_fp,
+                           otu_table_fp,
+                           tax_level,
+                           wanted_tax){
+  ## taxonomy
+  taxonomy <- read_qza(tax_fp)$data %>% 
+    parse_taxonomy() %>% 
+    rownames_to_column('asv')
+  ## otu table 
+  otu_table <- read_qza(otu_table_fp)$data
+  otu_table %>% 
+    as_tibble(rownames = 'asv') %>% 
+    gather(-asv, key = sampleid, value = abun) %>% 
+    group_by(sampleid) %>% 
+    mutate(rel_abun = abun/sum(abun)) %>% 
+    mutate(rel_abun = rel_abun + 0.000001) -> otu_table
+  ## joining all tables together 
+  otu_table %>% 
+    left_join(metadata_file, by = 'sampleid') %>% 
+    left_join(taxonomy, by = 'asv') -> abun_table
+  abun_table %>% 
+    group_by(sampleid, diet, vendor,
+             location, experiment, mouse_id,
+             colony_count, .data[[tax_level]]) %>% 
+    summarise(rel_abund = sum(rel_abun)) %>% 
+    filter(.data[[tax_level]] %in% wanted_tax) -> abun_filt
+  ## creating a list for my outputs
+  my_list <- list(Metadata = metadata_file,
+                  Taxonomy = taxonomy,
+                  OTUTable = otu_table,
+                  AbundanceTable = abun_filt)
+  return(my_list)
+}
+```
+
+**File Paths**
+```{r}
+## cdd02 and cdd03 
+otu_table_FP <- '../data/new_culture_qiime/taxOnly_otu_table.qza'
+tax_FP <- '../data/new_culture_qiime/taxonomy.qza'
+metadata_FP <- '../data/new_culture_seqs/culture_mock_barcodes.txt'
+colony_FP <- '../data/misc/newExp_cfus.txt'
+
+diet_labs <- c('Chow',
+               'High Fat / High Fiber',
+               'High Fat / Low Fiber',
+               'Low Fat / High Fiber',
+               'Low Fat / Low Fiber')
+names(diet_labs) <- c('Chow',
+                      'HF/HF',
+                      'HF/LF',
+                      'LF/HF',
+                      'LF/LF')
+
+vendor_labs <- c('Charles River',
+                 'Taconic')
+names(vendor_labs) <- c('charles_river',
+                        'taconic')
+  
+wanted_level <- 'Genus'
+wanted_genus <- c('Proteus', 
+                  'Escherichia-Shigella',
+                  'Enterococcus',
+                  'Oceanobacillus',
+                  'Dietzia',
+                  'Lactobacillus',
+                  'Planococcaceae',
+                  'Streptococcus',
+                  'Gemella',
+                  'Micrococcus',
+                  'Micrococcaceae')
+```
+
+**Metadata Processing**
+processing culture metadata file (this should have happened a while ago) for plots and stats
+```{r}
+pre_meta <- read_tsv(metadata_FP)
+
+mock_list <- c('EW.Mock.G20',
+               'EW.Mock.H20',
+               'EW.Mock.I20',
+               'EW.Mock.A20',
+               'EW.Mock.B20',
+               'EW.Mock.C20',
+               'EW.Mock.D20',
+               'EW.Mock.E20',
+               'EW.Mock.F20')
+new_col_names <- c('sampleid',
+                   'sample_type',
+                   'mouse_id',
+                   'diet',
+                   'vendor',
+                   'experiment')
+
+pre_meta %>% 
+  select(`#SampleID`, sampleType, MouseID, Diet, Vendor, ExperimentID) %>% 
+  filter(!(`#SampleID` %in% mock_list)) -> pre_meta
+
+colnames(pre_meta) <- new_col_names
+
+pre_meta %>%
+  mutate(diet = case_when(
+    diet == 'Chow' ~ 'Chow',
+    diet == 'HFLF' ~ 'HF/LF',
+    diet == 'HFHF' ~ 'HF/HF',
+    diet == 'LFHF' ~ 'LF/HF',
+    diet == 'LFLF' ~ 'LF/LF'
+  ),
+  vendor = case_when(
+    vendor == 'CharlesRiver' ~ 'charles_river',
+    vendor == 'Taconic' ~ 'taconic'
+  ),
+  separate_me = paste(sampleid)) %>% 
+  separate_wider_delim(cols = 'separate_me',
+                       delim = '.',
+                       names = c('extra1',
+                                 'extra2',
+                                 'extra3',
+                                 'extra4',
+                                 'location'),
+                       cols_remove = FALSE) %>% 
+  select(!c('extra1', 'extra2', 'extra3', 'extra4', 'separate_me')) %>% 
+  mutate(location = tolower(location)) -> proc_meta
+```
+
+minor edits to the colony counts table so that it can be joined with the processed metadata
+```{r}
+pre_colony <- read_tsv(colony_FP)
+
+pre_colony %>% 
+  rename('sampleid' = 'mouse_id.tissue') %>% 
+  mutate(colony_count = ifelse(colony_count == 'BLD', 0, colony_count),
+         colony_count = ifelse(colony_count == 'TNTC', 2000, colony_count),
+         colony_count = as.numeric(colony_count)) %>% 
+  select(sampleid, colony_count) -> proc_colony
+```
+combining the processed metadata with the cfu counts 
+```{r}
+proc_meta %>% 
+  left_join(proc_colony, by = 'sampleid') -> meta_cfu_table
+
+meta_cfu_table
+```
+
+**Data Wrangling for Plots**
+```{r}
+## relative abundance plot
+abun_files <- abun_file_prep(meta_cfu_table,
+                             tax_FP,
+                             otu_table_FP,
+                             wanted_level,
+                             wanted_genus)
+
+## pulling the abundance table out, you can also take metadata, otu table, and taxonomic info
+## out of the list output 
+abun_filt <- abun_files$AbundanceTable
+
+abun_filt %>% 
+  filter(!(sampleid %in% mock_list)) %>% 
+  group_by(mouse_id) %>% 
+  filter(rel_abund == max(rel_abund, na.rm = TRUE)) %>% 
+  arrange(Genus) -> test_abun_filt
+
+test_abun_filt
+```
+
+**Microbe CFUs Plot**
+```{r, fig.height=5.5, fig.width=10}
+test_abun_filt %>% 
+  ggplot(aes(x = Genus, y = colony_count)) +
+  geom_boxplot(aes(group = Genus)) +
+  geom_jitter(width = 0.1, height = 0, alpha = 0.6, size = 2) +
+  theme_bw(base_size = 20) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_y_continuous(transform = 'log10') +
+  facet_wrap(~vendor,
+             scales = "free_x")
+```
+
+**Saving my Outputs**
+```{r}
+```

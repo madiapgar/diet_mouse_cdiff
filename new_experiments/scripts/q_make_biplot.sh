@@ -1,14 +1,5 @@
 #!/bin/bash
 
-#echo "running biplot ordination analysis in qiime!"
-#qiime deicode rpca \
-#    --i-table ../data/qiime/otu_table.qza \
-#    --p-min-feature-count 10 \
-#    --p-min-sample-count 500 \
-#    --o-biplot ../data/qiime/ordination.qza \
-#    --o-distance-matrix ../data/qiime/biplot_distance.qza
-
-
 echo "making a biplot using pcoa results (since that's what we have for everything else)"
 ## make relative frequency table from otu table (should use rarefied table but I can't use rarefied results)
 qiime feature-table relative-frequency \

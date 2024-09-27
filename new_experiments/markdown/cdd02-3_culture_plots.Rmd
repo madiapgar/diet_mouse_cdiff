@@ -19,6 +19,7 @@ library(cowplot)
 library(vegan)
 library(viridis)
 library(rstatix)
+library(apppleplots)
 ```
 
 **Functions**
@@ -28,7 +29,7 @@ abun_file_prep <- function(metadata_file,
                            tax_fp,
                            otu_table_fp,
                            tax_level,
-                           wanted_tax){
+                           wanted_tax = NULL){
   ## taxonomy
   taxonomy <- read_qza(tax_fp)$data %>% 
     parse_taxonomy() %>% 
@@ -40,7 +41,8 @@ abun_file_prep <- function(metadata_file,
     gather(-asv, key = sampleid, value = abun) %>% 
     group_by(sampleid) %>% 
     mutate(rel_abun = abun/sum(abun)) %>% 
-    mutate(rel_abun = rel_abun + 0.000001) -> otu_table
+    mutate(rel_abun = rel_abun + 0.000001) %>% 
+    filter(sampleid %in% metadata_file$sampleid) -> otu_table
   ## joining all tables together 
   otu_table %>% 
     left_join(metadata_file, by = 'sampleid') %>% 
@@ -49,8 +51,14 @@ abun_file_prep <- function(metadata_file,
     group_by(sampleid, diet, vendor,
              location, experiment, mouse_id,
              colony_count, .data[[tax_level]]) %>% 
-    summarise(rel_abund = sum(rel_abun)) %>% 
-    filter(.data[[tax_level]] %in% wanted_tax) -> abun_filt
+    summarise(rel_abund = sum(rel_abun)) -> abun_filt 
+  
+  ## will conditionally filter the abundance table with a list of wanted microbes or not 
+  ## based on whether wanted_tax has an input or not
+  ifelse(class(wanted_tax) == "character",
+         abun_filt %>% 
+           filter(.data[[tax_level]] %in% wanted_tax) -> abun_filt,
+         abun_filt)
   ## creating a list for my outputs
   my_list <- list(Metadata = metadata_file,
                   Taxonomy = taxonomy,
@@ -65,8 +73,17 @@ abun_file_prep <- function(metadata_file,
 ## cdd02 and cdd03 
 otu_table_FP <- '../data/new_culture_qiime/taxOnly_otu_table.qza'
 tax_FP <- '../data/new_culture_qiime/taxonomy.qza'
-metadata_FP <- '../data/new_culture_seqs/culture_mock_barcodes.txt'
-colony_FP <- '../data/misc/newExp_cfus.txt'
+metadata_FP <- '../data/misc/proc_cdd02-3_culture_metadata.tsv'
+
+mock_list <- c('EW.Mock.G20',
+               'EW.Mock.H20',
+               'EW.Mock.I20',
+               'EW.Mock.A20',
+               'EW.Mock.B20',
+               'EW.Mock.C20',
+               'EW.Mock.D20',
+               'EW.Mock.E20',
+               'EW.Mock.F20')
 
 diet_labs <- c('Chow',
                'High Fat / High Fiber',
@@ -83,127 +100,134 @@ vendor_labs <- c('Charles River',
                  'Taconic')
 names(vendor_labs) <- c('charles_river',
                         'taconic')
+
+location_labs <- c('Blood',
+                   'Liver',
+                   'Reproductive',
+                   'Spleen')
+names(location_labs) <- c('blood',
+                          'liver',
+                          'reproductive',
+                          'spleen')
   
 wanted_level <- 'Genus'
 wanted_genus <- c('Proteus', 
                   'Escherichia-Shigella',
                   'Enterococcus',
-                  'Oceanobacillus',
-                  'Dietzia',
-                  'Lactobacillus',
-                  'Planococcaceae',
-                  'Streptococcus',
-                  'Gemella',
-                  'Micrococcus',
-                  'Micrococcaceae')
-```
-
-**Metadata Processing**
-processing culture metadata file (this should have happened a while ago) for plots and stats
-```{r}
-pre_meta <- read_tsv(metadata_FP)
-
-mock_list <- c('EW.Mock.G20',
-               'EW.Mock.H20',
-               'EW.Mock.I20',
-               'EW.Mock.A20',
-               'EW.Mock.B20',
-               'EW.Mock.C20',
-               'EW.Mock.D20',
-               'EW.Mock.E20',
-               'EW.Mock.F20')
-new_col_names <- c('sampleid',
-                   'sample_type',
-                   'mouse_id',
-                   'diet',
-                   'vendor',
-                   'experiment')
-
-pre_meta %>% 
-  select(`#SampleID`, sampleType, MouseID, Diet, Vendor, ExperimentID) %>% 
-  filter(!(`#SampleID` %in% mock_list)) -> pre_meta
-
-colnames(pre_meta) <- new_col_names
-
-pre_meta %>%
-  mutate(diet = case_when(
-    diet == 'Chow' ~ 'Chow',
-    diet == 'HFLF' ~ 'HF/LF',
-    diet == 'HFHF' ~ 'HF/HF',
-    diet == 'LFHF' ~ 'LF/HF',
-    diet == 'LFLF' ~ 'LF/LF'
-  ),
-  vendor = case_when(
-    vendor == 'CharlesRiver' ~ 'charles_river',
-    vendor == 'Taconic' ~ 'taconic'
-  ),
-  separate_me = paste(sampleid)) %>% 
-  separate_wider_delim(cols = 'separate_me',
-                       delim = '.',
-                       names = c('extra1',
-                                 'extra2',
-                                 'extra3',
-                                 'extra4',
-                                 'location'),
-                       cols_remove = FALSE) %>% 
-  select(!c('extra1', 'extra2', 'extra3', 'extra4', 'separate_me')) %>% 
-  mutate(location = tolower(location)) -> proc_meta
-```
-
-minor edits to the colony counts table so that it can be joined with the processed metadata
-```{r}
-pre_colony <- read_tsv(colony_FP)
-
-pre_colony %>% 
-  rename('sampleid' = 'mouse_id.tissue') %>% 
-  mutate(colony_count = ifelse(colony_count == 'BLD', 0, colony_count),
-         colony_count = ifelse(colony_count == 'TNTC', 2000, colony_count),
-         colony_count = as.numeric(colony_count)) %>% 
-  select(sampleid, colony_count) -> proc_colony
-```
-combining the processed metadata with the cfu counts 
-```{r}
-proc_meta %>% 
-  left_join(proc_colony, by = 'sampleid') -> meta_cfu_table
-
-meta_cfu_table
+                  'Lactobacillus')
 ```
 
 **Data Wrangling for Plots**
 ```{r}
-## relative abundance plot
-abun_files <- abun_file_prep(meta_cfu_table,
-                             tax_FP,
-                             otu_table_FP,
-                             wanted_level,
-                             wanted_genus)
+## reading in metadata file
+metadata <- read_tsv(metadata_FP)
 
-## pulling the abundance table out, you can also take metadata, otu table, and taxonomic info
-## out of the list output 
-abun_filt <- abun_files$AbundanceTable
+## microbe cfus plot
+non_filt_abun_files <- abun_file_prep(metadata_file = metadata,
+                                      tax_fp = tax_FP,
+                                      otu_table_fp = otu_table_FP,
+                                      tax_level = wanted_level,
+                                      wanted_tax = NULL)
 
-abun_filt %>% 
+non_filt_abun <- non_filt_abun_files$AbundanceTable
+
+non_filt_abun %>% 
   filter(!(sampleid %in% mock_list)) %>% 
-  group_by(mouse_id) %>% 
+  group_by(sampleid) %>% 
   filter(rel_abund == max(rel_abund, na.rm = TRUE)) %>% 
-  arrange(Genus) -> test_abun_filt
+  arrange(mouse_id) -> non_filt_abun
 
-test_abun_filt
+## relative abundance plot 
+filt_abun_files <- abun_file_prep(metadata_file = metadata,
+                                  tax_fp = tax_FP,
+                                  otu_table_fp = otu_table_FP,
+                                  tax_level = wanted_level,
+                                  wanted_tax = wanted_genus)
+filt_abun <- filt_abun_files$AbundanceTable
+
+
+non_filt_abun
+filt_abun
 ```
 
 **Microbe CFUs Plot**
-```{r, fig.height=5.5, fig.width=10}
-test_abun_filt %>% 
-  ggplot(aes(x = Genus, y = colony_count)) +
-  geom_boxplot(aes(group = Genus)) +
-  geom_jitter(width = 0.1, height = 0, alpha = 0.6, size = 2) +
-  theme_bw(base_size = 20) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_y_continuous(transform = 'log10') +
-  facet_wrap(~vendor,
-             scales = "free_x")
+```{r, fig.height=7.5, fig.width=10}
+cfu_plot <- non_filt_abun %>% 
+              na.omit() %>% 
+              ggplot(aes(x = Genus, y = colony_count)) +
+              geom_boxplot(aes(group = Genus)) +
+              geom_jitter(width = 0.1, height = 0, alpha = 0.6, size = 2) +
+              theme_bw(base_size = 20) +
+              theme(axis.text.x = element_text(angle = 45, hjust = 1),
+                    strip.text.y.right = element_text(angle = 0)) +
+              scale_y_continuous(transform = 'log10') +
+              facet_grid(location~vendor,
+                         scales = "free_x",
+                         labeller = labeller(location = location_labs,
+                                             vendor = vendor_labs)) +
+              labs(title = 'Microbe CFUs by Tissue',
+                   y = 'Colony Forming Units (CFUs)')
+
+cfu_plot
+```
+
+**Relative Abundance Plots**
+faceted by diet 
+```{r, fig.height=5, fig.width=10}
+cult_relAbun_plot <- apppleplots::facet_twice_plots(input_table = filt_abun,
+                                                    x_value = 'vendor',
+                                                    y_value = 'rel_abund',
+                                                    x_value_type = 'discrete',
+                                                    y_transform = TRUE,
+                                                    x_labels = vendor_labs,
+                                                    box_group_by = 'vendor',
+                                                    line_group_by = 'mouse_id',
+                                                    point_alpha = 0.4,
+                                                    facet_rows = 'Genus',
+                                                    facet_cols = 'diet',
+                                                    row_labs = NULL,
+                                                    col_labs = diet_labs,
+                                                    x_name = 'Vendor',
+                                                    y_name = 'Relative Abundance (log10)',
+                                                    title_content = 'Positive Culture Relative Abundance by Diet')
+
+cult_relAbun_plot
+```
+faceted by location
+```{r, fig.height=4.5, fig.width=9}
+cultLocation_relAbun_plot <- apppleplots::facet_twice_plots(input_table = filt_abun,
+                                                            x_value = 'vendor',
+                                                            y_value = 'rel_abund',
+                                                            x_value_type = 'discrete',
+                                                            y_transform = TRUE,
+                                                            x_labels = vendor_labs,
+                                                            box_group_by = 'vendor',
+                                                            line_group_by = 'mouse_id',
+                                                            point_alpha = 0.4,
+                                                            facet_rows = 'Genus',
+                                                            facet_cols = 'location',
+                                                            row_labs = NULL,
+                                                            col_labs = location_labs,
+                                                            x_name = 'Vendor',
+                                                            y_name = 'Relative Abundance (log10)',
+                                                            title_content = 'Positive Culture Relative Abundance by Tissue')
+
+cultLocation_relAbun_plot
 ```
 
 **Saving my Outputs**
 ```{r}
+## saving my plots
+ggsave('../plots/cdd02-3_cult_relAbun_diet_plot.pdf',
+       plot = cult_relAbun_plot,
+       height = 5,
+       width = 10)
+ggsave('../plots/cdd02-3_cult_relAbun_location_plot.pdf',
+       plot = cultLocation_relAbun_plot,
+       height = 4.5,
+       width = 9)
+ggsave('../plots/cdd02-3_cult_cfu_plot.pdf',
+       plot = cfu_plot,
+       height = 7.5,
+       width = 10)
 ```

@@ -122,8 +122,8 @@ pcoa_ax_lab <- function(unifrac_var, col_name){
 ## xlab and ylab are outputs from pcoa_ax_lab function
 pcoa_plot <- function(biom_file,
                       fill_by,
-                      # facet_by,
-                      # facet_labs,
+                      #facet_by,
+                      #facet_labs,
                       xlab,
                       ylab,
                       title){
@@ -132,13 +132,18 @@ pcoa_plot <- function(biom_file,
     geom_mark_ellipse(aes(group = .data[[fill_by]])) +
     geom_point(aes(fill = .data[[fill_by]]), pch = 21, alpha = 0.7, size = 2) +
     scale_fill_brewer(palette = 'Dark2',
-                      labels = c('New Anschutz (2024)',
+                      labels = c('Old Anschutz (2020)',
+                                 'New Anschutz (2024)',
                                  'U of Arizona'),
                       name = 'Experiment') +
     theme_bw(base_size = 20) +
-    # facet_wrap(~.data[[facet_by]],
-    #            labeller = labeller(.cols = facet_labs)) +
+    #facet_wrap(~.data[[facet_by]],
+               #labeller = labeller(.cols = facet_labs)) +
     theme(strip.text.y = element_text(angle = 0)) +
+   # scale_fill_brewer(palette = 'Dark2',
+   #                   name = 'Vendor',
+   #                   labels = c('Charles River',
+   #                              'Taconic')) +
     ggtitle(title) +
     labs(x = xlab, 
          y = ylab) -> pcoa
@@ -155,10 +160,12 @@ vendor_labs <- c('Charles River',
 names(vendor_labs) <- c('charles_river',
                         'taconic')
 
-exp_labs <- c('New Anschutz (2024)',
+exp_labs <- c('Old Anschutz (2020)',
+              'New Anschutz (2024)',
               'U of Arizona')
 
-names(exp_labs) <- c('new_exp_anschutz',
+names(exp_labs) <- c('first_set_anschutz',
+                     'new_exp_anschutz',
                      'second_set_arizona')
 
 ## preparing core beta diversity files for ggplot
@@ -177,12 +184,12 @@ weighted_biom <- core_files$WeightedBiom
 uw_uni_xlab <- pcoa_ax_lab(uw_var, 'PC1')
 uw_uni_ylab <- pcoa_ax_lab(uw_var, 'PC2')
 
-uw_title <- 'New Exp v AZ Exp Unweighted UniFrac PCoA Plot'
+uw_title <- 'All Exp Unweighted UniFrac PCoA Plot'
 
 unweighted_pcoa <- pcoa_plot(unweighted_biom,
                              'experiment_set',
-                             # 'experiment_set',
-                             # exp_labs,
+                             #'experiment_set',
+                             #exp_labs,
                              uw_uni_xlab,
                              uw_uni_ylab,
                              uw_title)
@@ -190,12 +197,12 @@ unweighted_pcoa <- pcoa_plot(unweighted_biom,
 w_uni_xlab <- pcoa_ax_lab(w_var, 'PC1')
 w_uni_ylab <- pcoa_ax_lab(w_var, 'PC2')
 
-w_title <- 'New Exp v AZ Exp Weighted UniFrac PCoA Plot'
+w_title <- 'All Exp Weighted UniFrac PCoA Plot'
 
 weighted_pcoa <- pcoa_plot(weighted_biom,
                            'experiment_set',
-                           # 'experiment_set',
-                           # exp_labs,
+                           #'experiment_set',
+                           #exp_labs,
                            w_uni_xlab,
                            w_uni_ylab,
                            w_title)
@@ -204,9 +211,9 @@ weighted_pcoa <- pcoa_plot(weighted_biom,
 ggsave(args$output_uu_FP,
        plot = unweighted_pcoa, 
        width = 16, 
-       height = 8)
+       height = 6)
 
 ggsave(args$output_wu_FP,
        plot = weighted_pcoa, 
        width = 16, 
-       height = 8)
+       height = 6)

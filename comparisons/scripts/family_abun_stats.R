@@ -48,7 +48,7 @@ args <- parser$parse_args()
 
 wanted_level <- 'Family'
 wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
-                   'Staphylococcaceae', 'Bacteroidaceae', 'Ruminococcaceae')
+                   'Staphylococcaceae', 'Bacteroidaceae', 'Tannerellaceae', 'Morganellaceae')
 
 group1_labs <- c('New Anschutz (2024)')
 names(group1_labs) <- c('new_exp_anschutz')
@@ -81,7 +81,7 @@ family_abun_file_prep <- function(metadata_fp,
   abun_table %>% 
     group_by(sampleid, diet, mouse_id,
              experiment_set, vendor, mouse_sex,
-             seq_depth, .data[[tax_level]]) %>% 
+             .data[[tax_level]]) %>% 
     summarise(rel_abund = sum(rel_abun)) %>% 
     filter(.data[[tax_level]] %in% wanted_tax) %>% 
     mutate(mouse_fact = as.factor(mouse_id)) -> abun_filt
@@ -284,20 +284,22 @@ stat_plot_prep <- function(filtered_table,
 stat_plot <- function(new_dunn,
                       title){
   new_dunn %>% 
-    ggplot(aes(x = .data[[wanted_level]], y = group2)) +
+    ggplot(aes(x = group1, y = group2)) +
     geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
     scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
     geom_text(aes(label = p.adj.signif)) +
-    facet_wrap(~group1,
-               labeller = labeller(group1 = group1_labs)) +
+    facet_wrap(~Family) +
     theme_bw(base_size = 20) +
     ggtitle(label = title,
-            subtitle = 'Group 1') +
+            subtitle = 'Microbe Family') +
     theme(strip.text.y = element_text(angle = 0),
           plot.subtitle = element_text(hjust = 0.5),
           axis.text.x = element_text(angle = 45, hjust = 1)) +
-    scale_y_discrete(labels = c('U of Arizona')) +
-    xlab('Family') +
+    scale_y_discrete(labels = c('New Anschutz (2024)',
+                                'U of Arizona')) +
+    scale_x_discrete(labels = c('Old Anschutz (2020)',
+                                'New Anschutz (2024)')) +
+    xlab('Group 1') +
     ylab('Group 2') -> stat_vis
   return(stat_vis)
 }
@@ -318,7 +320,7 @@ family_abun_lm <- linear_model(input_table = abun_filt,
                                adjust_method = 'BH',
                                filter_adj_p_value = FALSE,
                                formula_left = 'rel_abund',
-                               formula_right = 'experiment_set + vendor + mouse_sex')
+                               formula_right = 'experiment_set + vendor')
 
 abun_stats <- kruskal_dunn_stats(input_table = abun_filt,
                                  grouped_by = wanted_level,
@@ -337,7 +339,7 @@ new_dunn_test <- stat_plot_prep(filtered_table = abun_filt,
                                 dunn_test = abun_dunn_test)
 
 abun_stat_vis <- stat_plot(new_dunn_test,
-                           "New Exp v AZ Exp Microbe Relative Abundance")
+                           "All Exp Microbe Relative Abundance")
 
 
 ## saving my outputs as a .tsv
@@ -350,4 +352,4 @@ write_tsv(new_dunn_test,
 ggsave(args$stat_plot_FP,
        plot = abun_stat_vis, 
        width = 17, 
-       height = 5)
+       height = 10)

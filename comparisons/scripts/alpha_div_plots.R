@@ -84,7 +84,8 @@ names(faith)[names(faith) == '#SampleID'] <- 'sampleid'
 shannon <- read_tsv(args$shannon_FP)
 names(shannon)[names(shannon) == '...1'] <- 'sampleid'
 
-exp_x_labs <- c('New Anschutz (2024)',
+exp_x_labs <- c('Old Anschutz (2020)',
+                'New Anschutz (2024)',
                 'U of Arizona')
 
 ## faith's pd plot 
@@ -97,7 +98,7 @@ faith_plot <- make_plot(input_table = faith,
                         fill_by = 'vendor',
                         x_name = 'Experiment',
                         y_name = "Faith's PD",
-                        title = "New Exp v AZ Exp Faith's Phylogenetic Diversity")
+                        title = "All Exp Faith's Phylogenetic Diversity")
 
 ## shannon entropy plot 
 shannon_plot <- make_plot(input_table = shannon,
@@ -109,7 +110,7 @@ shannon_plot <- make_plot(input_table = shannon,
                           fill_by = 'vendor',
                           x_name = 'Experiment',
                           y_name = "Shannon Entropy",
-                          title = "New Exp v AZ Exp Shannon Entropy")
+                          title = "All Exp Shannon Entropy")
 
 ## saving my plot outputs to the plots folder
 ggsave(args$output_faith_FP,

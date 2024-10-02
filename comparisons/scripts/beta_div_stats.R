@@ -80,7 +80,7 @@ dist_matrix_prep <- function(metadata_file,
 ## beta diversity adonis2 testing function
 adonis_test <- function(dist_matrix,
                         metadata_file){
-  adonis_results <- adonis2(as.dist(dist_matrix) ~ experiment_set + vendor + mouse_sex,
+  adonis_results <- adonis2(as.dist(dist_matrix) ~ experiment_set + vendor,
                             data = metadata_file,
                             permutations = 999, 
                             parallel = 4)

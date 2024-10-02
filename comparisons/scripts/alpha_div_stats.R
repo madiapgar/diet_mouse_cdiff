@@ -288,7 +288,12 @@ stat_plot <- function(new_dunn,
     scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
     geom_text(aes(label = p.adj.signif)) +
     theme_bw(base_size = 20) +
-    theme(strip.text.y = element_text(angle = 0)) +
+    theme(strip.text.y = element_text(angle = 0),
+          axis.text.x = element_text(angle = 45, hjust = 1)) +
+    scale_y_discrete(labels = c('New Anschutz (2024)',
+                                'U of Arizona')) +
+    scale_x_discrete(labels = c('Old Anschutz (2020)',
+                                'New Anschutz (2024)')) +
     xlab('Group 1') +
     ylab('Group 2') +
     ggtitle(title) -> stat_vis
@@ -307,14 +312,14 @@ metadata <- alpha_files$Metadata
 
 ## faith's pd stats and visualization
 faith_lm <- linear_model(input_table = faith,
-                         grouped_by = 'sample_type',
+                         grouped_by = 'vendor',
                          adjust_method = 'BH',
                          filter_adj_p_value = FALSE,
                          formula_left = 'faith_pd',
-                         formula_right = 'experiment_set + vendor')
+                         formula_right = 'experiment_set')
 
 faith_stats <- kruskal_dunn_stats(input_table = faith,
-                                  grouped_by = 'sample_type',
+                                  grouped_by = 'vendor',
                                   adjust_method = 'BH',
                                   filter_adj_p_value = FALSE,
                                   formula_left = 'faith_pd',
@@ -329,18 +334,18 @@ new_faith_dunn <- stat_plot_prep(filtered_table = faith,
                                  dunn_test = faith_dunn)
 
 faith_stat_vis <- stat_plot(new_faith_dunn,
-                            "New Exp v AZ Exp Faith's PD")
+                            "All Exp Faith's PD")
 
 ## shannon entropy stats and visualization 
 shannon_lm <- linear_model(input_table = shannon,
-                           grouped_by = 'sample_type',
+                           grouped_by = 'vendor',
                            adjust_method = 'BH',
                            filter_adj_p_value = FALSE,
                            formula_left = 'shannon_entropy',
-                           formula_right = 'experiment_set + vendor + mouse_sex')
+                           formula_right = 'experiment_set')
 
 shannon_stats <- kruskal_dunn_stats(input_table = shannon,
-                                    grouped_by = 'sample_type',
+                                    grouped_by = 'vendor',
                                     adjust_method = 'BH',
                                     filter_adj_p_value = FALSE,
                                     formula_left = 'shannon_entropy',
@@ -355,7 +360,7 @@ new_shannon_dunn <- stat_plot_prep(filtered_table = shannon,
                                    dunn_test = shannon_dunn)
 
 shannon_stat_vis <- stat_plot(new_shannon_dunn,
-                              "New Exp v AZ Exp Shannon Entropy")
+                              "All Exp Shannon Entropy")
 
 ## writing out results as a .tsv file 
 write_tsv(faith_lm, args$faith_lm_FP)

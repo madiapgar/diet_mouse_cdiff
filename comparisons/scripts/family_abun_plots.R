@@ -45,7 +45,7 @@ args <- parser$parse_args()
 
 wanted_level <- 'Family'
 wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
-                   'Staphylococcaceae', 'Bacteroidaceae', 'Ruminococcaceae')
+                   'Staphylococcaceae', 'Bacteroidaceae', 'Tannerellaceae', 'Morganellaceae')
 
 ## functions in order of usage 
 ## 1
@@ -76,7 +76,7 @@ family_abun_file_prep <- function(metadata_fp,
   abun_table %>% 
     group_by(sampleid, diet, mouse_id,
              experiment_set, vendor, mouse_sex,
-             seq_depth, .data[[tax_level]]) %>% 
+             .data[[tax_level]]) %>% 
     summarise(rel_abund = sum(rel_abun)) %>% 
     filter(.data[[tax_level]] %in% wanted_tax) %>% 
     mutate(mouse_fact = as.factor(mouse_id)) -> abun_filt
@@ -125,13 +125,16 @@ abun_files <- family_abun_file_prep(args$metadata_FP,
                                     wanted_level,
                                     wanted_family)
 
-exp_x_labs <- c('New Anschutz (2024)',
+exp_x_labs <- c('Old Anschutz (2020)',
+                'New Anschutz (2024)',
                 'U of Arizona')
 
-exp_labs <- c('New Anschutz (2024)',
+exp_labs <- c('Old Anschutz (2020)',
+              'New Anschutz (2024)',
               'U of Arizona')
 
-names(exp_labs) <- c('new_exp_anschutz',
+names(exp_labs) <- c('first_set_anschutz',
+                     'new_exp_anschutz',
                      'second_set_arizona')
 
 ## pulling the abundance table out, you can also take metadata, otu table, and taxonomic info
@@ -145,7 +148,7 @@ abun1 <- abun_plots(input_table = abun_filt,
                     x_group_by = 'Family',
                     fill_by = 'vendor',
                     facet_by = 'experiment_set',
-                    title = 'New Exp v AZ Exp Microbes at Day -15',
+                    title = 'All Exp Microbes at Day -15',
                     x_name = 'Family',
                     y_name = 'Relative Abundance (log10)')
 
@@ -163,7 +166,7 @@ abun2 <- abun_plots(input_table = abun_filt,
                     x_group_by = 'experiment_set',
                     fill_by = 'vendor',
                     facet_by = 'Family',
-                    title = 'New Exp v AZ Exp Microbes at Day -15',
+                    title = 'All Exp Microbes at Day -15',
                     x_name = 'Experiment',
                     y_name = 'Relative Abundance (log10)')
 
@@ -182,5 +185,5 @@ ggsave(args$plot1_FP,
 ## option #2
 ggsave(args$plot2_FP,
        plot = abun2, 
-       width = 20, 
+       width = 21, 
        height = 7)

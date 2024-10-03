@@ -149,6 +149,18 @@ filt_abun <- filt_abun_files$AbundanceTable
 non_filt_abun
 filt_abun
 ```
+**Abundance Table for other Analysis**
+```{r}
+forExt_abun_files <- abun_file_prep(metadata_file = metadata,
+                                    tax_fp = tax_FP,
+                                    otu_table_fp = otu_table_FP,
+                                    tax_level = wanted_level,
+                                    wanted_tax = NULL)
+
+forExt_abun <- forExt_abun_files$AbundanceTable
+
+forExt_abun
+```
 
 **Microbe CFUs Plot**
 ```{r, fig.height=7.5, fig.width=10}
@@ -230,4 +242,8 @@ ggsave('../plots/cdd02-3_cult_cfu_plot.pdf',
        plot = cfu_plot,
        height = 7.5,
        width = 10)
+
+## saving unfiltered/manipulated culture abundance table for other analysis
+write_tsv(forExt_abun,
+          '../data/misc/culture_genusAbun_table.tsv')
 ```

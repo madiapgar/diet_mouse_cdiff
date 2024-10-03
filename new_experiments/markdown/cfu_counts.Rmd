@@ -133,6 +133,7 @@ make_count_table <- function(input_table,
 metadata_fp <- '../data/misc/proc_newExp_d15-d3_metadata.tsv'
 cfu_count_fp <- '../data/misc/combined_CDD_cfuCounts.txt'
 surv_status_fp <- '../data/misc/survival_status.tsv'
+cult_genusAbun_fp <- '../data/misc/culture_genusAbun_table.tsv'
 
 location_y_labs <- c('Blood',
                      'Liver',
@@ -174,9 +175,11 @@ names(vendor_labs) <- c('charles_river',
 meta <- read_tsv(metadata_fp)
 cfu_count_table <- read_tsv(cfu_count_fp)
 surv_status <- read_tsv(surv_status_fp)
+cult_genusAbun_table <- read_tsv(cult_genusAbun_fp)
 ```
 **Data Wrangling**
 ```{r}
+## cfu counts table
 cfu_count_inter <- cfu_count_table %>% 
   select(mouse_id, presence_spleen, presence_liver, presence_blood) %>% 
   gather(-mouse_id, key = 'location', value = 'microbe_presence') %>% 
@@ -204,17 +207,42 @@ proc_cfu_count <- cfu_count_table %>%
          vendor = ifelse(vendor == 'CR', 'charles_river', 'taconic')) %>% 
   rename('mouse_sex' = 'sex') %>% 
   left_join(surv_status, by = "mouse_id") %>% 
-  mutate(status_microbePres = as.factor(paste(status, microbe_presence, sep = ",")))
+  mutate(status_microbePres = as.factor(paste(status, microbe_presence, sep = ","))) %>% 
+  na.omit()
+
+## joining culture relative abundance table
+proc_cult_genusAbun <- cult_genusAbun_table %>% 
+                          select(mouse_id, Genus, rel_abund, location) %>% 
+                          group_by(mouse_id, location) %>% 
+                          filter(rel_abund == max(rel_abund)) %>% 
+                          mutate(top_tax = ifelse(rel_abund >= 0.7, Genus, "Polymicrobial"),
+                                 top_tax = ifelse(is.na(top_tax), 'Unknown', top_tax)) %>% 
+                          select(mouse_id, location, top_tax)
+
+
+comb_cfu_genusAbun <- proc_cfu_count %>% 
+  left_join(proc_cult_genusAbun, by = c("mouse_id", "location")) %>% 
+  filter(experiment != 'CDD01')  %>% 
+  mutate(top_tax = ifelse(is.na(top_tax), 'None', top_tax),
+         top_tax = ifelse(top_tax == 'Micrococcus' | top_tax == 'Oceanobacillus' | top_tax == 'Dietzia' |
+                            top_tax == 'Gemella' | top_tax == 'Corynebacterium', 'Contamination', top_tax))
 ```
 
 **Testing**
+color palette?
+took the hexcodes from scale_color_brewers 'Paired' palette and put gray in the middle for the "None" category. 
+```{r}
+# RColorBrewer::brewer.pal(n = 12, name = 'Paired')
+my_palette <- c("#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A", "#999999")
+```
+
+plot
 ```{r, fig.width=20, fig.height=8}
-proc_cfu_count %>% 
-  na.omit() %>% 
+comb_cfu_genusAbun %>% 
   ggplot(aes(x = mouse_id, y = location)) +
   theme_bw(base_size = 20) +
   theme(axis.text.x = element_blank()) +
-  geom_point(aes(shape = status_microbePres, alpha = status_microbePres), size = 6, 
+  geom_point(aes(color = top_tax, shape = status_microbePres, alpha = status_microbePres), size = 6, 
              stroke = 2) +
   scale_y_discrete(labels = location_y_labs) +
   facet_nested_wrap(~diet + vendor,
@@ -222,20 +250,31 @@ proc_cfu_count %>%
                     labeller = labeller(diet = diet_labs,
                                         vendor = vendor_labs),
                     nrow = 2) +
+  scale_color_manual(breaks = c('Bacillus',
+                                'Enterococcus',
+                                'Escherichia-Shigella',
+                                'Lactobacillus',
+                                'Proteus',
+                                'Staphylococcus',
+                                'Streptococcus',
+                                'Unknown',
+                                'Polymicrobial',
+                                'Contamination',
+                                'None'),
+                     values = my_palette,
+                     name = 'Genus') +
   scale_shape_manual(values = c(4, 4, 16, 16),
                      name = surv_presAbs_title,
                      labels = surv_presAbs_labs) +
-  scale_alpha_manual(values = c(0.1, 1, 0.1, 1),
+  scale_alpha_manual(values = c(0.15, 1, 0.15, 1),
                      name = surv_presAbs_title,
                      labels = surv_presAbs_labs) +
   labs(x = 'Mouse',
        y = 'Location',
-       title = 'All Experiments Culture Results',
-       subtitle = 'Test Plot') -> future_plot_test
+       title = 'All Experiments Culture Results') -> everything_plot
 
-future_plot_test
+everything_plot
 ```
-
 
 **CDD01 Plots**
 ```{r, fig.width=10, fig.height=5}
@@ -523,8 +562,8 @@ ggsave('../plots/allExp_culture_results.pdf',
        plot = allExp_together,
        width = 20,
        height = 8)
-ggsave('../plots/allExp_culture_futureTest.pdf',
-       plot = future_plot_test,
+ggsave('../plots/allExp_culture_withMicrobes.pdf',
+       plot = everything_plot,
        width = 20,
        height = 8)
 

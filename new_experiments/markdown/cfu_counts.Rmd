@@ -219,21 +219,61 @@ proc_cult_genusAbun <- cult_genusAbun_table %>%
                                  top_tax = ifelse(is.na(top_tax), 'Unknown', top_tax)) %>% 
                           select(mouse_id, location, top_tax)
 
+## added staph to the other list bc there's only one sample with it 
+other_list <- c('Unknown',
+                'Micrococcus',
+                'Oceanobacillus',
+                'Dietzia',
+                'Gemella',
+                'Corynebacterium',
+                'Bacillus',
+                'Streptococcus',
+                'Staphylococcus')
+
 
 comb_cfu_genusAbun <- proc_cfu_count %>% 
   left_join(proc_cult_genusAbun, by = c("mouse_id", "location")) %>% 
   filter(experiment != 'CDD01')  %>% 
   mutate(top_tax = ifelse(is.na(top_tax), 'None', top_tax),
-         top_tax = ifelse(top_tax == 'Micrococcus' | top_tax == 'Oceanobacillus' | top_tax == 'Dietzia' |
-                            top_tax == 'Gemella' | top_tax == 'Corynebacterium', 'Contamination', top_tax))
+         top_tax = ifelse(top_tax %in% other_list, 'Other', top_tax))
 ```
 
-**Testing**
+```{r}
+cult_genusAbun_table %>% 
+    select(mouse_id, Genus, rel_abund, location) %>% 
+    filter(Genus == 'Enterococcus' | Genus == 'Proteus') %>% 
+    group_by(mouse_id) %>% 
+    filter(rel_abund < 0.7,
+           rel_abund > 0.1)
+```
+
+
+**Putting together color palettes**
 color palette?
 took the hexcodes from scale_color_brewers 'Paired' palette and put gray in the middle for the "None" category. 
 ```{r}
-# RColorBrewer::brewer.pal(n = 12, name = 'Paired')
-my_palette <- c("#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A", "#999999")
+##RColorBrewer::brewer.pal(n = 8, name = 'Spectral')
+my_spectral_palette <- c("#D53E4F",
+                         "#F46D43",
+                         "#FDAE61",
+                         "#FEE08B",
+                         ##"#E6F598",
+                         "#ABDDA4",
+                         "#66C2A5",
+                         "#3288BD",
+                         "#999999")
+
+my_paired_palette <- c("#A6CEE3", 
+                       "#1F78B4",
+                       "#B2DF8A",
+                       "#33A02C",
+                       # "#FB9A99",
+                       # "#E31A1C",
+                       # "#FDBF6F",
+                       # "#FF7F00",
+                       "#CAB2D6",
+                       "#6A3D9A",
+                       "#999999")
 ```
 
 plot
@@ -250,18 +290,14 @@ comb_cfu_genusAbun %>%
                     labeller = labeller(diet = diet_labs,
                                         vendor = vendor_labs),
                     nrow = 2) +
-  scale_color_manual(breaks = c('Bacillus',
-                                'Enterococcus',
+  scale_color_manual(breaks = c('Enterococcus',
                                 'Escherichia-Shigella',
                                 'Lactobacillus',
                                 'Proteus',
-                                'Staphylococcus',
-                                'Streptococcus',
-                                'Unknown',
                                 'Polymicrobial',
-                                'Contamination',
+                                'Other',
                                 'None'),
-                     values = my_palette,
+                     values = my_paired_palette,
                      name = 'Genus') +
   scale_shape_manual(values = c(4, 4, 16, 16),
                      name = surv_presAbs_title,

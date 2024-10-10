@@ -43,9 +43,11 @@ args <- parser$parse_args()
 
 
 
-wanted_level <- 'Family'
+wanted_level <- 'Genus'
 wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
                    'Staphylococcaceae', 'Bacteroidaceae', 'Tannerellaceae', 'Morganellaceae')
+wanted_genus <- c('Akkermansia', 'Enterococcus', 'Escherichia-Shigella', 'Proteus', 
+                  'Bacteroides', 'Lactobacillus', 'Staphylococcus', 'Muribaculaceae')
 
 ## functions in order of usage 
 ## 1
@@ -109,7 +111,7 @@ abun_plots <- function(input_table,
                       labels = c('Charles River',
                                  'Taconic')) +
     theme_bw(base_size = 20) +
-    facet_grid(~.data[[facet_by]]) +
+    facet_wrap(~.data[[facet_by]]) +
     ggtitle(title) +
     ylab(y_name) +
     xlab(x_name) -> plot
@@ -123,7 +125,7 @@ abun_files <- family_abun_file_prep(args$metadata_FP,
                                     args$tax_FP,
                                     args$otu_table_FP,
                                     wanted_level,
-                                    wanted_family)
+                                    wanted_genus)
 
 exp_x_labs <- c('Old Anschutz (2020)',
                 'New Anschutz (2024)',
@@ -143,13 +145,13 @@ abun_filt <- abun_files$AbundanceTable
 
 ## generating the plots
 abun1 <- abun_plots(input_table = abun_filt,
-                    x_axis = 'Family',
+                    x_axis = 'Genus',
                     y_axis = 'rel_abund',
-                    x_group_by = 'Family',
+                    x_group_by = 'Genus',
                     fill_by = 'vendor',
                     facet_by = 'experiment_set',
                     title = 'All Exp Microbes at Day -15',
-                    x_name = 'Family',
+                    x_name = 'Genus',
                     y_name = 'Relative Abundance (log10)')
 
 abun1 <- abun1 +
@@ -165,7 +167,7 @@ abun2 <- abun_plots(input_table = abun_filt,
                     y_axis = 'rel_abund',
                     x_group_by = 'experiment_set',
                     fill_by = 'vendor',
-                    facet_by = 'Family',
+                    facet_by = 'Genus',
                     title = 'All Exp Microbes at Day -15',
                     x_name = 'Experiment',
                     y_name = 'Relative Abundance (log10)')
@@ -185,5 +187,5 @@ ggsave(args$plot1_FP,
 ## option #2
 ggsave(args$plot2_FP,
        plot = abun2, 
-       width = 21, 
-       height = 7)
+       width = 18, 
+       height = 10)

@@ -49,6 +49,8 @@ args <- parser$parse_args()
 wanted_level <- 'Family'
 wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
                    'Staphylococcaceae', 'Bacteroidaceae', 'Tannerellaceae', 'Morganellaceae')
+wanted_genus <- c('Akkermansia', 'Enterococcus', 'Escherichia-Shigella', 'Proteus', 
+                  'Bacteroides', 'Lactobacillus', 'Staphylococcus', 'Muribaculaceae')
 
 group1_labs <- c('New Anschutz (2024)')
 names(group1_labs) <- c('new_exp_anschutz')
@@ -285,13 +287,14 @@ stat_plot <- function(new_dunn,
                       title){
   new_dunn %>% 
     ggplot(aes(x = group1, y = group2)) +
-    geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
+    geom_tile(aes(fill = stat_diff_means), alpha = 1, color = 'black') +
     scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
     geom_text(aes(label = p.adj.signif)) +
-    facet_wrap(~Family) +
+    facet_wrap(~Family,
+               nrow = 2) +
     theme_bw(base_size = 20) +
     ggtitle(label = title,
-            subtitle = 'Microbe Family') +
+            subtitle = 'Microbe Genus') +
     theme(strip.text.y = element_text(angle = 0),
           plot.subtitle = element_text(hjust = 0.5),
           axis.text.x = element_text(angle = 45, hjust = 1)) +
@@ -320,7 +323,7 @@ family_abun_lm <- linear_model(input_table = abun_filt,
                                adjust_method = 'BH',
                                filter_adj_p_value = FALSE,
                                formula_left = 'rel_abund',
-                               formula_right = 'experiment_set + vendor')
+                               formula_right = 'experiment_set * vendor')
 
 abun_stats <- kruskal_dunn_stats(input_table = abun_filt,
                                  grouped_by = wanted_level,
@@ -351,5 +354,5 @@ write_tsv(new_dunn_test,
 ## saving statistical visualization
 ggsave(args$stat_plot_FP,
        plot = abun_stat_vis, 
-       width = 17, 
-       height = 10)
+       width = 14, 
+       height = 8)

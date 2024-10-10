@@ -105,14 +105,14 @@ rule beta_diversity_stats:
         """
 
 
-rule family_abundance_plots:
+rule relative_abundance_plots:
     input:
         otu_table = os.path.join(DATASET_DIR, WHICH_OTU),
         taxonomy = os.path.join(DATASET_DIR, "data/qiime/taxonomy.qza"),
         metadata = os.path.join(DATASET_DIR, PROCESSED_META)
     output:
-        plot1 = os.path.join(DATASET_DIR, "plots/family_abun1.pdf"),
-        plot2 = os.path.join(DATASET_DIR, "plots/family_abun2.pdf")
+        plot1 = os.path.join(DATASET_DIR, "plots/rel_abun1.pdf"),
+        plot2 = os.path.join(DATASET_DIR, "plots/rel_abun2.pdf")
     conda:
         "r_env"
     params:
@@ -127,15 +127,15 @@ rule family_abundance_plots:
         """
 
 
-rule family_abundance_stats:
+rule relative_abundance_stats:
     input:
        otu_table = os.path.join(DATASET_DIR, WHICH_OTU),
        taxonomy = os.path.join(DATASET_DIR, "data/qiime/taxonomy.qza"),
        metadata = os.path.join(DATASET_DIR, PROCESSED_META)
     output:
-        lm = os.path.join(DATASET_DIR, "stats/family_abun_lm.tsv"),
-        dunn = os.path.join(DATASET_DIR, "stats/family_abun_dunn.tsv"),
-        stat_plot = os.path.join(DATASET_DIR, "plots/famAbun_stat_vis.pdf")
+        lm = os.path.join(DATASET_DIR, "stats/rel_abun_lm.tsv"),
+        dunn = os.path.join(DATASET_DIR, "stats/rel_abun_dunn.tsv"),
+        stat_plot = os.path.join(DATASET_DIR, "plots/relAbun_stat_vis.pdf")
     conda:
         "r_env"
     params:

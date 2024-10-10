@@ -129,11 +129,11 @@ microbiome_r_outputs = ["plots/faith_pd.pdf",
                         "plots/weighted_unifrac_pcoa.pdf",
                         "stats/w_adonis_results.tsv",
                         "stats/uw_adonis_results.tsv",
-                        "plots/family_abun1.pdf",
-                        "plots/family_abun2.pdf",
-                        "stats/family_abun_lm.tsv",
-                        "stats/family_abun_dunn.tsv",
-                        "plots/famAbun_stat_vis.pdf"]
+                        "plots/rel_abun1.pdf",
+                        "plots/rel_abun2.pdf",
+                        "stats/rel_abun_lm.tsv",
+                        "stats/rel_abun_dunn.tsv",
+                        "plots/relAbun_stat_vis.pdf"]
 
 resil_homog_outList = ["stats/wu_homogeneity.tsv",
                        "stats/wu_homog_dunn.tsv",

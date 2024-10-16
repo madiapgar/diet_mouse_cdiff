@@ -1,0 +1,275 @@
+---
+title: "extra_relAbun_stats"
+output: html_document
+date: "2024-10-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(broom)
+library(apppleplots)
+library(rstatix)
+library(qiime2R)
+```
+
+**Functions**
+```{r}
+family_abun_file_prep <- function(metadata_fp,
+                                  tax_fp,
+                                  otu_table_fp,
+                                  tax_level,
+                                  wanted_tax){
+  ## metadata
+  metadata <- read_tsv(metadata_fp)
+  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
+  ## taxonomy
+  taxonomy <- read_qza(tax_fp)$data %>% 
+    parse_taxonomy() %>% 
+    rownames_to_column('asv')
+  ## otu table 
+  otu_table <- read_qza(otu_table_fp)$data
+  otu_table %>% 
+    as_tibble(rownames = 'asv') %>% 
+    gather(-asv, key = sampleid, value = abun) %>% 
+    group_by(sampleid) %>% 
+    mutate(rel_abun = abun/sum(abun)) %>% 
+    mutate(rel_abun = rel_abun + 0.000001) -> otu_table
+  ## joining all tables together 
+  otu_table %>% 
+    left_join(metadata, by = 'sampleid') %>% 
+    left_join(taxonomy, by = 'asv') -> abun_table
+  abun_table %>% 
+    group_by(sampleid, diet, mouse_id,
+             experiment_set, vendor, mouse_sex,
+             .data[[tax_level]]) %>% 
+    summarise(rel_abund = sum(rel_abun)) %>% 
+    filter(.data[[tax_level]] %in% wanted_tax) %>% 
+    mutate(mouse_fact = as.factor(mouse_id)) -> abun_filt
+  ## creating a list for my outputs
+  my_list <- list(Metadata = metadata,
+                  Taxonomy = taxonomy,
+                  OTUTable = otu_table,
+                  AbundanceTable = abun_filt)
+  return(my_list)
+}
+
+## preps dunns post hoc results for statistical visualization
+stat_plot_prep <- function(filtered_table,
+                           first_group,
+                           second_group,
+                           mean_value,
+                           dunn_test){
+  filtered_table %>% 
+    group_by(.data[[first_group]], .data[[second_group]]) %>%
+    summarise(mean = mean(.data[[mean_value]])) -> mean_table
+  
+  dunn_test %>% 
+    merge(mean_table, 
+          by.x = c('group1',
+                   second_group),
+          by.y = c(first_group,
+                   second_group)) %>%
+    rename_with(~paste0('group1_', mean_value, recycle0 = TRUE), contains('mean')) %>% 
+    merge(mean_table,
+          by.x = c('group2',
+                   second_group),
+          by.y = c(first_group,
+                   second_group)) %>%
+    rename_with(~paste0('group2_', mean_value, recycle0 = TRUE), contains('mean')) -> int_dunn
+  
+  group1_col <- paste0('group1_', mean_value)
+  group2_col <- paste0('group2_', mean_value)
+  
+  int_dunn %>% 
+    mutate(diff_means = (.data[[group1_col]] - .data[[group2_col]]),
+           stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
+  
+  return(new_dunn)
+}
+
+## statistical visualization 
+stat_plot <- function(new_dunn,
+                      facet_by,
+                      title,
+                      wanted_subtitle){
+  new_dunn %>% 
+    ggplot(aes(x = group1, y = group2)) +
+    geom_tile(aes(fill = stat_diff_means), alpha = 1, color = 'black') +
+    scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
+    geom_text(aes(label = p.adj.signif)) +
+    facet_wrap(~.data[[facet_by]],
+               nrow = 2) +
+    theme_bw(base_size = 20) +
+    ggtitle(label = title,
+            subtitle = wanted_subtitle) +
+    theme(strip.text.y = element_text(angle = 0),
+          plot.subtitle = element_text(hjust = 0.5),
+          axis.text.x = element_text(angle = 45, hjust = 1)) +
+    # scale_y_discrete(labels = c('New Anschutz (2024)',
+    #                             'U of Arizona')) +
+    # scale_x_discrete(labels = c('Old Anschutz (2020)',
+    #                             'New Anschutz (2024)')) +
+    xlab('Group 1') +
+    ylab('Group 2') -> stat_vis
+  return(stat_vis)
+}
+```
+
+**File paths**
+```{r}
+metadata_FP <- '../data/misc/oldNew_comp_d15_metadata.tsv'
+otu_table_FP <- '../data/qiime/total_sum_otu_table.qza'
+tax_FP <- '../data/qiime/taxonomy.qza'
+
+## global lists
+wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
+                   'Staphylococcaceae', 'Bacteroidaceae', 'Tannerellaceae', 'Morganellaceae')
+wanted_genus <- c('Akkermansia', 'Enterococcus', 'Escherichia-Shigella', 'Proteus', 
+                  'Bacteroides', 'Lactobacillus', 'Staphylococcus', 'Muribaculaceae')
+```
+
+## **Family level**
+**Abundance table**
+```{r}
+family_abun_files <- family_abun_file_prep(metadata_fp = metadata_FP,
+                                          tax_fp = tax_FP,
+                                          otu_table_fp = otu_table_FP,
+                                          tax_level = 'Family',
+                                          wanted_tax = wanted_family)
+family_abun_table <- family_abun_files$AbundanceTable
+
+## adding a separate column the dataframe so I can 
+proc_familyAbun_table <- family_abun_table %>% 
+  mutate(exp_vendor = paste(experiment_set, vendor, sep = ":"))
+
+proc_familyAbun_table
+```
+
+**Linear modeling**
+```{r}
+family_relAbun_lm <- apppleplots::linear_model(input_table = proc_familyAbun_table,
+                                               grouped_by = 'Family',
+                                               adjust_method = 'BH',
+                                               filter_adj_p_value = FALSE,
+                                               formula_left = 'rel_abund',
+                                               formula_right = 'exp_vendor')
+family_relAbun_lm
+```
+
+**Kruskal-Wallis and Dunn's Post Hoc test**
+i think i want to use the results from the dunn's post hoc test for the stat visualization
+```{r}
+family_relAbun_krDunn <- apppleplots::kruskal_dunn_stats(input_table = proc_familyAbun_table,
+                                                         grouped_by = 'Family',
+                                                         adjust_method = 'BH',
+                                                         filter_adj_p_value = FALSE,
+                                                         formula_left = 'rel_abund',
+                                                         formula_right = 'exp_vendor')
+
+family_relAbun_kruskal <- family_relAbun_krDunn$KruskalTest
+family_relAbun_dunn <- family_relAbun_krDunn$DunnTest
+
+family_relAbun_dunn
+```
+
+**Wrangling Dunn test for stat visualization**
+```{r}
+proc_family_relAbun_dunn <- stat_plot_prep(filtered_table = proc_familyAbun_table,
+                                           first_group = 'exp_vendor',
+                                           second_group = 'Family',
+                                           mean_value = 'rel_abund',
+                                           dunn_test = family_relAbun_dunn)
+proc_family_relAbun_dunn
+```
+
+**Stat visualization**
+```{r, fig.width=15, fig.height=9}
+family_relAbun_stat_plot <- stat_plot(new_dunn = proc_family_relAbun_dunn,
+                                      facet_by = 'Family',
+                                      title = 'All Exp Microbe Relative Abundance',
+                                      wanted_subtitle = 'Microbe Family')
+
+family_relAbun_stat_plot
+```
+
+
+## **Genus level**
+**Abundance table**
+```{r}
+genus_abun_files <- family_abun_file_prep(metadata_fp = metadata_FP,
+                                          tax_fp = tax_FP,
+                                          otu_table_fp = otu_table_FP,
+                                          tax_level = 'Genus',
+                                          wanted_tax = wanted_genus)
+genus_abun_table <- genus_abun_files$AbundanceTable
+
+## adding a separate column the dataframe so I can 
+proc_genusAbun_table <- genus_abun_table %>% 
+  mutate(exp_vendor = paste(experiment_set, vendor, sep = ":"))
+
+proc_genusAbun_table
+```
+
+**Linear modeling**
+```{r}
+genus_relAbun_lm <- apppleplots::linear_model(input_table = proc_genusAbun_table,
+                                              grouped_by = 'Genus',
+                                              adjust_method = 'BH',
+                                              filter_adj_p_value = FALSE,
+                                              formula_left = 'rel_abund',
+                                              formula_right = 'exp_vendor')
+genus_relAbun_lm
+```
+
+**Kruskal-Wallis and Dunn's Post Hoc test**
+```{r}
+genus_relAbun_krDunn <- apppleplots::kruskal_dunn_stats(input_table = proc_genusAbun_table,
+                                                        grouped_by = 'Genus',
+                                                        adjust_method = 'BH',
+                                                        filter_adj_p_value = FALSE,
+                                                        formula_left = 'rel_abund',
+                                                        formula_right = 'exp_vendor')
+
+genus_relAbun_kruskal <- genus_relAbun_krDunn$KruskalTest
+genus_relAbun_dunn <- genus_relAbun_krDunn$DunnTest
+
+genus_relAbun_dunn
+```
+
+**Wrangling Dunn test for stat visualization**
+```{r}
+proc_genus_relAbun_dunn <- stat_plot_prep(filtered_table = proc_genusAbun_table,
+                                          first_group = 'exp_vendor',
+                                          second_group = 'Genus',
+                                          mean_value = 'rel_abund',
+                                          dunn_test = genus_relAbun_dunn)
+proc_genus_relAbun_dunn
+```
+
+**Stat visualization**
+```{r, fig.width=15, fig.height=9}
+genus_relAbun_stat_plot <- stat_plot(new_dunn = proc_genus_relAbun_dunn,
+                                     facet_by = 'Genus',
+                                     title = 'All Exp Microbe Relative Abundance',
+                                     wanted_subtitle = 'Microbe Genus')
+
+genus_relAbun_stat_plot
+```
+
+## **Saving my outputs**
+```{r}
+ggsave('../plots/famAbun_stat_vis.pdf',
+       plot = family_relAbun_stat_plot,
+       width = 15, 
+       height = 9)
+ggsave('../plots/genusAbun_stat_vis.pdf',
+       plot = genus_relAbun_stat_plot,
+       width = 15,
+       height = 9)
+```
+

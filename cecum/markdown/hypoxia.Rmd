@@ -171,7 +171,10 @@ hypoxia_locationDiet_plot <- apppleplots::facet_once_plots(input_table = hypoxia
 
 
 ## diet on x-axis and faceted by location CECUM ONLY
-hypoxia_cecum_plot <- apppleplots::facet_once_plots(input_table = hypoxia,
+cecum_hypox_table <- hypoxia %>% 
+  filter(location == 'Cecum')
+
+hypoxia_cecum_plot <- apppleplots::facet_once_plots(input_table = cecum_hypox_table,
                                                     stat_on_plot = TRUE,
                                                     x_value = 'diet',
                                                     y_value = 'fluorescence',

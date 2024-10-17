@@ -82,6 +82,45 @@ r2_value_for_loop <- function(biom_table,
   }
   return(output)
 }
+
+## putting stats directly on correlation plots 
+stat_on_plot <- function(stat_table,
+                         wanted_col_list,
+                         x_col_name,
+                         x_col_value,
+                         y_col_name,
+                         y_col_value,
+                         plot,
+                         plot_text_size){
+  ## making table conducive to labeling plot 
+  proc_stat_table <- stat_table %>% 
+    filter(signif != 'ns') %>% 
+    select(all_of(wanted_col_list)) %>% 
+    ## created columns need to match up with the column names called for the x and y axis in the plot
+    ## numeric values added are the x and y coordinates for where the label will sit in the facet block 
+    mutate("{x_col_name}" := paste(x_col_value),
+           "{x_col_name}" := as.numeric(.data[[x_col_name]]),
+           "{y_col_name}" := paste(y_col_value),
+           "{y_col_name}" := as.numeric(.data[[y_col_name]]),
+           p_value = signif(p_value, digits = 3),
+           r_squared = signif(r_squared, digits = 3),
+           pVal_rSquare = paste0('p-value: ', p_value, "\n", 
+                                 'r2: ', r_squared))
+  
+  ## putting labels on plot 
+  plot_wStats <- plot +
+    geom_label(data = proc_stat_table, 
+               label = proc_stat_table$pVal_rSquare,
+               color = 'black',
+               fontface = 'bold',
+               size = plot_text_size)
+  
+  ## creating list of my outputs
+  my_list <- list(ProcStatTable = proc_stat_table,
+                  PlotwStats = plot_wStats)
+  
+  return(my_list)
+}
 ```
 
 **File Paths**
@@ -163,7 +202,7 @@ tox_acetic <- apppleplots::correlation_plots(input_table = acetic_neatTox,
                                              col_labs = diet_labs,
                                              x_name = 'Toxin Concentration (ng/uL) (log10)',
                                              y_name = 'SCFA Concentration (ug/g) (log10)',
-                                             title_content = 'Acetate')
+                                             title_content = 'C. difficile Toxin by Acetate')
   
 tox_acetic
 ```
@@ -183,7 +222,7 @@ tox_butanoic <- apppleplots::correlation_plots(input_table = butanoic_neatTox,
                                                col_labs = diet_labs,
                                                x_name = 'Toxin Concentration (ng/uL) (log10)',
                                                y_name = 'SCFA Concentration (ug/g) (log10)',
-                                               title_content = 'Butyrate')
+                                               title_content = 'C. difficile Toxin by Butyrate')
 tox_butanoic
 ```
 
@@ -202,7 +241,7 @@ tox_propanoic <- apppleplots::correlation_plots(input_table = propanoic_neatTox,
                                                 col_labs = diet_labs,
                                                 x_name = 'Toxin Concentration (ng/uL) (log10)',
                                                 y_name = 'SCFA Concentration (ug/g) (log10)',
-                                                title_content = 'Propionate')
+                                                title_content = 'C. difficile Toxin by Propionate')
 
 tox_propanoic
 ```
@@ -220,10 +259,69 @@ stat_table['signif'] <- symnum(stat_table$p_value,
                                na = "")
 ```
 
+**Stats on Actual Plot**
+```{r,warning=FALSE, fig.height=4, fig.width=10}
+names(stat_table)[names(stat_table) == 'toxin'] <- 'neat_toxin'
+col_list <- c('diet', 'neat_toxin', 'signif', 'p_value', 'r_squared')
+
+## acetate
+stat_table %>% 
+  filter(metabolite == 'Acetic Acid (ug/g)') %>% 
+  select(-metabolite) -> acetate_stat_table
+
+tox_acetic_list <- stat_on_plot(stat_table = acetate_stat_table,
+                                wanted_col_list = col_list,
+                                x_col_name = 'neat_conc_norm',
+                                x_col_value = '15',
+                                y_col_name = 'metab_conc_norm',
+                                y_col_value = '5.5',
+                                plot = tox_acetic,
+                                plot_text_size = 3)
+
+tox_acetic_stats <- tox_acetic_list$PlotwStats
+
+## butyrate
+stat_table %>% 
+  filter(metabolite == 'n-Butanoic Acid (ug/g)') %>% 
+  select(-metabolite) -> butyrate_stat_table
+
+tox_butanoic_list <- stat_on_plot(stat_table = butyrate_stat_table,
+                                  wanted_col_list = col_list,
+                                  x_col_name = 'neat_conc_norm',
+                                  x_col_value = '15',
+                                  y_col_name = 'metab_conc_norm',
+                                  y_col_value = '12',
+                                  plot = tox_butanoic,
+                                  plot_text_size = 3)
+
+tox_butanoic_stats <- tox_butanoic_list$PlotwStats
+
+## propionate
+stat_table %>% 
+  filter(metabolite == 'Propanoic Acid (ug/g)') %>% 
+  select(-metabolite) -> propionate_stat_table
+
+tox_propanoic_list <- stat_on_plot(stat_table = propionate_stat_table,
+                                  wanted_col_list = col_list,
+                                  x_col_name = 'neat_conc_norm',
+                                  x_col_value = '15',
+                                  y_col_name = 'metab_conc_norm',
+                                  y_col_value = '5.5',
+                                  plot = tox_propanoic,
+                                  plot_text_size = 3)
+
+tox_propanoic_stats <- tox_propanoic_list$PlotwStats
+
+tox_acetic_stats
+tox_butanoic_stats
+tox_propanoic_stats
+```
+
+
 **Statistical Visualization**
 ```{r, fig.height=3, fig.width=5.5}
 tox_metab_stat_vis <- apppleplots::stat_heat_plot(input_table = stat_table,
-                                                  x_value = 'toxin',
+                                                  x_value = 'neat_toxin',
                                                   y_value = 'diet',
                                                   x_value_type = 'discrete',
                                                   y_value_type = 'discrete',
@@ -249,9 +347,9 @@ tox_metab_stat_vis
 ```
 
 **Putting my Plots Together**
-```{r, warning=FALSE, fig.height=7, fig.width=16}
-plot_grid(tox_acetic, tox_butanoic,
-          tox_propanoic, tox_metab_stat_vis,
+```{r, warning=FALSE, fig.height=7, fig.width=18}
+plot_grid(tox_acetic_stats, tox_butanoic_stats,
+          tox_propanoic_stats, tox_metab_stat_vis,
           nrow = 2,
           labels = c('a)', 'b)', 'c)', 'd)')) -> metab_tox_plots
 
@@ -261,18 +359,29 @@ metab_tox_plots
 **Saving my Outputs**
 ```{r}
 ## as a pdf
-ggsave('metab_tox_comp.pdf',
+ggsave('../plots/metab_tox_comp.pdf',
        plot = metab_tox_plots,
-       width = 16,
-       height = 7,
-       path = '../plots')
+       width = 18,
+       height = 7)
+ggsave('../plots/toxin_acetateStats_plot.pdf',
+       plot = tox_acetic_stats,
+       width = 10,
+       height = 4)
+ggsave('../plots/toxin_butyrateStats_plot.pdf',
+       plot = tox_butanoic_stats,
+       width = 10,
+       height = 4)
+ggsave('../plots/toxin_propionateStats_plot.pdf',
+       plot = tox_propanoic_stats,
+       width = 10,
+       height = 4)
 
 ## as an rdata object
-save(tox_acetic,
+save(tox_acetic_stats,
      file = '../../figures/tox_metab_acetic.rdata')
-save(tox_butanoic,
+save(tox_butanoic_stats,
      file = '../../figures/tox_metab_butanoic.rdata')
-save(tox_propanoic,
+save(tox_propanoic_stats,
      file = '../../figures/tox_metab_propanoic.rdata')
 save(tox_metab_stat_vis,
      file = '../../figures/tox_metab_stats.rdata')

@@ -194,7 +194,7 @@ hypox_metab_table %>%
 **Plot**
 ```{r, warning=FALSE, fig.width=10, fig.height=3}
 ## cecum
-hypox_cecum_plot <- apppleplots::correlation_plots(input_table = hypox_cecumOnly,
+hypox_cecumHisto_plot <- apppleplots::correlation_plots(input_table = hypox_cecumOnly,
                                                    x_value = 'score',
                                                    y_value = 'fluorescence',
                                                    x_transform = FALSE,
@@ -227,7 +227,7 @@ hypox_colon_plot <- apppleplots::correlation_plots(input_table = hypox_colonOnly
                                                    title_content = 'Colon Hypoxia by Inflammation')
 
 
-hypox_cecum_plot
+hypox_cecumHisto_plot
 hypox_colon_plot
 ```
 
@@ -304,7 +304,7 @@ hypox_colonStats_plot
 
 **Everything Together**
 ```{r, warning=FALSE, fig.height=5, fig.width=17}
-hypoxia_histo_plots <- plot_grid(hypox_cecum_plot,
+hypoxia_histo_plots <- plot_grid(hypox_cecumHisto_plot,
                                  hypox_colon_plot,
                                  hypox_histo_stat_plot,
                                  nrow = 2,
@@ -557,7 +557,7 @@ save(hypox_tcdb_plot,
      file = '../../figures/hypoxia_tcdb_comp.rdata')
 save(hypox_toxin_stat_plot,
      file = '../../figures/hypoxia_toxin_stats.rdata')
-save(hypox_cecum_plot,
+save(hypox_cecumHisto_plot,
      file = '../../figures/hypox_histo_cecum_comp.rdata')
 save(hypox_colonStats_plot,
      file = '../../figures/hypox_histo_colon_comp.rdata')

@@ -235,9 +235,8 @@ names(diet_labs) <- c('Chow',
 
 fam_row_labs <- c('Lachnospiraceae',
                   'Ruminococcaceae',
-                  'Bacteroidaceae',
-                  'Marinifilaceae',
                   'Peptostreptococcaceae',
+                  'Lactobacillaceae',
                   'Enterobacteriaceae',
                   'Enterococcaceae',
                   'Staphylococcaceae')
@@ -247,8 +246,7 @@ names(fam_row_labs) <- c(1,
                          4,
                          5,
                          6,
-                         7,
-                         8)
+                         7)
 
 poster_row_labs <- c('Lachnospiraceae',
                       'Ruminococcaceae',
@@ -274,13 +272,12 @@ names(diet_stat_labs) <- c('Chow',
 wanted_level <- 'Family'
 
 wanted_family <- c('Enterobacteriaceae', 
-                    'Enterococcaceae', 
-                    'Staphylococcaceae',
-                    'Lachnospiraceae',
-                    'Ruminococcaceae',
-                    'Bacteroidaceae',
-                    'Marinifilaceae',
-                    'Peptostreptococcaceae')
+                   'Lactobacillaceae', 
+                   'Lachnospiraceae', 
+                   'Enterococcaceae',
+                   'Ruminococcaceae',
+                   'Staphylococcaceae',
+                   'Peptostreptococcaceae')
 
 poster_wanted_family <- c('Lachnospiraceae',
                           'Ruminococcaceae',
@@ -309,16 +306,16 @@ abun_files <- family_abun_file_prep(metadata_FP,
 
 abun_filt <- abun_files$AbundanceTable
 abun_filt %>% 
-  mutate(order = ifelse(Family == 'Lachnospiraceae', 1, Family),
-         order = ifelse(Family == 'Ruminococcaceae', 2, order),
-         order = ifelse(Family == 'Bacteroidaceae', 3, order),
-         order = ifelse(Family == 'Marinifilaceae', 4, order),
-         order = ifelse(Family == 'Peptostreptococcaceae', 5, order),
-         order = ifelse(Family == 'Enterobacteriaceae', 6, order),
-         order = ifelse(Family == 'Enterococcaceae', 7, order),
-         order = ifelse(Family == 'Staphylococcaceae', 8, order),
+  mutate(order = case_when(
+                  Family == 'Lachnospiraceae' ~ 1,
+                  Family == 'Ruminococcaceae' ~ 2,
+                  Family == 'Peptostreptococcaceae' ~ 3,
+                  Family == 'Lactobacillaceae' ~ 4,
+                  Family == 'Enterobacteriaceae' ~ 5,
+                  Family == 'Enterococcaceae' ~ 6,
+                  Family == 'Staphylococcaceae' ~ 7
+                ),
          microbe_ident = ifelse(Family == 'Lachnospiraceae' | Family == 'Ruminococcaceae' |
-                                  Family == 'Bacteroidaceae' | Family == 'Marinifilaceae' | 
                                   Family == 'Peptostreptococcaceae', 'Obligate\nAnaerobe',
                                 'Facultative\nAnaerobe')) -> abun_filt
 tax <- abun_files$Taxonomy
@@ -404,6 +401,7 @@ facAnaerobe_abun <- abun_plots(abundance_table = mini_poster_facAn,
 
 obAnaerobe_abun
 facAnaerobe_abun
+family_abun1
 ```
 
 ```{r, fig.height=10, fig.width=17}
@@ -441,7 +439,7 @@ poster_stat_plot1
 ```
 
 **Putting my Plots Together**
-```{r, fig.height=15, fig.width=35}
+```{r, fig.height=12, fig.width=35}
 ## regular plots 
 plot_grid(family_abun1, stat_plot1,
           nrow = 1,
@@ -521,7 +519,7 @@ ggsave("../plots/mini_famAbun_stat_vis.pdf",
 ggsave("famAbun_together.pdf",
        plot = plots_together, 
        width = 35, 
-       height = 15, 
+       height = 12, 
        path = '../plots')
 ggsave("../plots/genus_abun1.pdf",
        plot = genus_plot1,

@@ -30,6 +30,13 @@ cdiff_effect_labs <- c('C. difficile Inhibitor',
 names(cdiff_effect_labs) <- c('inhibitor',
                               'promoter')
 
+dca_sep_labs <- c('Deoxycholic Acid',
+                 'C. difficile Inhibitor',
+                 'C. difficile Promoter')
+names(dca_sep_labs) <- c('DCA',
+                         'inhibitor',
+                         'promoter')
+
 bile_labs <- c('a-MCA',
                'b-MCA',
                'LCA',
@@ -61,7 +68,12 @@ Use prescence/abscence tests or rank-based test instead of a non-parametric stat
 ```{r}
 big_bile_acid <- read_tsv(bile_acid_FP)
 bile_ratio <- read_tsv(bile_ratio_FP)
+
+## changing the c.diff effect column to include DCA for a special plot
+dca_sep_bileAcid <- big_bile_acid %>% 
+  mutate(c_diff_effect = ifelse(bile_acid == "Deoxycholic_acid_DCA", "DCA", c_diff_effect))
 ```
+
 **Stats**
 Had to filter out CDCA and UDCA from the 'inhibitors' category because the dunn_test wouldn't run - I think it's because they're all zeroes so there aren't any pairwise comparisons to do between diets for them. Maybe include T-CDCA and T-DCA as inhibitors instead?
 ```{r}
@@ -76,6 +88,21 @@ kruskal <- no_bile_krDunn$KruskalTest
 dunn <- no_bile_krDunn$DunnTest
 
 dunn <- dunn %>% 
+          add_y_position(scales = 'free',
+                         fun = 'max',
+                         y.trans = log10)
+
+## with dca separated out
+dca_sep_krDunn <- apppleplots::kruskal_dunn_stats(input_table = dca_sep_bileAcid,
+                                                  grouped_by = non_bile_groups,
+                                                  adjust_method = 'BH',
+                                                  filter_adj_p_value = FALSE,
+                                                  formula_left = 'conc_normalized',
+                                                  formula_right = 'diet')
+dca_sep_kruskal <- dca_sep_krDunn$KruskalTest
+dca_sep_dunn <- dca_sep_krDunn$DunnTest
+
+dca_sep_dunn <- dca_sep_dunn %>% 
           add_y_position(scales = 'free',
                          fun = 'max',
                          y.trans = log10)
@@ -124,6 +151,35 @@ overall_plot <- overall_plot +
 
 overall_plot
 ```
+
+same as the plot above but there's a separate facet for dca rather than it being combined with the c. diff inhibitors facet
+```{r, fig.height=3.5, fig.width=7}
+dca_sep_plot <- apppleplots::facet_once_plots(input_table = dca_sep_bileAcid,
+                                              stat_on_plot = FALSE,
+                                              x_value = 'diet',
+                                              y_value = 'conc_normalized',
+                                              x_value_type = 'discrete',
+                                              grouped_by = 'diet',
+                                              point_alpha = 0.4,
+                                              x_labels = diet_x_labs,
+                                              facet_by = 'c_diff_effect',
+                                              facet_labels = dca_sep_labs,
+                                              stat_table = NA,
+                                              x_name = 'Diet',
+                                              y_name = 'Concentration (pmol/mg) (log10)',
+                                              title_content = 'Cecum Bile Acid Concentration')
+
+dca_sep_plot <- dca_sep_plot +
+                  scale_y_continuous(trans = 'log10') +
+                  stat_pvalue_manual(dca_sep_dunn,
+                                     tip.length = 0.01,
+                                     step.increase = 0.05,
+                                     label = 'p.adj.signif',
+                                     hide.ns = TRUE)
+
+dca_sep_plot
+```
+
 
 ```{r, fig.width=8, fig.height=6}
 bile_plot <- apppleplots::facet_once_plots(input_table = big_bile_acid,
@@ -204,6 +260,10 @@ ggsave('../plots/bile_acid_ratio.pdf',
        plot = ratio_bile_plot,
        width = 5,
        height = 3.5)
+ggsave('../plots/dcaSep_overall_bileAcid.pdf',
+       plot = dca_sep_plot,
+       width = 7,
+       height = 3.5)
 
 ## rdata object 
 save(overall_plot,
@@ -212,6 +272,8 @@ save(bile_plot,
      file = '../../figures/bile_acid.rdata')
 save(ratio_bile_plot,
      file = '../../figures/bile_acid_ratio.rdata')
+save(dca_sep_plot,
+     file = '../../figures/dcaSep_overall_bileAcid.rdat')
 
 ## stats
 write_tsv(dunn,
@@ -222,10 +284,10 @@ write_tsv(ratio_dunn,
           '../stats/ratio_bile_acid.tsv')
 
 ## saving processed bile acid files so I don't have to keep reprocessing them
-write_tsv(big_bile_acid,
-          '../data/misc/processed_bile_acid.tsv')
-write_tsv(bile_ratio,
-          '../data/misc/processed_ratio_bileAcid.tsv')
+# write_tsv(big_bile_acid,
+#           '../data/misc/processed_bile_acid.tsv')
+# write_tsv(bile_ratio,
+#           '../data/misc/processed_ratio_bileAcid.tsv')
 ```
 
 

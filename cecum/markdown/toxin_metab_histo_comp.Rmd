@@ -186,19 +186,35 @@ neat_toxin %>%
 
 ## putting histo and metab tables together
 histo %>% 
-  select(mouse_id, tissue, score, diet) %>% 
+  select(mouse_id, tissue, score, diet, sampleid) %>% 
   left_join(metab, by = 'mouse_id') %>% 
   na.omit() -> histo_metab
 
 ## putting histo and neat toxin tables together
 histo %>% 
-  select(mouse_id, tissue, score, diet) %>% 
+  select(mouse_id, tissue, score, diet, sampleid) %>% 
   left_join(neat_toxin, by = 'mouse_id') %>% 
   na.omit() -> histo_neat_toxin
 
 ## creating mini histo_neat_toxin table that only contains low fiber diets 
 histo_neat_toxin %>% 
   filter(diet == "HF/LF" | diet == "LF/LF") -> mini_histo_neat_toxin
+
+## making a giant table of everything combined to save for later
+## so I don't have to do this data wrangling again 
+toComb_histo_metab <- histo_metab %>% 
+  rename(microbe_product = metabolite,
+         conc_normalized = metab_conc_norm) 
+
+toComb_histo_neatTox <- histo_neat_toxin %>% 
+  rename(microbe_product = neat_toxin,
+         concentration = neat_conc,
+         conc_normalized = neat_conc_norm)
+
+everything_table <- rbind(toComb_histo_metab,
+                          toComb_histo_neatTox)
+
+everything_table 
 ```
 
 #**Toxin to Histopathology Scores Comparisons**
@@ -271,13 +287,14 @@ mini_neat_histo_cecum_plot
 ```
 
 **Toxin/Histo Correlations Not Faceted by Diet**
-```{r, fig.height=4, fig.width=8}
+```{r, fig.height=4, fig.width=20}
+## base plot
 noDiet_histoCecum_tox_plot <- apppleplots::correlation_plots(input_table = cecum_neat_toxin,
                                                           x_value = 'neat_conc_norm',
                                                           y_value = 'score',
                                                           x_transform = TRUE,
                                                           y_transform = FALSE,
-                                                          point_alpha = 0.4,
+                                                          point_alpha = 0,
                                                           regression_method = 'lm',
                                                           facet_rows = NULL,
                                                           facet_cols = 'neat_toxin',
@@ -287,8 +304,59 @@ noDiet_histoCecum_tox_plot <- apppleplots::correlation_plots(input_table = cecum
                                                           y_name = 'Score',
                                                           title_content = 
                                                           'Cecum C. difficile Toxin by Histopathology')
+
+noDiet_histoCecum_tox_plot <- noDiet_histoCecum_tox_plot +
+                    geom_jitter(aes(fill = diet), pch = 21, alpha = 0.7, size = 3) +
+                    scale_fill_brewer(palette = 'Spectral',
+                                      name = 'Mouse Diet',
+                                      labels = c('Chow',
+                                                 'HFt / HFb',
+                                                 'HFt / LFb',
+                                                 'LFt / HFb',
+                                                 'LFt / LFb')) +
+                    theme_bw(base_size = 20)
   
-noDiet_histoCecum_tox_plot
+## stats
+cecum_neat_toxin %>% 
+    filter(neat_toxin == "Total TcA Neat") %>%
+    do(glance(lm(score ~ neat_conc_norm * diet,
+                 data = .))) -> lm_tca
+
+cecum_neat_toxin %>% 
+    filter(neat_toxin == "Total TcB Neat") %>%
+    do(glance(lm(score ~ neat_conc_norm * diet,
+                 data = .))) -> lm_tcb
+
+noDiet_histoCecum_tox_stats <- data.frame(r_squared = c(lm_tca$r.squared,
+                                                        lm_tcb$r.squared),
+                                          p_value = c(lm_tca$p.value,
+                                                      lm_tcb$p.value),
+                                          neat_toxin = c('Total TcA Neat',
+                                                         'Total TcB Neat'))
+
+noDiet_histoCecum_tox_stats['signif'] <- symnum(noDiet_histoCecum_tox_stats$p_value,
+                                                cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                                symbols = c("****", "***", "**", "*", "ns"),
+                                                abbr.colnames = FALSE,
+                                                na = "")
+
+## stats on plot
+noDiet_histoCecum_col_list <- c('r_squared', 'p_value', 'neat_toxin', 'signif')
+
+
+noDiet_histoCecum_list <- stat_on_plot(stat_table = noDiet_histoCecum_tox_stats,
+                                       wanted_col_list = noDiet_histoCecum_col_list,
+                                       x_col_name = 'neat_conc_norm',
+                                       x_col_value = '5',
+                                       y_col_name = 'score',
+                                       y_col_value = '5.5',
+                                       plot = noDiet_histoCecum_tox_plot,
+                                       plot_text_size = 4)
+
+noDiet_histoCecum_toxStats_plot <- noDiet_histoCecum_list$PlotwStats
+
+noDiet_histoCecum_tox_stats
+noDiet_histoCecum_toxStats_plot
 ```
 
 **Toxin Stats (to put on plots)**
@@ -589,6 +657,10 @@ ggsave('histo_metab_stats.pdf',
        height = 4,
        path = '../plots')
 
+## saving histo, metab, and toxin results combined table as a .tsv
+write_tsv(everything_table,
+          '../data/misc/histoMetabToxin_results_comb.tsv')
+
 ## as an rdata object
 save(neat_histo_cecum_plot,
      file = '../../figures/neat_histo_cecum.rdata')
@@ -606,7 +678,7 @@ save(metab_stat_vis,
      file = '../../figures/histo_metab_stats.rdata')
 save(mini_neat_cecumHisto_stats_plot,
      file = '../../posters/mini_neat_cecumHisto_stats.rdat')
-save(noDiet_histoCecum_tox_plot,
+save(noDiet_histoCecum_toxStats_plot,
      file = '../../figures/noDiet_histoCecum_tox_plot.rdat')
 ```
 

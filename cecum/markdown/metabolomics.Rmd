@@ -39,7 +39,7 @@ metab_x_labs <- c('Chow',
                  'LFt/\nHFb', 
                  'LFt/\nLFb')
 
-metab_title <- 'Cecal Metabolite Concentration by Mouse Diet'
+metab_title <- 'Cecum SCFA Concentration'
 ```
 
 **Reading in Needed File**
@@ -97,6 +97,41 @@ metab_plot <- metab_plot +
 metab_plot
 ```
 
+butyrate only plot
+```{r, fig.height=5.5, fig.width=6}
+## filtering metabolites to only include butyrate
+butyrate_table <- metab %>% 
+  filter(metabolite == "n-Butanoic Acid (ug/g)")
+
+butyrate_dunn <- dunn %>% 
+  filter(metabolite == "n-Butanoic Acid (ug/g)")
+
+butyrateOnly_plot <- apppleplots::facet_once_plots(input_table = butyrate_table,
+                                                  stat_on_plot = TRUE,
+                                                  x_value = 'diet',
+                                                  y_value = 'concentration',
+                                                  x_value_type = 'discrete',
+                                                  grouped_by = 'diet',
+                                                  point_alpha = 0.4,
+                                                  x_labels = metab_x_labs,
+                                                  facet_by = 'metabolite',
+                                                  facet_labels = metab_labs,
+                                                  stat_table = butyrate_dunn,
+                                                  x_name = 'Diet',
+                                                  y_name = 'Concentration (ug/g)',
+                                                  title_content = metab_title)
+
+## had to free y-axis scales which the function doesn't do
+## but its a ggplot so you can add layers
+butyrateOnly_plot <- butyrateOnly_plot + 
+                      theme_bw(base_size = 20) +
+                      facet_wrap(~metabolite,
+                                 scales = "free_y",
+                                 labeller = labeller(metabolite = metab_labs))
+
+butyrateOnly_plot
+```
+
 **Saving my Outputs**
 ```{r}
 ## plot
@@ -108,6 +143,8 @@ ggsave("../plots/metabolomics.pdf",
 ## as an rdata object
 save(metab_plot,
      file = '../../figures/metab.rdata')
+save(butyrateOnly_plot,
+     file = '../../figures/butyrateOnly_metab.rdat')
 
 ## statistical tests 
 write_tsv(linear_model,

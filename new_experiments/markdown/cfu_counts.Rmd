@@ -177,7 +177,7 @@ cfu_count_table <- read_tsv(cfu_count_fp)
 surv_status <- read_tsv(surv_status_fp)
 cult_genusAbun_table <- read_tsv(cult_genusAbun_fp)
 ```
-**Data Wrangling**
+**Wrangling the positive culture and survival results**
 ```{r}
 ## cfu counts table
 cfu_count_inter <- cfu_count_table %>% 
@@ -209,16 +209,56 @@ proc_cfu_count <- cfu_count_table %>%
   left_join(surv_status, by = "mouse_id") %>% 
   mutate(status_microbePres = as.factor(paste(status, microbe_presence, sep = ","))) %>% 
   na.omit()
+```
 
-## joining culture relative abundance table
-proc_cult_genusAbun <- cult_genusAbun_table %>% 
-                          select(mouse_id, Genus, rel_abund, location) %>% 
-                          group_by(mouse_id, location) %>% 
-                          filter(rel_abund == max(rel_abund)) %>% 
-                          mutate(top_tax = ifelse(rel_abund >= 0.7, Genus, "Polymicrobial"),
-                                 top_tax = ifelse(is.na(top_tax), 'Unknown', top_tax)) %>% 
-                          select(mouse_id, location, top_tax)
+**Wrangling the taxonomy of positive cultures**
+info on culture results:
+- samples taken from 40 different mice
+- 64 samples total from different locations 
+```{r}
+## pulling out mice/locations that have culture results that include enterococcus, escherichia-shigella,
+## and proteus 
+cult_genusAbun_table %>% 
+  select(location, mouse_id, Genus, rel_abund) %>% 
+  filter(Genus == 'Enterococcus' | Genus == 'Escherichia-Shigella' | Genus == 'Proteus',
+         rel_abund < 0.9) %>% 
+  spread(key = 'Genus', value = 'rel_abund', fill = 0) %>% 
+  mutate(total_abun = (Enterococcus + `Escherichia-Shigella` + Proteus)) %>% 
+  filter(total_abun >= 0.8) %>% 
+  mutate(Genus = paste("enterococcus", "escherichiaShigella", "proteus", sep = "_"),
+         sanity = paste(mouse_id, location, sep = "_")) %>% 
+  rename(rel_abund = total_abun) %>% 
+  select(mouse_id, location, Genus, sanity, rel_abund) -> big3_polymicro_table
 
+## pulling out mice/locations with culture results that are 90% or above one microbe
+cult_genusAbun_table %>%
+    select(mouse_id, Genus, rel_abund, location) %>%
+    group_by(mouse_id, Genus) %>%
+    filter(rel_abund > 0.9) %>% 
+  mutate(sanity = paste(mouse_id, location, sep = "_")) -> top_tax_table
+
+append(top_tax_table$sanity,
+      big3_polymicro_table$sanity) -> sanity_list
+
+## pulling out the last mice/locations that are not included in either of the tables above 
+cult_genusAbun_table %>% 
+  group_by(mouse_id, location) %>% 
+  filter(rel_abund == max(rel_abund)) %>% 
+  mutate(sanity = paste(mouse_id, location, sep = "_")) %>% 
+  filter(!(sanity %in% sanity_list)) %>% 
+  select(mouse_id, Genus, rel_abund, location, sanity) -> missing_mice
+
+## putting all tables together and more data wrangling 
+proc_cult_genusAbun <- rbind(top_tax_table,
+                             big3_polymicro_table,
+                             missing_mice)
+
+proc_cult_genusAbun <- proc_cult_genusAbun %>% 
+  mutate(top_tax = ifelse(is.na(Genus), 'Unknown', Genus))
+```
+
+**Combining all tables together for the plot**
+```{r}
 ## added staph to the other list bc there's only one sample with it 
 other_list <- c('Unknown',
                 'Micrococcus',
@@ -228,7 +268,9 @@ other_list <- c('Unknown',
                 'Corynebacterium',
                 'Bacillus',
                 'Streptococcus',
-                'Staphylococcus')
+                'Staphylococcus',
+                'Cutibacterium',
+                'Kocuria')
 
 
 comb_cfu_genusAbun <- proc_cfu_count %>% 
@@ -236,15 +278,6 @@ comb_cfu_genusAbun <- proc_cfu_count %>%
   filter(experiment != 'CDD01')  %>% 
   mutate(top_tax = ifelse(is.na(top_tax), 'None', top_tax),
          top_tax = ifelse(top_tax %in% other_list, 'Other', top_tax))
-```
-
-```{r}
-cult_genusAbun_table %>% 
-    select(mouse_id, Genus, rel_abund, location) %>% 
-    filter(Genus == 'Enterococcus' | Genus == 'Proteus') %>% 
-    group_by(mouse_id) %>% 
-    filter(rel_abund < 0.7,
-           rel_abund > 0.1)
 ```
 
 
@@ -257,7 +290,7 @@ my_spectral_palette <- c("#D53E4F",
                          "#F46D43",
                          "#FDAE61",
                          "#FEE08B",
-                         ##"#E6F598",
+                         "#E6F598",
                          "#ABDDA4",
                          "#66C2A5",
                          "#3288BD",
@@ -277,7 +310,7 @@ my_paired_palette <- c("#A6CEE3",
 ```
 
 plot
-```{r, fig.width=20, fig.height=8}
+```{r, fig.width=22, fig.height=8}
 comb_cfu_genusAbun %>% 
   ggplot(aes(x = mouse_id, y = location)) +
   theme_bw(base_size = 20) +
@@ -292,9 +325,16 @@ comb_cfu_genusAbun %>%
                     nrow = 2) +
   scale_color_manual(breaks = c('Enterococcus',
                                 'Escherichia-Shigella',
-                                'Lactobacillus',
                                 'Proteus',
-                                'Polymicrobial',
+                                'enterococcus_escherichiaShigella_proteus',
+                                'Lactobacillus',
+                                'Other',
+                                'None'),
+                     labels = c('Enterococcus',
+                                'Escherichia-Shigella',
+                                'Proteus',
+                                'Enterococcus, Escherichia-Shigella,\nand Proteus',
+                                'Lactobacillus',
                                 'Other',
                                 'None'),
                      values = my_paired_palette,
@@ -600,7 +640,7 @@ ggsave('../plots/allExp_culture_results.pdf',
        height = 8)
 ggsave('../plots/allExp_culture_withMicrobes.pdf',
        plot = everything_plot,
-       width = 20,
+       width = 22,
        height = 8)
 
 ## saving processed cfu count table as a .tsv for later analysis

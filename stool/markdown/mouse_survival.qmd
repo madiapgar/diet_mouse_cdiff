@@ -357,7 +357,7 @@ ggsave('survival_curve_stats.pdf',
 
 ## as an rdata object
 save(diet_plot_final,
-     file = '../figures/survival.rdata')
+     file = '../../figures/survival.rdata')
 save(surv_stat_vis,
-     file = '../figures/survival_stats.rdata')
+     file = '../../figures/survival_stats.rdata')
 ```

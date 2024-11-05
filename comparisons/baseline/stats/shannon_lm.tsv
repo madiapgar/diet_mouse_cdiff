@@ -1,0 +1,3 @@
+vendor	term	estimate	std.error	statistic	p.value	signif
+charles_river	experiment_setsecond_set_arizona	-0.634792990876955	0.15225095635807262	-4.169385901156588	5.587678033211687e-5	****
+taconic	experiment_setnew_exp_anschutz	-0.02374504405805054	0.15341635444178545	-0.15477518120182363	0.8775756173827898	ns

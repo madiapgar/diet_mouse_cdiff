@@ -5,8 +5,7 @@ This repository includes all files produced through QIIME2 microbiome profiling 
 ## Directory contents are as follows:
   - **Arizona Experiments Combined (az_exp_combined):** A re-run of lower QIIME2 16S rDNA sequencing analysis with the combination of cecal and stool sample data due to a lack of data points at sacrifice in the stool samples for the Arizona experiments (stool samples taken at sacrifice are filtered out, respectively). 
   - **Cecum:** 16S rDNA sequencing microbiome results, CD toxin, bile acid, short-chain fatty acid (SCFA), histologic scores, and       hypoxia levels for mouse cecal contents at sacrifice from the Arizona experiments. 
-  - **Comparisons:** A combination of baseline microbiome data from the Arizona experiments and new experiments conducted at CU Anschutz 
-  to make comparisons between studies (soon to be combined with data from [this study](https://www.nature.com/articles/s41522-022-00276-1#ref-CR67)).
+  - **Comparisons:** A combination of baseline microbiome data from the Arizona experiments, new experiments conducted at CU Anschutz, and previously published data from [this study](https://www.nature.com/articles/s41522-022-00276-1#ref-CR67) to make comparisons between studies.
   - **Figures:** Compiled manuscript figures, plots taken from all directories. 
   - **New Experiments (new_experiments):** Preliminary results of follow-up mouse experiments currently being conducted at CU Anschutz.
   - **Stool:** 16S rDNA sequencing microbiome results for mouse fecal stool samples taken throughout the experimental timeline to get a better picture of microbiome changes over time from the Arizona experiments.

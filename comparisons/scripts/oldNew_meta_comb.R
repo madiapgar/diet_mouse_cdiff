@@ -10,7 +10,8 @@ old_samples_fp <- './comparisons/data/misc/sample_ids.csv'
 old_set4_fp <- './comparisons/data/misc/mouse_set_4_mapping.txt'
 old_set3_fp <- './comparisons/data/misc/mouse_set_3_mapping.txt'
 old_set5_fp <- './comparisons/data/misc/mouse_CF_set_5_mapping.txt'
-new_meta_comb_fp <- './comparisons/data/misc/newExp_comp_d15_metadata.tsv'
+new_meta_comb_d15_fp <- './comparisons/data/misc/newExp_comp_d15_metadata.tsv'
+new_meta_comb_d15_d3_fp <- './comparisons/data/misc/newExp_comp_d15-d3_metadata.tsv'
 
 ## reading in files
 old_sample_list <- read_csv(old_samples_fp)
@@ -18,9 +19,11 @@ old_set4 <- read_tsv(old_set4_fp)
 old_set3 <- read_tsv(old_set3_fp)
 old_set5 <- read_tsv(old_set5_fp)
 
-new_meta_comb <- read_tsv(new_meta_comb_fp) %>% 
-  select(-seq_depth) %>% 
-  mutate(mouse_sex = paste('Female'))
+new_meta_comb_d15 <- read_tsv(new_meta_comb_d15_fp) %>% 
+  select(-seq_depth) 
+
+new_meta_comb_d15_d3 <- read_tsv(new_meta_comb_d15_d3_fp) %>% 
+  select(-seq_depth)
 
 wanted_cols <- c('#SampleID', 'BarcodeSequence', 'LinkerPrimerSequence', 
                  'mouse_PID', 'abx_treatment', 'diet', 
@@ -119,10 +122,7 @@ old_metadata <- rbind(filt_old_set3,
                       filt_old_set4,
                       filt_old_set5)
 
-baseline_old_meta <- old_metadata %>% 
-                      filter(day_post_inf == -17 | day_post_inf == -15 | day_post_inf == -13)
-
-proc_baseline_oldMeta <- baseline_old_meta %>% 
+proc_oldMeta <- old_metadata %>% 
                             select(`#SampleID`, mouse_id, diet, day_post_inf, study) %>% 
                             mutate(sample_type = paste('colon'),
                                    mouse_sex = paste('Female'),
@@ -132,13 +132,40 @@ proc_baseline_oldMeta <- baseline_old_meta %>%
                                    high_fiber = paste(0),
                                    purified_diet = ifelse(diet == 'Chow', 0, 1))
 
+baseline_old_meta <- proc_oldMeta %>% 
+  filter(day_post_inf == -17 | day_post_inf == -15 | day_post_inf == -13)
+
+## changing the values in day_post_inf to match those of the other two experiments 
+d15_d3_oldMeta <- proc_oldMeta %>% 
+  filter(day_post_inf == -17 | day_post_inf == -15 | day_post_inf == -13 | day_post_inf == 2) %>% 
+  mutate(day_post_inf = case_when(
+    day_post_inf == -17 ~ -15,
+    day_post_inf == -15 ~ -15,
+    day_post_inf == -13 ~ -15,
+    day_post_inf == 2 ~ 3
+  ))
+
+## making sure that I should be taking day 2 as the last day of the timeline from the old experiments 
+proc_oldMeta %>% 
+  select(mouse_id, day_post_inf) %>% 
+  filter(day_post_inf == -17 | day_post_inf == -15 | day_post_inf == -13 | 
+           day_post_inf == 2 | day_post_inf == 1) %>% 
+  mutate(sample_days = as.numeric(paste(day_post_inf))) %>% 
+  spread(key = 'sample_days', value = 'day_post_inf') -> test
+
 ## combining processed old metadata file with the new experiments combined metadata   
-oldNew_meta_comb <- rbind(new_meta_comb,
-                          proc_baseline_oldMeta)
+oldNew_meta_comb_d15 <- rbind(new_meta_comb_d15,
+                              baseline_old_meta)
+
+oldNew_meta_comb_d15_d3 <- rbind(new_meta_comb_d15_d3,
+                                 d15_d3_oldMeta)
+
 
 ## saving my outputs
-write_tsv(oldNew_meta_comb,
+write_tsv(oldNew_meta_comb_d15,
           './comparisons/data/misc/oldNew_comp_d15_metadata.tsv')
+write_tsv(oldNew_meta_comb_d15_d3,
+          './comparisons/data/misc/oldNew_comp_d15-d3_metadata.tsv')
 write_tsv(filt_old_set3,
           './comparisons/data/first_set_qiime/SEQ016/oldExp_s3-016_barcodes.txt')
 write_tsv(filt_old_set4,

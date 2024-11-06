@@ -402,8 +402,7 @@ mini_microbeProd_relAbun_comb <- microbeProd_relAbun_comb %>%
 
 
 **Correlation comparison plot w stats**
-- need to figure out which microbes to include in final plot so there's some consistency 
-- add that its log10 scale for all axis labels
+- added five regression lines (one for each diet) instead of just one line per facet - im not sure how I feel about it 
 ```{r, fig.height=7, fig.width=25}
 microbeProd_relAbun_plot <- apppleplots::correlation_plots(input_table = mini_microbeProd_relAbun_comb,
                                                        x_value = 'conc_normalized',
@@ -411,7 +410,7 @@ microbeProd_relAbun_plot <- apppleplots::correlation_plots(input_table = mini_mi
                                                        x_transform = TRUE,
                                                        y_transform = TRUE,
                                                        point_alpha = 0,
-                                                       regression_method = "lm",
+                                                       regression_method = "none",
                                                        facet_rows = 'microbe_product',
                                                        facet_cols = 'microbe_order',
                                                        row_labs = faith_comb_labs,
@@ -421,6 +420,13 @@ microbeProd_relAbun_plot <- apppleplots::correlation_plots(input_table = mini_mi
                                                        title_content = 'Microbe Relative Abundance by Product Concentration')
 
 microbeProd_relAbun_plot <- microbeProd_relAbun_plot +
+                    ## this adds the black outline to the regression lines so you can see them better 
+                    geom_smooth(aes(group = diet), color = 'black', 
+                                linewidth = 1.5, method = 'lm', se = FALSE) +
+                    ## this is the actual regression lines 
+                    geom_smooth(aes(group = diet, color = diet), method = 'lm', se = FALSE) +
+                    scale_color_brewer(palette = 'Spectral',
+                                       guide = 'none') +
                     geom_jitter(aes(fill = diet), pch = 21, alpha = 0.6, size = 4) +
                     scale_fill_brewer(palette = 'Spectral',
                                       name = 'Mouse Diet',
@@ -446,7 +452,7 @@ microbeProd_relAbun_stats <- lm_r2_p_value(input_table = mini_microbeProd_relAbu
 microbeProd_relAbun_list <- stat_on_plot(stat_table = microbeProd_relAbun_stats,
                                      wanted_col_list = colnames(microbeProd_relAbun_stats),
                                      x_col_name = 'conc_normalized',
-                                     x_col_value = '10',
+                                     x_col_value = '15',
                                      y_col_name = 'rel_abund',
                                      y_col_value = '100',
                                      plot = microbeProd_relAbun_plot,

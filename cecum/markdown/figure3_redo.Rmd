@@ -224,9 +224,9 @@ dca_tox_plot <- apppleplots::correlation_plots(input_table = dca_tox_table,
 
 dca_tox_plot <- dca_tox_plot +
   geom_jitter(aes(fill = diet), pch = 21, alpha = 0.7, size = 3) +
-                    scale_fill_brewer(palette = 'Spectral',
-                                      guide = 'none') +
-                    theme_bw(base_size = 20) +
+  scale_fill_brewer(palette = 'Spectral',
+                    guide = 'none') +
+  theme_bw(base_size = 20) +
   labs(subtitle = 'C. difficile Toxin')
 
 ## stats
@@ -275,14 +275,14 @@ dca_histo_plot <- apppleplots::correlation_plots(input_table = dca_histo_table,
 
 dca_histo_plot <- dca_histo_plot +
   geom_jitter(aes(fill = diet), pch = 21, alpha = 0.7, size = 3) +
-                    scale_fill_brewer(palette = 'Spectral',
-                                      name = 'Mouse Diet',
-                                      labels = c('Chow',
-                                                 'HFt / HFb',
-                                                 'HFt / LFb',
-                                                 'LFt / HFb',
-                                                 'LFt / LFb')) +
-                    theme_bw(base_size = 20) +
+  scale_fill_brewer(palette = 'Spectral',
+                    name = 'Mouse Diet',
+                    labels = c('Chow',
+                               'HFt / HFb',
+                               'HFt / LFb',
+                               'LFt / HFb',
+                               'LFt / LFb')) +
+  theme_bw(base_size = 20) +
   labs(subtitle = 'Histopathology')
 
 ## stats
@@ -360,7 +360,7 @@ butyrate_tox_plot <- apppleplots::correlation_plots(input_table = butyrate_tox_t
                                                     x_transform = TRUE,
                                                     y_transform = TRUE,
                                                     point_alpha = 0,
-                                                    regression_method = 'lm',
+                                                    regression_method = 'none',
                                                     facet_rows = NULL,
                                                     facet_cols = 'comp_value',
                                                     row_labs = NULL,
@@ -370,10 +370,17 @@ butyrate_tox_plot <- apppleplots::correlation_plots(input_table = butyrate_tox_t
                                                     title_content = 'Cecum Butyrate Comparisons')
 
 butyrate_tox_plot <- butyrate_tox_plot +
+  ## this adds the black outline to the regression lines so you can see them better 
+  geom_smooth(aes(group = diet), color = 'black', 
+              linewidth = 1.5, method = 'lm', se = FALSE) +
+  ## this is the actual regression lines 
+  geom_smooth(aes(group = diet, color = diet), method = 'lm', se = FALSE) +
+  scale_color_brewer(palette = 'Spectral',
+                     guide = 'none') +
   geom_jitter(aes(fill = diet), pch = 21, alpha = 0.7, size = 3) +
-                    scale_fill_brewer(palette = 'Spectral',
-                                      guide = 'none') +
-                    theme_bw(base_size = 20) +
+  scale_fill_brewer(palette = 'Spectral',
+                    guide = 'none') +
+  theme_bw(base_size = 20) +
   labs(subtitle = 'C. difficile Toxin')
 
 butyrate_tox_stats <- lm_r2_p_value(input_table = butyrate_tox_table,
@@ -387,7 +394,7 @@ butyrate_tox_stats <- lm_r2_p_value(input_table = butyrate_tox_table,
 butyrate_tox_list <- stat_on_plot(stat_table = butyrate_tox_stats,
                                   wanted_col_list = colnames(butyrate_tox_stats),
                                   x_col_name = 'conc_normalized',
-                                  x_col_value = '10',
+                                  x_col_value = '15',
                                   y_col_name = 'conc_score',
                                   y_col_value = '15',
                                   plot = butyrate_tox_plot,
@@ -410,7 +417,7 @@ butyrate_histo_plot <- apppleplots::correlation_plots(input_table = butyrate_his
                                                     x_transform = TRUE,
                                                     y_transform = FALSE,
                                                     point_alpha = 0,
-                                                    regression_method = 'lm',
+                                                    regression_method = 'none',
                                                     facet_rows = NULL,
                                                     facet_cols = 'comp_value',
                                                     row_labs = NULL,
@@ -420,6 +427,11 @@ butyrate_histo_plot <- apppleplots::correlation_plots(input_table = butyrate_his
                                                     title_content = '')
 
 butyrate_histo_plot <- butyrate_histo_plot +
+  geom_smooth(aes(group = diet), color = 'black', 
+              linewidth = 1.5, method = 'lm', se = FALSE) +
+  geom_smooth(aes(group = diet, color = diet), method = 'lm', se = FALSE) +
+  scale_color_brewer(palette = 'Spectral',
+                     guide = 'none') +
   geom_jitter(aes(fill = diet), pch = 21, alpha = 0.7, size = 3) +
                     scale_fill_brewer(palette = 'Spectral',
                                       name = 'Mouse Diet',
@@ -455,7 +467,7 @@ butyrate_histoStats_plot
 ```
 
 putting them together via cowplot
-```{r, fig.height=5.5, fig.width=16.5}
+```{r, fig.height=5.5, fig.width=16.5, warning=FALSE}
 ## creating universal y axis label since the y axis is the same for both plots 
 y_axis_label2 <- ggdraw() +
   draw_label('Butyrate Concentration (ug/g) (log10)',

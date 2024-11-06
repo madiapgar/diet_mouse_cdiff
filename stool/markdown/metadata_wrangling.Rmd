@@ -104,20 +104,37 @@ These are filtered to only have day -15 in the timeline for baseline microbiome 
 ```{r}
 filt_comp_metadata %>% 
   filter(day_post_inf == -15) %>% 
-  mutate(mouse_sex = paste('Male'),
+  mutate(mouse_sex = paste('Female'),
          experiment_set = paste('second_set_arizona'),
          vendor = paste('charles_river')) %>% 
-  select(-facility) -> prep_comp_metadata
+  select(!c('facility')) -> prep_comp_metadata
 
 newExp_meta %>% 
   filter(day_post_inf == -15) %>% 
-  mutate(mouse_sex = paste('Female')) %>% 
   select(!c('experiment', 'experiment_day')) -> prep_newExp_meta
 
 names(prep_newExp_meta)[names(prep_newExp_meta) == 'sampleid'] <- '#SampleID'
 
 rbind(prep_comp_metadata,
       prep_newExp_meta) -> newExp_comp_d15_metadata
+```
+
+**Combining metadata for the U of Arizona experiments and the new experiments (2024) - INCLUDES DAY 3**
+These are filtered to only have day -15 AND day 3 in the timeline for microbiome comparisons!
+```{r}
+filt_comp_metadata %>% 
+  filter(day_post_inf == -15 | day_post_inf == 3) %>% 
+  mutate(mouse_sex = paste('Female'),
+         experiment_set = paste('second_set_arizona'),
+         vendor = paste('charles_river')) %>% 
+  select(-facility) -> prep_comp_metadata_d15_d3
+
+newExp_meta %>% 
+  filter(day_post_inf == -15 | day_post_inf == 3) %>% 
+  select(!c('experiment', 'experiment_day')) -> prep_newExp_meta_d15_d3
+
+rbind(prep_comp_metadata_d15_d3,
+      prep_newExp_meta_d15_d3) -> newExp_comp_d15_d3_metadata
 ```
 
 
@@ -135,5 +152,7 @@ write_tsv(filt_comp_metadata,
           '../../comparisons/data/misc/s1_filt_comp_metadata.tsv')
 write_tsv(newExp_comp_d15_metadata,
           '../../comparisons/data/misc/newExp_comp_d15_metadata.tsv')
+write_tsv(newExp_comp_d15_d3_metadata,
+          '../../comparisons/data/misc/newExp_comp_d15-d3_metadata.tsv')
 ```
 

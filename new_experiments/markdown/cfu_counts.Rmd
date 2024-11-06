@@ -164,6 +164,18 @@ names(diet_labs) <- c('Chow',
                       'HF/LF',
                       'LF/HF',
                       'LF/LF')
+
+diet_order_labs <- c('High Fat / Low Fiber',
+                     'Low Fat / Low Fiber',
+                     'High Fat / High Fiber',
+                     'Low Fat / High Fiber',
+                     'Chow')
+names(diet_order_labs) <- c(1,
+                            2, 
+                            3,
+                            4,
+                            5)
+
 vendor_labs <- c('Charles River',
                  'Taconic')
 names(vendor_labs) <- c('charles_river',
@@ -277,7 +289,14 @@ comb_cfu_genusAbun <- proc_cfu_count %>%
   left_join(proc_cult_genusAbun, by = c("mouse_id", "location")) %>% 
   filter(experiment != 'CDD01')  %>% 
   mutate(top_tax = ifelse(is.na(top_tax), 'None', top_tax),
-         top_tax = ifelse(top_tax %in% other_list, 'Other', top_tax))
+         top_tax = ifelse(top_tax %in% other_list, 'Other', top_tax),
+         diet_order = case_when(
+           diet == 'HF/LF' ~ 1,
+           diet == 'LF/LF' ~ 2,
+           diet == 'HF/HF' ~ 3,
+           diet == 'LF/HF' ~ 4,
+           diet == 'Chow' ~ 5
+         ))
 ```
 
 
@@ -310,7 +329,7 @@ my_paired_palette <- c("#A6CEE3",
 ```
 
 plot
-```{r, fig.width=22, fig.height=8}
+```{r, fig.width=22, fig.height=12}
 comb_cfu_genusAbun %>% 
   ggplot(aes(x = mouse_id, y = location)) +
   theme_bw(base_size = 20) +
@@ -318,11 +337,11 @@ comb_cfu_genusAbun %>%
   geom_point(aes(color = top_tax, shape = status_microbePres, alpha = status_microbePres), size = 6, 
              stroke = 2) +
   scale_y_discrete(labels = location_y_labs) +
-  facet_nested_wrap(~diet + vendor,
+  facet_nested_wrap(~diet_order + vendor,
                     scales = "free_x",
-                    labeller = labeller(diet = diet_labs,
+                    labeller = labeller(diet_order = diet_order_labs,
                                         vendor = vendor_labs),
-                    nrow = 2) +
+                    nrow = 3) +
   scale_color_manual(breaks = c('Enterococcus',
                                 'Escherichia-Shigella',
                                 'Proteus',
@@ -641,7 +660,7 @@ ggsave('../plots/allExp_culture_results.pdf',
 ggsave('../plots/allExp_culture_withMicrobes.pdf',
        plot = everything_plot,
        width = 22,
-       height = 8)
+       height = 12)
 
 ## saving processed cfu count table as a .tsv for later analysis
 write_tsv(proc_cfu_count,

@@ -8,12 +8,13 @@ library(magrittr)
 ## file paths
 cdd02_meta_fp <- './new_experiments/data/misc/newExp_d15-d3_metadata.txt'
 cdd03_meta_fp <- './new_experiments/data/SEQ096/new_stool_barcodes.txt'
-##seq_depth_fp <- './new_experiments/data/misc/newExp_d15-d3_seq_depth.tsv'
+seq_depth_fp <- './new_experiments/data/misc/newExp_d15-d3_seq_depth.tsv'
 
 ## reading in metadata file and sequencing depth
 pre_cdd02_meta <- read_tsv(cdd02_meta_fp)
 pre_cdd03_meta <- read_tsv(cdd03_meta_fp)
-##seq_depth <- read_tsv(seq_depth_fp)
+seq_depth <- read_tsv(seq_depth_fp) %>% 
+  rename(`#SampleID` = sampleid)
 
 ## data wrangling/processing
 ## CDD02 batch (since we got the data for the batches at different times)
@@ -90,12 +91,8 @@ comb_pre_meta %>%
         purified_diet = case_when(
           diet == 'Chow' ~ 0,
           .default = 1
-        ))  -> comb_metadata
-  
-  
-## will need to add the sequencing depth at some point
-# left_join(seq_depth,
-#           by = 'sampleid') -> metadata
+        )) %>% 
+    left_join(seq_depth, by = '#SampleID') -> comb_metadata
 
 
 ## saving processed metadata file as a .tsv

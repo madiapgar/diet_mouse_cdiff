@@ -1,197 +1,197 @@
-#SampleID	study	mouse_sex	diet	vendor	experiment	experiment_day	mouse_id	experiment_set	day_post_inf	sample_type	high_fat	high_fiber	purified_diet
-CDD02.Tc.HFLF.3.00	2	Female	HF/LF	taconic	CDD02	0	CDD02.Tc.HFLF.3	new_exp_anschutz	-15	colon	1	0	1
-CDD02.Tc.LFLF.4.00	2	Female	LF/LF	taconic	CDD02	0	CDD02.Tc.LFLF.4	new_exp_anschutz	-15	colon	0	0	1
-CDD02.Tc.Chow.4.00	2	Female	Chow	taconic	CDD02	0	CDD02.Tc.Chow.4	new_exp_anschutz	-15	colon	0	0	0
-CDD02.Tc.Chow.2.00	2	Female	Chow	taconic	CDD02	0	CDD02.Tc.Chow.2	new_exp_anschutz	-15	colon	0	0	0
-CDD02.Tc.Chow.1.00	2	Female	Chow	taconic	CDD02	0	CDD02.Tc.Chow.1	new_exp_anschutz	-15	colon	0	0	0
-CDD02.CR.LFLF.5.00	2	Female	LF/LF	charles_river	CDD02	0	CDD02.CR.LFLF.5	new_exp_anschutz	-15	colon	0	0	1
-CDD02.CR.Chow.1.00	2	Female	Chow	charles_river	CDD02	0	CDD02.CR.Chow.1	new_exp_anschutz	-15	colon	0	0	0
-CDD02.CR.LFLF.1.00	2	Female	LF/LF	charles_river	CDD02	0	CDD02.CR.LFLF.1	new_exp_anschutz	-15	colon	0	0	1
-CDD02.CR.Chow.4.00	2	Female	Chow	charles_river	CDD02	0	CDD02.CR.Chow.4	new_exp_anschutz	-15	colon	0	0	0
-CDD02.CR.Chow.3.00	2	Female	Chow	charles_river	CDD02	0	CDD02.CR.Chow.3	new_exp_anschutz	-15	colon	0	0	0
-CDD02.CR.Chow.5.00	2	Female	Chow	charles_river	CDD02	0	CDD02.CR.Chow.5	new_exp_anschutz	-15	colon	0	0	0
-CDD02.Tc.HFHF.5.00	2	Female	HF/HF	taconic	CDD02	0	CDD02.Tc.HFHF.5	new_exp_anschutz	-15	colon	1	1	1
-CDD02.CR.LFLF.2.00	2	Female	LF/LF	charles_river	CDD02	0	CDD02.CR.LFLF.2	new_exp_anschutz	-15	colon	0	0	1
-CDD02.CR.HFLF.3.00	2	Female	HF/LF	charles_river	CDD02	0	CDD02.CR.HFLF.3	new_exp_anschutz	-15	colon	1	0	1
-CDD02.Tc.HFLF.2.00	2	Female	HF/LF	taconic	CDD02	0	CDD02.Tc.HFLF.2	new_exp_anschutz	-15	colon	1	0	1
-CDD02.CR.Chow.2.00	2	Female	Chow	charles_river	CDD02	0	CDD02.CR.Chow.2	new_exp_anschutz	-15	colon	0	0	0
-CDD02.Tc.HFHF.1.00	2	Female	HF/HF	taconic	CDD02	0	CDD02.Tc.HFHF.1	new_exp_anschutz	-15	colon	1	1	1
-CDD02.CR.LFLF.3.00	2	Female	LF/LF	charles_river	CDD02	0	CDD02.CR.LFLF.3	new_exp_anschutz	-15	colon	0	0	1
-CDD02.Tc.LFHF.2.00	2	Female	LF/HF	taconic	CDD02	0	CDD02.Tc.LFHF.2	new_exp_anschutz	-15	colon	0	1	1
-CDD02.Tc.HFLF.4.00	2	Female	HF/LF	taconic	CDD02	0	CDD02.Tc.HFLF.4	new_exp_anschutz	-15	colon	1	0	1
-CDD02.Tc.HFLF.5.00	2	Female	HF/LF	taconic	CDD02	0	CDD02.Tc.HFLF.5	new_exp_anschutz	-15	colon	1	0	1
-CDD02.CR.LFLF.4.00	2	Female	LF/LF	charles_river	CDD02	0	CDD02.CR.LFLF.4	new_exp_anschutz	-15	colon	0	0	1
-CDD02.Tc.LFHF.3.00	2	Female	LF/HF	taconic	CDD02	0	CDD02.Tc.LFHF.3	new_exp_anschutz	-15	colon	0	1	1
-CDD02.Tc.HFHF.4.00	2	Female	HF/HF	taconic	CDD02	0	CDD02.Tc.HFHF.4	new_exp_anschutz	-15	colon	1	1	1
-CDD02.Tc.LFLF.5.00	2	Female	LF/LF	taconic	CDD02	0	CDD02.Tc.LFLF.5	new_exp_anschutz	-15	colon	0	0	1
-CDD02.Tc.Chow.5.00	2	Female	Chow	taconic	CDD02	0	CDD02.Tc.Chow.5	new_exp_anschutz	-15	colon	0	0	0
-CDD02.Tc.HFLF.1.00	2	Female	HF/LF	taconic	CDD02	0	CDD02.Tc.HFLF.1	new_exp_anschutz	-15	colon	1	0	1
-CDD02.CR.HFLF.2.00	2	Female	HF/LF	charles_river	CDD02	0	CDD02.CR.HFLF.2	new_exp_anschutz	-15	colon	1	0	1
-CDD02.Tc.Chow.3.00	2	Female	Chow	taconic	CDD02	0	CDD02.Tc.Chow.3	new_exp_anschutz	-15	colon	0	0	0
-CDD02.Tc.LFHF.4.00	2	Female	LF/HF	taconic	CDD02	0	CDD02.Tc.LFHF.4	new_exp_anschutz	-15	colon	0	1	1
-CDD02.Tc.LFHF.5.00	2	Female	LF/HF	taconic	CDD02	0	CDD02.Tc.LFHF.5	new_exp_anschutz	-15	colon	0	1	1
-CDD02.Tc.HFHF.3.00	2	Female	HF/HF	taconic	CDD02	0	CDD02.Tc.HFHF.3	new_exp_anschutz	-15	colon	1	1	1
-CDD02.CR.HFLF.1.00	2	Female	HF/LF	charles_river	CDD02	0	CDD02.CR.HFLF.1	new_exp_anschutz	-15	colon	1	0	1
-CDD02.Tc.LFLF.1.00	2	Female	LF/LF	taconic	CDD02	0	CDD02.Tc.LFLF.1	new_exp_anschutz	-15	colon	0	0	1
-CDD02.Tc.LFLF.2.00	2	Female	LF/LF	taconic	CDD02	0	CDD02.Tc.LFLF.2	new_exp_anschutz	-15	colon	0	0	1
-CDD02.Tc.LFLF.3.00	2	Female	LF/LF	taconic	CDD02	0	CDD02.Tc.LFLF.3	new_exp_anschutz	-15	colon	0	0	1
-CDD02.Tc.HFHF.2.00	2	Female	HF/HF	taconic	CDD02	0	CDD02.Tc.HFHF.2	new_exp_anschutz	-15	colon	1	1	1
-CDD02.Tc.LFHF.1.00	2	Female	LF/HF	taconic	CDD02	0	CDD02.Tc.LFHF.1	new_exp_anschutz	-15	colon	0	1	1
-CDD02.CR.HFHF.1.00	2	Female	HF/HF	charles_river	CDD02	0	CDD02.CR.HFHF.1	new_exp_anschutz	-15	colon	1	1	1
-CDD02.Tc.LFHF.2.18	2	Female	LF/HF	taconic	CDD02	18	CDD02.Tc.LFHF.2	new_exp_anschutz	3	colon	0	1	1
-CDD02.Tc.LFLF.5.18	2	Female	LF/LF	taconic	CDD02	18	CDD02.Tc.LFLF.5	new_exp_anschutz	3	colon	0	0	1
-CDD02.CR.LFHF.2.00	2	Female	LF/HF	charles_river	CDD02	0	CDD02.CR.LFHF.2	new_exp_anschutz	-15	colon	0	1	1
-CDD02.CR.HFLF.5.00	2	Female	HF/LF	charles_river	CDD02	0	CDD02.CR.HFLF.5	new_exp_anschutz	-15	colon	1	0	1
-CDD02.CR.Chow.2.18	2	Female	Chow	charles_river	CDD02	18	CDD02.CR.Chow.2	new_exp_anschutz	3	colon	0	0	0
-CDD02.Tc.LFHF.1.18	2	Female	LF/HF	taconic	CDD02	18	CDD02.Tc.LFHF.1	new_exp_anschutz	3	colon	0	1	1
-CDD02.CR.HFHF.3.00	2	Female	HF/HF	charles_river	CDD02	0	CDD02.CR.HFHF.3	new_exp_anschutz	-15	colon	1	1	1
-CDD02.CR.Chow.1.18	2	Female	Chow	charles_river	CDD02	18	CDD02.CR.Chow.1	new_exp_anschutz	3	colon	0	0	0
-CDD02.Tc.LFLF.4.18	2	Female	LF/LF	taconic	CDD02	18	CDD02.Tc.LFLF.4	new_exp_anschutz	3	colon	0	0	1
-CDD02.CR.LFHF.5.00	2	Female	LF/HF	charles_river	CDD02	0	CDD02.CR.LFHF.5	new_exp_anschutz	-15	colon	0	1	1
-CDD02.CR.HFHF.4.00	2	Female	HF/HF	charles_river	CDD02	0	CDD02.CR.HFHF.4	new_exp_anschutz	-15	colon	1	1	1
-CDD02.CR.HFHF.5.00	2	Female	HF/HF	charles_river	CDD02	0	CDD02.CR.HFHF.5	new_exp_anschutz	-15	colon	1	1	1
-CDD02.Tc.LFLF.1.18	2	Female	LF/LF	taconic	CDD02	18	CDD02.Tc.LFLF.1	new_exp_anschutz	3	colon	0	0	1
-CDD02.CR.LFHF.1.00	2	Female	LF/HF	charles_river	CDD02	0	CDD02.CR.LFHF.1	new_exp_anschutz	-15	colon	0	1	1
-CDD02.CR.LFHF.3.00	2	Female	LF/HF	charles_river	CDD02	0	CDD02.CR.LFHF.3	new_exp_anschutz	-15	colon	0	1	1
-CDD02.CR.Chow.3.18	2	Female	Chow	charles_river	CDD02	18	CDD02.CR.Chow.3	new_exp_anschutz	3	colon	0	0	0
-CDD02.CR.HFLF.4.00	2	Female	HF/LF	charles_river	CDD02	0	CDD02.CR.HFLF.4	new_exp_anschutz	-15	colon	1	0	1
-CDD02.Tc.HFLF.3.18	2	Female	HF/LF	taconic	CDD02	18	CDD02.Tc.HFLF.3	new_exp_anschutz	3	colon	1	0	1
-CDD02.Tc.Chow.5.18	2	Female	Chow	taconic	CDD02	18	CDD02.Tc.Chow.5	new_exp_anschutz	3	colon	0	0	0
-CDD02.Tc.LFLF.3.18	2	Female	LF/LF	taconic	CDD02	18	CDD02.Tc.LFLF.3	new_exp_anschutz	3	colon	0	0	1
-CDD02.CR.LFHF.4.00	2	Female	LF/HF	charles_river	CDD02	0	CDD02.CR.LFHF.4	new_exp_anschutz	-15	colon	0	1	1
-CDD02.CR.HFHF.2.00	2	Female	HF/HF	charles_river	CDD02	0	CDD02.CR.HFHF.2	new_exp_anschutz	-15	colon	1	1	1
-CDD02.Tc.HFHF.4.18	2	Female	HF/HF	taconic	CDD02	18	CDD02.Tc.HFHF.4	new_exp_anschutz	3	colon	1	1	1
-CDD02.Tc.HFHF.3.18	2	Female	HF/HF	taconic	CDD02	18	CDD02.Tc.HFHF.3	new_exp_anschutz	3	colon	1	1	1
-CDD02.Tc.HFLF.5.18	2	Female	HF/LF	taconic	CDD02	18	CDD02.Tc.HFLF.5	new_exp_anschutz	3	colon	1	0	1
-CDD02.Tc.LFHF.4.18	2	Female	LF/HF	taconic	CDD02	18	CDD02.Tc.LFHF.4	new_exp_anschutz	3	colon	0	1	1
-CDD02.Tc.HFLF.1.18	2	Female	HF/LF	taconic	CDD02	18	CDD02.Tc.HFLF.1	new_exp_anschutz	3	colon	1	0	1
-CDD02.Tc.LFLF.2.18	2	Female	LF/LF	taconic	CDD02	18	CDD02.Tc.LFLF.2	new_exp_anschutz	3	colon	0	0	1
-CDD02.Tc.LFHF.3.18	2	Female	LF/HF	taconic	CDD02	18	CDD02.Tc.LFHF.3	new_exp_anschutz	3	colon	0	1	1
-CDD02.Tc.Chow.4.18	2	Female	Chow	taconic	CDD02	18	CDD02.Tc.Chow.4	new_exp_anschutz	3	colon	0	0	0
-CDD02.Tc.Chow.2.18	2	Female	Chow	taconic	CDD02	18	CDD02.Tc.Chow.2	new_exp_anschutz	3	colon	0	0	0
-CDD02.Tc.HFLF.2.18	2	Female	HF/LF	taconic	CDD02	18	CDD02.Tc.HFLF.2	new_exp_anschutz	3	colon	1	0	1
-CDD02.Tc.HFLF.4.18	2	Female	HF/LF	taconic	CDD02	18	CDD02.Tc.HFLF.4	new_exp_anschutz	3	colon	1	0	1
-CDD02.Tc.Chow.1.18	2	Female	Chow	taconic	CDD02	18	CDD02.Tc.Chow.1	new_exp_anschutz	3	colon	0	0	0
-CDD02.Tc.HFHF.5.18	2	Female	HF/HF	taconic	CDD02	18	CDD02.Tc.HFHF.5	new_exp_anschutz	3	colon	1	1	1
-CDD02.Tc.HFHF.2.18	2	Female	HF/HF	taconic	CDD02	18	CDD02.Tc.HFHF.2	new_exp_anschutz	3	colon	1	1	1
-CDD02.Tc.LFHF.5.18	2	Female	LF/HF	taconic	CDD02	18	CDD02.Tc.LFHF.5	new_exp_anschutz	3	colon	0	1	1
-CDD02.CR.HFLF.3.18	2	Female	HF/LF	charles_river	CDD02	18	CDD02.CR.HFLF.3	new_exp_anschutz	3	colon	1	0	1
-CDD02.CR.LFLF.2.18	2	Female	LF/LF	charles_river	CDD02	18	CDD02.CR.LFLF.2	new_exp_anschutz	3	colon	0	0	1
-CDD02.CR.Chow.5.18	2	Female	Chow	charles_river	CDD02	18	CDD02.CR.Chow.5	new_exp_anschutz	3	colon	0	0	0
-CDD02.CR.LFLF.5.18	2	Female	LF/LF	charles_river	CDD02	18	CDD02.CR.LFLF.5	new_exp_anschutz	3	colon	0	0	1
-CDD02.CR.LFHF.3.18	2	Female	LF/HF	charles_river	CDD02	18	CDD02.CR.LFHF.3	new_exp_anschutz	3	colon	0	1	1
-CDD02.CR.HFLF.5.18	2	Female	HF/LF	charles_river	CDD02	18	CDD02.CR.HFLF.5	new_exp_anschutz	3	colon	1	0	1
-CDD02.CR.HFLF.2.18	2	Female	HF/LF	charles_river	CDD02	18	CDD02.CR.HFLF.2	new_exp_anschutz	3	colon	1	0	1
-CDD02.CR.LFLF.1.18	2	Female	LF/LF	charles_river	CDD02	18	CDD02.CR.LFLF.1	new_exp_anschutz	3	colon	0	0	1
-CDD02.CR.HFLF.4.18	2	Female	HF/LF	charles_river	CDD02	18	CDD02.CR.HFLF.4	new_exp_anschutz	3	colon	1	0	1
-CDD02.CR.Chow.4.18	2	Female	Chow	charles_river	CDD02	18	CDD02.CR.Chow.4	new_exp_anschutz	3	colon	0	0	0
-CDD02.CR.LFHF.2.18	2	Female	LF/HF	charles_river	CDD02	18	CDD02.CR.LFHF.2	new_exp_anschutz	3	colon	0	1	1
-CDD02.CR.LFLF.4.18	2	Female	LF/LF	charles_river	CDD02	18	CDD02.CR.LFLF.4	new_exp_anschutz	3	colon	0	0	1
-CDD02.CR.LFLF.3.18	2	Female	LF/LF	charles_river	CDD02	18	CDD02.CR.LFLF.3	new_exp_anschutz	3	colon	0	0	1
-CDD02.CR.LFHF.1.18	2	Female	LF/HF	charles_river	CDD02	18	CDD02.CR.LFHF.1	new_exp_anschutz	3	colon	0	1	1
-CDD02.CR.LFHF.5.18	2	Female	LF/HF	charles_river	CDD02	18	CDD02.CR.LFHF.5	new_exp_anschutz	3	colon	0	1	1
-CDD02.CR.LFHF.4.18	2	Female	LF/HF	charles_river	CDD02	18	CDD02.CR.LFHF.4	new_exp_anschutz	3	colon	0	1	1
-CDD02.CR.HFHF.4.18	2	Female	HF/HF	charles_river	CDD02	18	CDD02.CR.HFHF.4	new_exp_anschutz	3	colon	1	1	1
-CDD02.CR.HFHF.1.18	2	Female	HF/HF	charles_river	CDD02	18	CDD02.CR.HFHF.1	new_exp_anschutz	3	colon	1	1	1
-CDD02.CR.HFLF.1.18	2	Female	HF/LF	charles_river	CDD02	18	CDD02.CR.HFLF.1	new_exp_anschutz	3	colon	1	0	1
-CDD02.CR.HFHF.3.18	2	Female	HF/HF	charles_river	CDD02	18	CDD02.CR.HFHF.3	new_exp_anschutz	3	colon	1	1	1
-CDD02.CR.HFHF.5.18	2	Female	HF/HF	charles_river	CDD02	18	CDD02.CR.HFHF.5	new_exp_anschutz	3	colon	1	1	1
-CDD02.CR.HFHF.2.18	2	Female	HF/HF	charles_river	CDD02	18	CDD02.CR.HFHF.2	new_exp_anschutz	3	colon	1	1	1
-CDD03.Tc.LFLF.1.18	3	Female	LF/LF	taconic	CDD03	18	CDD03.Tc.LFLF.1	new_exp_anschutz	3	colon	0	0	1
-CDD03.Tc.Chow.3.18	3	Female	Chow	taconic	CDD03	18	CDD03.Tc.Chow.3	new_exp_anschutz	3	colon	0	0	0
-CDD03.CR.HFHF.1.00	3	Female	HF/HF	charles_river	CDD03	0	CDD03.CR.HFHF.1	new_exp_anschutz	-15	colon	1	1	1
-CDD03.CR.LFLF.2.00	3	Female	LF/LF	charles_river	CDD03	0	CDD03.CR.LFLF.2	new_exp_anschutz	-15	colon	0	0	1
-CDD03.Tc.HFHF.5.18	3	Female	HF/HF	taconic	CDD03	18	CDD03.Tc.HFHF.5	new_exp_anschutz	3	colon	1	1	1
-CDD03.CR.LFLF.4.00	3	Female	LF/LF	charles_river	CDD03	0	CDD03.CR.LFLF.4	new_exp_anschutz	-15	colon	0	0	1
-CDD03.CR.Chow.2.00	3	Female	Chow	charles_river	CDD03	0	CDD03.CR.Chow.2	new_exp_anschutz	-15	colon	0	0	0
-CDD03.CR.LFLF.2.18	3	Female	LF/LF	charles_river	CDD03	18	CDD03.CR.LFLF.2	new_exp_anschutz	3	colon	0	0	1
-CDD03.CR.LFHF.2.00	3	Female	LF/HF	charles_river	CDD03	0	CDD03.CR.LFHF.2	new_exp_anschutz	-15	colon	0	1	1
-CDD03.Tc.Chow.4.18	3	Female	Chow	taconic	CDD03	18	CDD03.Tc.Chow.4	new_exp_anschutz	3	colon	0	0	0
-CDD03.CR.HFLF.1.00	3	Female	HF/LF	charles_river	CDD03	0	CDD03.CR.HFLF.1	new_exp_anschutz	-15	colon	1	0	1
-CDD03.CR.Chow.3.00	3	Female	Chow	charles_river	CDD03	0	CDD03.CR.Chow.3	new_exp_anschutz	-15	colon	0	0	0
-CDD03.CR.HFLF.5.00	3	Female	HF/LF	charles_river	CDD03	0	CDD03.CR.HFLF.5	new_exp_anschutz	-15	colon	1	0	1
-CDD03.CR.HFHF.4.00	3	Female	HF/HF	charles_river	CDD03	0	CDD03.CR.HFHF.4	new_exp_anschutz	-15	colon	1	1	1
-CDD03.Tc.Chow.5.18	3	Female	Chow	taconic	CDD03	18	CDD03.Tc.Chow.5	new_exp_anschutz	3	colon	0	0	0
-CDD03.Tc.LFHF.4.18	3	Female	LF/HF	taconic	CDD03	18	CDD03.Tc.LFHF.4	new_exp_anschutz	3	colon	0	1	1
-CDD03.CR.LFLF.5.00	3	Female	LF/LF	charles_river	CDD03	0	CDD03.CR.LFLF.5	new_exp_anschutz	-15	colon	0	0	1
-CDD03.CR.Chow.5.18	3	Female	Chow	charles_river	CDD03	18	CDD03.CR.Chow.5	new_exp_anschutz	3	colon	0	0	0
-CDD03.CR.LFLF.4.18	3	Female	LF/LF	charles_river	CDD03	18	CDD03.CR.LFLF.4	new_exp_anschutz	3	colon	0	0	1
-CDD03.CR.LFHF.3.00	3	Female	LF/HF	charles_river	CDD03	0	CDD03.CR.LFHF.3	new_exp_anschutz	-15	colon	0	1	1
-CDD03.Tc.HFLF.5.00	3	Female	HF/LF	taconic	CDD03	0	CDD03.Tc.HFLF.5	new_exp_anschutz	-15	colon	1	0	1
-CDD03.CR.Chow.5.00	3	Female	Chow	charles_river	CDD03	0	CDD03.CR.Chow.5	new_exp_anschutz	-15	colon	0	0	0
-CDD03.Tc.LFHF.3.18	3	Female	LF/HF	taconic	CDD03	18	CDD03.Tc.LFHF.3	new_exp_anschutz	3	colon	0	1	1
-CDD03.CR.HFHF.2.00	3	Female	HF/HF	charles_river	CDD03	0	CDD03.CR.HFHF.2	new_exp_anschutz	-15	colon	1	1	1
-CDD03.Tc.HFHF.2.00	3	Female	HF/HF	taconic	CDD03	0	CDD03.Tc.HFHF.2	new_exp_anschutz	-15	colon	1	1	1
-CDD03.CR.LFHF.5.00	3	Female	LF/HF	charles_river	CDD03	0	CDD03.CR.LFHF.5	new_exp_anschutz	-15	colon	0	1	1
-CDD03.Tc.HFHF.1.18	3	Female	HF/HF	taconic	CDD03	18	CDD03.Tc.HFHF.1	new_exp_anschutz	3	colon	1	1	1
-CDD03.CR.HFLF.3.00	3	Female	HF/LF	charles_river	CDD03	0	CDD03.CR.HFLF.3	new_exp_anschutz	-15	colon	1	0	1
-CDD03.CR.HFLF.3.18	3	Female	HF/LF	charles_river	CDD03	18	CDD03.CR.HFLF.3	new_exp_anschutz	3	colon	1	0	1
-CDD03.Tc.LFLF.4.00	3	Female	LF/LF	taconic	CDD03	0	CDD03.Tc.LFLF.4	new_exp_anschutz	-15	colon	0	0	1
-CDD03.Tc.HFHF.3.00	3	Female	HF/HF	taconic	CDD03	0	CDD03.Tc.HFHF.3	new_exp_anschutz	-15	colon	1	1	1
-CDD03.CR.LFLF.1.00	3	Female	LF/LF	charles_river	CDD03	0	CDD03.CR.LFLF.1	new_exp_anschutz	-15	colon	0	0	1
-CDD03.CR.HFLF.4.00	3	Female	HF/LF	charles_river	CDD03	0	CDD03.CR.HFLF.4	new_exp_anschutz	-15	colon	1	0	1
-CDD03.Tc.Chow.3.00	3	Female	Chow	taconic	CDD03	0	CDD03.Tc.Chow.3	new_exp_anschutz	-15	colon	0	0	0
-CDD03.CR.Chow.1.00	3	Female	Chow	charles_river	CDD03	0	CDD03.CR.Chow.1	new_exp_anschutz	-15	colon	0	0	0
-CDD03.Tc.LFHF.5.18	3	Female	LF/HF	taconic	CDD03	18	CDD03.Tc.LFHF.5	new_exp_anschutz	3	colon	0	1	1
-CDD03.CR.HFHF.5.00	3	Female	HF/HF	charles_river	CDD03	0	CDD03.CR.HFHF.5	new_exp_anschutz	-15	colon	1	1	1
-CDD03.Tc.LFHF.2.18	3	Female	LF/HF	taconic	CDD03	18	CDD03.Tc.LFHF.2	new_exp_anschutz	3	colon	0	1	1
-CDD03.Tc.HFLF.3.00	3	Female	HF/LF	taconic	CDD03	0	CDD03.Tc.HFLF.3	new_exp_anschutz	-15	colon	1	0	1
-CDD03.CR.LFHF.1.00	3	Female	LF/HF	charles_river	CDD03	0	CDD03.CR.LFHF.1	new_exp_anschutz	-15	colon	0	1	1
-CDD03.Tc.HFHF.5.00	3	Female	HF/HF	taconic	CDD03	0	CDD03.Tc.HFHF.5	new_exp_anschutz	-15	colon	1	1	1
-CDD03.Tc.HFLF.3.18	3	Female	HF/LF	taconic	CDD03	18	CDD03.Tc.HFLF.3	new_exp_anschutz	3	colon	1	0	1
-CDD03.CR.Chow.2.18	3	Female	Chow	charles_river	CDD03	18	CDD03.CR.Chow.2	new_exp_anschutz	3	colon	0	0	0
-CDD03.Tc.LFHF.4.00	3	Female	LF/HF	taconic	CDD03	0	CDD03.Tc.LFHF.4	new_exp_anschutz	-15	colon	0	1	1
-CDD03.Tc.Chow.5.00	3	Female	Chow	taconic	CDD03	0	CDD03.Tc.Chow.5	new_exp_anschutz	-15	colon	0	0	0
-CDD03.CR.HFLF.2.00	3	Female	HF/LF	charles_river	CDD03	0	CDD03.CR.HFLF.2	new_exp_anschutz	-15	colon	1	0	1
-CDD03.CR.LFLF.5.18	3	Female	LF/LF	charles_river	CDD03	18	CDD03.CR.LFLF.5	new_exp_anschutz	3	colon	0	0	1
-CDD03.CR.LFHF.4.00	3	Female	LF/HF	charles_river	CDD03	0	CDD03.CR.LFHF.4	new_exp_anschutz	-15	colon	0	1	1
-CDD03.CR.Chow.4.00	3	Female	Chow	charles_river	CDD03	0	CDD03.CR.Chow.4	new_exp_anschutz	-15	colon	0	0	0
-CDD03.Tc.Chow.1.00	3	Female	Chow	taconic	CDD03	0	CDD03.Tc.Chow.1	new_exp_anschutz	-15	colon	0	0	0
-CDD03.Tc.LFHF.3.00	3	Female	LF/HF	taconic	CDD03	0	CDD03.Tc.LFHF.3	new_exp_anschutz	-15	colon	0	1	1
-CDD03.Tc.HFHF.4.00	3	Female	HF/HF	taconic	CDD03	0	CDD03.Tc.HFHF.4	new_exp_anschutz	-15	colon	1	1	1
-CDD03.Tc.LFHF.1.18	3	Female	LF/HF	taconic	CDD03	18	CDD03.Tc.LFHF.1	new_exp_anschutz	3	colon	0	1	1
-CDD03.Tc.HFLF.2.00	3	Female	HF/LF	taconic	CDD03	0	CDD03.Tc.HFLF.2	new_exp_anschutz	-15	colon	1	0	1
-CDD03.Tc.LFLF.2.00	3	Female	LF/LF	taconic	CDD03	0	CDD03.Tc.LFLF.2	new_exp_anschutz	-15	colon	0	0	1
-CDD03.Tc.LFLF.1.00	3	Female	LF/LF	taconic	CDD03	0	CDD03.Tc.LFLF.1	new_exp_anschutz	-15	colon	0	0	1
-CDD03.Tc.LFLF.5.00	3	Female	LF/LF	taconic	CDD03	0	CDD03.Tc.LFLF.5	new_exp_anschutz	-15	colon	0	0	1
-CDD03.Tc.HFLF.1.00	3	Female	HF/LF	taconic	CDD03	0	CDD03.Tc.HFLF.1	new_exp_anschutz	-15	colon	1	0	1
-CDD03.CR.HFLF.1.18	3	Female	HF/LF	charles_river	CDD03	18	CDD03.CR.HFLF.1	new_exp_anschutz	3	colon	1	0	1
-CDD03.CR.LFLF.3.00	3	Female	LF/LF	charles_river	CDD03	0	CDD03.CR.LFLF.3	new_exp_anschutz	-15	colon	0	0	1
-CDD03.CR.HFHF.3.00	3	Female	HF/HF	charles_river	CDD03	0	CDD03.CR.HFHF.3	new_exp_anschutz	-15	colon	1	1	1
-CDD03.Tc.HFHF.1.00	3	Female	HF/HF	taconic	CDD03	0	CDD03.Tc.HFHF.1	new_exp_anschutz	-15	colon	1	1	1
-CDD03.CR.LFHF.4.18	3	Female	LF/HF	charles_river	CDD03	18	CDD03.CR.LFHF.4	new_exp_anschutz	3	colon	0	1	1
-CDD03.Tc.LFLF.2.18	3	Female	LF/LF	taconic	CDD03	18	CDD03.Tc.LFLF.2	new_exp_anschutz	3	colon	0	0	1
-CDD03.Tc.LFHF.1.00	3	Female	LF/HF	taconic	CDD03	0	CDD03.Tc.LFHF.1	new_exp_anschutz	-15	colon	0	1	1
-CDD03.Tc.Chow.4.00	3	Female	Chow	taconic	CDD03	0	CDD03.Tc.Chow.4	new_exp_anschutz	-15	colon	0	0	0
-CDD03.CR.LFLF.3.18	3	Female	LF/LF	charles_river	CDD03	18	CDD03.CR.LFLF.3	new_exp_anschutz	3	colon	0	0	1
-CDD03.Tc.LFHF.5.00	3	Female	LF/HF	taconic	CDD03	0	CDD03.Tc.LFHF.5	new_exp_anschutz	-15	colon	0	1	1
-CDD03.Tc.LFLF.3.18	3	Female	LF/LF	taconic	CDD03	18	CDD03.Tc.LFLF.3	new_exp_anschutz	3	colon	0	0	1
-CDD03.Tc.Chow.1.18	3	Female	Chow	taconic	CDD03	18	CDD03.Tc.Chow.1	new_exp_anschutz	3	colon	0	0	0
-CDD03.CR.HFLF.5.18	3	Female	HF/LF	charles_river	CDD03	18	CDD03.CR.HFLF.5	new_exp_anschutz	3	colon	1	0	1
-CDD03.Tc.LFLF.3.00	3	Female	LF/LF	taconic	CDD03	0	CDD03.Tc.LFLF.3	new_exp_anschutz	-15	colon	0	0	1
-CDD03.Tc.HFLF.5.18	3	Female	HF/LF	taconic	CDD03	18	CDD03.Tc.HFLF.5	new_exp_anschutz	3	colon	1	0	1
-CDD03.Tc.LFHF.2.00	3	Female	LF/HF	taconic	CDD03	0	CDD03.Tc.LFHF.2	new_exp_anschutz	-15	colon	0	1	1
-CDD03.Tc.HFLF.4.00	3	Female	HF/LF	taconic	CDD03	0	CDD03.Tc.HFLF.4	new_exp_anschutz	-15	colon	1	0	1
-CDD03.CR.HFHF.5.18	3	Female	HF/HF	charles_river	CDD03	18	CDD03.CR.HFHF.5	new_exp_anschutz	3	colon	1	1	1
-CDD03.Tc.LFLF.4.18	3	Female	LF/LF	taconic	CDD03	18	CDD03.Tc.LFLF.4	new_exp_anschutz	3	colon	0	0	1
-CDD03.Tc.HFLF.1.18	3	Female	HF/LF	taconic	CDD03	18	CDD03.Tc.HFLF.1	new_exp_anschutz	3	colon	1	0	1
-CDD03.CR.LFLF.1.18	3	Female	LF/LF	charles_river	CDD03	18	CDD03.CR.LFLF.1	new_exp_anschutz	3	colon	0	0	1
-CDD03.Tc.Chow.2.00	3	Female	Chow	taconic	CDD03	0	CDD03.Tc.Chow.2	new_exp_anschutz	-15	colon	0	0	0
-CDD03.CR.HFHF.3.18	3	Female	HF/HF	charles_river	CDD03	18	CDD03.CR.HFHF.3	new_exp_anschutz	3	colon	1	1	1
-CDD03.CR.LFHF.2.18	3	Female	LF/HF	charles_river	CDD03	18	CDD03.CR.LFHF.2	new_exp_anschutz	3	colon	0	1	1
-CDD03.CR.HFHF.1.18	3	Female	HF/HF	charles_river	CDD03	18	CDD03.CR.HFHF.1	new_exp_anschutz	3	colon	1	1	1
-CDD03.Tc.Chow.2.18	3	Female	Chow	taconic	CDD03	18	CDD03.Tc.Chow.2	new_exp_anschutz	3	colon	0	0	0
-CDD03.Tc.HFHF.3.18	3	Female	HF/HF	taconic	CDD03	18	CDD03.Tc.HFHF.3	new_exp_anschutz	3	colon	1	1	1
-CDD03.CR.HFLF.4.18	3	Female	HF/LF	charles_river	CDD03	18	CDD03.CR.HFLF.4	new_exp_anschutz	3	colon	1	0	1
-CDD03.CR.Chow.1.18	3	Female	Chow	charles_river	CDD03	18	CDD03.CR.Chow.1	new_exp_anschutz	3	colon	0	0	0
-CDD03.Tc.LFLF.5.18	3	Female	LF/LF	taconic	CDD03	18	CDD03.Tc.LFLF.5	new_exp_anschutz	3	colon	0	0	1
-CDD03.Tc.HFLF.4.18	3	Female	HF/LF	taconic	CDD03	18	CDD03.Tc.HFLF.4	new_exp_anschutz	3	colon	1	0	1
-CDD03.Tc.HFHF.4.18	3	Female	HF/HF	taconic	CDD03	18	CDD03.Tc.HFHF.4	new_exp_anschutz	3	colon	1	1	1
-CDD03.CR.Chow.3.18	3	Female	Chow	charles_river	CDD03	18	CDD03.CR.Chow.3	new_exp_anschutz	3	colon	0	0	0
-CDD03.CR.LFHF.1.18	3	Female	LF/HF	charles_river	CDD03	18	CDD03.CR.LFHF.1	new_exp_anschutz	3	colon	0	1	1
-CDD03.CR.LFHF.3.18	3	Female	LF/HF	charles_river	CDD03	18	CDD03.CR.LFHF.3	new_exp_anschutz	3	colon	0	1	1
-CDD03.CR.HFHF.2.18	3	Female	HF/HF	charles_river	CDD03	18	CDD03.CR.HFHF.2	new_exp_anschutz	3	colon	1	1	1
-CDD03.CR.Chow.4.18	3	Female	Chow	charles_river	CDD03	18	CDD03.CR.Chow.4	new_exp_anschutz	3	colon	0	0	0
-CDD03.CR.HFHF.4.18	3	Female	HF/HF	charles_river	CDD03	18	CDD03.CR.HFHF.4	new_exp_anschutz	3	colon	1	1	1
-CDD03.Tc.HFHF.2.18	3	Female	HF/HF	taconic	CDD03	18	CDD03.Tc.HFHF.2	new_exp_anschutz	3	colon	1	1	1
-CDD03.CR.HFLF.2.18	3	Female	HF/LF	charles_river	CDD03	18	CDD03.CR.HFLF.2	new_exp_anschutz	3	colon	1	0	1
+#SampleID	study	mouse_sex	diet	vendor	experiment	experiment_day	mouse_id	experiment_set	day_post_inf	sample_type	high_fat	high_fiber	purified_diet	seq_depth
+CDD02.Tc.HFLF.3.00	2	Female	HF/LF	taconic	CDD02	0	CDD02.Tc.HFLF.3	new_exp_anschutz	-15	colon	1	0	1	62859
+CDD02.Tc.LFLF.4.00	2	Female	LF/LF	taconic	CDD02	0	CDD02.Tc.LFLF.4	new_exp_anschutz	-15	colon	0	0	1	75937
+CDD02.Tc.Chow.4.00	2	Female	Chow	taconic	CDD02	0	CDD02.Tc.Chow.4	new_exp_anschutz	-15	colon	0	0	0	55839
+CDD02.Tc.Chow.2.00	2	Female	Chow	taconic	CDD02	0	CDD02.Tc.Chow.2	new_exp_anschutz	-15	colon	0	0	0	45329
+CDD02.Tc.Chow.1.00	2	Female	Chow	taconic	CDD02	0	CDD02.Tc.Chow.1	new_exp_anschutz	-15	colon	0	0	0	84825
+CDD02.CR.LFLF.5.00	2	Female	LF/LF	charles_river	CDD02	0	CDD02.CR.LFLF.5	new_exp_anschutz	-15	colon	0	0	1	43404
+CDD02.CR.Chow.1.00	2	Female	Chow	charles_river	CDD02	0	CDD02.CR.Chow.1	new_exp_anschutz	-15	colon	0	0	0	52927
+CDD02.CR.LFLF.1.00	2	Female	LF/LF	charles_river	CDD02	0	CDD02.CR.LFLF.1	new_exp_anschutz	-15	colon	0	0	1	53356
+CDD02.CR.Chow.4.00	2	Female	Chow	charles_river	CDD02	0	CDD02.CR.Chow.4	new_exp_anschutz	-15	colon	0	0	0	57656
+CDD02.CR.Chow.3.00	2	Female	Chow	charles_river	CDD02	0	CDD02.CR.Chow.3	new_exp_anschutz	-15	colon	0	0	0	38827
+CDD02.CR.Chow.5.00	2	Female	Chow	charles_river	CDD02	0	CDD02.CR.Chow.5	new_exp_anschutz	-15	colon	0	0	0	29768
+CDD02.Tc.HFHF.5.00	2	Female	HF/HF	taconic	CDD02	0	CDD02.Tc.HFHF.5	new_exp_anschutz	-15	colon	1	1	1	72549
+CDD02.CR.LFLF.2.00	2	Female	LF/LF	charles_river	CDD02	0	CDD02.CR.LFLF.2	new_exp_anschutz	-15	colon	0	0	1	46843
+CDD02.CR.HFLF.3.00	2	Female	HF/LF	charles_river	CDD02	0	CDD02.CR.HFLF.3	new_exp_anschutz	-15	colon	1	0	1	51291
+CDD02.Tc.HFLF.2.00	2	Female	HF/LF	taconic	CDD02	0	CDD02.Tc.HFLF.2	new_exp_anschutz	-15	colon	1	0	1	45775
+CDD02.CR.Chow.2.00	2	Female	Chow	charles_river	CDD02	0	CDD02.CR.Chow.2	new_exp_anschutz	-15	colon	0	0	0	41773
+CDD02.Tc.HFHF.1.00	2	Female	HF/HF	taconic	CDD02	0	CDD02.Tc.HFHF.1	new_exp_anschutz	-15	colon	1	1	1	87743
+CDD02.CR.LFLF.3.00	2	Female	LF/LF	charles_river	CDD02	0	CDD02.CR.LFLF.3	new_exp_anschutz	-15	colon	0	0	1	67280
+CDD02.Tc.LFHF.2.00	2	Female	LF/HF	taconic	CDD02	0	CDD02.Tc.LFHF.2	new_exp_anschutz	-15	colon	0	1	1	73611
+CDD02.Tc.HFLF.4.00	2	Female	HF/LF	taconic	CDD02	0	CDD02.Tc.HFLF.4	new_exp_anschutz	-15	colon	1	0	1	52843
+CDD02.Tc.HFLF.5.00	2	Female	HF/LF	taconic	CDD02	0	CDD02.Tc.HFLF.5	new_exp_anschutz	-15	colon	1	0	1	41708
+CDD02.CR.LFLF.4.00	2	Female	LF/LF	charles_river	CDD02	0	CDD02.CR.LFLF.4	new_exp_anschutz	-15	colon	0	0	1	46336
+CDD02.Tc.LFHF.3.00	2	Female	LF/HF	taconic	CDD02	0	CDD02.Tc.LFHF.3	new_exp_anschutz	-15	colon	0	1	1	55243
+CDD02.Tc.HFHF.4.00	2	Female	HF/HF	taconic	CDD02	0	CDD02.Tc.HFHF.4	new_exp_anschutz	-15	colon	1	1	1	42595
+CDD02.Tc.LFLF.5.00	2	Female	LF/LF	taconic	CDD02	0	CDD02.Tc.LFLF.5	new_exp_anschutz	-15	colon	0	0	1	24245
+CDD02.Tc.Chow.5.00	2	Female	Chow	taconic	CDD02	0	CDD02.Tc.Chow.5	new_exp_anschutz	-15	colon	0	0	0	39419
+CDD02.Tc.HFLF.1.00	2	Female	HF/LF	taconic	CDD02	0	CDD02.Tc.HFLF.1	new_exp_anschutz	-15	colon	1	0	1	47410
+CDD02.CR.HFLF.2.00	2	Female	HF/LF	charles_river	CDD02	0	CDD02.CR.HFLF.2	new_exp_anschutz	-15	colon	1	0	1	53788
+CDD02.Tc.Chow.3.00	2	Female	Chow	taconic	CDD02	0	CDD02.Tc.Chow.3	new_exp_anschutz	-15	colon	0	0	0	28490
+CDD02.Tc.LFHF.4.00	2	Female	LF/HF	taconic	CDD02	0	CDD02.Tc.LFHF.4	new_exp_anschutz	-15	colon	0	1	1	49475
+CDD02.Tc.LFHF.5.00	2	Female	LF/HF	taconic	CDD02	0	CDD02.Tc.LFHF.5	new_exp_anschutz	-15	colon	0	1	1	30759
+CDD02.Tc.HFHF.3.00	2	Female	HF/HF	taconic	CDD02	0	CDD02.Tc.HFHF.3	new_exp_anschutz	-15	colon	1	1	1	59529
+CDD02.CR.HFLF.1.00	2	Female	HF/LF	charles_river	CDD02	0	CDD02.CR.HFLF.1	new_exp_anschutz	-15	colon	1	0	1	78937
+CDD02.Tc.LFLF.1.00	2	Female	LF/LF	taconic	CDD02	0	CDD02.Tc.LFLF.1	new_exp_anschutz	-15	colon	0	0	1	58550
+CDD02.Tc.LFLF.2.00	2	Female	LF/LF	taconic	CDD02	0	CDD02.Tc.LFLF.2	new_exp_anschutz	-15	colon	0	0	1	102011
+CDD02.Tc.LFLF.3.00	2	Female	LF/LF	taconic	CDD02	0	CDD02.Tc.LFLF.3	new_exp_anschutz	-15	colon	0	0	1	41523
+CDD02.Tc.HFHF.2.00	2	Female	HF/HF	taconic	CDD02	0	CDD02.Tc.HFHF.2	new_exp_anschutz	-15	colon	1	1	1	52066
+CDD02.Tc.LFHF.1.00	2	Female	LF/HF	taconic	CDD02	0	CDD02.Tc.LFHF.1	new_exp_anschutz	-15	colon	0	1	1	38985
+CDD02.CR.HFHF.1.00	2	Female	HF/HF	charles_river	CDD02	0	CDD02.CR.HFHF.1	new_exp_anschutz	-15	colon	1	1	1	70530
+CDD02.Tc.LFHF.2.18	2	Female	LF/HF	taconic	CDD02	18	CDD02.Tc.LFHF.2	new_exp_anschutz	3	colon	0	1	1	61615
+CDD02.Tc.LFLF.5.18	2	Female	LF/LF	taconic	CDD02	18	CDD02.Tc.LFLF.5	new_exp_anschutz	3	colon	0	0	1	110884
+CDD02.CR.LFHF.2.00	2	Female	LF/HF	charles_river	CDD02	0	CDD02.CR.LFHF.2	new_exp_anschutz	-15	colon	0	1	1	67551
+CDD02.CR.HFLF.5.00	2	Female	HF/LF	charles_river	CDD02	0	CDD02.CR.HFLF.5	new_exp_anschutz	-15	colon	1	0	1	58436
+CDD02.CR.Chow.2.18	2	Female	Chow	charles_river	CDD02	18	CDD02.CR.Chow.2	new_exp_anschutz	3	colon	0	0	0	38539
+CDD02.Tc.LFHF.1.18	2	Female	LF/HF	taconic	CDD02	18	CDD02.Tc.LFHF.1	new_exp_anschutz	3	colon	0	1	1	73245
+CDD02.CR.HFHF.3.00	2	Female	HF/HF	charles_river	CDD02	0	CDD02.CR.HFHF.3	new_exp_anschutz	-15	colon	1	1	1	53938
+CDD02.CR.Chow.1.18	2	Female	Chow	charles_river	CDD02	18	CDD02.CR.Chow.1	new_exp_anschutz	3	colon	0	0	0	70727
+CDD02.Tc.LFLF.4.18	2	Female	LF/LF	taconic	CDD02	18	CDD02.Tc.LFLF.4	new_exp_anschutz	3	colon	0	0	1	63271
+CDD02.CR.LFHF.5.00	2	Female	LF/HF	charles_river	CDD02	0	CDD02.CR.LFHF.5	new_exp_anschutz	-15	colon	0	1	1	51698
+CDD02.CR.HFHF.4.00	2	Female	HF/HF	charles_river	CDD02	0	CDD02.CR.HFHF.4	new_exp_anschutz	-15	colon	1	1	1	58457
+CDD02.CR.HFHF.5.00	2	Female	HF/HF	charles_river	CDD02	0	CDD02.CR.HFHF.5	new_exp_anschutz	-15	colon	1	1	1	58097
+CDD02.Tc.LFLF.1.18	2	Female	LF/LF	taconic	CDD02	18	CDD02.Tc.LFLF.1	new_exp_anschutz	3	colon	0	0	1	63827
+CDD02.CR.LFHF.1.00	2	Female	LF/HF	charles_river	CDD02	0	CDD02.CR.LFHF.1	new_exp_anschutz	-15	colon	0	1	1	62331
+CDD02.CR.LFHF.3.00	2	Female	LF/HF	charles_river	CDD02	0	CDD02.CR.LFHF.3	new_exp_anschutz	-15	colon	0	1	1	41007
+CDD02.CR.Chow.3.18	2	Female	Chow	charles_river	CDD02	18	CDD02.CR.Chow.3	new_exp_anschutz	3	colon	0	0	0	24290
+CDD02.CR.HFLF.4.00	2	Female	HF/LF	charles_river	CDD02	0	CDD02.CR.HFLF.4	new_exp_anschutz	-15	colon	1	0	1	69016
+CDD02.Tc.HFLF.3.18	2	Female	HF/LF	taconic	CDD02	18	CDD02.Tc.HFLF.3	new_exp_anschutz	3	colon	1	0	1	48011
+CDD02.Tc.Chow.5.18	2	Female	Chow	taconic	CDD02	18	CDD02.Tc.Chow.5	new_exp_anschutz	3	colon	0	0	0	55631
+CDD02.Tc.LFLF.3.18	2	Female	LF/LF	taconic	CDD02	18	CDD02.Tc.LFLF.3	new_exp_anschutz	3	colon	0	0	1	53111
+CDD02.CR.LFHF.4.00	2	Female	LF/HF	charles_river	CDD02	0	CDD02.CR.LFHF.4	new_exp_anschutz	-15	colon	0	1	1	40920
+CDD02.CR.HFHF.2.00	2	Female	HF/HF	charles_river	CDD02	0	CDD02.CR.HFHF.2	new_exp_anschutz	-15	colon	1	1	1	56580
+CDD02.Tc.HFHF.4.18	2	Female	HF/HF	taconic	CDD02	18	CDD02.Tc.HFHF.4	new_exp_anschutz	3	colon	1	1	1	25126
+CDD02.Tc.HFHF.3.18	2	Female	HF/HF	taconic	CDD02	18	CDD02.Tc.HFHF.3	new_exp_anschutz	3	colon	1	1	1	31960
+CDD02.Tc.HFLF.5.18	2	Female	HF/LF	taconic	CDD02	18	CDD02.Tc.HFLF.5	new_exp_anschutz	3	colon	1	0	1	51050
+CDD02.Tc.LFHF.4.18	2	Female	LF/HF	taconic	CDD02	18	CDD02.Tc.LFHF.4	new_exp_anschutz	3	colon	0	1	1	41964
+CDD02.Tc.HFLF.1.18	2	Female	HF/LF	taconic	CDD02	18	CDD02.Tc.HFLF.1	new_exp_anschutz	3	colon	1	0	1	48337
+CDD02.Tc.LFLF.2.18	2	Female	LF/LF	taconic	CDD02	18	CDD02.Tc.LFLF.2	new_exp_anschutz	3	colon	0	0	1	49524
+CDD02.Tc.LFHF.3.18	2	Female	LF/HF	taconic	CDD02	18	CDD02.Tc.LFHF.3	new_exp_anschutz	3	colon	0	1	1	44122
+CDD02.Tc.Chow.4.18	2	Female	Chow	taconic	CDD02	18	CDD02.Tc.Chow.4	new_exp_anschutz	3	colon	0	0	0	43285
+CDD02.Tc.Chow.2.18	2	Female	Chow	taconic	CDD02	18	CDD02.Tc.Chow.2	new_exp_anschutz	3	colon	0	0	0	45603
+CDD02.Tc.HFLF.2.18	2	Female	HF/LF	taconic	CDD02	18	CDD02.Tc.HFLF.2	new_exp_anschutz	3	colon	1	0	1	50212
+CDD02.Tc.HFLF.4.18	2	Female	HF/LF	taconic	CDD02	18	CDD02.Tc.HFLF.4	new_exp_anschutz	3	colon	1	0	1	19984
+CDD02.Tc.Chow.1.18	2	Female	Chow	taconic	CDD02	18	CDD02.Tc.Chow.1	new_exp_anschutz	3	colon	0	0	0	27430
+CDD02.Tc.HFHF.5.18	2	Female	HF/HF	taconic	CDD02	18	CDD02.Tc.HFHF.5	new_exp_anschutz	3	colon	1	1	1	26049
+CDD02.Tc.HFHF.2.18	2	Female	HF/HF	taconic	CDD02	18	CDD02.Tc.HFHF.2	new_exp_anschutz	3	colon	1	1	1	38589
+CDD02.Tc.LFHF.5.18	2	Female	LF/HF	taconic	CDD02	18	CDD02.Tc.LFHF.5	new_exp_anschutz	3	colon	0	1	1	4491
+CDD02.CR.HFLF.3.18	2	Female	HF/LF	charles_river	CDD02	18	CDD02.CR.HFLF.3	new_exp_anschutz	3	colon	1	0	1	62562
+CDD02.CR.LFLF.2.18	2	Female	LF/LF	charles_river	CDD02	18	CDD02.CR.LFLF.2	new_exp_anschutz	3	colon	0	0	1	88992
+CDD02.CR.Chow.5.18	2	Female	Chow	charles_river	CDD02	18	CDD02.CR.Chow.5	new_exp_anschutz	3	colon	0	0	0	60593
+CDD02.CR.LFLF.5.18	2	Female	LF/LF	charles_river	CDD02	18	CDD02.CR.LFLF.5	new_exp_anschutz	3	colon	0	0	1	55863
+CDD02.CR.LFHF.3.18	2	Female	LF/HF	charles_river	CDD02	18	CDD02.CR.LFHF.3	new_exp_anschutz	3	colon	0	1	1	79219
+CDD02.CR.HFLF.5.18	2	Female	HF/LF	charles_river	CDD02	18	CDD02.CR.HFLF.5	new_exp_anschutz	3	colon	1	0	1	81235
+CDD02.CR.HFLF.2.18	2	Female	HF/LF	charles_river	CDD02	18	CDD02.CR.HFLF.2	new_exp_anschutz	3	colon	1	0	1	72226
+CDD02.CR.LFLF.1.18	2	Female	LF/LF	charles_river	CDD02	18	CDD02.CR.LFLF.1	new_exp_anschutz	3	colon	0	0	1	89194
+CDD02.CR.HFLF.4.18	2	Female	HF/LF	charles_river	CDD02	18	CDD02.CR.HFLF.4	new_exp_anschutz	3	colon	1	0	1	15389
+CDD02.CR.Chow.4.18	2	Female	Chow	charles_river	CDD02	18	CDD02.CR.Chow.4	new_exp_anschutz	3	colon	0	0	0	67954
+CDD02.CR.LFHF.2.18	2	Female	LF/HF	charles_river	CDD02	18	CDD02.CR.LFHF.2	new_exp_anschutz	3	colon	0	1	1	59094
+CDD02.CR.LFLF.4.18	2	Female	LF/LF	charles_river	CDD02	18	CDD02.CR.LFLF.4	new_exp_anschutz	3	colon	0	0	1	96623
+CDD02.CR.LFLF.3.18	2	Female	LF/LF	charles_river	CDD02	18	CDD02.CR.LFLF.3	new_exp_anschutz	3	colon	0	0	1	93244
+CDD02.CR.LFHF.1.18	2	Female	LF/HF	charles_river	CDD02	18	CDD02.CR.LFHF.1	new_exp_anschutz	3	colon	0	1	1	53213
+CDD02.CR.LFHF.5.18	2	Female	LF/HF	charles_river	CDD02	18	CDD02.CR.LFHF.5	new_exp_anschutz	3	colon	0	1	1	61714
+CDD02.CR.LFHF.4.18	2	Female	LF/HF	charles_river	CDD02	18	CDD02.CR.LFHF.4	new_exp_anschutz	3	colon	0	1	1	60855
+CDD02.CR.HFHF.4.18	2	Female	HF/HF	charles_river	CDD02	18	CDD02.CR.HFHF.4	new_exp_anschutz	3	colon	1	1	1	49557
+CDD02.CR.HFHF.1.18	2	Female	HF/HF	charles_river	CDD02	18	CDD02.CR.HFHF.1	new_exp_anschutz	3	colon	1	1	1	44417
+CDD02.CR.HFLF.1.18	2	Female	HF/LF	charles_river	CDD02	18	CDD02.CR.HFLF.1	new_exp_anschutz	3	colon	1	0	1	41690
+CDD02.CR.HFHF.3.18	2	Female	HF/HF	charles_river	CDD02	18	CDD02.CR.HFHF.3	new_exp_anschutz	3	colon	1	1	1	44317
+CDD02.CR.HFHF.5.18	2	Female	HF/HF	charles_river	CDD02	18	CDD02.CR.HFHF.5	new_exp_anschutz	3	colon	1	1	1	58706
+CDD02.CR.HFHF.2.18	2	Female	HF/HF	charles_river	CDD02	18	CDD02.CR.HFHF.2	new_exp_anschutz	3	colon	1	1	1	47893
+CDD03.Tc.LFLF.1.18	3	Female	LF/LF	taconic	CDD03	18	CDD03.Tc.LFLF.1	new_exp_anschutz	3	colon	0	0	1	60549
+CDD03.Tc.Chow.3.18	3	Female	Chow	taconic	CDD03	18	CDD03.Tc.Chow.3	new_exp_anschutz	3	colon	0	0	0	72040
+CDD03.CR.HFHF.1.00	3	Female	HF/HF	charles_river	CDD03	0	CDD03.CR.HFHF.1	new_exp_anschutz	-15	colon	1	1	1	54011
+CDD03.CR.LFLF.2.00	3	Female	LF/LF	charles_river	CDD03	0	CDD03.CR.LFLF.2	new_exp_anschutz	-15	colon	0	0	1	76835
+CDD03.Tc.HFHF.5.18	3	Female	HF/HF	taconic	CDD03	18	CDD03.Tc.HFHF.5	new_exp_anschutz	3	colon	1	1	1	105352
+CDD03.CR.LFLF.4.00	3	Female	LF/LF	charles_river	CDD03	0	CDD03.CR.LFLF.4	new_exp_anschutz	-15	colon	0	0	1	57393
+CDD03.CR.Chow.2.00	3	Female	Chow	charles_river	CDD03	0	CDD03.CR.Chow.2	new_exp_anschutz	-15	colon	0	0	0	50689
+CDD03.CR.LFLF.2.18	3	Female	LF/LF	charles_river	CDD03	18	CDD03.CR.LFLF.2	new_exp_anschutz	3	colon	0	0	1	72361
+CDD03.CR.LFHF.2.00	3	Female	LF/HF	charles_river	CDD03	0	CDD03.CR.LFHF.2	new_exp_anschutz	-15	colon	0	1	1	56867
+CDD03.Tc.Chow.4.18	3	Female	Chow	taconic	CDD03	18	CDD03.Tc.Chow.4	new_exp_anschutz	3	colon	0	0	0	107196
+CDD03.CR.HFLF.1.00	3	Female	HF/LF	charles_river	CDD03	0	CDD03.CR.HFLF.1	new_exp_anschutz	-15	colon	1	0	1	52883
+CDD03.CR.Chow.3.00	3	Female	Chow	charles_river	CDD03	0	CDD03.CR.Chow.3	new_exp_anschutz	-15	colon	0	0	0	56748
+CDD03.CR.HFLF.5.00	3	Female	HF/LF	charles_river	CDD03	0	CDD03.CR.HFLF.5	new_exp_anschutz	-15	colon	1	0	1	65478
+CDD03.CR.HFHF.4.00	3	Female	HF/HF	charles_river	CDD03	0	CDD03.CR.HFHF.4	new_exp_anschutz	-15	colon	1	1	1	53756
+CDD03.Tc.Chow.5.18	3	Female	Chow	taconic	CDD03	18	CDD03.Tc.Chow.5	new_exp_anschutz	3	colon	0	0	0	83706
+CDD03.Tc.LFHF.4.18	3	Female	LF/HF	taconic	CDD03	18	CDD03.Tc.LFHF.4	new_exp_anschutz	3	colon	0	1	1	40376
+CDD03.CR.LFLF.5.00	3	Female	LF/LF	charles_river	CDD03	0	CDD03.CR.LFLF.5	new_exp_anschutz	-15	colon	0	0	1	32935
+CDD03.CR.Chow.5.18	3	Female	Chow	charles_river	CDD03	18	CDD03.CR.Chow.5	new_exp_anschutz	3	colon	0	0	0	72644
+CDD03.CR.LFLF.4.18	3	Female	LF/LF	charles_river	CDD03	18	CDD03.CR.LFLF.4	new_exp_anschutz	3	colon	0	0	1	90866
+CDD03.CR.LFHF.3.00	3	Female	LF/HF	charles_river	CDD03	0	CDD03.CR.LFHF.3	new_exp_anschutz	-15	colon	0	1	1	80160
+CDD03.Tc.HFLF.5.00	3	Female	HF/LF	taconic	CDD03	0	CDD03.Tc.HFLF.5	new_exp_anschutz	-15	colon	1	0	1	45006
+CDD03.CR.Chow.5.00	3	Female	Chow	charles_river	CDD03	0	CDD03.CR.Chow.5	new_exp_anschutz	-15	colon	0	0	0	56780
+CDD03.Tc.LFHF.3.18	3	Female	LF/HF	taconic	CDD03	18	CDD03.Tc.LFHF.3	new_exp_anschutz	3	colon	0	1	1	42003
+CDD03.CR.HFHF.2.00	3	Female	HF/HF	charles_river	CDD03	0	CDD03.CR.HFHF.2	new_exp_anschutz	-15	colon	1	1	1	43737
+CDD03.Tc.HFHF.2.00	3	Female	HF/HF	taconic	CDD03	0	CDD03.Tc.HFHF.2	new_exp_anschutz	-15	colon	1	1	1	51485
+CDD03.CR.LFHF.5.00	3	Female	LF/HF	charles_river	CDD03	0	CDD03.CR.LFHF.5	new_exp_anschutz	-15	colon	0	1	1	57033
+CDD03.Tc.HFHF.1.18	3	Female	HF/HF	taconic	CDD03	18	CDD03.Tc.HFHF.1	new_exp_anschutz	3	colon	1	1	1	97553
+CDD03.CR.HFLF.3.00	3	Female	HF/LF	charles_river	CDD03	0	CDD03.CR.HFLF.3	new_exp_anschutz	-15	colon	1	0	1	56493
+CDD03.CR.HFLF.3.18	3	Female	HF/LF	charles_river	CDD03	18	CDD03.CR.HFLF.3	new_exp_anschutz	3	colon	1	0	1	66347
+CDD03.Tc.LFLF.4.00	3	Female	LF/LF	taconic	CDD03	0	CDD03.Tc.LFLF.4	new_exp_anschutz	-15	colon	0	0	1	53255
+CDD03.Tc.HFHF.3.00	3	Female	HF/HF	taconic	CDD03	0	CDD03.Tc.HFHF.3	new_exp_anschutz	-15	colon	1	1	1	52058
+CDD03.CR.LFLF.1.00	3	Female	LF/LF	charles_river	CDD03	0	CDD03.CR.LFLF.1	new_exp_anschutz	-15	colon	0	0	1	50167
+CDD03.CR.HFLF.4.00	3	Female	HF/LF	charles_river	CDD03	0	CDD03.CR.HFLF.4	new_exp_anschutz	-15	colon	1	0	1	54289
+CDD03.Tc.Chow.3.00	3	Female	Chow	taconic	CDD03	0	CDD03.Tc.Chow.3	new_exp_anschutz	-15	colon	0	0	0	62000
+CDD03.CR.Chow.1.00	3	Female	Chow	charles_river	CDD03	0	CDD03.CR.Chow.1	new_exp_anschutz	-15	colon	0	0	0	70432
+CDD03.Tc.LFHF.5.18	3	Female	LF/HF	taconic	CDD03	18	CDD03.Tc.LFHF.5	new_exp_anschutz	3	colon	0	1	1	81471
+CDD03.CR.HFHF.5.00	3	Female	HF/HF	charles_river	CDD03	0	CDD03.CR.HFHF.5	new_exp_anschutz	-15	colon	1	1	1	64330
+CDD03.Tc.LFHF.2.18	3	Female	LF/HF	taconic	CDD03	18	CDD03.Tc.LFHF.2	new_exp_anschutz	3	colon	0	1	1	54144
+CDD03.Tc.HFLF.3.00	3	Female	HF/LF	taconic	CDD03	0	CDD03.Tc.HFLF.3	new_exp_anschutz	-15	colon	1	0	1	65786
+CDD03.CR.LFHF.1.00	3	Female	LF/HF	charles_river	CDD03	0	CDD03.CR.LFHF.1	new_exp_anschutz	-15	colon	0	1	1	66434
+CDD03.Tc.HFHF.5.00	3	Female	HF/HF	taconic	CDD03	0	CDD03.Tc.HFHF.5	new_exp_anschutz	-15	colon	1	1	1	53591
+CDD03.Tc.HFLF.3.18	3	Female	HF/LF	taconic	CDD03	18	CDD03.Tc.HFLF.3	new_exp_anschutz	3	colon	1	0	1	76739
+CDD03.CR.Chow.2.18	3	Female	Chow	charles_river	CDD03	18	CDD03.CR.Chow.2	new_exp_anschutz	3	colon	0	0	0	70305
+CDD03.Tc.LFHF.4.00	3	Female	LF/HF	taconic	CDD03	0	CDD03.Tc.LFHF.4	new_exp_anschutz	-15	colon	0	1	1	66590
+CDD03.Tc.Chow.5.00	3	Female	Chow	taconic	CDD03	0	CDD03.Tc.Chow.5	new_exp_anschutz	-15	colon	0	0	0	38275
+CDD03.CR.HFLF.2.00	3	Female	HF/LF	charles_river	CDD03	0	CDD03.CR.HFLF.2	new_exp_anschutz	-15	colon	1	0	1	56564
+CDD03.CR.LFLF.5.18	3	Female	LF/LF	charles_river	CDD03	18	CDD03.CR.LFLF.5	new_exp_anschutz	3	colon	0	0	1	87084
+CDD03.CR.LFHF.4.00	3	Female	LF/HF	charles_river	CDD03	0	CDD03.CR.LFHF.4	new_exp_anschutz	-15	colon	0	1	1	47901
+CDD03.CR.Chow.4.00	3	Female	Chow	charles_river	CDD03	0	CDD03.CR.Chow.4	new_exp_anschutz	-15	colon	0	0	0	79328
+CDD03.Tc.Chow.1.00	3	Female	Chow	taconic	CDD03	0	CDD03.Tc.Chow.1	new_exp_anschutz	-15	colon	0	0	0	51406
+CDD03.Tc.LFHF.3.00	3	Female	LF/HF	taconic	CDD03	0	CDD03.Tc.LFHF.3	new_exp_anschutz	-15	colon	0	1	1	66128
+CDD03.Tc.HFHF.4.00	3	Female	HF/HF	taconic	CDD03	0	CDD03.Tc.HFHF.4	new_exp_anschutz	-15	colon	1	1	1	70770
+CDD03.Tc.LFHF.1.18	3	Female	LF/HF	taconic	CDD03	18	CDD03.Tc.LFHF.1	new_exp_anschutz	3	colon	0	1	1	65994
+CDD03.Tc.HFLF.2.00	3	Female	HF/LF	taconic	CDD03	0	CDD03.Tc.HFLF.2	new_exp_anschutz	-15	colon	1	0	1	38488
+CDD03.Tc.LFLF.2.00	3	Female	LF/LF	taconic	CDD03	0	CDD03.Tc.LFLF.2	new_exp_anschutz	-15	colon	0	0	1	32013
+CDD03.Tc.LFLF.1.00	3	Female	LF/LF	taconic	CDD03	0	CDD03.Tc.LFLF.1	new_exp_anschutz	-15	colon	0	0	1	60847
+CDD03.Tc.LFLF.5.00	3	Female	LF/LF	taconic	CDD03	0	CDD03.Tc.LFLF.5	new_exp_anschutz	-15	colon	0	0	1	61077
+CDD03.Tc.HFLF.1.00	3	Female	HF/LF	taconic	CDD03	0	CDD03.Tc.HFLF.1	new_exp_anschutz	-15	colon	1	0	1	62044
+CDD03.CR.HFLF.1.18	3	Female	HF/LF	charles_river	CDD03	18	CDD03.CR.HFLF.1	new_exp_anschutz	3	colon	1	0	1	78272
+CDD03.CR.LFLF.3.00	3	Female	LF/LF	charles_river	CDD03	0	CDD03.CR.LFLF.3	new_exp_anschutz	-15	colon	0	0	1	57258
+CDD03.CR.HFHF.3.00	3	Female	HF/HF	charles_river	CDD03	0	CDD03.CR.HFHF.3	new_exp_anschutz	-15	colon	1	1	1	68049
+CDD03.Tc.HFHF.1.00	3	Female	HF/HF	taconic	CDD03	0	CDD03.Tc.HFHF.1	new_exp_anschutz	-15	colon	1	1	1	53725
+CDD03.CR.LFHF.4.18	3	Female	LF/HF	charles_river	CDD03	18	CDD03.CR.LFHF.4	new_exp_anschutz	3	colon	0	1	1	74142
+CDD03.Tc.LFLF.2.18	3	Female	LF/LF	taconic	CDD03	18	CDD03.Tc.LFLF.2	new_exp_anschutz	3	colon	0	0	1	105276
+CDD03.Tc.LFHF.1.00	3	Female	LF/HF	taconic	CDD03	0	CDD03.Tc.LFHF.1	new_exp_anschutz	-15	colon	0	1	1	80690
+CDD03.Tc.Chow.4.00	3	Female	Chow	taconic	CDD03	0	CDD03.Tc.Chow.4	new_exp_anschutz	-15	colon	0	0	0	39387
+CDD03.CR.LFLF.3.18	3	Female	LF/LF	charles_river	CDD03	18	CDD03.CR.LFLF.3	new_exp_anschutz	3	colon	0	0	1	61438
+CDD03.Tc.LFHF.5.00	3	Female	LF/HF	taconic	CDD03	0	CDD03.Tc.LFHF.5	new_exp_anschutz	-15	colon	0	1	1	36902
+CDD03.Tc.LFLF.3.18	3	Female	LF/LF	taconic	CDD03	18	CDD03.Tc.LFLF.3	new_exp_anschutz	3	colon	0	0	1	48136
+CDD03.Tc.Chow.1.18	3	Female	Chow	taconic	CDD03	18	CDD03.Tc.Chow.1	new_exp_anschutz	3	colon	0	0	0	63565
+CDD03.CR.HFLF.5.18	3	Female	HF/LF	charles_river	CDD03	18	CDD03.CR.HFLF.5	new_exp_anschutz	3	colon	1	0	1	73961
+CDD03.Tc.LFLF.3.00	3	Female	LF/LF	taconic	CDD03	0	CDD03.Tc.LFLF.3	new_exp_anschutz	-15	colon	0	0	1	52174
+CDD03.Tc.HFLF.5.18	3	Female	HF/LF	taconic	CDD03	18	CDD03.Tc.HFLF.5	new_exp_anschutz	3	colon	1	0	1	72351
+CDD03.Tc.LFHF.2.00	3	Female	LF/HF	taconic	CDD03	0	CDD03.Tc.LFHF.2	new_exp_anschutz	-15	colon	0	1	1	82515
+CDD03.Tc.HFLF.4.00	3	Female	HF/LF	taconic	CDD03	0	CDD03.Tc.HFLF.4	new_exp_anschutz	-15	colon	1	0	1	44751
+CDD03.CR.HFHF.5.18	3	Female	HF/HF	charles_river	CDD03	18	CDD03.CR.HFHF.5	new_exp_anschutz	3	colon	1	1	1	42996
+CDD03.Tc.LFLF.4.18	3	Female	LF/LF	taconic	CDD03	18	CDD03.Tc.LFLF.4	new_exp_anschutz	3	colon	0	0	1	53964
+CDD03.Tc.HFLF.1.18	3	Female	HF/LF	taconic	CDD03	18	CDD03.Tc.HFLF.1	new_exp_anschutz	3	colon	1	0	1	51635
+CDD03.CR.LFLF.1.18	3	Female	LF/LF	charles_river	CDD03	18	CDD03.CR.LFLF.1	new_exp_anschutz	3	colon	0	0	1	76529
+CDD03.Tc.Chow.2.00	3	Female	Chow	taconic	CDD03	0	CDD03.Tc.Chow.2	new_exp_anschutz	-15	colon	0	0	0	53618
+CDD03.CR.HFHF.3.18	3	Female	HF/HF	charles_river	CDD03	18	CDD03.CR.HFHF.3	new_exp_anschutz	3	colon	1	1	1	57115
+CDD03.CR.LFHF.2.18	3	Female	LF/HF	charles_river	CDD03	18	CDD03.CR.LFHF.2	new_exp_anschutz	3	colon	0	1	1	35800
+CDD03.CR.HFHF.1.18	3	Female	HF/HF	charles_river	CDD03	18	CDD03.CR.HFHF.1	new_exp_anschutz	3	colon	1	1	1	38162
+CDD03.Tc.Chow.2.18	3	Female	Chow	taconic	CDD03	18	CDD03.Tc.Chow.2	new_exp_anschutz	3	colon	0	0	0	52721
+CDD03.Tc.HFHF.3.18	3	Female	HF/HF	taconic	CDD03	18	CDD03.Tc.HFHF.3	new_exp_anschutz	3	colon	1	1	1	45973
+CDD03.CR.HFLF.4.18	3	Female	HF/LF	charles_river	CDD03	18	CDD03.CR.HFLF.4	new_exp_anschutz	3	colon	1	0	1	54934
+CDD03.CR.Chow.1.18	3	Female	Chow	charles_river	CDD03	18	CDD03.CR.Chow.1	new_exp_anschutz	3	colon	0	0	0	36498
+CDD03.Tc.LFLF.5.18	3	Female	LF/LF	taconic	CDD03	18	CDD03.Tc.LFLF.5	new_exp_anschutz	3	colon	0	0	1	68865
+CDD03.Tc.HFLF.4.18	3	Female	HF/LF	taconic	CDD03	18	CDD03.Tc.HFLF.4	new_exp_anschutz	3	colon	1	0	1	71503
+CDD03.Tc.HFHF.4.18	3	Female	HF/HF	taconic	CDD03	18	CDD03.Tc.HFHF.4	new_exp_anschutz	3	colon	1	1	1	68645
+CDD03.CR.Chow.3.18	3	Female	Chow	charles_river	CDD03	18	CDD03.CR.Chow.3	new_exp_anschutz	3	colon	0	0	0	43164
+CDD03.CR.LFHF.1.18	3	Female	LF/HF	charles_river	CDD03	18	CDD03.CR.LFHF.1	new_exp_anschutz	3	colon	0	1	1	84767
+CDD03.CR.LFHF.3.18	3	Female	LF/HF	charles_river	CDD03	18	CDD03.CR.LFHF.3	new_exp_anschutz	3	colon	0	1	1	65851
+CDD03.CR.HFHF.2.18	3	Female	HF/HF	charles_river	CDD03	18	CDD03.CR.HFHF.2	new_exp_anschutz	3	colon	1	1	1	60381
+CDD03.CR.Chow.4.18	3	Female	Chow	charles_river	CDD03	18	CDD03.CR.Chow.4	new_exp_anschutz	3	colon	0	0	0	14576
+CDD03.CR.HFHF.4.18	3	Female	HF/HF	charles_river	CDD03	18	CDD03.CR.HFHF.4	new_exp_anschutz	3	colon	1	1	1	60787
+CDD03.Tc.HFHF.2.18	3	Female	HF/HF	taconic	CDD03	18	CDD03.Tc.HFHF.2	new_exp_anschutz	3	colon	1	1	1	64615
+CDD03.CR.HFLF.2.18	3	Female	HF/LF	charles_river	CDD03	18	CDD03.CR.HFLF.2	new_exp_anschutz	3	colon	1	0	1	49672

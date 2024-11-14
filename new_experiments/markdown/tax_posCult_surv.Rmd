@@ -1,0 +1,203 @@
+---
+title: "tax_posCult_surv"
+output: html_document
+date: "2024-11-12"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggpubr)
+library(ggplot2)
+library(qiime2R)
+library(tidyverse)
+library(ggh4x)
+library(viridis)
+library(ggrepel)
+library(cowplot)
+```
+
+MAIN QUESTION:
+- out of the mice who died and had positive cultures, did we culture the same microbe that was blooming in their gut microbiome at day 3? 
+
+..i'm still trying to figure out how to show this 
+
+**Functions**
+```{r}
+abun_file_prep <- function(metadata_file,
+                           tax_fp,
+                           otu_table_fp){
+  ## metadata
+  metadata <- metadata_file %>% 
+            rename(sampleid = `#SampleID`)
+  ## taxonomy
+  taxonomy <- read_qza(tax_fp)$data %>% 
+    parse_taxonomy() %>% 
+    rownames_to_column('asv')
+  ## otu table 
+  otu_table <- read_qza(otu_table_fp)$data
+  otu_table %>% 
+    as_tibble(rownames = 'asv') %>% 
+    gather(-asv, key = sampleid, value = abun) %>% 
+    group_by(sampleid) %>% 
+    mutate(rel_abun = abun/sum(abun)) %>% 
+    mutate(rel_abun = rel_abun + 0.000001) %>% 
+    filter(sampleid %in% metadata$sampleid) -> otu_table
+  ## joining all tables together 
+  otu_table %>% 
+    left_join(metadata, by = 'sampleid') %>% 
+    left_join(taxonomy, by = 'asv') -> abun_table
+  abun_table %>% 
+    group_by(sampleid, day_post_inf, diet, mouse_id, vendor,
+             experiment, Genus) %>% 
+    summarise(rel_abund = sum(rel_abun)) %>% 
+    ungroup() -> abun_filt
+  ## creating a list for my outputs
+  my_list <- list(Taxonomy = taxonomy,
+                  OTUTable = otu_table,
+                  AbundanceTable = abun_filt)
+  return(my_list)
+}
+```
+
+**File paths**
+```{r}
+pos_cult_surv_fp <- '../data/misc/proc_combined_CDD_cfuCounts.tsv'
+tax_FP <- '../data/qiime/taxonomy.qza'
+otu_table_FP <- '../data/qiime/total_sum_otu_table.qza'
+metadata_fp <- '../data/misc/proc_newExp_d15-d3_metadata.tsv'
+
+## main microbes cultured out of blood, spleen, and liver 
+top_microbes <- c('Enterococcus',
+                  'Escherichia-Shigella',
+                  'Proteus',
+                  'Lactobacillus',
+                  'Micrococcus',
+                  'Oceanobacillus',
+                  'Dietzia',
+                  'Gemella',
+                  'Corynebacterium',
+                  'Bacillus',
+                  'Streptococcus',
+                  'Staphylococcus',
+                  'Cutibacterium',
+                  'Kocuria')
+
+other_list <- c('Unknown',
+                'Micrococcus',
+                'Oceanobacillus',
+                'Dietzia',
+                'Gemella',
+                'Corynebacterium',
+                'Bacillus',
+                'Streptococcus',
+                'Staphylococcus',
+                'Cutibacterium',
+                'Kocuria')
+```
+
+**Reading in files**
+```{r}
+posCult_surv_table <- read_tsv(pos_cult_surv_fp)
+metadata <- read_tsv(metadata_fp)
+```
+
+**Data wrangled**
+Info:
+- 25 mice between experiments CDD02/CDD03 had positive cultures and died 
+- filtered out CDD01 as not to skew results 
+```{r}
+## pulling mouse ids for mice that had a positive culture result and didnt survive
+pre_target_mouse_ids <- posCult_surv_table %>% 
+  spread(key = "location", value = "microbe_presence", fill = 0) %>% 
+  filter(experiment != "CDD01",
+         status_microbePres == "didnt_survive,1") %>% 
+  select(mouse_id)
+
+target_mouse_ids <- pre_target_mouse_ids$mouse_id
+
+## filtering the metadata mouse ids by the target mouse ids 
+wanted_mouse_meta <- metadata %>% 
+  filter(mouse_id %in% target_mouse_ids)
+```
+
+pulling top microbe cultured out of the mice that died to compare to microbiome results
+```{r}
+posCult_surv_table %>% 
+  filter(experiment != "CDD01",
+         status_microbePres == "didnt_survive,1") %>% 
+  mutate(location_microbe = paste(location, top_tax, sep = "_")) %>% 
+  select(mouse_id, location, location_microbe) %>% 
+  spread(key = "location", value = "location_microbe", fill = "None") %>% 
+  mutate(blood = ifelse(blood == "None", "blood_None", blood),
+         liver = ifelse(liver == "None", "liver_None", liver),
+         spleen = ifelse(spleen == "None", "spleen_None", spleen),
+         cultured_microbe = paste(blood, liver, spleen, sep = ";")) %>% 
+  select(mouse_id, cultured_microbe) -> comb_microbes
+
+comb_microbes
+```
+
+```{r}
+wide_cult_table <- posCult_surv_table %>% 
+  filter(experiment != "CDD01",
+         status_microbePres == "didnt_survive,1") %>% 
+  select(mouse_id, location, top_tax) %>% 
+  spread(key = "location", value = "top_tax", fill = "None") %>% 
+  rename(cult_blood = blood,
+         cult_spleen = spleen,
+         cult_liver = liver)
+
+wide_cult_table
+```
+
+
+microbiome taxonomic information for the mice who had positive cultures and died 
+```{r}
+abun_files <- abun_file_prep(metadata_file = wanted_mouse_meta,
+                             tax_fp = tax_FP,
+                             otu_table_fp = otu_table_FP)
+
+wanted_mouse_abun <- abun_files$AbundanceTable
+
+wanted_mouse_abun <- wanted_mouse_abun %>%
+  filter(Genus %in% top_microbes)
+
+test_mouse_abun <- wanted_mouse_abun %>% 
+  select(-sampleid) %>% 
+  spread(key = "day_post_inf", value = "rel_abund") %>% 
+  rename(day_neg15 = `-15`,
+         day_3 = `3`) %>% 
+  mutate(diff_relAbun_days = (day_neg15 - day_3)) %>% 
+  select(!c('day_neg15', 'day_3')) %>% 
+  filter(diff_relAbun_days != 0,
+         diff_relAbun_days >= 0.1 | diff_relAbun_days <= -0.1,
+         Genus != 'Lactobacillus') %>%
+  left_join(wide_cult_table, by = "mouse_id")
+
+test_mouse_abun %>% 
+  group_by(mouse_id) %>% 
+  mutate(cult_pres_microbiome = ifelse(Genus == cult_blood | Genus == cult_liver | Genus == cult_spleen, 1, 0),
+         cult_pres_microbiome = case_when(
+                    Genus == 'Enterococcus' & cult_blood == 'enterococcus_escherichiaShigella_proteus' | 
+                    cult_liver == 'enterococcus_escherichiaShigella_proteus' |
+                    cult_spleen == 'enterococcus_escherichiaShigella_proteus' ~ 1,
+                  .default = cult_pres_microbiome
+          )) -> test_mouse_abun
+
+test_mouse_abun %>% 
+  filter(cult_pres_microbiome != 0)
+
+```
+
+**Attempt at a plot**
+this is not it 
+```{r}
+test_mouse_abun %>% 
+  na.omit() %>% 
+  ggplot(aes(x = mouse_id, y = Genus)) +
+  geom_tile(aes(fill = diff_relAbun_days), color = 'black') 
+```
+

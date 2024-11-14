@@ -299,7 +299,6 @@ comb_cfu_genusAbun <- proc_cfu_count %>%
          ))
 ```
 
-
 **Putting together color palettes**
 color palette?
 took the hexcodes from scale_color_brewers 'Paired' palette and put gray in the middle for the "None" category. 
@@ -638,6 +637,19 @@ pos_culture_table <- cfu_count_table %>%
 pos_culture_table
 ```
 
+**to save for later!**
+```{r}
+proc_cfuCount_topTax <- proc_cfu_count %>% 
+  left_join(proc_cult_genusAbun, by = c("mouse_id", "location")) %>% 
+  filter(experiment != 'CDD01')  %>% 
+  mutate(top_tax = ifelse(is.na(top_tax), 'None', top_tax)) %>% 
+  select(!c('Genus', 'sanity')) %>%
+  rename(cult_rel_abund = rel_abund) %>% 
+  mutate(cult_rel_abund = ifelse(is.na(cult_rel_abund), 0, cult_rel_abund))
+
+proc_cfuCount_topTax  
+```
+
 
 **Saving my Outputs**
 ```{r}
@@ -663,7 +675,7 @@ ggsave('../plots/allExp_culture_withMicrobes.pdf',
        height = 12)
 
 ## saving processed cfu count table as a .tsv for later analysis
-write_tsv(proc_cfu_count,
+write_tsv(proc_cfuCount_topTax,
           '../data/misc/proc_combined_CDD_cfuCounts.tsv')
 write_tsv(pos_culture_table,
           '../data/misc/pos_culture_status.tsv')

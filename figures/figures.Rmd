@@ -119,7 +119,8 @@ fig3_middle_row <- plot_grid(panelC_fig3_redoWithlab,
 
 
 fig3_bottom_row <- plot_grid(butyrateOnly_plot +
-                               theme_bw(base_size = 20),
+                               theme_bw(base_size = 20) +
+                               ggtitle('Cecum Butyrate Concentration'),
                              panelE_fig3_redoWithlab,
                              rel_widths = c(0.4, 1),
                              nrow = 1,
@@ -227,40 +228,6 @@ fig5
 ```
 
 ## **Figure Six**
-
-*Caption*:
-*a) Unweighted UniFrac PCoA plots delimited by diet (columns) and by days relative to infection (rows). Individual points are colored by their associated Faith's PD score. b) Microbiome resilience determined using pairwise comparisons between day negative eight (seven days post diet switch and five days prior to oral antibiotic administration) and later time points. c) Microbiome homogeneity determined using pairwise Unweighted UniFrac distances within each time point by tested diets. The dashed red line at day negative three indicates the day the mice received oral antibiotics and the purple dashed line at day zero indicates with the mice were infected with C. difficile. Statistical analysis of microbiome d) resiliency and e) homogeneity was done with a Kruskal-Wallis test followed by a Dunn's Post Hoc test with the color gradient indicating the difference in means between the various groups.*P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).*
-```{r, warning=FALSE, fig.width=26.5, fig.height=18}
-## use NULL to create a ghost plot to alter your rows
-fig6_bottom_row <- plot_grid(uu_resil_plot, uu_homog_plot,
-                             uu_resil_stat_vis +
-                               theme(legend.position = "None"), 
-                             uu_homog_stat_vis,
-                             nrow = 2,
-                             rel_heights = c(1, 0.7),
-                             rel_widths = c(0.90, 1),
-                             labels = c('b)', 'c)', 'd)', 'e)'),
-                             label_size = 20)
-
-                    
-fig6_top_row <- plot_grid(unweighted_pcoa,
-                          NULL,
-                          nrow = 1,
-                          rel_widths = c(1, 0.5),
-                          labels = c('a)', ' '),
-                          label_size = 20,
-                          align = c('hv'),
-                          axis = c('tblr'))
-
-plot_grid(fig6_top_row,
-          fig6_bottom_row,
-          nrow = 2,
-          rel_heights = c(0.9, 1)) -> fig6
-
-fig6
-```
-
-## **Figure Seven**
 Plots to go in figure:
 - want to eventually have the plot that goes with 16S for stool and cecal samples 
 - need an unbiased differential abundance test? 
@@ -279,16 +246,81 @@ microbeProd_relAbunStats_plot$layers[[6]]$aes_params$size <- 6
 plot_grid(family_abun1, stat_plot1,
           labels = c('a)', 'b)'),
           label_size = 20,
-          rel_widths = c(1, 0.9)) -> fig7_top_row
+          rel_widths = c(1, 0.9)) -> fig6_top_row
 
-plot_grid(fig7_top_row,
+plot_grid(fig6_top_row,
           microbeProd_relAbunStats_plot,
           labels = c(' ', 'c)'),
           ncol = 1,
           label_size = 20,
-          rel_heights = c(1, 0.6)) -> fig7
+          rel_heights = c(1, 0.6)) -> fig6
 
+fig6
+```
+
+## **Figure Seven**
+New experiment culture/mortality results.
+```{r, fig.width=22, fig.height=17}
+fig7_bottom_row <- plot_grid(everything_stats, NULL,
+                             nrow = 1,
+                             rel_widths = c(1, 0.7))
+
+fig7 <- plot_grid(everything_plot,
+                  fig7_bottom_row,
+                  ncol = 1,
+                  labels = c('a)', 'b)'),
+                  label_size = 20,
+                  rel_heights = c(1, 0.5))
 fig7
+```
+
+## **Figure Eight**
+Comparison analysis between first set anschutz, u of arizona, and new anschutz experiment microbiome data at day -15 and day 3 with stats.
+```{r, fig.height=8.5, fig.width=27}
+fig8 <- plot_grid(miniVendor_genusAbun_plot +
+                    ggtitle('All Experiment Microbes by Vendor'), 
+                  mini_d3_genus_relAbun_stat_plot +
+                    ggtitle('All Experiment Microbe Comparisons'),
+                  labels = c('a)', 'b)'),
+                  label_size = 20,
+                  rel_widths = c(0.78, 1))
+
+fig8
+```
+
+
+## **Supplemental Figure Seven**
+
+*Caption*:
+*a) Unweighted UniFrac PCoA plots delimited by diet (columns) and by days relative to infection (rows). Individual points are colored by their associated Faith's PD score. b) Microbiome resilience determined using pairwise comparisons between day negative eight (seven days post diet switch and five days prior to oral antibiotic administration) and later time points. c) Microbiome homogeneity determined using pairwise Unweighted UniFrac distances within each time point by tested diets. The dashed red line at day negative three indicates the day the mice received oral antibiotics and the purple dashed line at day zero indicates with the mice were infected with C. difficile. Statistical analysis of microbiome d) resiliency and e) homogeneity was done with a Kruskal-Wallis test followed by a Dunn's Post Hoc test with the color gradient indicating the difference in means between the various groups.*P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).*
+```{r, warning=FALSE, fig.width=26.5, fig.height=18}
+## use NULL to create a ghost plot to alter your rows
+figS7_bottom_row <- plot_grid(uu_resil_plot, uu_homog_plot,
+                             uu_resil_stat_vis +
+                               theme(legend.position = "None"), 
+                             uu_homog_stat_vis,
+                             nrow = 2,
+                             rel_heights = c(1, 0.7),
+                             rel_widths = c(0.90, 1),
+                             labels = c('b)', 'c)', 'd)', 'e)'),
+                             label_size = 20)
+
+                    
+figS7_top_row <- plot_grid(unweighted_pcoa,
+                          NULL,
+                          nrow = 1,
+                          rel_widths = c(1, 0.5),
+                          labels = c('a)', ' '),
+                          label_size = 20,
+                          align = c('hv'),
+                          axis = c('tblr'))
+
+plot_grid(figS7_top_row,
+          figS7_bottom_row,
+          nrow = 2,
+          rel_heights = c(0.9, 1)) -> figS7
+
+figS7
 ```
 
 
@@ -330,16 +362,25 @@ ggsave('fig5.pdf',
        width = 15,
        height = 14)
 
-
 ggsave('fig6.pdf',
        plot = fig6,
-       width = 26.5,
-       height = 18)
-
-## new figure 7!
-ggsave('fig7.pdf',
-       plot = fig7,
        width = 35,
        height = 25)
+
+ggsave('fig7.pdf',
+       plot = fig7,
+       width = 22,
+       height = 17)
+
+ggsave('fig8.pdf',
+       plot = fig8,
+       width = 27,
+       height = 8.5)
+
+## this used to be figure 6 but it got moved to supplemental 
+ggsave('figS7.pdf',
+       plot = figS7,
+       width = 26.5,
+       height = 18)
 ```
 

@@ -58,6 +58,31 @@ pretty_pvalue <- function(pairwise_results){
                                    na = "")
   return(pvalue_table)
 }
+
+## making the survival heat map plot
+surv_vis <- function(pvalue_table,
+                     x_axis,
+                     y_axis,
+                     facet_by,
+                     x_labs = NULL,
+                     y_labs = NULL){
+  surv_stat_plot <- pvalue_table %>%
+        na.omit() %>% 
+        ggplot(aes(x = .data[[x_axis]], y = .data[[y_axis]])) +
+        geom_tile(aes(fill = p.value), alpha = 0.6, color = 'black') +
+        geom_text(aes(label = signif), size = 5) +
+        scale_fill_distiller(limits = c(0, 0.05), palette = 'Reds', name = "P-Value") +
+        theme_bw(base_size = 20) +
+        theme(axis.title.x = element_blank(),
+              axis.title.y = element_blank(),
+              legend.text = element_text(size = 16),
+              legend.title = element_text(size = 18),
+              legend.position = 'none') +
+        facet_wrap(~.data[[facet_by]])
+        # scale_x_discrete(labels = x_labs) +
+        # scale_y_discrete(labels = y_labs)
+  return(surv_stat_plot)
+}
 ```
 
 **File Paths**
@@ -192,13 +217,41 @@ expVendor_plot
 ```
 
 **Stats**
-```{r}
+```{r, fig.width=10, fig.height=10}
 ## diet and vendor stats
-dietVendor_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, actual_surv) ~ diet + vendor,
+dietVendor_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, actual_surv) ~ vendor + diet,
                                          data = surv_table,
                                          p.adjust.method = "BH")
 
 dietVendor_pvalue <- pretty_pvalue(pairwise_results = dietVendor_pairwise)
+
+dietVendor_stat_vis <- surv_vis(pvalue_table = dietVendor_pvalue)
+
+dietVendor_stat_vis
+```
+
+running difference between survival by vendor individually for each diet and then smushing them together 
+```{r}
+test_out <- tibble()
+for(i in unique(unlist(surv_table['diet']))){
+  survdiff_res <- surv_table %>% 
+    filter(diet == i) %>% 
+     pairwise_survdiff(formula = Surv(day_post_inf, actual_surv) ~ vendor,
+                       data = .,
+                       p.adjust.method = "BH")
+  pretty_res <- pretty_pvalue(pairwise_results = survdiff_res) %>% 
+    mutate(diet = paste(i))
+  
+  test_out <- rbind(test_out, pretty_res)
+}
+```
+
+the stat vis for the stats above (it looks like a lot of work for not a lot of stats..its almost unnecessary)
+```{r, fig.width=5.5, fig.height=2.5}
+surv_vis(pvalue_table = test_out,
+         x_axis = 'diet',
+         y_axis = 'group2',
+         facet_by = 'group1')
 ```
 
 idk why i didn't just run normal stats on this data bc I don't need the surminer package to do them 

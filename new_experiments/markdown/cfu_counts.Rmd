@@ -19,7 +19,9 @@ library(ggrepel)
 library(cowplot)
 library(grid)
 library(gridExtra)
+library(apppleplots)
 ```
+
 **Functions**
 ```{r}
 ## plot!!
@@ -133,7 +135,6 @@ make_count_table <- function(input_table,
 metadata_fp <- '../data/misc/proc_newExp_d15-d3_metadata.tsv'
 cfu_count_fp <- '../data/misc/combined_CDD_cfuCounts.txt'
 surv_status_fp <- '../data/misc/survival_status.tsv'
-cult_genusAbun_fp <- '../data/misc/culture_genusAbun_table.tsv'
 
 location_y_labs <- c('Blood',
                      'Liver',
@@ -187,7 +188,6 @@ names(vendor_labs) <- c('charles_river',
 meta <- read_tsv(metadata_fp)
 cfu_count_table <- read_tsv(cfu_count_fp)
 surv_status <- read_tsv(surv_status_fp)
-cult_genusAbun_table <- read_tsv(cult_genusAbun_fp)
 ```
 **Wrangling the positive culture and survival results**
 ```{r}
@@ -221,153 +221,6 @@ proc_cfu_count <- cfu_count_table %>%
   left_join(surv_status, by = "mouse_id") %>% 
   mutate(status_microbePres = as.factor(paste(status, microbe_presence, sep = ","))) %>% 
   na.omit()
-```
-
-**Wrangling the taxonomy of positive cultures**
-info on culture results:
-- samples taken from 40 different mice
-- 64 samples total from different locations 
-```{r}
-## pulling out mice/locations that have culture results that include enterococcus, escherichia-shigella,
-## and proteus 
-cult_genusAbun_table %>% 
-  select(location, mouse_id, Genus, rel_abund) %>% 
-  filter(Genus == 'Enterococcus' | Genus == 'Escherichia-Shigella' | Genus == 'Proteus',
-         rel_abund < 0.9) %>% 
-  spread(key = 'Genus', value = 'rel_abund', fill = 0) %>% 
-  mutate(total_abun = (Enterococcus + `Escherichia-Shigella` + Proteus)) %>% 
-  filter(total_abun >= 0.8) %>% 
-  mutate(Genus = paste("enterococcus", "escherichiaShigella", "proteus", sep = "_"),
-         sanity = paste(mouse_id, location, sep = "_")) %>% 
-  rename(rel_abund = total_abun) %>% 
-  select(mouse_id, location, Genus, sanity, rel_abund) -> big3_polymicro_table
-
-## pulling out mice/locations with culture results that are 90% or above one microbe
-cult_genusAbun_table %>%
-    select(mouse_id, Genus, rel_abund, location) %>%
-    group_by(mouse_id, Genus) %>%
-    filter(rel_abund > 0.9) %>% 
-  mutate(sanity = paste(mouse_id, location, sep = "_")) -> top_tax_table
-
-append(top_tax_table$sanity,
-      big3_polymicro_table$sanity) -> sanity_list
-
-## pulling out the last mice/locations that are not included in either of the tables above 
-cult_genusAbun_table %>% 
-  group_by(mouse_id, location) %>% 
-  filter(rel_abund == max(rel_abund)) %>% 
-  mutate(sanity = paste(mouse_id, location, sep = "_")) %>% 
-  filter(!(sanity %in% sanity_list)) %>% 
-  select(mouse_id, Genus, rel_abund, location, sanity) -> missing_mice
-
-## putting all tables together and more data wrangling 
-proc_cult_genusAbun <- rbind(top_tax_table,
-                             big3_polymicro_table,
-                             missing_mice)
-
-proc_cult_genusAbun <- proc_cult_genusAbun %>% 
-  mutate(top_tax = ifelse(is.na(Genus), 'Unknown', Genus))
-```
-
-**Combining all tables together for the plot**
-```{r}
-## added staph to the other list bc there's only one sample with it 
-other_list <- c('Unknown',
-                'Micrococcus',
-                'Oceanobacillus',
-                'Dietzia',
-                'Gemella',
-                'Corynebacterium',
-                'Bacillus',
-                'Streptococcus',
-                'Staphylococcus',
-                'Cutibacterium',
-                'Kocuria')
-
-
-comb_cfu_genusAbun <- proc_cfu_count %>% 
-  left_join(proc_cult_genusAbun, by = c("mouse_id", "location")) %>% 
-  filter(experiment != 'CDD01')  %>% 
-  mutate(top_tax = ifelse(is.na(top_tax), 'None', top_tax),
-         top_tax = ifelse(top_tax %in% other_list, 'Other', top_tax),
-         diet_order = case_when(
-           diet == 'HF/LF' ~ 1,
-           diet == 'LF/LF' ~ 2,
-           diet == 'HF/HF' ~ 3,
-           diet == 'LF/HF' ~ 4,
-           diet == 'Chow' ~ 5
-         ))
-```
-
-**Putting together color palettes**
-color palette?
-took the hexcodes from scale_color_brewers 'Paired' palette and put gray in the middle for the "None" category. 
-```{r}
-##RColorBrewer::brewer.pal(n = 8, name = 'Spectral')
-my_spectral_palette <- c("#D53E4F",
-                         "#F46D43",
-                         "#FDAE61",
-                         "#FEE08B",
-                         "#E6F598",
-                         "#ABDDA4",
-                         "#66C2A5",
-                         "#3288BD",
-                         "#999999")
-
-my_paired_palette <- c("#A6CEE3", 
-                       "#1F78B4",
-                       "#B2DF8A",
-                       "#33A02C",
-                       # "#FB9A99",
-                       # "#E31A1C",
-                       # "#FDBF6F",
-                       # "#FF7F00",
-                       "#CAB2D6",
-                       "#6A3D9A",
-                       "#999999")
-```
-
-plot
-```{r, fig.width=22, fig.height=12}
-comb_cfu_genusAbun %>% 
-  ggplot(aes(x = mouse_id, y = location)) +
-  theme_bw(base_size = 20) +
-  theme(axis.text.x = element_blank()) +
-  geom_point(aes(color = top_tax, shape = status_microbePres, alpha = status_microbePres), size = 6, 
-             stroke = 2) +
-  scale_y_discrete(labels = location_y_labs) +
-  facet_nested_wrap(~diet_order + vendor,
-                    scales = "free_x",
-                    labeller = labeller(diet_order = diet_order_labs,
-                                        vendor = vendor_labs),
-                    nrow = 3) +
-  scale_color_manual(breaks = c('Enterococcus',
-                                'Escherichia-Shigella',
-                                'Proteus',
-                                'enterococcus_escherichiaShigella_proteus',
-                                'Lactobacillus',
-                                'Other',
-                                'None'),
-                     labels = c('Enterococcus',
-                                'Escherichia-Shigella',
-                                'Proteus',
-                                'Enterococcus, Escherichia-Shigella,\nand Proteus',
-                                'Lactobacillus',
-                                'Other',
-                                'None'),
-                     values = my_paired_palette,
-                     name = 'Genus') +
-  scale_shape_manual(values = c(4, 4, 16, 16),
-                     name = surv_presAbs_title,
-                     labels = surv_presAbs_labs) +
-  scale_alpha_manual(values = c(0.15, 1, 0.15, 1),
-                     name = surv_presAbs_title,
-                     labels = surv_presAbs_labs) +
-  labs(x = 'Mouse',
-       y = 'Location',
-       title = 'All Experiments Culture Results') -> everything_plot
-
-everything_plot
 ```
 
 **CDD01 Plots**
@@ -637,20 +490,6 @@ pos_culture_table <- cfu_count_table %>%
 pos_culture_table
 ```
 
-**to save for later!**
-```{r}
-proc_cfuCount_topTax <- proc_cfu_count %>% 
-  left_join(proc_cult_genusAbun, by = c("mouse_id", "location")) %>% 
-  filter(experiment != 'CDD01')  %>% 
-  mutate(top_tax = ifelse(is.na(top_tax), 'None', top_tax)) %>% 
-  select(!c('Genus', 'sanity')) %>%
-  rename(cult_rel_abund = rel_abund) %>% 
-  mutate(cult_rel_abund = ifelse(is.na(cult_rel_abund), 0, cult_rel_abund))
-
-proc_cfuCount_topTax  
-```
-
-
 **Saving my Outputs**
 ```{r}
 ggsave('../plots/cdd01_culture_results.pdf',
@@ -669,13 +508,9 @@ ggsave('../plots/allExp_culture_results.pdf',
        plot = allExp_together,
        width = 20,
        height = 8)
-ggsave('../plots/allExp_culture_withMicrobes.pdf',
-       plot = everything_plot,
-       width = 22,
-       height = 12)
 
 ## saving processed cfu count table as a .tsv for later analysis
-write_tsv(proc_cfuCount_topTax,
+write_tsv(proc_cfu_count,
           '../data/misc/proc_combined_CDD_cfuCounts.tsv')
 write_tsv(pos_culture_table,
           '../data/misc/pos_culture_status.tsv')

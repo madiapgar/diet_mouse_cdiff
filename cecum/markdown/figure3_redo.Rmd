@@ -213,7 +213,7 @@ dca_tox_plot <- apppleplots::correlation_plots(input_table = dca_tox_table,
                                                     x_transform = TRUE,
                                                     y_transform = TRUE,
                                                     point_alpha = 0,
-                                                    regression_method = 'lm',
+                                                    regression_method = 'none',
                                                     facet_rows = NULL,
                                                     facet_cols = 'comp_value',
                                                     row_labs = NULL,
@@ -223,6 +223,13 @@ dca_tox_plot <- apppleplots::correlation_plots(input_table = dca_tox_table,
                                                     title_content = 'Cecum Deoxycholic Acid Comparisons')
 
 dca_tox_plot <- dca_tox_plot +
+  ## this adds the black outline to the regression lines so you can see them better 
+  geom_smooth(aes(group = diet), color = 'black', 
+              linewidth = 1.5, method = 'lm', se = FALSE) +
+  ## this is the actual regression lines 
+  geom_smooth(aes(group = diet, color = diet), method = 'lm', se = FALSE) +
+  scale_color_brewer(palette = 'Spectral',
+                     guide = 'none') +
   geom_jitter(aes(fill = diet), pch = 21, alpha = 0.7, size = 3) +
   scale_fill_brewer(palette = 'Spectral',
                     guide = 'none') +
@@ -264,7 +271,7 @@ dca_histo_plot <- apppleplots::correlation_plots(input_table = dca_histo_table,
                                                     x_transform = TRUE,
                                                     y_transform = FALSE,
                                                     point_alpha = 0,
-                                                    regression_method = 'lm',
+                                                    regression_method = 'none',
                                                     facet_rows = NULL,
                                                     facet_cols = 'comp_value',
                                                     row_labs = NULL,
@@ -274,6 +281,13 @@ dca_histo_plot <- apppleplots::correlation_plots(input_table = dca_histo_table,
                                                     title_content = '')
 
 dca_histo_plot <- dca_histo_plot +
+  ## this adds the black outline to the regression lines so you can see them better 
+  geom_smooth(aes(group = diet), color = 'black', 
+              linewidth = 1.5, method = 'lm', se = FALSE) +
+  ## this is the actual regression lines 
+  geom_smooth(aes(group = diet, color = diet), method = 'lm', se = FALSE) +
+  scale_color_brewer(palette = 'Spectral',
+                     guide = 'none') +
   geom_jitter(aes(fill = diet), pch = 21, alpha = 0.7, size = 3) +
   scale_fill_brewer(palette = 'Spectral',
                     name = 'Mouse Diet',

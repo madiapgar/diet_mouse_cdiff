@@ -141,7 +141,7 @@ tax_FP <- '../data/comp_qiime/taxonomy.qza'
 otu_table_FP <- '../data/comp_qiime/taxonomy_filtered.qza'
 filt_otu_table_FP <- '../data/comp_qiime/tax_s1_filt.qza'
 tss_tax_rank <- "Phylum"
-tss_tax_subgroup <- "Family"
+tss_tax_subgroup <- "Genus"
 tss_title <- 'Combined Taxa Barplot'
 supp_title <- 'Non-Lacto Filtered Taxa Barplot'
 tss_y <- 'Relative Abundance'

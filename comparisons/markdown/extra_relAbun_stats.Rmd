@@ -321,6 +321,21 @@ d3_genus_relAbun_krDunn <- apppleplots::kruskal_dunn_stats(input_table = proc_d3
 
 d3_genus_relAbun_kruskal <- d3_genus_relAbun_krDunn$KruskalTest
 d3_genus_relAbun_dunn <- d3_genus_relAbun_krDunn$DunnTest
+
+## mini version
+mini_d3_genusAbun_table <- proc_d3_genusAbun_table %>% 
+  filter(Genus == 'Escherichia-Shigella' | Genus == 'Enterococcus' | Genus == 'Proteus' |
+           Genus == 'Staphylococcus')
+
+mini_d3_genus_relAbun_krDunn <- apppleplots::kruskal_dunn_stats(input_table = mini_d3_genusAbun_table,
+                                                                grouped_by = c('Genus', 'day_post_inf'),
+                                                                adjust_method = 'BH',
+                                                                filter_adj_p_value = FALSE,
+                                                                formula_left = 'rel_abund',
+                                                                formula_right = 'exp_vendor')
+
+mini_d3_genus_relAbun_kruskal <- mini_d3_genus_relAbun_krDunn$KruskalTest
+mini_d3_genus_relAbun_dunn <- mini_d3_genus_relAbun_krDunn$DunnTest
 ```
 
 **Wrangling Dunn test for stat visualization**
@@ -338,6 +353,14 @@ proc_d3_genus_relAbun_dunn <- stat_plot_prep(filtered_table = proc_d3_genusAbun_
                                              second_group = c('Genus', 'day_post_inf'),
                                              mean_value = 'rel_abund',
                                              dunn_test = d3_genus_relAbun_dunn)
+
+## mini version
+procMini_d3_genus_relAbun_dunn <- stat_plot_prep(filtered_table = mini_d3_genusAbun_table,
+                                             first_group = 'exp_vendor',
+                                             second_group = c('Genus', 'day_post_inf'),
+                                             mean_value = 'rel_abund',
+                                             dunn_test = mini_d3_genus_relAbun_dunn)
+
 ```
 
 **Stat visualization**
@@ -364,6 +387,31 @@ d3_genus_relAbun_stat_plot <- d3_genus_relAbun_stat_plot +
 d3_genus_relAbun_stat_plot
 ```
 
+mini version of the stats
+```{r, fig.width=15, fig.height=8.5}
+## new plot labels 
+exp_x_labs <- c('Old\nAnschutz\n(2020) -\nTaconic',
+                'New\nAnschutz\n(2024) -\nCharles\nRiver',
+                'New\nAnschutz\n(2024) -\nTaconic')
+
+exp_y_labs <- c('New Anschutz (2024) - Charles River',
+                'New Anschutz (2024) - Taconic',
+                'U of Arizona - Charles River')
+
+mini_d3_genus_relAbun_stat_plot <- stat_plot(new_dunn = procMini_d3_genus_relAbun_dunn,
+                                             facet_by = 'Genus',
+                                             title = 'All Exp Microbe Relative Abundance',
+                                             wanted_subtitle = 'Timeline Day')
+
+mini_d3_genus_relAbun_stat_plot <- mini_d3_genus_relAbun_stat_plot +
+  facet_grid(Genus~day_post_inf) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 0.5)) +
+  scale_x_discrete(labels = exp_x_labs) +
+  scale_y_discrete(labels = exp_y_labs)
+
+mini_d3_genus_relAbun_stat_plot
+```
+
 
 ## **Saving my outputs**
 ```{r}
@@ -386,5 +434,13 @@ ggsave('../baseline_day3/plots/genusAbun_stat_vis.pdf',
        plot = d3_genus_relAbun_stat_plot,
        width = 24.5,
        height = 9)
+ggsave('../baseline_day3/plots/mini_genusAbun_stat_vis.pdf',
+       plot = mini_d3_genus_relAbun_stat_plot,
+       width = 15,
+       height = 8.5)
+
+## saving as an .rdat object to be put together in a figure
+save(mini_d3_genus_relAbun_stat_plot,
+     file = '../../figures/miniComparison_genusAbun_stat_vis.rdat')
 ```
 

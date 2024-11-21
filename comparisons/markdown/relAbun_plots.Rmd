@@ -248,9 +248,10 @@ diet_genusAbun_plot
 ```
 
 
-```{r, fig.width=12.5, fig.height=7}
+```{r, fig.width=12.5, fig.height=8}
 mini_genusAbun_table <- genus_abun_table %>% 
-  filter(Genus == 'Escherichia-Shigella' | Genus == 'Enterococcus' | Genus == 'Proteus')
+  filter(Genus == 'Escherichia-Shigella' | Genus == 'Enterococcus' | Genus == 'Proteus' |
+           Genus == 'Staphylococcus')
 
 ## vendor
 miniVendor_genusAbun_plot <- abun_plots(input_table = mini_genusAbun_table,
@@ -326,5 +327,11 @@ ggsave('../baseline_day3/plots/miniDiet_genusAbun_plot.pdf',
        plot = miniDiet_genusAbun_plot,
        width = 12.5, 
        height = 7)
+
+## as an .rdat object
+save(miniVendor_genusAbun_plot,
+     file = '../../figures/miniComparison_vendor_genusAbun_plot.rdat')
+save(miniDiet_genusAbun_plot,
+     file = '../../figures/miniComparison_diet_genusAbun_plot.rdat')
 ```
 

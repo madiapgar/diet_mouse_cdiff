@@ -19,6 +19,7 @@ library(broom)
 library(rstatix)
 library(ggpubr)
 library(ggh4x)
+library(apppleplots)
 ```
 
 **Functions**
@@ -64,6 +65,40 @@ abun_file_prep <- function(metadata_fp,
                   AbundanceTable = abun_filt)
   return(my_list)
 }
+
+## editing my dunn's post hoc test to include the difference in means between groups 
+edit_dunn_test <- function(filtered_table,
+                           first_group,
+                           second_group,
+                           mean_value,
+                           dunn_test){
+  filtered_table %>% 
+    group_by(filtered_table[first_group], filtered_table[second_group]) %>% 
+    summarise(mean = mean(.data[[mean_value]])) -> mean_table
+  
+  dunn_test %>% 
+    merge(mean_table, 
+          by.x = c('group1',
+                   second_group),
+          by.y = c(first_group,
+                   second_group)) %>% 
+    rename_with(~paste0('group1_', mean_value, recycle0 = TRUE), contains('mean')) %>% 
+    merge(mean_table,
+          by.x = c('group2',
+                   second_group),
+          by.y = c(first_group,
+                   second_group)) %>% 
+    rename_with(~paste0('group2_', mean_value, recycle0 = TRUE), contains('mean')) -> int_dunn
+  
+  group1_col <- paste0('group1_', mean_value)
+  group2_col <- paste0('group2_', mean_value)
+  
+  int_dunn %>% 
+    mutate(diff_means = (.data[[group1_col]] - .data[[group2_col]]),
+           stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
+  
+  return(new_dunn)
+}
 ```
 
 **File paths**
@@ -99,11 +134,21 @@ lacto_abun <- lacto_files$AbundanceTable %>%
   filter(diet != 'Chow')
 
 av_lacto_abun <- lacto_abun %>% 
-  group_by(diet) %>% 
-  summarise(av_rel_abund = mean(rel_abund))
+  group_by(diet, day_post_inf) %>% 
+  summarise(av_rel_abund = mean(rel_abund),
+            perc_av_relAbund = paste0(round(av_rel_abund * 100, digits = 3), '%'))
+
+## keith wanted the lacto relative abundance percentages at days -3, 0 and 3 so this is me getting them and 
+## making the table pretty for him 
+keiths_perc <- av_lacto_abun %>% 
+  filter(day_post_inf == -3 | day_post_inf == 0 | day_post_inf == 3) %>% 
+  select(diet, day_post_inf, perc_av_relAbund) %>% 
+  spread(diet, perc_av_relAbund)
+
+keiths_perc
 ```
 
-**Attempt at a plot**
+**Plot**
 ```{r, fig.height=4, fig.width=12}
 all_timeline_plot <- apppleplots::facet_twice_plots(input_table = lacto_abun,
                                                     x_value = 'day_post_inf',
@@ -128,23 +173,67 @@ all_timeline_plot <- all_timeline_plot +
 
 all_timeline_plot
 ```
-probably not using this one...
-```{r, fig.width=7, fig.height=4.5}
-av_lacto_abun %>% 
-  ggplot(aes(x = diet, y = av_rel_abund)) +
-  geom_bar(aes(group = diet, fill = diet), stat = 'identity', position = 'stack', 
-           color = 'black', alpha = 0.7) +
-  theme_bw(base_size = 20) +
-  scale_fill_brewer(palette = 'Spectral',
-                    guide = 'none') +
-  scale_x_discrete(labels = c('HFt/\nHFb',
-                              'HFt/\nLFb',
-                              'LFt/\nHFb',
-                              'LFt/\nLFb')) +
-  labs(x = 'Diet',
-       y = 'Average Relative Abundance',
-       title = 'Lactococcus Relative Abundance')
+
+**Stats**
+```{r}
+lacto_krDunn_stats <- apppleplots::kruskal_dunn_stats(input_table = lacto_abun,
+                                                      grouped_by = c('Genus', 'day_post_inf'),
+                                                      adjust_method = 'BH',
+                                                      filter_adj_p_value = FALSE,
+                                                      formula_left = 'rel_abund',
+                                                      formula_right = 'diet')
+lacto_kruskal <- lacto_krDunn_stats$KruskalTest
+lacto_dunn <- lacto_krDunn_stats$DunnTest
+
+new_lacto_dunn <- edit_dunn_test(filtered_table = lacto_abun,
+                                 first_group = 'diet',
+                                 second_group = c('day_post_inf', 'Genus'),
+                                 mean_value = 'rel_abund',
+                                 dunn_test = lacto_dunn)
 ```
+
+statistical visualization
+```{r, fig.width=12, fig.height=4}
+stat_y_labs <- c('HFt / LFb',
+                 'LFt / HFb',
+                 'LFt / LFb')
+stat_x_labs <- c(-15, -8, -3, 0, 3)
+
+lacto_stat_plot <- apppleplots::stat_heat_plot(input_table = new_lacto_dunn,
+                                               x_value = 'day_post_inf',
+                                               y_value = 'group2',
+                                               x_value_type = 'continuous',
+                                               y_value_type = 'discrete',
+                                               pairwise = TRUE,
+                                               tile_fill = 'stat_diff_means',
+                                               text_value = 'p.adj.signif',
+                                               legend_name = 'Group 1 -\nGroup2',
+                                               x_labels = stat_x_labs,
+                                               y_labels = stat_y_labs,
+                                               facet_by = 'group1',
+                                               facet_labels = diet_labs,
+                                               x_name = 'Days Relative to Infection',
+                                               y_name = 'Group 2',
+                                               title_content = 'Lactococcus Comparisons')
+
+lacto_stat_plot <- lacto_stat_plot +
+  theme_bw(base_size = 20) +
+  theme(plot.subtitle = element_text(hjust = 0.5))
+
+lacto_stat_plot
+```
+
+**Putting Plots Together**
+```{r, fig.width=12, fig.height=8}
+lacto_abun_plots <- plot_grid(all_timeline_plot,
+                              lacto_stat_plot,
+                              labels = c('a)', 'b)'),
+                              label_size = 20,
+                              ncol = 1)
+
+lacto_abun_plots
+```
+
 
 **Saving my Outputs**
 ```{r}
@@ -152,5 +241,13 @@ ggsave('../plots/lacto_relAbun_diet.pdf',
        plot = all_timeline_plot,
        width = 12,
        height = 4)
+ggsave('../plots/lacto_relbun_stats.pdf',
+       plot = lacto_stat_plot,
+       width = 12,
+       height = 4)
+ggsave('../plots/lacto_relAbun_withStats.pdf',
+       plot = lacto_abun_plots,
+       width = 12,
+       height = 8)
 ```
 

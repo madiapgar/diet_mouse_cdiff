@@ -295,6 +295,43 @@ wanted_genus <- c('Proteus',
                   'Bacteroides')
 ```
 
+**Looking into peptostreptococcaceae genera and species**
+cathy wanted more info about these so here's the code i used to generate it 
+```{r}
+pepto_table <- read_qza(tax_FP)$data %>% 
+  parse_taxonomy() %>% 
+  filter(Family == 'Peptostreptococcaceae')
+
+pepto_genera <- pepto_table %>% 
+  count(Genus)
+
+pepto_species <- pepto_table %>% 
+  count(Species)
+
+pepto_genus_list <- pepto_genera$Genus
+
+pepto_abun_files <- family_abun_file_prep(metadata_fp = metadata_FP,
+                                         tax_fp = tax_FP,
+                                         otu_table_fp = otu_table_FP,
+                                         tax_level = wanted_level2,
+                                         wanted_tax = pepto_genus_list)
+
+pepto_abun_filt <- pepto_abun_files$AbundanceTable
+
+pepto_by_day <- pepto_abun_filt %>% 
+  filter(rel_abund > 0.00001) %>% 
+  group_by(day_post_inf, diet) %>% 
+  count(Genus) %>% 
+  na.omit() %>% 
+  spread(diet, n, fill = 0)
+
+pepto_by_day
+
+# write_tsv(pepto_by_day,
+#           '../data/misc/pepto_genus_info.tsv')
+```
+
+
 **File Prep for Plot Construction**
 ```{r}
 ## for regular plot 

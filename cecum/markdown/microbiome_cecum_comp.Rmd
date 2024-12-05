@@ -399,6 +399,20 @@ mini_microbeProd_relAbun_comb <- microbeProd_relAbun_comb %>%
     Family == 'Staphylococcaceae' ~ 7
   ))
 ```
+estimate = the slope of the regression line 
+i'm having a couple issues with this, since some of the diets had a concentration of 0 for the metabolites, there is no slope for the regression line (also, the slope of the regression line isn't super helpful in understanding the results since its so small) 
+
+why isn't chow showing up when I run the overall model?? i have this horrible feeling that it's because i'm comparing categorical variables in the same column so it chooses the highest one in the alphabet and compares the rest of the variables to it (in this case, its chow). 
+```{r}
+mini_microbeProd_relAbun_comb %>% 
+  filter(microbe_product == 'n-Butanoic Acid (ug/g)',
+         Family == 'Enterobacteriaceae') %>% 
+  do(tidy(lm(rel_abund ~ conc_normalized * diet,
+               data = .))) -> test
+
+test
+
+```
 
 
 **Correlation comparison plot w stats**

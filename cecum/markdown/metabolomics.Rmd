@@ -132,6 +132,42 @@ butyrateOnly_plot <- butyrateOnly_plot +
 butyrateOnly_plot
 ```
 
+acetate and propionate only plot
+```{r, fig.height=5.5, fig.width=10}
+## filtering metabolites to only include butyrate
+notButy_table <- metab %>% 
+  filter(metabolite != "n-Butanoic Acid (ug/g)")
+
+notButy_dunn <- dunn %>% 
+  filter(metabolite != "n-Butanoic Acid (ug/g)")
+
+notButy_plot <- apppleplots::facet_once_plots(input_table = notButy_table,
+                                                  stat_on_plot = TRUE,
+                                                  x_value = 'diet',
+                                                  y_value = 'concentration',
+                                                  x_value_type = 'discrete',
+                                                  grouped_by = 'diet',
+                                                  point_alpha = 0.4,
+                                                  x_labels = metab_x_labs,
+                                                  facet_by = 'metabolite',
+                                                  facet_labels = metab_labs,
+                                                  stat_table = notButy_dunn,
+                                                  x_name = 'Diet',
+                                                  y_name = 'Concentration (ug/g)',
+                                                  title_content = metab_title)
+
+## had to free y-axis scales which the function doesn't do
+## but its a ggplot so you can add layers
+notButy_plot <- notButy_plot + 
+                      theme_bw(base_size = 20) +
+                      facet_wrap(~metabolite,
+                                 scales = "free_y",
+                                 labeller = labeller(metabolite = metab_labs))
+
+notButy_plot
+```
+
+
 **Saving my Outputs**
 ```{r}
 ## plot
@@ -139,6 +175,14 @@ ggsave("../plots/metabolomics.pdf",
        plot = metab_plot,
        width = 12,
        height = 5)
+ggsave('../plots/butyrateOnly_metab.pdf',
+       plot = butyrateOnly_plot,
+       width = 6,
+       height = 5.5)
+ggsave('../plots/noButyrate_metab.pdf',
+       plot = notButy_plot,
+       width = 10,
+       height = 5.5)
 
 ## as an rdata object
 save(metab_plot,

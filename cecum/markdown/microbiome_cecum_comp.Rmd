@@ -290,12 +290,19 @@ miniButyrate_faith_table <- butyrate_faith_table %>%
 
 microbeProd_faith_comb <- rbind(miniDCA_faith_table,
                                 miniButyrate_faith_table)
+
+## transforming x and y axis columns to log10 for more accurate stats
+microbeProd_faith_comb <- microbeProd_faith_comb %>% 
+  mutate(log_faith_pd = log(faith_pd),
+         log_conc_norm = log(conc_normalized))
 ```
 
 **Alpha Diversity Compared to Butyrate and DCA Concentration**
 secondary bile acid: 
   - the outlier point in the low fiber facet is a LF/LF mouse that has a DCA concentration of ~65 pmol/mg (all    the others have a DCA concentration of 0) - mouse_id is 106!!
   - i want to filter that point out
+  
+NOTE: I don't use the log transformed columns for the plot since I just have ggplot transform the data to log10 scale in the actual plot but keep the x and y axis labels the same (so the x and y axis labels are reflective of the actual data and thus make more sense in a biological context). 
 ```{r, fig.width=9.5, fig.height=4.5}
 faith_comb_plot <- apppleplots::correlation_plots(input_table = microbeProd_faith_comb,
                                                  x_value = 'conc_normalized',
@@ -327,8 +334,8 @@ faith_comb_plot <- faith_comb_plot +
 faith_comb_stats <- lm_r2_p_value(input_table = microbeProd_faith_comb,
                                   wanted_col1 = 'microbe_product',
                                   wanted_col2 = NULL,
-                                  formula_left = 'faith_pd',
-                                  formula_right = 'conc_normalized * diet')
+                                  formula_left = 'log_faith_pd',
+                                  formula_right = 'log_conc_norm * diet')
 
 
 ## stats on plot
@@ -363,21 +370,12 @@ rel_abun_table <- rel_abun_files$AbundanceTable %>%
                     ungroup() %>% 
                     select(sampleid, Family, rel_abund)
 
-relAbun_butyrate_table <- rel_abun_table %>% 
-  left_join(full_metab, by = 'sampleid',
-            relationship = "many-to-many") %>% 
-  filter(metabolite == 'n-Butanoic Acid (ug/g)') %>% 
-  mutate(dietary_content = case_when(
-    diet == 'HF/HF' | diet == 'LF/HF' ~ 'high_fiber',
-    diet == 'Chow' ~ 'chow',
-    diet == 'HF/LF' | diet == 'LF/LF' ~ 'low_fiber'
-  ))
-
 ## microbe product combined table
 microbeProd_relAbun_comb <- microbeProd_faith_comb %>% 
-                              select(-faith_pd) %>% 
+                              select(-faith_pd, -log_faith_pd) %>% 
                               left_join(rel_abun_table, by = 'sampleid',
-                                        relationship = 'many-to-many')
+                                        relationship = 'many-to-many') %>% 
+                              mutate(log_rel_abund = log10(rel_abund))
 
 mini_family <- c('Enterobacteriaceae', 
                  'Lactobacillaceae', 
@@ -403,15 +401,18 @@ estimate = the slope of the regression line
 i'm having a couple issues with this, since some of the diets had a concentration of 0 for the metabolites, there is no slope for the regression line (also, the slope of the regression line isn't super helpful in understanding the results since its so small) 
 
 why isn't chow showing up when I run the overall model?? i have this horrible feeling that it's because i'm comparing categorical variables in the same column so it chooses the highest one in the alphabet and compares the rest of the variables to it (in this case, its chow). 
+
+changing the diet column to a numeric doesn't work the way we want it to for a zero based comparison instead of a reference based comparison. 
 ```{r}
 mini_microbeProd_relAbun_comb %>% 
+  mutate(log_rel_abund = log10(rel_abund),
+         log_conc_norm = log10(conc_normalized)) %>% 
   filter(microbe_product == 'n-Butanoic Acid (ug/g)',
-         Family == 'Enterobacteriaceae') %>% 
-  do(tidy(lm(rel_abund ~ conc_normalized * diet,
+         Family == 'Lachnospiraceae') %>% 
+  do(tidy(lm(log_rel_abund ~ log_conc_norm * diet,
                data = .))) -> test
 
 test
-
 ```
 
 
@@ -459,8 +460,8 @@ microbeProd_relAbun_plot <- microbeProd_relAbun_plot +
 microbeProd_relAbun_stats <- lm_r2_p_value(input_table = mini_microbeProd_relAbun_comb,
                                        wanted_col1 = 'microbe_product',
                                        wanted_col2 = 'microbe_order',
-                                       formula_left = 'rel_abund',
-                                       formula_right = 'conc_normalized * diet')
+                                       formula_left = 'log_rel_abund',
+                                       formula_right = 'log_conc_norm * diet')
 
 ## stats on plot
 microbeProd_relAbun_list <- stat_on_plot(stat_table = microbeProd_relAbun_stats,

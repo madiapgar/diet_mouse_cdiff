@@ -45,7 +45,7 @@ plot_grid(diet_plot_final +
 fig1
 ```
 
-## **Figure Two**
+## **Figure Two - REDO ALL STATS IN LOG10!!**
 Plots to go in figure:
 - cecal toxin plot 
 - cecal overall histopathology plot
@@ -88,7 +88,7 @@ plot_grid(fig2_top_row,
 fig2
 ```
 
-## **Figure Three**
+## **Figure Three - REDO ALL STATS IN LOG10!!**
 Plots to go in figure:
 - bile acid concentration plot
 - bile acid c. diff promoters/inhibitors ratio plot
@@ -147,44 +147,6 @@ Plots to go in figure:
 
 *Caption*:
 *a) Hypoxia measurements for three intestinal locations (cecum, proximal colon, distal colon) in the tested diets, determined by fluorescence of the oxygen sensitive dye, pimonidazole, in the respective tissues. b) Cecal hypoxia measurements between the five tested diets. Statistical analysis was done using a Kruskal-Wallis test followed by a Dunn's Post Hoc test with p-values being corrected for multiple comparisons via Benjamini and Hochberg. c) Linear regression comparison of cecal histologic inflammation scoring to hypoxia across tested diets. d) Linear regression comparison o colon histologic inflammation scoring to hypoxia across tested diets. P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).
-```{r, warning=FALSE, fig.height=14, fig.width=23}
-fig4_top_row <- plot_grid(hypoxia_dietLocation_plot +
-                            theme_bw(base_size = 20) +
-                            ggtitle('Intestinal Hypoxia') +
-                            xlab('Location'),
-                          hypoxia_cecum_plot +
-                            theme_bw(base_size = 20) +
-                            ggtitle('Cecum Hypoxia Between Diets'),
-                          labels = c('a)', 'b)'),
-                          axis = c('tblr'),
-                          align = c('hv'),
-                          label_size = 20,
-                          rel_widths = c(1, 0.4))
-
-
-fig4_middle_row <- plot_grid(hypox_cecumHisto_plot +
-                               theme_bw(base_size = 20) +
-                               theme(strip.text.y.right = element_text(angle = 0)),
-                             hypox_colonStats_plot +
-                               theme_bw(base_size = 20) +
-                               theme(strip.text.y.right = element_text(angle = 0)),
-                             labels = c('c)', 'd)'),
-                             ncol = 1,
-                             rel_heights = c(0.8, 1),
-                             axis = c('tblr'),
-                             align = c('hv'),
-                             label_size = 20)
-
-
-plot_grid(fig4_top_row,
-          fig4_middle_row,
-          rel_heights = c(0.95, 1),
-          ncol = 1,
-          align = c('hv'),
-          axis = c('tblr')) -> fig4
-
-fig4
-```
 
 **Revised Figure Four**
 ```{r, fig.height=6, fig.width=10}
@@ -202,6 +164,8 @@ rev_fig4
 ```
 
 ## **Figure Five**
+NOTE: stats have been redone log10 transformed
+
 Plots to go in figure:
 - faith's pd and stats
 
@@ -228,6 +192,8 @@ fig5
 ```
 
 ## **Figure Six**
+NOTE: stats have already been redone log10 transformed!!
+
 Plots to go in figure:
 - want to eventually have the plot that goes with 16S for stool and cecal samples 
 - need an unbiased differential abundance test? 
@@ -239,24 +205,46 @@ Plots to go in figure:
 *Caption*:
 *a) Relative abundances of key gut bacterial families by the five tested diets throughout the experimental timeline. The dashed red line at day negative three indicates the day the mice received oral antibiotics and the purple dashed line at day zero indicates with the mice were infected with C. difficile. b) Pairwise comparisons by days relative to infection (columns) and bacterial family (rows) per diet as determined by a Kruskal-Wallis test followed by a Dunn's Post Hoc test with the color gradient indicating the difference in means.*P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).*
 ```{r}
-microbeProd_relAbunStats_plot$layers[[6]]$aes_params$size <- 6
+microbeProd_relAbunStats_plot$layers[[6]]$aes_params$size <- 5
 ```
 
-```{r, warning=FALSE, fig.height=25, fig.width=35}
-plot_grid(family_abun1, stat_plot1,
-          labels = c('a)', 'b)'),
-          label_size = 20,
-          rel_widths = c(1, 0.9)) -> fig6_top_row
-
-plot_grid(fig6_top_row,
+```{r, warning=FALSE, fig.height=30, fig.width=29}
+plot_grid(genusAbun_plots_together_withLabs,
           microbeProd_relAbunStats_plot,
           labels = c(' ', 'c)'),
           ncol = 1,
           label_size = 20,
-          rel_heights = c(1, 0.6)) -> fig6
+          rel_heights = c(1, 0.4)) -> fig6
 
 fig6
 ```
+
+```{r, fig.height=30, fig.width=29}
+fig6_part_two <- plot_grid(lachno_abun_plot +
+                            theme(axis.title.x = element_blank()) +
+                             labs(y = '',
+                                  subtitle = 'Lachnospiraceae',
+                                  title = 'Obligate Anaerobe Relative Abundance'),
+                            rumino_abun_plot +
+                              theme(plot.title = element_blank()) +
+                              labs(x = 'Days Relative to Infection',
+                                   y = '',
+                                   subtitle = 'Ruminococcaceae'),
+                            path_abun_plot,
+                            microbeProd_relAbunStats_plot,
+                            ncol = 1,
+                            labels = c('a)', ' ', 'b)', 'c)'),
+                            label_size = 20,
+                            rel_heights = c(0.5, 0.5, 1, 0.8),
+                            align = 'hv',
+                            axis = 'tblr')
+
+fig6_part_two_withLabs <- ggdraw(fig6_part_two) +
+  draw_label('Relative Abundace (log10)', x = 0, y = 0.82, angle = 90, size = 20, vjust = 1.5)
+
+fig6_part_two_withLabs
+```
+
 
 ## **Figure Seven**
 New experiment culture/mortality results.
@@ -276,14 +264,20 @@ fig7
 
 ## **Figure Eight**
 Comparison analysis between first set anschutz, u of arizona, and new anschutz experiment microbiome data at day -15 and day 3 with stats.
-```{r, fig.height=8.5, fig.width=27}
+```{r, fig.height=27, fig.width=15}
 fig8 <- plot_grid(miniVendor_genusAbun_plot +
                     ggtitle('All Experiment Microbes by Vendor'), 
                   mini_d3_genus_relAbun_stat_plot +
+                    scale_y_discrete(labels = c('New Anschutz\n(2024) -\nCharles River',
+                                                'New Anschutz\n(2024) -\nTaconic',
+                                                'U of\nArizona -\nCharles River')) +
                     ggtitle('All Experiment Microbe Comparisons'),
                   labels = c('a)', 'b)'),
                   label_size = 20,
-                  rel_widths = c(0.78, 1))
+                  ncol = 1,
+                  align = 'hv',
+                  axis = 'tblr',
+                  rel_heights = c(1, 1))
 
 fig8
 ```
@@ -347,10 +341,10 @@ ggsave('fig3.pdf',
        width = 20,
        height = 17)
 
-ggsave('fig4.pdf',
-       plot = fig4,
-       width = 23,
-       height = 14)
+# ggsave('fig4.pdf',
+#        plot = fig4,
+#        width = 23,
+#        height = 14)
 ggsave('rev_fig4.pdf',
        plot = rev_fig4,
        width = 10,
@@ -364,8 +358,8 @@ ggsave('fig5.pdf',
 
 ggsave('fig6.pdf',
        plot = fig6,
-       width = 35,
-       height = 25)
+       width = 29,
+       height = 30)
 
 ggsave('fig7.pdf',
        plot = fig7,
@@ -374,8 +368,8 @@ ggsave('fig7.pdf',
 
 ggsave('fig8.pdf',
        plot = fig8,
-       width = 27,
-       height = 8.5)
+       width = 15,
+       height = 27)
 
 ## this used to be figure 6 but it got moved to supplemental 
 ggsave('figS7.pdf',

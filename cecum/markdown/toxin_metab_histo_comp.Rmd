@@ -194,7 +194,8 @@ histo %>%
 histo %>% 
   select(mouse_id, tissue, score, diet, sampleid) %>% 
   left_join(neat_toxin, by = 'mouse_id') %>% 
-  na.omit() -> histo_neat_toxin
+  na.omit() %>% 
+  mutate(log_neat_conc = log10(neat_conc_norm)) -> histo_neat_toxin
 
 ## creating mini histo_neat_toxin table that only contains low fiber diets 
 histo_neat_toxin %>% 
@@ -319,12 +320,12 @@ noDiet_histoCecum_tox_plot <- noDiet_histoCecum_tox_plot +
 ## stats
 cecum_neat_toxin %>% 
     filter(neat_toxin == "Total TcA Neat") %>%
-    do(glance(lm(score ~ neat_conc_norm * diet,
+    do(glance(lm(score ~ log_neat_conc * diet,
                  data = .))) -> lm_tca
 
 cecum_neat_toxin %>% 
     filter(neat_toxin == "Total TcB Neat") %>%
-    do(glance(lm(score ~ neat_conc_norm * diet,
+    do(glance(lm(score ~ log_neat_conc * diet,
                  data = .))) -> lm_tcb
 
 noDiet_histoCecum_tox_stats <- data.frame(r_squared = c(lm_tca$r.squared,

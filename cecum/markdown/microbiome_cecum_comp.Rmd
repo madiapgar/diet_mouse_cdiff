@@ -49,8 +49,7 @@ rel_abun_file_prep <- function(metadata_fp,
     left_join(taxonomy, by = 'asv') -> abun_table
   abun_table %>% 
     group_by(sampleid, day_post_inf, diet, mouse_id, 
-             purified_diet, high_fat, high_fiber, 
-             seq_depth, .data[[tax_level]], facility, study) %>% 
+             .data[[tax_level]], Genus) %>% 
     summarise(rel_abund = sum(rel_abun)) %>% 
     filter(.data[[tax_level]] %in% wanted_tax) %>% 
     mutate(mouse_fact = as.factor(mouse_id),
@@ -205,33 +204,41 @@ names(faith_comb_labs) <- c('Deoxycholic_acid_DCA',
 
 microbe_labs <- c('Lachnospiraceae',
                   'Ruminococcaceae',
-                  'Peptostreptococcaceae',
-                  'Lactobacillaceae',
-                  'Enterobacteriaceae',
-                  'Enterococcaceae',
-                  'Staphylococcaceae')
+                  'Clostridioides',
+                  'Enterococcus',
+                  'Unclassified\nEnterobacteriaceae',
+                  'Staphylococcus')
 names(microbe_labs) <- c(1,
                          2,
                          3,
                          4,
                          5,
-                         6,
-                         7)
+                         6)
 
 
 wanted_level <- 'Family'
 wanted_family <- c('Enterobacteriaceae', 
-                   'Lactobacillaceae', 
                    'Lachnospiraceae', 
                    'Enterococcaceae',
-                   'Staphylococcaceae', 
-                   'Tannerellaceae', 
-                   'Muribaculaceae', 
-                   'Bacteroidaceae', 
-                   'Marinifilaceae', 
                    'Ruminococcaceae',
-                   'Morganellaceae',
+                   'Staphylococcaceae',
                    'Peptostreptococcaceae')
+
+wanted_obAn <- c('Lachnospiraceae_NK4A136_group',
+                 'Unclassified\nLachnospiraceae',
+                 'Lachnoclostridium',
+                 'Blautia',
+                 'Roseburia',
+                 'Incertae_Sedis',
+                 'Anaerotruncus',
+                 'UBA1819',
+                 'uncultured')
+
+wanted_genera <- c('Clostridioides',
+                   'Enterococcus',
+                   'Unclassified\nEnterobacteriaceae',
+                   'Staphylococcus')
+
 diet_x_labs <- c("Chow",
                  "HFt/\nHFb",
                  "HFt/\nLFb",
@@ -368,35 +375,44 @@ rel_abun_files <- rel_abun_file_prep(metadata_fp = metadata_FP,
 
 rel_abun_table <- rel_abun_files$AbundanceTable %>% 
                     ungroup() %>% 
-                    select(sampleid, Family, rel_abund)
+                    select(sampleid, Family, Genus, rel_abund) %>% 
+                    mutate(Genus = ifelse(is.na(Genus), paste0('Unclassified', '\n', Family), Genus))
+
+obAn_rel_abun <- rel_abun_table %>% 
+  filter(Genus %in% wanted_obAn) %>% 
+  group_by(sampleid, Family) %>% 
+  mutate(fam_abund = sum(rel_abund)) %>% 
+  spread(Genus, rel_abund) %>% 
+  rename(rel_abund = fam_abund,
+         taxonomy = Family) %>% 
+  select(sampleid, taxonomy, rel_abund) %>% 
+  ungroup()
+
+path_rel_abun <- rel_abun_table %>% 
+  filter(Genus %in% wanted_genera) %>% 
+  rename(taxonomy = Genus) %>% 
+  select(sampleid, taxonomy, rel_abund) %>% 
+  ungroup()
+
+new_rel_abun_table <- rbind(obAn_rel_abun,
+                            path_rel_abun)
 
 ## microbe product combined table
 microbeProd_relAbun_comb <- microbeProd_faith_comb %>% 
                               select(-faith_pd, -log_faith_pd) %>% 
-                              left_join(rel_abun_table, by = 'sampleid',
+                              left_join(new_rel_abun_table, by = 'sampleid',
                                         relationship = 'many-to-many') %>% 
-                              mutate(log_rel_abund = log10(rel_abund))
-
-mini_family <- c('Enterobacteriaceae', 
-                 'Lactobacillaceae', 
-                 'Lachnospiraceae', 
-                 'Enterococcaceae',
-                 'Ruminococcaceae',
-                 'Staphylococcaceae',
-                 'Peptostreptococcaceae')
-
-mini_microbeProd_relAbun_comb <- microbeProd_relAbun_comb %>% 
-  filter(Family %in% mini_family) %>% 
-  mutate(microbe_order = case_when(
-    Family == 'Lachnospiraceae' ~ 1,
-    Family == 'Ruminococcaceae' ~ 2,
-    Family == 'Peptostreptococcaceae' ~ 3,
-    Family == 'Lactobacillaceae' ~ 4,
-    Family == 'Enterobacteriaceae' ~ 5,
-    Family == 'Enterococcaceae' ~ 6,
-    Family == 'Staphylococcaceae' ~ 7
-  ))
+                              mutate(log_rel_abund = log10(rel_abund),
+                                     microbe_order = case_when(
+                                      taxonomy == 'Lachnospiraceae' ~ 1,
+                                      taxonomy == 'Ruminococcaceae' ~ 2,
+                                      taxonomy == 'Clostridioides' ~ 3,
+                                      taxonomy == 'Enterococcus' ~ 4,
+                                      taxonomy == 'Unclassified\nEnterobacteriaceae' ~ 5,
+                                      taxonomy == 'Staphylococcus' ~ 6
+                                    ))
 ```
+
 estimate = the slope of the regression line 
 i'm having a couple issues with this, since some of the diets had a concentration of 0 for the metabolites, there is no slope for the regression line (also, the slope of the regression line isn't super helpful in understanding the results since its so small) 
 
@@ -419,20 +435,20 @@ test
 **Correlation comparison plot w stats**
 - added five regression lines (one for each diet) instead of just one line per facet - im not sure how I feel about it 
 ```{r, fig.height=7, fig.width=25}
-microbeProd_relAbun_plot <- apppleplots::correlation_plots(input_table = mini_microbeProd_relAbun_comb,
-                                                       x_value = 'conc_normalized',
-                                                       y_value = 'rel_abund',
-                                                       x_transform = TRUE,
-                                                       y_transform = TRUE,
-                                                       point_alpha = 0,
-                                                       regression_method = "none",
-                                                       facet_rows = 'microbe_product',
-                                                       facet_cols = 'microbe_order',
-                                                       row_labs = faith_comb_labs,
-                                                       col_labs = microbe_labs,
-                                                       x_name = 'Concentration (log10)',
-                                                       y_name = "Relative Abundance (log10)",
-                                                       title_content = 'Microbe Relative Abundance by Product Concentration')
+microbeProd_relAbun_plot <- apppleplots::correlation_plots(input_table = microbeProd_relAbun_comb,
+                                                           x_value = 'conc_normalized',
+                                                           y_value = 'rel_abund',
+                                                           x_transform = TRUE,
+                                                           y_transform = TRUE,
+                                                           point_alpha = 0,
+                                                           regression_method = "none",
+                                                           facet_rows = 'microbe_product',
+                                                           facet_cols = 'microbe_order',
+                                                           row_labs = faith_comb_labs,
+                                                           col_labs = microbe_labs,
+                                                           x_name = 'Concentration (log10)',
+                                                           y_name = "Relative Abundance (log10)",
+                                                           title_content = 'Microbe Relative Abundance by Product Concentration')
 
 microbeProd_relAbun_plot <- microbeProd_relAbun_plot +
                     ## this adds the black outline to the regression lines so you can see them better 
@@ -457,21 +473,21 @@ microbeProd_relAbun_plot <- microbeProd_relAbun_plot +
 
 
 ## stats
-microbeProd_relAbun_stats <- lm_r2_p_value(input_table = mini_microbeProd_relAbun_comb,
-                                       wanted_col1 = 'microbe_product',
-                                       wanted_col2 = 'microbe_order',
-                                       formula_left = 'log_rel_abund',
-                                       formula_right = 'log_conc_norm * diet')
+microbeProd_relAbun_stats <- lm_r2_p_value(input_table = microbeProd_relAbun_comb,
+                                           wanted_col1 = 'microbe_product',
+                                           wanted_col2 = 'microbe_order',
+                                           formula_left = 'log_rel_abund',
+                                           formula_right = 'log_conc_norm * diet')
 
 ## stats on plot
 microbeProd_relAbun_list <- stat_on_plot(stat_table = microbeProd_relAbun_stats,
-                                     wanted_col_list = colnames(microbeProd_relAbun_stats),
-                                     x_col_name = 'conc_normalized',
-                                     x_col_value = '15',
-                                     y_col_name = 'rel_abund',
-                                     y_col_value = '100',
-                                     plot = microbeProd_relAbun_plot,
-                                     plot_text_size = 4)
+                                         wanted_col_list = colnames(microbeProd_relAbun_stats),
+                                         x_col_name = 'conc_normalized',
+                                         x_col_value = '15',
+                                         y_col_name = 'rel_abund',
+                                         y_col_value = '100',
+                                         plot = microbeProd_relAbun_plot,
+                                         plot_text_size = 4)
 
 microbeProd_relAbunStats_plot <- microbeProd_relAbun_list$PlotwStats
 

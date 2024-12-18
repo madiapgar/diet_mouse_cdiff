@@ -1,7 +1,7 @@
 ---
-title: "bile_acid_comp_redo"
+title: "acetate_propionate_comp_redo"
 output: html_document
-date: "2024-12-02"
+date: "2024-12-18"
 ---
 
 ```{r setup, include=FALSE}
@@ -117,8 +117,6 @@ stat_on_plot <- function(stat_table,
 **File paths**
 ```{r}
 histo_metabTox_fp <- '../data/misc/histoMetabToxin_results_comb.tsv'
-bile_acid_fp <- '../data/misc/processed_bile_acid.tsv'
-ratio_ba_fp <- '../data/misc/processed_ratio_bileAcid.tsv'
 
 ## plot relabeling variables
 tox_labs <- c('TcdA',
@@ -126,19 +124,16 @@ tox_labs <- c('TcdA',
 names(tox_labs) <- c('Total TcA Neat',
                      'Total TcB Neat')
 
-bile_acid_labs <- c('C. difficile Inhibitor',
-                    'C. difficile Promoter',
-                    'C. difficile\nPromoter:Inhibitor')
-names(bile_acid_labs) <- c(1,
-                           2,
-                           3)
+metab_labs <- c('Acetate',
+                'Propionate')
+names(metab_labs) <- c('Acetic Acid (ug/g)',
+                       'Propanoic Acid (ug/g)')
 
 cecum_labs <- c('Cecum')
 names(cecum_labs) <- c('cecum')
 ```
 
-**Data wrangling**
-- put the histopathology and toxin data in the same columns via rbind (comp_value and conc_score) since that's what I'll be doing correlation comparisons to dca and butyrate concentration
+**Data wrangled**
 ```{r}
 histo_metabTox_table <- read_tsv(histo_metabTox_fp)
 
@@ -164,64 +159,39 @@ histo_metabTox_table %>%
 ## so that's why you later see me filtering for either toxin or histopathology later
 histoTox_only_table <- rbind(toxOnly_table,
                              cecal_histoOnly_table)
-```
-putting bile acid concentrations/ratios together with the toxin and histo data 
-```{r}
-## bile acid table
-bile_acid_table <- read_tsv(bile_acid_fp) %>% 
-  select(mouse_id, bile_acid, concentration, conc_normalized, c_diff_effect) %>% 
-  rename(microbe_product = bile_acid)
 
-## bile acid ratios promoter:inhibitor
-ratio_table <- read_tsv(ratio_ba_fp) %>% 
-  select(!c('promoter', 'inhibitor', 'diet')) %>% 
-  mutate(c_diff_effect = paste('promote_inhib_ratio'),
-         conc_normalized = paste(ratio + 2)) %>% 
-  rename(microbe_product = ratio_label,
-         concentration = ratio)
-
-## making a big ass table 
-all_bileAcid_table <- rbind(bile_acid_table,
-                            ratio_table)
-
-## putting diet and toxin/histo data back with the bile acid table
-all_bileAcid_table <- all_bileAcid_table %>% 
+## prepping metabolomics data and combining it with histo and tox table
+histo_metabTox_table %>% 
+  select(mouse_id, microbe_product, conc_normalized) %>% 
+  filter(microbe_product == 'Acetic Acid (ug/g)' | microbe_product == 'Propanoic Acid (ug/g)') %>% 
   left_join(histoTox_only_table, by = 'mouse_id',
-            relationship = "many-to-many") %>% 
-  na.omit() %>% 
-  mutate(conc_normalized = as.numeric(conc_normalized),
-         conc_score = as.numeric(conc_score),
-         bile_effect_order = case_when(
-           c_diff_effect == 'inhibitor' ~ 1,
-           c_diff_effect == 'promoter' ~ 2,
-           c_diff_effect == 'promote_inhib_ratio' ~ 3
-         ))
+            relationship = "many-to-many") -> all_metab_table
 ```
 
 **Toxin comparison plot**
-```{r, fig.width=10, fig.height=10}
+```{r, fig.width=10, fig.height=8}
 ## only pulling out toxin data
-bileAcid_tox_table <- all_bileAcid_table %>% 
+metab_tox_table <- all_metab_table %>% 
   filter(comp_value != "cecum") %>% 
   mutate(log_conc_norm = log10(conc_normalized),
          log_conc_score = log10(conc_score))
 
-bileAcid_tox_plot <- apppleplots::correlation_plots(input_table = bileAcid_tox_table,
+metab_tox_plot <- apppleplots::correlation_plots(input_table = metab_tox_table,
                                                     x_value = 'conc_normalized',
                                                     y_value = 'conc_score',
                                                     x_transform = TRUE,
                                                     y_transform = TRUE,
                                                     point_alpha = 0,
                                                     regression_method = 'none',
-                                                    facet_rows = 'bile_effect_order',
+                                                    facet_rows = 'microbe_product',
                                                     facet_cols = 'comp_value',
-                                                    row_labs = bile_acid_labs,
+                                                    row_labs = metab_labs,
                                                     col_labs = tox_labs,
                                                     x_name = ' ',
                                                     y_name = 'Toxin Concentration (ng/uL) (log10)',
-                                                    title_content = 'Cecum Bile Acid Comparisons')
+                                                    title_content = 'Cecum Acetate and Propionate Comparisons')
 
-bileAcid_tox_plot  <- bileAcid_tox_plot +
+metab_tox_plot  <- metab_tox_plot +
   ## this adds the black outline to the regression lines so you can see them better 
   geom_smooth(aes(group = diet), color = 'black', 
               linewidth = 1.5, method = 'lm', se = FALSE) +
@@ -234,54 +204,56 @@ bileAcid_tox_plot  <- bileAcid_tox_plot +
                     guide = 'none') +
   theme_bw(base_size = 20) +
   theme(strip.text.y.right = element_text(angle = 0)) +
+  ## changed y-axis limits so I could fit the stat label in all facet blocks
+  expand_limits(y = c(0, 1500)) +
   labs(subtitle = 'C. difficile Toxin')
 
 ## stats
-bileAcid_tox_stats <- lm_r2_p_value(input_table = bileAcid_tox_table,
-                                    wanted_col1 = 'comp_value',
-                                    wanted_col2 = 'bile_effect_order',
-                                    formula_left = 'log_conc_score',
-                                    formula_right = 'log_conc_norm * diet')
+metab_tox_stats <- lm_r2_p_value(input_table = metab_tox_table,
+                                 wanted_col1 = 'comp_value',
+                                 wanted_col2 = 'microbe_product',
+                                 formula_left = 'log_conc_score',
+                                 formula_right = 'log_conc_norm * diet')
 
 
 ## stats on plot
-bileAcid_tox_list <- stat_on_plot(stat_table = bileAcid_tox_stats,
-                               wanted_col_list = colnames(bileAcid_tox_stats),
+metab_tox_list <- stat_on_plot(stat_table = metab_tox_stats,
+                               wanted_col_list = colnames(metab_tox_stats),
                                x_col_name = 'conc_normalized',
                                x_col_value = '10',
                                y_col_name = 'conc_score',
-                               y_col_value = '14',
-                               plot = bileAcid_tox_plot,
+                               y_col_value = '1500',
+                               plot = metab_tox_plot,
                                plot_text_size = 3.5)
 
-bileAcid_toxStats_plot <- bileAcid_tox_list$PlotwStats
+metab_toxStats_plot <- metab_tox_list$PlotwStats
 
-bileAcid_toxStats_plot
+metab_toxStats_plot
 ```
 
 **Histopathology comparisons**
-```{r, fig.width=10, fig.height=10}
+```{r, fig.width=10, fig.height=8}
 ## only pulling out cecal histopathology data
-bileAcid_histo_table <- all_bileAcid_table %>% 
+metab_histo_table <- all_metab_table %>% 
   filter(comp_value == "cecum") %>% 
   mutate(log_conc_norm = log10(conc_normalized))
 
-bileAcid_histo_plot <- apppleplots::correlation_plots(input_table = bileAcid_histo_table,
+metab_histo_plot <- apppleplots::correlation_plots(input_table = metab_histo_table,
                                                       x_value = 'conc_normalized',
                                                       y_value = 'conc_score',
                                                       x_transform = TRUE,
                                                       y_transform = FALSE,
                                                       point_alpha = 0,
                                                       regression_method = 'none',
-                                                      facet_rows = 'bile_effect_order',
+                                                      facet_rows = 'microbe_product',
                                                       facet_cols = 'comp_value',
-                                                      row_labs = bile_acid_labs,
+                                                      row_labs = metab_labs,
                                                       col_labs = cecum_labs,
                                                       x_name = ' ',
                                                       y_name = 'Score',
                                                       title_content = '')
 
-bileAcid_histo_plot <- bileAcid_histo_plot +
+metab_histo_plot <- metab_histo_plot +
   ## this adds the black outline to the regression lines so you can see them better 
   geom_smooth(aes(group = diet), color = 'black', 
               linewidth = 1.5, method = 'lm', se = FALSE) +
@@ -302,56 +274,76 @@ bileAcid_histo_plot <- bileAcid_histo_plot +
   labs(subtitle = 'Histopathology')
 
 ## stats
-bileAcid_histo_stats <- lm_r2_p_value(input_table = bileAcid_histo_table,
+metab_histo_stats <- lm_r2_p_value(input_table = metab_histo_table,
                                     wanted_col1 = 'comp_value',
-                                    wanted_col2 = 'bile_effect_order',
+                                    wanted_col2 = 'microbe_product',
                                     formula_left = 'conc_score',
                                     formula_right = 'log_conc_norm * diet')
 
 
 ## stats on plot
-bileAcid_histo_list <- stat_on_plot(stat_table = bileAcid_histo_stats,
-                               wanted_col_list = colnames(bileAcid_histo_stats),
+metab_histo_list <- stat_on_plot(stat_table = metab_histo_stats,
+                               wanted_col_list = colnames(metab_histo_stats),
                                x_col_name = 'conc_normalized',
-                               x_col_value = '4000',
+                               x_col_value = '5',
                                y_col_name = 'conc_score',
                                y_col_value = '5.75',
-                               plot = bileAcid_histo_plot,
+                               plot = metab_histo_plot,
                                plot_text_size = 3.5)
 
-bileAcid_histoStats_plot <- bileAcid_histo_list$PlotwStats
+metab_histoStats_plot <- metab_histo_list$PlotwStats
 
-bileAcid_histoStats_plot
+metab_histo_plot
+metab_histoStats_plot
 ```
 
 **Putting the plots together**
-```{r, fig.width=19, fig.height=10}
+```{r, fig.width=19, fig.height=8}
 ## creating universal y axis label since the y axis is the same for both plots 
 y_axis_label <- ggdraw() +
-  draw_label('Bile Acid Concentration (pmol/mg) (log10)',
+  draw_label('SCFA Concentration (pmol/mg) (log10)',
              size = 20,
              hjust = 0.5,
              y = 1)
 
-all_bileAcid_plots <- plot_grid(bileAcid_toxStats_plot, bileAcid_histoStats_plot,
+all_metab_plots <- plot_grid(metab_toxStats_plot, metab_histoStats_plot,
                               nrow = 1,
                               rel_widths = c(1, 0.8))
 
-all_bileAcid_plotsWithlab <- plot_grid(all_bileAcid_plots,
+all_metab_plotsWithlab <- plot_grid(all_metab_plots,
                                      y_axis_label,
                                      ncol = 1,
                                      rel_heights = c(1, 0.05),
                                      align = c('hv'),
                                      axis = c('tblr'))
 
-all_bileAcid_plotsWithlab
+all_metab_plotsWithlab
+```
+
+**Creating supplemental figure 3 for the paper**
+combining the correlation comparisons with the acetate/propionate concentration plot 
+```{r, fig.width=19, fig.height=14.5}
+supp_fig3_top_row <- plot_grid(notButy_plot, NULL,
+                               nrow = 1,
+                               rel_widths = c(1, 0.4))
+
+supp_fig3 <- plot_grid(supp_fig3_top_row,
+          all_metab_plotsWithlab,
+          labels = c('a)', 'b)'),
+          label_size = 20,
+          ncol = 1,
+          rel_heights = c(0.8, 1),
+          axis = 'tblr',
+          align = 'hv')
+
+supp_fig3
 ```
 
 **Saving my outputs**
 ```{r}
-ggsave('../plots/supp_bileAcid_comp_plot.pdf',
-       plot = all_bileAcid_plotsWithlab,
+ggsave('../plots/supp_acetProp_comp_plot.pdf',
+       plot = supp_fig3,
        width = 19,
-       height = 10)
+       height = 14.5)
 ```
 

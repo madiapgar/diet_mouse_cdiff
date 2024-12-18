@@ -189,6 +189,8 @@ save(metab_plot,
      file = '../../figures/metab.rdata')
 save(butyrateOnly_plot,
      file = '../../figures/butyrateOnly_metab.rdat')
+save(notButy_plot,
+     file = '../../figures/noButyrate_metab.rdat')
 
 ## statistical tests 
 write_tsv(linear_model,

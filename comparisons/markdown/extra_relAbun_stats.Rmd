@@ -325,13 +325,14 @@ d3_genus_relAbun_dunn <- d3_genus_relAbun_krDunn$DunnTest
 ## mini version
 mini_d3_genusAbun_table <- proc_d3_genusAbun_table %>% 
   filter(Genus == 'Escherichia-Shigella' | Genus == 'Enterococcus' | Genus == 'Proteus' |
-           Genus == 'Staphylococcus')
+           Genus == 'Staphylococcus') %>% 
+  mutate(log_rel_abund = log10(rel_abund))
 
 mini_d3_genus_relAbun_krDunn <- apppleplots::kruskal_dunn_stats(input_table = mini_d3_genusAbun_table,
                                                                 grouped_by = c('Genus', 'day_post_inf'),
                                                                 adjust_method = 'BH',
                                                                 filter_adj_p_value = FALSE,
-                                                                formula_left = 'rel_abund',
+                                                                formula_left = 'log_rel_abund',
                                                                 formula_right = 'exp_vendor')
 
 mini_d3_genus_relAbun_kruskal <- mini_d3_genus_relAbun_krDunn$KruskalTest
@@ -358,7 +359,7 @@ proc_d3_genus_relAbun_dunn <- stat_plot_prep(filtered_table = proc_d3_genusAbun_
 procMini_d3_genus_relAbun_dunn <- stat_plot_prep(filtered_table = mini_d3_genusAbun_table,
                                              first_group = 'exp_vendor',
                                              second_group = c('Genus', 'day_post_inf'),
-                                             mean_value = 'rel_abund',
+                                             mean_value = 'log_rel_abund',
                                              dunn_test = mini_d3_genus_relAbun_dunn)
 
 ```

@@ -10,6 +10,7 @@ library(survminer)
 require(survival)
 library(readr)
 library(viridis)
+library(cowplot)
 ```
 
 **Input File Path**
@@ -142,16 +143,70 @@ surv_stat_vis
 
 **Cox PH for Diet**
 
+this calculates the hazard ratios for each diet compared to chow
+
+if you call *summary(coxph_object)*, the *exp(coef)* column contains the actual hazard ratio for the variable and the *Pr(\>\|z\|)* column contains the p-value
+
 ```{r}
-surv_obj <- Surv(time = spore_survival$Day, event = spore_survival$status)
+spore_surv_obj <- Surv(time = spore_survival$Day, event = spore_survival$status)
 spore_survival$diet_f = factor(spore_survival$diet, 
-                         levels = c("HF/LF", 
-                                    "LF+fiber",
-                                    "LF/LF", 
-                                    "chow", 
-                                    "HF+fiber"))
-diet.fit.cox <- coxph(surv_obj ~ diet_f, data = spore_survival)
-summary(diet.fit.cox)
+                               levels = c("chow",
+                                          "HF+fiber",
+                                          "HF/LF", 
+                                          "LF+fiber",
+                                          "LF/LF"))
+diet.fit.cox.spore <- coxph(spore_surv_obj ~ diet_f, data = spore_survival)
+
+spore_summary_coxph <- summary(diet.fit.cox.spore)
+```
+
+```{r}
+## pulling the hazard ratio from coxph summary 
+spore_haz_df <- as.data.frame(spore_summary_coxph$coefficients)
+spore_haz_df["diet"] <- rownames(spore_haz_df)
+
+spore_haz_table <- as_tibble(spore_haz_df) %>% 
+  mutate(diet = case_when(
+    diet == 'diet_fHF+fiber' ~ 'HF/HF',
+    diet == 'diet_fHF/LF' ~ 'HF/LF',
+    diet == 'diet_fLF+fiber' ~ 'LF/HF',
+    diet == 'diet_fLF/LF' ~ 'LF/LF'
+  )) %>% 
+  rename(haz_ratio = `exp(coef)`,
+         p_value = `Pr(>|z|)`)
+
+spore_haz_table
+```
+
+```{r}
+## pulling confidence intervals from the coxph summary
+spore_ci_df <- as.data.frame(spore_summary_coxph$conf.int)
+spore_ci_df["diet"] <- rownames(spore_ci_df)
+
+spore_ci_table <- as_tibble(spore_ci_df) %>% 
+  mutate(diet = case_when(
+    diet == 'diet_fHF+fiber' ~ 'HF/HF',
+    diet == 'diet_fHF/LF' ~ 'HF/LF',
+    diet == 'diet_fLF+fiber' ~ 'LF/HF',
+    diet == 'diet_fLF/LF' ~ 'LF/LF'
+  )) %>% 
+  rename(lower_95_ci = `lower .95`,
+         upper_95_ci = `upper .95`) %>% 
+  select(diet, lower_95_ci, upper_95_ci)
+
+## combining the hazard ratio and confidence interval tables 
+final_spore_haz_table <- spore_haz_table %>% 
+  left_join(spore_ci_table, by = 'diet') %>% 
+  select(diet, coef, haz_ratio, p_value, lower_95_ci, upper_95_ci) %>% 
+  mutate(infection_type = paste('spores'))
+
+final_spore_haz_table
+```
+
+forest plot for the hazard ratio because it's nice to look at
+
+```{r}
+ggforest(diet.fit.cox.spore)
 ```
 
 **Putting Survival Plot by Diet with Statistical Visualization**
@@ -238,6 +293,64 @@ liveCult_diet_pvalue %>%
 liveCult_surv_stat_vis
 ```
 
+**Cox PH for Diet**
+
+this calculates the hazard ratios for each diet compared to chow
+
+```{r}
+liveCult_surv_obj <- Surv(time = liveCult_survival$Day, event = liveCult_survival$status)
+liveCult_survival$diet_f = factor(liveCult_survival$diet, 
+                                  levels = c("chow",
+                                             "HF/LF",
+                                             "LF/LF"))
+diet.fit.cox.liveCult <- coxph(liveCult_surv_obj ~ diet_f, data = liveCult_survival)
+
+liveCult_summary_coxph <- summary(diet.fit.cox.liveCult)
+```
+
+```{r}
+## pulling the hazard ratio from coxph summary 
+liveCult_haz_df <- as.data.frame(liveCult_summary_coxph$coefficients)
+liveCult_haz_df["diet"] <- rownames(liveCult_haz_df)
+
+liveCult_haz_table <- as_tibble(liveCult_haz_df) %>% 
+  mutate(diet = case_when(
+    diet == 'diet_fHF/LF' ~ 'HF/LF',
+    diet == 'diet_fLF/LF' ~ 'LF/LF'
+  )) %>% 
+  rename(haz_ratio = `exp(coef)`,
+         p_value = `Pr(>|z|)`)
+
+liveCult_haz_table
+```
+
+```{r}
+## pulling confidence intervals from the coxph summary
+liveCult_ci_df <- as.data.frame(liveCult_summary_coxph$conf.int)
+liveCult_ci_df["diet"] <- rownames(liveCult_ci_df)
+
+liveCult_ci_table <- as_tibble(liveCult_ci_df) %>% 
+  mutate(diet = case_when(
+    diet == 'diet_fHF/LF' ~ 'HF/LF',
+    diet == 'diet_fLF/LF' ~ 'LF/LF'
+  )) %>% 
+  rename(lower_95_ci = `lower .95`,
+         upper_95_ci = `upper .95`) %>% 
+  select(diet, lower_95_ci, upper_95_ci)
+
+## combining the hazard ratio and confidence interval tables 
+final_liveCult_haz_table <- liveCult_haz_table %>% 
+  left_join(liveCult_ci_table, by = 'diet') %>% 
+  select(diet, coef, haz_ratio, p_value, lower_95_ci, upper_95_ci) %>% 
+  mutate(infection_type = paste('live_culture'))
+
+final_liveCult_haz_table
+```
+
+```{r}
+ggforest(diet.fit.cox.liveCult)
+```
+
 **Putting Survival Plot by Diet with Statistical Visualization**
 
 ```{r, fig.height=10, fig.width=10}
@@ -256,6 +369,16 @@ plot_grid(liveCult_diet_plot_final +
           label_size = 20) -> liveCult_surv_res
 
 liveCult_surv_res
+```
+
+## Combining the Hazard Ratio Tables 
+
+for the spore and live culture c. diff infections
+
+```{r}
+combined_haz_ratio_table <- rbind(final_spore_haz_table,
+                                  final_liveCult_haz_table)
+combined_haz_ratio_table
 ```
 
 ## Saving my Outputs
@@ -280,4 +403,8 @@ save(diet_plot_final,
      file = '../../figures/survival.rdata')
 save(surv_stat_vis,
      file = '../../figures/survival_stats.rdata')
+
+## saving the hazard ratio table results 
+write_tsv(combined_haz_ratio_table,
+          '../stats/survival_hazardRatio_results.tsv')
 ```

@@ -27,7 +27,8 @@ micro_file_prep <- function(metadata_fp,
                             otu_table_fp,
                             tax_table_fp){
   ## metadata file prep 
-  metadata <- read_tsv(metadata_fp)
+  metadata <- read_tsv(metadata_fp) %>% 
+    rename(sampleid = `#SampleID`)
   metadata <- as.data.frame(metadata)
   rownames(metadata) <- metadata$sampleid
   ## otu file prep
@@ -135,13 +136,11 @@ microshades_tax_barplot <- function(meta_fp,
 
 **File Paths**
 ```{r}
-metadata_FP <- '../data/misc/proc_blood_culture_meta.tsv'
-tax_FP <- '../data/qiime/bc_taxonomy.qza'
-otu_table_FP <- '../data/qiime/filt_bc_otu_table.qza'
-bc_tax_rank <- "Phylum"
-bc_tax_subgroup <- "Genus"
+## CDD01 blood culture data 
+bc_metadata_FP <- '../data/misc/proc_blood_culture_meta.tsv'
+bc_tax_FP <- '../data/bloodCulture_qiime/bc_taxonomy.qza'
+bc_otu_table_FP <- '../data/bloodCulture_qiime/filt_bc_otu_table.qza'
 bc_title <- 'Blood Culture Taxa Barplot'
-bc_y <- 'Relative Abundance'
 bc_diet_labs <- 
   c('Chow',
     'Low Fat / Low Fiber')
@@ -149,44 +148,97 @@ bc_diet_labs <-
 names(bc_diet_labs) <- c('Chow',
                       'LF/LF')
 
-vendor_labs <- c('Charles River',
-                 'Taconic')
-names(vendor_labs) <- c('charles_river',
-                        'taconic')
+
+## CDD02/CDD03 gut microbiome data
+newExp_metadata_FP <- '../data/misc/proc_newExp_d15-d3_metadata.tsv'
+newExp_tax_FP <- '../data/qiime/taxonomy.qza'
+newExp_otu_table_FP <- '../data/qiime/total_sum_otu_table.qza'
+newExp_title <- 'New Experiment Taxa Barplot'
+newExp_diet_labs <- 
+  c('Chow',
+    'High Fat / High Fiber',
+    'High Fat / Low Fiber',
+    'Low Fat / High Fiber',
+    'Low Fat / Low Fiber')
+
+names(newExp_diet_labs) <- c('Chow',
+                             'HF/HF',
+                             'HF/LF',
+                             'LF/HF',
+                             'LF/LF')
+
+
+## variables used for both
+tax_rank <- "Phylum"
+tax_subgroup <- "Genus"
+y_axis_name <- "Relative Abundance"
 ```
 
 **Running the Overall Microshades Taxa Barplot Function**
 ```{r}
-bc_barplot_files <- microshades_tax_barplot(metadata_FP, 
-                                             otu_table_FP, 
-                                             tax_FP,
-                                             bc_tax_rank, 
-                                             bc_tax_subgroup,
+## CDD01 blood culture data
+bc_barplot_files <- microshades_tax_barplot(bc_metadata_FP, 
+                                             bc_otu_table_FP, 
+                                             bc_tax_FP,
+                                             tax_rank, 
+                                             tax_subgroup,
                                              bc_title, 
-                                             bc_y) 
+                                             y_axis_name) 
+
+## CDD02/CDD03 gut microbiome data 
+newExp_barplot_files <- microshades_tax_barplot(newExp_metadata_FP, 
+                                             newExp_otu_table_FP, 
+                                             newExp_tax_FP,
+                                             tax_rank, 
+                                             tax_subgroup,
+                                             newExp_title, 
+                                             y_axis_name) 
 ```
 
-**Messing with the Taxa Barplot Outputs**
+**CDD01 Blood Culture Tax Barplot**
 ```{r, warning=FALSE, fig.height=6, fig.width=13.5}
 ## pulling the tax barplot out of the named list output of the microshades_tax_barplot function
-main_barplot <- bc_barplot_files$TaxBarplot
+bc_main_barplot <- bc_barplot_files$TaxBarplot
 
-main_barplot + 
+bc_main_barplot + 
   facet_grid2(~diet, scales="free_x", independent = "x",
               labeller = labeller(diet = bc_diet_labs)) +
   theme(legend.text = element_text(size = 8.5),
-        strip.text.y = element_text(angle = 0)) -> main_barplot 
+        strip.text.y = element_text(angle = 0)) -> bc_main_barplot 
 
-legend <- bc_barplot_files$TaxLegend
+bc_legend <- bc_barplot_files$TaxLegend
 
 ## putting them together in the same plot via cowplot 
-tax_all <- plot_grid(main_barplot, 
-                     legend,  
+bc_tax_all <- plot_grid(bc_main_barplot, 
+                     bc_legend,  
                      rel_widths = c(1, .25),
                      align = 'tblr',
                      axis = 'tblr')
 
-tax_all
+bc_tax_all
+```
+
+**CDD02/CDD03 Gut Microbiome Tax Barplot**
+```{r, fig.width=20, fig.height=8}
+## pulling the tax barplot out of the named list output of the microshades_tax_barplot function
+newExp_main_barplot <- newExp_barplot_files$TaxBarplot
+
+newExp_main_barplot + 
+  facet_grid2(day_post_inf~diet, scales="free_x", independent = "x",
+              labeller = labeller(diet = newExp_diet_labs)) +
+  theme(legend.text = element_text(size = 8.5),
+        strip.text.y = element_text(angle = 0)) -> newExp_main_barplot 
+
+newExp_legend <- newExp_barplot_files$TaxLegend
+
+## putting them together in the same plot via cowplot 
+newExp_tax_all <- plot_grid(newExp_main_barplot, 
+                     newExp_legend,  
+                     rel_widths = c(1, .25),
+                     align = 'tblr',
+                     axis = 'tblr')
+
+newExp_tax_all
 ```
 
 
@@ -194,11 +246,17 @@ tax_all
 ```{r}
 ## saving the output barplot 
 ggsave("../plots/bloodCulture_tax_barplot.pdf",
-       plot = tax_all, 
+       plot = bc_tax_all, 
        width = 13.5, 
-       height = 7)
+       height = 6)
+
+ggsave("../plots/newExp_stool_tax_barplot.pdf",
+       plot = newExp_tax_all, 
+       width = 20, 
+       height = 8)
+
 
 ## saving it as an rdat object 
-save(tax_all,
+save(bc_tax_all,
      file = '../../posters/bloodCulture_tax_barplot.rdat')
 ```

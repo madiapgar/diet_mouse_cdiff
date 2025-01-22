@@ -97,13 +97,13 @@ kidney_histo_plot
 ```
 faceting the above plot by batch/experiment to see if there are any differences between them 
 ```{r, fig.width=15, fig.height=8}
-kidneyHisto_byExp_plot <- kidney_histo_plot +
+(kidneyHisto_byExp_plot <- kidney_histo_plot +
   facet_grid(ExperimentID~kidney_histo,
              labeller = labeller(kidney_histo = kidney_labs)) +
   theme(strip.text.y.right = element_text(angle = 0)) +
-  ggtitle('Kidney Histology Scores by Experiment')
+  ggtitle('Kidney Histology Scores by Experiment'))
 
-kidneyHisto_byExp_plot
+# kidneyHisto_byExp_plot
 ```
 **Saving my outputs**
 ```{r}

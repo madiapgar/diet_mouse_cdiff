@@ -123,6 +123,51 @@ surv_table <- surv_table %>%
                 filter(experiment != 'CDD01')
 ```
 
+**Investigating Differences in Date of Mouse Death per Diet**
+Putting together a summary table for how many days post CDI the mice started/stopped dying per diet and infection type.
+```{r}
+## day the mice started dying 
+start_death_df <- surv_table %>% 
+  filter(actual_surv == 1) %>% 
+  group_by(diet, vendor) %>%
+  summarise(start_death = min(day_post_inf))
+
+## how many mice of each died died during the death range 
+mice_lost_during <- surv_table %>% 
+  filter(actual_surv == 1) %>% 
+  count(diet, vendor) %>% 
+  rename(num_mice_lost = n)
+
+## day the mice stopped dying and combining it with the counts table
+## and the day the mice started dying to create one summary table 
+death_range_df <- surv_table %>% 
+  filter(actual_surv == 1) %>% 
+  group_by(diet, vendor) %>% 
+  summarise(stop_death = max(day_post_inf)) %>% 
+  left_join(start_death_df, by = c('diet', 'vendor')) %>% 
+  mutate(death_range = paste(start_death, stop_death, sep = "_")) %>% 
+  left_join(mice_lost_during, by = c('diet', 'vendor'))
+
+death_range_df
+```
+
+Running a non-parametric ANOVA (Kruskal-Wallis followed by Dunn's Post Hoc) on the days the mice from different diets died on binned by vendor (charles river vs taconic). 
+```{r}
+## pulling out the results from just the mice that died 
+just_mice_died <- surv_table %>% 
+  filter(actual_surv == 1)
+
+death_date_stats <- apppleplots::kruskal_dunn_stats(input_table = just_mice_died,
+                                grouped_by = 'vendor',
+                                adjust_method = 'BH',
+                                formula_left = 'day_post_inf',
+                                formula_right = 'diet')
+
+death_date_kruskal <- death_date_stats$KruskalTest
+death_date_dunn <- death_date_stats$DunnTest
+
+death_date_dunn
+```
 
 **IN THESE PLOTS:**
 - Day 0 on the x-axis is the day that the mice are infected with C. diff, so the day that the mice start dying is how soon after CDI that they succumb

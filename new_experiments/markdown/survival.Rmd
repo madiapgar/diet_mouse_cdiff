@@ -83,6 +83,46 @@ surv_vis <- function(pvalue_table,
         # scale_y_discrete(labels = y_labs)
   return(surv_stat_plot)
 }
+
+## editing my dunn's post hoc test to include the difference in means between groups 
+## this version of the function is for when you don't group by any variable for your stats 
+edit_dunn_test_v2 <- function(input_table,
+                              wanted_group,
+                              mean_value,
+                              dunn_test){
+  input_table %>% 
+    group_by(across(all_of(wanted_group))) %>% 
+    summarise(mean = mean(.data[[mean_value]])) -> mean_table
+  
+  ## doing some funky stuff to put the merge by columns together accurately and make my life easier
+  ## looks for the column in the dunn test df that matches the wanted_group param and adds it to the 
+  ## group1 and group2 lists for merging the dunn test df and mean_table together 
+  pre_group_list <- lapply(wanted_group, function(x) x[x %in% colnames(dunn_test)])
+  proc_group_list <- sapply(pre_group_list, function(x) paste(sort(x[x %in% wanted_group]), collapse=""))
+  wanted_col <- scan(text = proc_group_list, sep = "", what = character())
+  
+  group1_list <- append('group1', wanted_col)
+  group2_list <- append('group2', wanted_col)
+  
+  dunn_test %>% 
+    merge(mean_table, 
+          by.x = group1_list,
+          by.y = wanted_group) %>% 
+    rename_with(~paste0('group1_', mean_value, recycle0 = TRUE), contains('mean')) %>% 
+    merge(mean_table,
+          by.x = group2_list,
+          by.y = wanted_group) %>% 
+    rename_with(~paste0('group2_', mean_value, recycle0 = TRUE), contains('mean')) -> int_dunn
+  
+  group1_col <- paste0('group1_', mean_value)
+  group2_col <- paste0('group2_', mean_value)
+  
+  int_dunn %>% 
+    mutate(diff_means = (.data[[group1_col]] - .data[[group2_col]]),
+           stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
+  
+  return(new_dunn)
+}
 ```
 
 **File Paths**
@@ -121,52 +161,6 @@ surv_table <- read_tsv(surv_fp,
 ## filtering out the first set of experiments since it could skew the results
 surv_table <- surv_table %>% 
                 filter(experiment != 'CDD01')
-```
-
-**Investigating Differences in Date of Mouse Death per Diet**
-Putting together a summary table for how many days post CDI the mice started/stopped dying per diet and infection type.
-```{r}
-## day the mice started dying 
-start_death_df <- surv_table %>% 
-  filter(actual_surv == 1) %>% 
-  group_by(diet, vendor) %>%
-  summarise(start_death = min(day_post_inf))
-
-## how many mice of each died died during the death range 
-mice_lost_during <- surv_table %>% 
-  filter(actual_surv == 1) %>% 
-  count(diet, vendor) %>% 
-  rename(num_mice_lost = n)
-
-## day the mice stopped dying and combining it with the counts table
-## and the day the mice started dying to create one summary table 
-death_range_df <- surv_table %>% 
-  filter(actual_surv == 1) %>% 
-  group_by(diet, vendor) %>% 
-  summarise(stop_death = max(day_post_inf)) %>% 
-  left_join(start_death_df, by = c('diet', 'vendor')) %>% 
-  mutate(death_range = paste(start_death, stop_death, sep = "_")) %>% 
-  left_join(mice_lost_during, by = c('diet', 'vendor'))
-
-death_range_df
-```
-
-Running a non-parametric ANOVA (Kruskal-Wallis followed by Dunn's Post Hoc) on the days the mice from different diets died on binned by vendor (charles river vs taconic). 
-```{r}
-## pulling out the results from just the mice that died 
-just_mice_died <- surv_table %>% 
-  filter(actual_surv == 1)
-
-death_date_stats <- apppleplots::kruskal_dunn_stats(input_table = just_mice_died,
-                                grouped_by = 'vendor',
-                                adjust_method = 'BH',
-                                formula_left = 'day_post_inf',
-                                formula_right = 'diet')
-
-death_date_kruskal <- death_date_stats$KruskalTest
-death_date_dunn <- death_date_stats$DunnTest
-
-death_date_dunn
 ```
 
 **IN THESE PLOTS:**

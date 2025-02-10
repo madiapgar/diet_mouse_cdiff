@@ -108,7 +108,8 @@ d3_tax_FP <- '../data/baseline_day3_qiime/taxonomy.qza'
 wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
                    'Staphylococcaceae', 'Bacteroidaceae', 'Tannerellaceae', 'Morganellaceae')
 wanted_genus <- c('Akkermansia', 'Enterococcus', 'Escherichia-Shigella', 'Proteus', 
-                  'Bacteroides', 'Lactobacillus', 'Staphylococcus', 'Muribaculaceae')
+                  'Bacteroides', 'Lactobacillus', 'Staphylococcus', 'Muribaculaceae',
+                  'Clostridioides')
 
 ## new plot labels 
 exp_x_labs <- c('Old\nAnschutz\n(2020)',
@@ -248,10 +249,10 @@ diet_genusAbun_plot
 ```
 
 
-```{r, fig.width=12.5, fig.height=8}
+```{r, fig.width=12.5, fig.height=8.5}
 mini_genusAbun_table <- genus_abun_table %>% 
   filter(Genus == 'Escherichia-Shigella' | Genus == 'Enterococcus' | Genus == 'Proteus' |
-           Genus == 'Staphylococcus')
+           Genus == 'Staphylococcus' | Genus == 'Clostridioides')
 
 ## vendor
 miniVendor_genusAbun_plot <- abun_plots(input_table = mini_genusAbun_table,

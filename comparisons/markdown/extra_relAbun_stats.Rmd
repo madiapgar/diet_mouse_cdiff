@@ -132,7 +132,8 @@ d3_tax_FP <- '../data/baseline_day3_qiime/taxonomy.qza'
 wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
                    'Staphylococcaceae', 'Bacteroidaceae', 'Tannerellaceae', 'Morganellaceae')
 wanted_genus <- c('Akkermansia', 'Enterococcus', 'Escherichia-Shigella', 'Proteus', 
-                  'Bacteroides', 'Lactobacillus', 'Staphylococcus', 'Muribaculaceae')
+                  'Bacteroides', 'Lactobacillus', 'Staphylococcus', 'Muribaculaceae',
+                  'Clostridioides')
 ```
 
 ## **Family level**
@@ -325,7 +326,7 @@ d3_genus_relAbun_dunn <- d3_genus_relAbun_krDunn$DunnTest
 ## mini version
 mini_d3_genusAbun_table <- proc_d3_genusAbun_table %>% 
   filter(Genus == 'Escherichia-Shigella' | Genus == 'Enterococcus' | Genus == 'Proteus' |
-           Genus == 'Staphylococcus') %>% 
+           Genus == 'Staphylococcus' | Genus == 'Clostridioides') %>% 
   mutate(log_rel_abund = log10(rel_abund))
 
 mini_d3_genus_relAbun_krDunn <- apppleplots::kruskal_dunn_stats(input_table = mini_d3_genusAbun_table,
@@ -389,7 +390,7 @@ d3_genus_relAbun_stat_plot
 ```
 
 mini version of the stats
-```{r, fig.width=15, fig.height=8.5}
+```{r, fig.width=15, fig.height=9}
 ## new plot labels 
 exp_x_labs <- c('Old\nAnschutz\n(2020) -\nTaconic',
                 'New\nAnschutz\n(2024) -\nCharles\nRiver',
@@ -438,7 +439,7 @@ ggsave('../baseline_day3/plots/genusAbun_stat_vis.pdf',
 ggsave('../baseline_day3/plots/mini_genusAbun_stat_vis.pdf',
        plot = mini_d3_genus_relAbun_stat_plot,
        width = 15,
-       height = 8.5)
+       height = 9)
 
 ## saving as an .rdat object to be put together in a figure
 save(mini_d3_genus_relAbun_stat_plot,

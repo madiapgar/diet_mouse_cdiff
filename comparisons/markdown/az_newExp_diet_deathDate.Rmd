@@ -264,7 +264,7 @@ not sure how I want to show this yet
                             facet_labels = NULL,
                             x_name = 'C. difficile Infection Method',
                             y_name = 'Group 2',
-                            title_content = 'Comparison of Date of Death Post-CDI by Diet') +
+                            title_content = 'Onset of Mortality Post-CDI Comparisons') +
   facet_grid(rows = vars(experiment_set),
              cols = vars(group1),
              labeller = labeller(.rows = experiment_labs,

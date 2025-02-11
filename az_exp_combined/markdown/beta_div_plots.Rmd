@@ -99,7 +99,7 @@ pcoa_plot <- function(biom_file,
     #                   name = 'Barrier\nFacility',
     #                   labels = c('Barrier 1',
     #                              'Barrier 2')) +
-    scale_fill_distiller(palette = 'Spectral', name = "Faith's PD") +
+    scale_fill_viridis(option = 'C', name = "Faith's PD") +
     facet_grid(day_post_inf~diet,
                labeller = labeller(diet = labs)) +
     theme(legend.text = element_text(size = 14),

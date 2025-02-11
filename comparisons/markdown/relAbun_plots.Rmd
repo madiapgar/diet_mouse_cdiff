@@ -66,7 +66,7 @@ abun_plots <- function(input_table,
                        x_axis_labels,
                        x_group_by,
                        fill_by,
-                       brewer_palette,
+                       viridis_palette,
                        legend_name,
                        legend_labels,
                        facet_rows,
@@ -82,9 +82,13 @@ abun_plots <- function(input_table,
                        labels = x_axis_labels) +
     geom_boxplot(aes(group = .data[[x_group_by]]), outlier.shape = NA) +
     geom_jitter(aes(fill = .data[[fill_by]]), width = 0.1, height = 0, alpha = 0.7, pch = 21, size = 3) +
-    scale_fill_brewer(palette = brewer_palette, 
-                      name = legend_name,
-                      labels = legend_labels) +
+    # scale_fill_brewer(palette = brewer_palette, 
+    #                   name = legend_name,
+    #                   labels = legend_labels) +
+    scale_fill_viridis(option = viridis_palette,
+                       discrete = TRUE,
+                       name = legend_name,
+                       labels = legend_labels) +
     theme_bw(base_size = 20) +
     facet_grid(rows = vars(.data[[facet_rows]]),
                cols = vars(.data[[facet_cols]])) +
@@ -161,6 +165,14 @@ genus_abun_table <- genus_abun_table %>%
 
 **Plots**
 family level - colored by vendor and diet 
+```{r}
+## get hexcodes of viridis color palette option C
+viridis_pal(option = 'C')(5)
+
+## take the hexcodes that I want from above to make my own palette
+only_two_palette <- c("#0D0887FF", "#CC4678FF")
+```
+
 ```{r, fig.width=15, fig.height=13}
 ## vendor 
 vendor_familyAbun_plot <- abun_plots(input_table = family_abun_table,
@@ -170,14 +182,17 @@ vendor_familyAbun_plot <- abun_plots(input_table = family_abun_table,
                                      x_axis_labels = exp_x_labs,
                                      x_group_by = 'exp_order',
                                      fill_by = 'vendor',
-                                     brewer_palette = 'Pastel1',
+                                     viridis_palette = 'C',
                                      legend_name = 'Mouse Vendor',
                                      legend_labels = c('Charles River', 'Taconic'),
                                      facet_rows = 'Family',
                                      facet_cols = 'day_post_inf',
                                      title = 'All Exp Microbes by Vendor',
                                      x_name = 'Experiment',
-                                     y_name = 'Relative Abundance (log10)')
+                                     y_name = 'Relative Abundance (log10)') +
+  scale_fill_manual(values = only_two_palette,
+                    name = 'Mouse Vendor',
+                    labels = c('Charles River', 'Taconic'))
 
 ## diet 
 diet_familyAbun_plot <- abun_plots(input_table = family_abun_table,
@@ -187,7 +202,7 @@ diet_familyAbun_plot <- abun_plots(input_table = family_abun_table,
                                      x_axis_labels = exp_x_labs,
                                      x_group_by = 'exp_order',
                                      fill_by = 'diet',
-                                     brewer_palette = 'Spectral',
+                                     viridis_palette = 'C',
                                      legend_name = 'Mouse Diet',
                                      legend_labels = c('Chow',
                                                        'HFt / HFb',
@@ -214,14 +229,17 @@ vendor_genusAbun_plot <- abun_plots(input_table = genus_abun_table,
                                     x_axis_labels = exp_x_labs,
                                     x_group_by = 'exp_order',
                                     fill_by = 'vendor',
-                                    brewer_palette = 'Pastel1',
+                                    viridis_palette = 'C',
                                     legend_name = 'Mouse Vendor',
                                     legend_labels = c('Charles River', 'Taconic'),
                                     facet_rows = 'Genus',
                                     facet_cols = 'day_post_inf',
                                     title = 'All Exp Microbes by Vendor',
                                     x_name = 'Experiment',
-                                    y_name = 'Relative Abundance (log10)')
+                                    y_name = 'Relative Abundance (log10)') +
+  scale_fill_manual(values = only_two_palette,
+                    name = 'Mouse Vendor',
+                    labels = c('Charles River', 'Taconic'))
 
 ## diet 
 diet_genusAbun_plot <- abun_plots(input_table = genus_abun_table,
@@ -231,7 +249,7 @@ diet_genusAbun_plot <- abun_plots(input_table = genus_abun_table,
                                   x_axis_labels = exp_x_labs,
                                   x_group_by = 'exp_order',
                                   fill_by = 'diet',
-                                  brewer_palette = 'Spectral',
+                                  viridis_palette = 'C',
                                   legend_name = 'Mouse Diet',
                                   legend_labels = c('Chow',
                                                     'HFt / HFb',
@@ -262,14 +280,17 @@ miniVendor_genusAbun_plot <- abun_plots(input_table = mini_genusAbun_table,
                                         x_axis_labels = exp_x_labs,
                                         x_group_by = 'exp_order',
                                         fill_by = 'vendor',
-                                        brewer_palette = 'Pastel1',
+                                        viridis_palette = 'C',
                                         legend_name = 'Mouse Vendor',
                                         legend_labels = c('Charles River', 'Taconic'),
                                         facet_rows = 'Genus',
                                         facet_cols = 'day_post_inf',
                                         title = 'All Exp Microbes by Vendor',
                                         x_name = 'Experiment',
-                                        y_name = 'Relative Abundance (log10)')
+                                        y_name = 'Relative Abundance (log10)') +
+  scale_fill_manual(values = only_two_palette,
+                    name = 'Mouse Vendor',
+                    labels = c('Charles River', 'Taconic'))
 
 ## diet
 miniDiet_genusAbun_plot <- abun_plots(input_table = mini_genusAbun_table,
@@ -279,7 +300,7 @@ miniDiet_genusAbun_plot <- abun_plots(input_table = mini_genusAbun_table,
                                       x_axis_labels = exp_x_labs,
                                       x_group_by = 'exp_order',
                                       fill_by = 'diet',
-                                      brewer_palette = 'Spectral',
+                                      viridis_palette = 'C',
                                       legend_name = 'Mouse Diet',
                                       legend_labels = c('Chow',
                                                         'HFt / HFb',

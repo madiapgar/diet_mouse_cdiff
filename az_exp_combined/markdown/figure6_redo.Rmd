@@ -20,6 +20,7 @@ library(rstatix)
 library(ggpubr)
 library(ggh4x)
 library(apppleplots)
+library(viridis)
 ```
 
 **Functions**
@@ -100,7 +101,7 @@ smooth_abun_plot <- function(input_table,
                              y_axis,
                              line_group_by,
                              line_color_by,
-                             brewer_palette,
+                             viridis_palette,
                              legend_order,
                              legend_labels,
                              x_axis_breaks,
@@ -116,9 +117,10 @@ smooth_abun_plot <- function(input_table,
     geom_smooth(aes(group = .data[[line_group_by]], color = .data[[line_color_by]]), 
                 se = FALSE, method = 'loess', alpha = 0.7) +
     # guides(color = guide_legend(override.aes=list(shape = 22))) +
-    scale_color_brewer(palette = brewer_palette,
-                       breaks = legend_order,
-                       labels = legend_labels) +
+    scale_color_viridis(option = viridis_palette,
+                        discrete = TRUE,
+                        breaks = legend_order,
+                        labels = legend_labels) +
     theme_bw(base_size = 20) +
     scale_y_continuous(transform = 'log10') +
     scale_x_continuous(breaks = x_axis_breaks,
@@ -366,7 +368,7 @@ lachno_abun_plot <- smooth_abun_plot(input_table = lachno_abun_table,
                                      y_axis = 'rel_abund',
                                      line_group_by = 'Genus',
                                      line_color_by = 'Genus',
-                                     brewer_palette = 'Spectral',
+                                     viridis_palette = 'C',
                                      legend_order = wanted_lachno,
                                      legend_labels = lachno_legend_labs,
                                      x_axis_breaks = day_x_breaks,
@@ -391,7 +393,7 @@ rumino_abun_plot <- smooth_abun_plot(input_table = rumino_abun_table,
                                      y_axis = 'rel_abund',
                                      line_group_by = 'Genus',
                                      line_color_by = 'Genus',
-                                     brewer_palette = 'Spectral',
+                                     viridis_palette = 'C',
                                      legend_order = wanted_rumino,
                                      legend_labels = rumino_legend_labs,
                                      x_axis_breaks = day_x_breaks,

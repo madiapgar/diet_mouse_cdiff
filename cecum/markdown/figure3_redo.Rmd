@@ -14,6 +14,7 @@ library(broom)
 library(magrittr)
 library(cowplot)
 library(apppleplots)
+library(viridis)
 ```
 
 **Functions**
@@ -128,6 +129,12 @@ names(tox_labs) <- c('Total TcA Neat',
 
 cecum_labs <- c('Cecum')
 names(cecum_labs) <- c('cecum')
+
+## the color palette used for the points/lines previously!!
+  # scale_color_brewer(palette = 'Spectral',
+  #                    guide = 'none') +
+  # scale_fill_brewer(palette = 'Spectral',
+  #                   guide = 'none') +
 ```
 
 **Data wrangling**
@@ -229,12 +236,14 @@ dca_tox_plot <- dca_tox_plot +
   geom_smooth(aes(group = diet), color = 'black', 
               linewidth = 1.5, method = 'lm', se = FALSE) +
   ## this is the actual regression lines 
-  geom_smooth(aes(group = diet, color = diet), method = 'lm', se = FALSE) +
-  scale_color_brewer(palette = 'Spectral',
-                     guide = 'none') +
+  geom_smooth(aes(group = diet, color = diet), method = 'lm', se = FALSE, alpha = 0.7) +
+  scale_color_viridis(option = 'C',
+                      discrete = TRUE,
+                      guide = 'none') +
   geom_jitter(aes(fill = diet), pch = 21, alpha = 0.7, size = 3) +
-  scale_fill_brewer(palette = 'Spectral',
-                    guide = 'none') +
+  scale_fill_viridis(option = 'C',
+                     discrete = TRUE,
+                     guide = 'none') +
   theme_bw(base_size = 20) +
   labs(subtitle = 'C. difficile Toxin')
 
@@ -289,12 +298,14 @@ dca_histo_plot <- dca_histo_plot +
               linewidth = 1.5, method = 'lm', se = FALSE) +
   ## this is the actual regression lines 
   geom_smooth(aes(group = diet, color = diet), method = 'lm', se = FALSE) +
-  scale_color_brewer(palette = 'Spectral',
-                     guide = 'none') +
+  scale_color_viridis(option = 'C',
+                      discrete = TRUE,
+                      guide = 'none') +
   geom_jitter(aes(fill = diet), pch = 21, alpha = 0.7, size = 3) +
-  scale_fill_brewer(palette = 'Spectral',
-                    name = 'Mouse Diet',
-                    labels = c('Chow',
+  scale_fill_viridis(option = 'C',
+                     discrete = TRUE,
+                     name = 'Mouse Diet',
+                     labels = c('Chow',
                                'HFt / HFb',
                                'HFt / LFb',
                                'LFt / HFb',
@@ -394,11 +405,13 @@ butyrate_tox_plot <- butyrate_tox_plot +
               linewidth = 1.5, method = 'lm', se = FALSE) +
   ## this is the actual regression lines 
   geom_smooth(aes(group = diet, color = diet), method = 'lm', se = FALSE) +
-  scale_color_brewer(palette = 'Spectral',
-                     guide = 'none') +
+  scale_color_viridis(option = 'C',
+                      discrete = TRUE,
+                      guide = 'none') +
   geom_jitter(aes(fill = diet), pch = 21, alpha = 0.7, size = 3) +
-  scale_fill_brewer(palette = 'Spectral',
-                    guide = 'none') +
+  scale_fill_viridis(option = 'C',
+                     discrete = TRUE,
+                     guide = 'none') +
   theme_bw(base_size = 20) +
   labs(subtitle = 'C. difficile Toxin')
 
@@ -450,16 +463,18 @@ butyrate_histo_plot <- butyrate_histo_plot +
   geom_smooth(aes(group = diet), color = 'black', 
               linewidth = 1.5, method = 'lm', se = FALSE) +
   geom_smooth(aes(group = diet, color = diet), method = 'lm', se = FALSE) +
-  scale_color_brewer(palette = 'Spectral',
-                     guide = 'none') +
+  scale_color_viridis(option = 'C',
+                      discrete = TRUE,
+                      guide = 'none') +
   geom_jitter(aes(fill = diet), pch = 21, alpha = 0.7, size = 3) +
-                    scale_fill_brewer(palette = 'Spectral',
-                                      name = 'Mouse Diet',
-                                      labels = c('Chow',
-                                                 'HFt / HFb',
-                                                 'HFt / LFb',
-                                                 'LFt / HFb',
-                                                 'LFt / LFb')) +
+  scale_fill_viridis(option = 'C',
+                     discrete = TRUE,
+                     name = 'Mouse Diet',
+                     labels = c('Chow',
+                                'HFt / HFb',
+                                'HFt / LFb',
+                                'LFt / HFb',
+                                'LFt / LFb')) +
                     theme_bw(base_size = 20) +
   labs(subtitle = 'Histopathology')
 

@@ -328,9 +328,10 @@ faith_comb_plot <- apppleplots::correlation_plots(input_table = microbeProd_fait
 
 faith_comb_plot <- faith_comb_plot +
                     geom_jitter(aes(fill = diet), pch = 21, alpha = 0.7, size = 3) +
-                    scale_fill_brewer(palette = 'Spectral',
-                                      name = 'Mouse Diet',
-                                      labels = c('Chow',
+                    scale_fill_viridis(option = 'C',
+                                       discrete = TRUE,
+                                       name = 'Mouse Diet',
+                                       labels = c('Chow',
                                                  'HFt / HFb',
                                                  'HFt / LFb',
                                                  'LFt / HFb',
@@ -446,7 +447,7 @@ microbeProd_relAbun_plot <- apppleplots::correlation_plots(input_table = microbe
                                                            facet_cols = 'microbe_order',
                                                            row_labs = faith_comb_labs,
                                                            col_labs = microbe_labs,
-                                                           x_name = 'Concentration (log10)',
+                                                           x_name = "Concentration (log10)",
                                                            y_name = "Relative Abundance (log10)",
                                                            title_content = 'Microbe Relative Abundance by Product Concentration')
 
@@ -456,12 +457,14 @@ microbeProd_relAbun_plot <- microbeProd_relAbun_plot +
                                 linewidth = 1.5, method = 'lm', se = FALSE) +
                     ## this is the actual regression lines 
                     geom_smooth(aes(group = diet, color = diet), method = 'lm', se = FALSE) +
-                    scale_color_brewer(palette = 'Spectral',
-                                       guide = 'none') +
+                    scale_color_viridis(option = 'C',
+                                        discrete = TRUE,
+                                        guide = 'none') +
                     geom_jitter(aes(fill = diet), pch = 21, alpha = 0.6, size = 4) +
-                    scale_fill_brewer(palette = 'Spectral',
-                                      name = 'Mouse Diet',
-                                      labels = c('Chow',
+                    scale_fill_viridis(option = 'C',
+                                       discrete = TRUE,
+                                       name = 'Mouse Diet',
+                                       labels = c('Chow',
                                                  'HFt / HFb',
                                                  'HFt / LFb',
                                                  'LFt / HFb',

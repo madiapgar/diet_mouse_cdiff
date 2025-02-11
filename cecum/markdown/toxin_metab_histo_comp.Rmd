@@ -212,10 +212,10 @@ toComb_histo_neatTox <- histo_neat_toxin %>%
          concentration = neat_conc,
          conc_normalized = neat_conc_norm)
 
-everything_table <- rbind(toComb_histo_metab,
-                          toComb_histo_neatTox)
-
-everything_table 
+# everything_table <- rbind(toComb_histo_metab,
+#                           toComb_histo_neatTox)
+# 
+# everything_table 
 ```
 
 #**Toxin to Histopathology Scores Comparisons**
@@ -308,13 +308,14 @@ noDiet_histoCecum_tox_plot <- apppleplots::correlation_plots(input_table = cecum
 
 noDiet_histoCecum_tox_plot <- noDiet_histoCecum_tox_plot +
                     geom_jitter(aes(fill = diet), pch = 21, alpha = 0.7, size = 3) +
-                    scale_fill_brewer(palette = 'Spectral',
-                                      name = 'Mouse Diet',
-                                      labels = c('Chow',
-                                                 'HFt / HFb',
-                                                 'HFt / LFb',
-                                                 'LFt / HFb',
-                                                 'LFt / LFb')) +
+                    scale_fill_viridis(option = 'C',
+                                       discrete = TRUE,
+                                       name = 'Mouse Diet',
+                                       labels = c('Chow',
+                                                   'HFt / HFb',
+                                                   'HFt / LFb',
+                                                   'LFt / HFb',
+                                                   'LFt / LFb')) +
                     theme_bw(base_size = 20)
   
 ## stats

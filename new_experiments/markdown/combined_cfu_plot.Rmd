@@ -219,6 +219,18 @@ my_paired_palette <- c("#A6CEE3",
                        "#CAB2D6",
                        "#6A3D9A",
                        "#999999")
+
+
+## get hexcodes of viridis color palette option C
+# viridis_pal(option = 'C')(6)
+
+my_viridis_c_palette <- c("#0D0887FF",
+                          "#6A00A8FF",
+                          "#B12A90FF",
+                          "#E16462FF",
+                          "#FCA636FF",
+                          "#F0F921FF",
+                          "#999999")
 ```
 
 **Combined CFU/Survival Plot**
@@ -249,7 +261,7 @@ comb_cfu_genusAbun %>%
                                 'Lactobacillus',
                                 'Other',
                                 'None'),
-                     values = my_paired_palette,
+                     values = my_viridis_c_palette,
                      name = 'Genus') +
   scale_shape_manual(values = c(4, 4, 16, 16),
                      name = surv_presAbs_title,

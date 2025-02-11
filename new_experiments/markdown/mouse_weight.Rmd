@@ -16,11 +16,6 @@ library(readr)
 library(viridis)
 ```
 
-**Functions**
-```{r}
-
-```
-
 **File paths**
 ```{r}
 weight_fp <- '../data/misc/newExp_mouse_weightData.csv'
@@ -115,6 +110,9 @@ ggsave('../plots/avWeight_change_plot.pdf',
        plot = newExp_avWeight_plot,
        width = 12,
        height = 10)
+
+write_tsv(avWeight_dunn,
+          '../stats/avWeight_change_dunn.tsv')
 
 ## as an .rdat object to put in r package 
 save(newExp_avWeight_plot,

@@ -257,6 +257,8 @@ not sure how I want to show this yet
                             pairwise = TRUE, 
                             tile_fill = 'stat_diff_means',
                             text_value = 'p.adj.signif',
+                            low_color = "#0D0887FF",
+                            high_color = "#CC4678FF",
                             legend_name = 'Group 1 -\nGroup 2',
                             x_labels = cult_x_labs,
                             y_labels = diet_y_labs,

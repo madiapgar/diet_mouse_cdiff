@@ -117,19 +117,20 @@ diet_pvalue['signif'] <- symnum(diet_pvalue$p.value,
 
 **Pairwise Comparison Visualization**
 
-```{r, fig.height=3, fig.width=4.5}
+```{r, fig.height=3.5, fig.width=6.5}
 diet_pvalue %>%
   na.omit() %>% 
   ggplot(aes(x = diet2, y = diet1)) +
   geom_tile(aes(fill = p.value), alpha = 0.6, color = 'black') +
   geom_text(aes(label = signif), size = 5) +
-  scale_fill_distiller(limits = c(0, 0.05), palette = 'Reds', name = "P-Value") +
+  scale_fill_viridis(option = 'C', limits = c(0, 0.05), direction = 1,  name = 'p-value') +
+  # scale_fill_distiller(limits = c(0, 0.05), palette = 'Reds', name = "P-Value") +
   theme_bw(base_size = 20) +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_blank(),
         legend.text = element_text(size = 16),
         legend.title = element_text(size = 18),
-        legend.position = 'none') +
+        legend.position = 'right') +
   scale_x_discrete(labels = c("Chow",
                               "HFt/\nLFb",
                               "HFt/\nHFb",
@@ -273,19 +274,20 @@ liveCult_diet_pvalue['signif'] <- symnum(liveCult_diet_pvalue$p.value,
 
 **Pairwise Comparison Visualization**
 
-```{r, fig.height=2.5, fig.width=3.5}
+```{r, fig.height=3.5, fig.width=5.5}
 liveCult_diet_pvalue %>%
   na.omit() %>% 
   ggplot(aes(x = diet2, y = diet1)) +
   geom_tile(aes(fill = p.value), alpha = 0.6, color = 'black') +
   geom_text(aes(label = signif), size = 5) +
-  scale_fill_distiller(limits = c(0, 0.05), palette = 'Reds', name = "P-Value") +
+  scale_fill_viridis(option = 'C', limits = c(0, 0.05), direction = 1, name = 'p-value') +
+  ##scale_fill_distiller(limits = c(0, 0.05), palette = 'Reds', name = "P-Value") +
   theme_bw(base_size = 20) +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_blank(),
         legend.text = element_text(size = 16),
         legend.title = element_text(size = 18),
-        legend.position = 'none') +
+        legend.position = 'right') +
   scale_x_discrete(labels = c("Chow",
                               "HFt/\nLFb")) +
   scale_y_discrete(labels = c("HFt / LFb",
@@ -356,7 +358,7 @@ ggforest(diet.fit.cox.liveCult)
 
 ```{r, fig.height=10, fig.width=10}
 liveCult_bottom_row <- plot_grid(liveCult_surv_stat_vis, NULL,
-                                 rel_widths = c(0.65, 1),
+                                 rel_widths = c(1, 0.8),
                                  labels = c('b)', ' '),
                                  label_size = 20)
 

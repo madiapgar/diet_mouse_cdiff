@@ -544,6 +544,8 @@ abun_stat_plot <- apppleplots::stat_heat_plot(input_table = new_abun_dunn,
                                               correlation = FALSE,
                                               tile_fill = 'stat_diff_means',
                                               text_value = 'p.adj.signif',
+                                              low_color = "#0D0887FF",
+                                              high_color = "#CC4678FF",
                                               legend_name = 'Group 1 -\nGroup 2',
                                               x_labels = day_x_breaks,
                                               y_labels = diet_y_labs,
@@ -551,7 +553,7 @@ abun_stat_plot <- apppleplots::stat_heat_plot(input_table = new_abun_dunn,
                                               facet_labels = diet_labs,
                                               x_name = 'Days Relative to Infection',
                                               y_name = 'Group 2',
-                                              title_content = 'Figure 6 Genus Comparisons') +
+                                              title_content = 'Figure 5 Genus Comparisons') +
                     theme_bw(base_size = 20) +
                     theme(strip.text.y.right = element_text(angle = 0),
                           plot.subtitle = element_text(hjust = 0.5)) +
@@ -577,11 +579,11 @@ ggsave('../plots/rumino_genera_by_day.pdf',
        plot = rumino_abun_plot,
        width = 20,
        height = 5)
-ggsave('../plots/potential_new_fig6.pdf',
+ggsave('../plots/potential_new_fig5.pdf',
        plot = genusAbun_plots_together_withLabs,
        width = 22,
        height = 21)
-ggsave('../plots/new_fig6_stats.pdf',
+ggsave('../plots/new_fig5_stats.pdf',
        plot = abun_stat_plot,
        width = 16,
        height = 19)

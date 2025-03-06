@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(tidyverse)
+library(viridis)
 library(ggplot2)
 library(cowplot)
 library(apppleplots)
@@ -27,8 +28,13 @@ Plots to go in figure:
 *a) Survival curves for the five tested diets after antibiotic induced gut microbiome dysbiosis and C. difficile infection. b) A heat map of log-normal pairwise comparisons of survival probability between the tested diets. P-value significance (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).*
 
 ```{r, warning=FALSE, fig.height=12, fig.width=15}
-fig1_bottom_row <- plot_grid(surv_stat_vis, NULL,
-                             rel_widths = c(0.6, 1),
+fig1_bottom_row <- plot_grid(surv_stat_vis +
+                               scale_fill_viridis(option = 'C',
+                                                  limits = c(0, 0.05),
+                                                  direction = 1,
+                                                  name = 'p-value') +
+                               theme(legend.position = 'right'), NULL,
+                             rel_widths = c(0.8, 1),
                              labels = c('b)', ' '),
                              label_size = 20)
 
@@ -148,13 +154,19 @@ how you change the size of the labels in a ggplot object!!
 faith_combStats_plot$layers[[4]]$aes_params$size <- 5
 ```
 
+```{r}
+viridis_pal(option = 'C')(3)
+```
 
 *Caption*:
 *a) Faith's Phylogenetic Diversity (alpha diversity) analysis by the five tested diets. The dashed red line at day negative three indicates the day the mice received oral antibiotics and the purple dashed line at day zero indicates with the mice were infected with C. difficile. b) Pairwise comparisons between diets as determined by a Kruskal-Wallis test followed by a Dunn's Post Hoc test with the color gradient indicating the difference in means.*P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).*
 ```{r, warning=FALSE, fig.height=14, fig.width=15}
 plot_grid(faith_plot +
             theme_bw(base_size = 20), 
-          faith_stat_vis,
+          faith_stat_vis +
+            scale_fill_gradient2(low = "#0D0887FF",
+                                 high = "#CC4678FF",
+                                 name = 'Group 1 -\nGroup 2'),
           faith_combStats_plot,
           ncol = 1,
           rel_heights = c(1, 0.7, 1),
@@ -223,11 +235,38 @@ fig5_part_two_withLabs
 ## **Figure 6**
 New experiment culture/mortality results.
 ```{r, fig.width=22, fig.height=17}
-fig6_bottom_row <- plot_grid(everything_stats, NULL,
+my_viridis_c_palette <- c("#0D0887FF",
+                          "#5D01A6FF",
+                          "#9C179EFF",
+                          "#CC4678FF",
+                          "#ED7953FF",
+                          "#FDB32FFF",
+                          "#999999")
+
+fig6_bottom_row <- plot_grid(everything_stats +
+                               scale_fill_gradient2(low = "#0D0887FF",
+                                 high = "#CC4678FF",
+                                 name = 'Group 1 -\nGroup 2'), NULL,
                              nrow = 1,
                              rel_widths = c(1, 0.7))
 
-fig6 <- plot_grid(everything_plot,
+fig6 <- plot_grid(everything_plot +
+                    scale_color_manual(breaks = c('Enterococcus',
+                                'Escherichia-Shigella',
+                                'Proteus',
+                                'enterococcus_escherichiaShigella_proteus',
+                                'Lactobacillus',
+                                'Other',
+                                'None'),
+                     labels = c('Enterococcus',
+                                'Escherichia-Shigella',
+                                'Proteus',
+                                'Enterococcus, Escherichia-Shigella,\nand Proteus',
+                                'Lactobacillus',
+                                'Other',
+                                'None'),
+                     values = my_viridis_c_palette,
+                     name = 'Genus'),
                   fig6_bottom_row,
                   ncol = 1,
                   labels = c('a)', 'b)'),
@@ -237,11 +276,30 @@ fig6
 ```
 
 ```{r, fig.width=30, fig.height=12}
-test_fig6_bottom_row <- plot_grid(everything_stats, NULL,
+test_fig6_bottom_row <- plot_grid(everything_stats +
+                               scale_fill_gradient2(low = "#0D0887FF",
+                                 high = "#CC4678FF",
+                                 name = 'Group 1 -\nGroup 2'), NULL,
                              ncol = 1,
                              rel_heights = c(0.7, 1))
 
-test_fig6 <- plot_grid(everything_plot,
+test_fig6 <- plot_grid(everything_plot +
+                         scale_color_manual(breaks = c('Enterococcus',
+                                'Escherichia-Shigella',
+                                'Proteus',
+                                'enterococcus_escherichiaShigella_proteus',
+                                'Lactobacillus',
+                                'Other',
+                                'None'),
+                     labels = c('Enterococcus',
+                                'Escherichia-Shigella',
+                                'Proteus',
+                                'Enterococcus, Escherichia-Shigella,\nand Proteus',
+                                'Lactobacillus',
+                                'Other',
+                                'None'),
+                     values = my_viridis_c_palette,
+                     name = 'Genus'),
                   test_fig6_bottom_row,
                   nrow = 1,
                   labels = c('a)', 'b)'),
@@ -255,8 +313,14 @@ test_fig6
 Comparison analysis between first set anschutz, u of arizona, and new anschutz experiment microbiome data at day -15 and day 3 with stats.
 ```{r, fig.height=13, fig.width=30}
 fig7 <- plot_grid(miniVendor_genusAbun_plot +
+                    scale_fill_manual(values = c("#DB5C68FF", "#FEBC2AFF"),
+                                      name = 'Mouse Vendor',
+                                      labels = c('Charles River', 'Taconic')) +
                     ggtitle('All Experiment Microbes by Vendor'), 
                   mini_d3_genus_relAbun_stat_plot +
+                    scale_fill_gradient2(low = "#0D0887FF",
+                                 high = "#CC4678FF",
+                                 name = 'Group 1 -\nGroup 2') +
                     scale_y_discrete(labels = c('New Anschutz\n(2024) - Charles River',
                                                 'New Anschutz\n(2024) - Taconic',
                                                 'U of Arizona\n- Charles River')) +
@@ -313,8 +377,16 @@ figS5
 ## use NULL to create a ghost plot to alter your rows
 figS7_bottom_row <- plot_grid(uu_resil_plot, uu_homog_plot,
                              uu_resil_stat_vis +
+                               scale_fill_gradient2(high = "#0D0887FF",
+                                 low = "#CC4678FF",
+                                 name = 'Group 1 -\nGroup 2',
+                                 trans = 'reverse') +
                                theme(legend.position = "None"), 
-                             uu_homog_stat_vis,
+                             uu_homog_stat_vis +
+                               scale_fill_gradient2(high = "#0D0887FF",
+                                 low = "#CC4678FF",
+                                 name = 'Group 1 -\nGroup 2',
+                                 trans = 'reverse'),
                              nrow = 2,
                              rel_heights = c(1, 0.7),
                              rel_widths = c(0.90, 1),

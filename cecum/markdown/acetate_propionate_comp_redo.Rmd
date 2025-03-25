@@ -306,7 +306,7 @@ metab_histoStats_plot
 ```{r, fig.width=19, fig.height=8}
 ## creating universal y axis label since the y axis is the same for both plots 
 y_axis_label <- ggdraw() +
-  draw_label('SCFA Concentration (pmol/mg) (log10)',
+  draw_label('SCFA Concentration (ug/g) (log10)',
              size = 20,
              hjust = 0.5,
              y = 1)
@@ -328,27 +328,31 @@ all_metab_plotsWithlab
 **Creating supplemental figure 3 for the paper**
 combining the correlation comparisons with the acetate/propionate concentration plot 
 ```{r, fig.width=19, fig.height=14.5}
-supp_fig3_top_row <- plot_grid(notButy_plot, NULL,
-                               nrow = 1,
-                               rel_widths = c(1, 0.4))
+supp_fig2bc_top_row <- plot_grid(notButy_plot, NULL,
+                                 nrow = 1,
+                                 rel_widths = c(1, 0.11))
+  
 
-supp_fig3 <- plot_grid(supp_fig3_top_row,
+supp_fig2bc <- plot_grid(supp_fig2bc_top_row,
           all_metab_plotsWithlab,
-          labels = c('a)', 'b)'),
+          labels = c('b)', 'c)'),
           label_size = 20,
           ncol = 1,
           rel_heights = c(0.8, 1),
           axis = 'tblr',
           align = 'hv')
 
-supp_fig3
+supp_fig2bc
 ```
 
 **Saving my outputs**
 ```{r}
 ggsave('../plots/supp_acetProp_comp_plot.pdf',
-       plot = supp_fig3,
+       plot = supp_fig2bc,
        width = 19,
        height = 14.5)
+
+save(supp_fig2bc,
+     file = '../../figures/supp_fig2bc.rdat')
 ```
 

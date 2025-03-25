@@ -160,8 +160,6 @@ resil_homog_plots <- function(resil_table,
   resil_table %>% 
     ggplot(aes(x = day_post_inf.x, y = dist)) +
       geom_boxplot((aes(group = day_post_inf.x)), outlier.shape = NA) +
-      geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
-      geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
       geom_line(aes(group = mouse_id.x), alpha = 0.1) +
       geom_jitter(width = 0.1, alpha = 0.4) +
       geom_smooth(se = FALSE, method = 'loess') + 
@@ -178,8 +176,6 @@ resil_homog_plots <- function(resil_table,
   homog_table %>% 
     ggplot(aes(x = day_post_inf.x, y = dist)) +
       geom_boxplot((aes(group = day_post_inf.x)), outlier.shape = NA) +
-      geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
-      geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
       geom_line(aes(group = mouse_id.x), alpha = 0.1) +
       geom_jitter(width = 0.1, alpha = 0.2) +
       geom_smooth(se = FALSE, method = 'loess', color = 'blue') + 

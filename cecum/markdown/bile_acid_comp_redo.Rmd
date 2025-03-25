@@ -127,9 +127,9 @@ tox_labs <- c('TcdA',
 names(tox_labs) <- c('Total TcA Neat',
                      'Total TcB Neat')
 
-bile_acid_labs <- c('C. difficile Inhibitor',
-                    'C. difficile Promoter',
-                    'C. difficile\nPromoter:Inhibitor')
+bile_acid_labs <- c('C. difficile Inhibitor\n(pmol/mg)',
+                    'C. difficile Promoter\n(pmol/mg)',
+                    'C. difficile\nPromoter:Inhibitor\n(ratio)')
 names(bile_acid_labs) <- c(1,
                            2,
                            3)
@@ -333,7 +333,7 @@ bileAcid_histoStats_plot
 ```{r, fig.width=19, fig.height=10}
 ## creating universal y axis label since the y axis is the same for both plots 
 y_axis_label <- ggdraw() +
-  draw_label('Bile Acid Concentration (pmol/mg) (log10)',
+  draw_label('Bile Acid Concentration (log10)',
              size = 20,
              hjust = 0.5,
              y = 1)
@@ -342,21 +342,24 @@ all_bileAcid_plots <- plot_grid(bileAcid_toxStats_plot, bileAcid_histoStats_plot
                               nrow = 1,
                               rel_widths = c(1, 0.8))
 
-all_bileAcid_plotsWithlab <- plot_grid(all_bileAcid_plots,
-                                     y_axis_label,
-                                     ncol = 1,
-                                     rel_heights = c(1, 0.05),
-                                     align = c('hv'),
-                                     axis = c('tblr'))
+supp_fig2a <- plot_grid(all_bileAcid_plots,
+                        y_axis_label,
+                        ncol = 1,
+                        rel_heights = c(1, 0.05),
+                        align = c('hv'),
+                        axis = c('tblr'))
 
-all_bileAcid_plotsWithlab
+supp_fig2a
 ```
 
 **Saving my outputs**
 ```{r}
 ggsave('../plots/supp_bileAcid_comp_plot.pdf',
-       plot = all_bileAcid_plotsWithlab,
+       plot = supp_fig2a,
        width = 19,
        height = 10)
+
+save(supp_fig2a,
+     file = '../../figures/supp_fig2a.rdat')
 ```
 

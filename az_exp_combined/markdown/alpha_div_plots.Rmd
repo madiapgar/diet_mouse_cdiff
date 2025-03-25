@@ -43,8 +43,6 @@ faith_pd_plot <- function(faith_fp,
     ggplot(aes(x = day_post_inf, y = faith_pd)) +
     geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
     geom_line(aes(group = mouse_id), alpha = 0.1) +
-    geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
-    geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
     geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
     scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
     geom_smooth(se = FALSE) +
@@ -78,8 +76,6 @@ shannon_plot <- function(shannon_fp,
     ggplot(aes(x = day_post_inf, y = shannon_entropy)) +
     geom_boxplot(aes(group = day_post_inf), outlier.shape = NA) +
     geom_line(aes(group = mouse_id), alpha = 0.1) +
-    geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
-    geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
     geom_jitter(width = 0.1, height = 0, alpha = 0.4) +
     scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
     geom_smooth(se = FALSE) +
@@ -99,7 +95,7 @@ faith_pd_FP <- '../data/s1_filt_core/faith_pd.tsv'
 shannon_FP <- '../data/s1_filt_core/shannon_entropy.tsv'
 
 ## day 3 filtered out of stool samples and replaced with cecal samples
-filt_metadata_FP <- '../data/misc/filt_comp_metadata.tsv'
+filt_metadata_FP <- '../data/misc/d3_filt_comp_metadata.tsv'
 filt_faith_pd_FP <- '../data/day3_filt_core/faith_pd.tsv'
 filt_shannon_FP <- '../data/day3_filt_core/shannon_entropy.tsv'
 
@@ -117,7 +113,7 @@ diet_names_labels <- c('Chow',
                        'LF/LF')
 ```
 
-# **Colon and Cecum Data Combined with No Filtering**
+# **Colon and Cecum Data Combined with Day 3 Filtered out of the Colon Samples AND Batch 1 Filtered Out**
 
 **Metadata File**
 ```{r}
@@ -150,7 +146,7 @@ shannon_entropy_plot <- shannon_plot(shannon_FP,
 shannon_entropy_plot
 ```
 
-# **Cecum and Colon Data Combined with Day 3 Filtered out of the Colon Samples**
+# **Cecum and Colon Data Combined with ONLY Day 3 Filtered out of the Colon Samples**
 
 **Metadata File**
 ```{r}
@@ -186,15 +182,15 @@ filt_shannon_entropy_plot
 **Saving my Outputs**
 ```{r}
 ## plots with day 3 replaced by the cecal data but replicate one isn't filtered out
-ggsave('../day3_filt_plots/faith_pd.pdf',
-       plot = filt_faith_plot, 
-       width = 14, 
-       height = 4.5)
-
-ggsave('../day3_filt_plots/shannon_entropy.pdf',
-       plot = filt_shannon_entropy_plot, 
-       width = 14, 
-       height = 4.5)
+# ggsave('../day3_filt_plots/faith_pd.pdf',
+#        plot = filt_faith_plot, 
+#        width = 14, 
+#        height = 4.5)
+# 
+# ggsave('../day3_filt_plots/shannon_entropy.pdf',
+#        plot = filt_shannon_entropy_plot, 
+#        width = 14, 
+#        height = 4.5)
 
 ## plots where replicate one IS filtered out
 ggsave('../plots/faith_pd.pdf',

@@ -147,6 +147,8 @@ surv_stat_vis
 
 this calculates the hazard ratios for each diet compared to chow
 
+could assign each diet a numeric key and run that way so that there isn't a reference diet but idk if that will replace pairwise comparisons in general
+
 if you call *summary(coxph_object)*, the *exp(coef)* column contains the actual hazard ratio for the variable and the *Pr(\>\|z\|)* column contains the p-value
 
 ```{r}

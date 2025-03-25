@@ -343,7 +343,28 @@ plot_grid(test_fig6,
           axis = 'tblr')
 ```
 
-## **Supplemental Figure 5**
+## *Supplemental Figure 3**
+Plots to go in figure:
+- bile acid concentration/CD toxin/histopathology score correlation comparisons
+- raw concentrations of acetate and propionate at day 3
+- acetate/propionate concentration/CD toxin/histopathology score correlation comparisons
+
+```{r, fig.width=19, fig.height=24}
+figS2 <- plot_grid(supp_fig2a,
+                   supp_fig2bc,
+                   ncol = 1,
+                   rel_heights = c(0.7, 1),
+                   labels = c('a)', '', ''),
+                   label_size = 20)
+
+figS2
+```
+
+
+
+
+
+## **Supplemental Figure 3**
 Plots to go in figure:
 - overall hypoxia plot (location on x-axis)?
 - cecum hypoxia plot (diet on x-axis)
@@ -355,7 +376,7 @@ Plots to go in figure:
 
 **Figure S5**
 ```{r, fig.height=6, fig.width=10}
-figS5 <- plot_grid(hypoxia_cecum_plot +
+figS3 <- plot_grid(hypoxia_cecum_plot +
                         theme_bw(base_size = 20) +
                         ggtitle('Cecum Hypoxia Between Diets'), 
                       NULL,
@@ -365,17 +386,17 @@ figS5 <- plot_grid(hypoxia_cecum_plot +
                       label_size = 20,
                       rel_widths = c(1, 0.5))
 
-figS5
+figS3
 ```
 
 
-## **Supplemental Figure 7**
+## **Supplemental Figure 4**
 
 *Caption*:
 *a) Unweighted UniFrac PCoA plots delimited by diet (columns) and by days relative to infection (rows). Individual points are colored by their associated Faith's PD score. b) Microbiome resilience determined using pairwise comparisons between day negative eight (seven days post diet switch and five days prior to oral antibiotic administration) and later time points. c) Microbiome homogeneity determined using pairwise Unweighted UniFrac distances within each time point by tested diets. The dashed red line at day negative three indicates the day the mice received oral antibiotics and the purple dashed line at day zero indicates with the mice were infected with C. difficile. Statistical analysis of microbiome d) resiliency and e) homogeneity was done with a Kruskal-Wallis test followed by a Dunn's Post Hoc test with the color gradient indicating the difference in means between the various groups.*P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).*
-```{r, warning=FALSE, fig.width=26.5, fig.height=18}
+```{r, warning=FALSE, fig.width=28, fig.height=18}
 ## use NULL to create a ghost plot to alter your rows
-figS7_bottom_row <- plot_grid(uu_resil_plot, uu_homog_plot,
+figS4_bottom_row <- plot_grid(uu_resil_plot, uu_homog_plot,
                              uu_resil_stat_vis +
                                scale_fill_gradient2(high = "#0D0887FF",
                                  low = "#CC4678FF",
@@ -390,34 +411,42 @@ figS7_bottom_row <- plot_grid(uu_resil_plot, uu_homog_plot,
                              nrow = 2,
                              rel_heights = c(1, 0.7),
                              rel_widths = c(0.90, 1),
-                             labels = c('b)', 'c)', 'd)', 'e)'),
+                             labels = c('d)', 'e)', 'f)', 'g)'),
                              label_size = 20)
 
+figS4_top_right <- plot_grid(lacto_contam_plot,
+                             lacto_stat_plot,
+                             labels = c('a)', 'b)'),
+                             label_size = 20,
+                             ncol = 1,
+                             rel_heights = c(1, 0.8))
+
                     
-figS7_top_row <- plot_grid(unweighted_pcoa,
-                          NULL,
+figS4_top_row <- plot_grid(figS4_top_right,
+                          unweighted_pcoa +
+                            theme_bw(base_size = 20) +
+                            theme(strip.text.y.right = element_text(angle = 0)) +
+                            scale_fill_viridis(option = 'C', name = "Faith's\nPD"),
                           nrow = 1,
-                          rel_widths = c(1, 0.5),
-                          labels = c('a)', ' '),
-                          label_size = 20,
-                          align = c('hv'),
-                          axis = c('tblr'))
+                          rel_widths = c(0.9, 1),
+                          labels = c('', 'c)'),
+                          label_size = 20)
 
-plot_grid(figS7_top_row,
-          figS7_bottom_row,
+plot_grid(figS4_top_row,
+          figS4_bottom_row,
           nrow = 2,
-          rel_heights = c(0.9, 1)) -> figS7
+          rel_heights = c(0.9, 1)) -> figS4
 
-figS7
+figS4
 ```
 
-## **Supplemental Figure 10**
+## **Supplemental Figure 7**
 
 *Caption:*
 *Mouse survival between diets for mice from the two different vendors. We conducted another round of mouse experiments in 2024 at the Anschutz Medical Campus to investigate the differences in survival results seen between our previous experiment and this one. This plot shows how mouse survival was not significantly different between vendors (except for in the LF/HF diet which had a p-value of 0.03) and that the survival trends are similar to what is depicted in Figures 1 and S7. A Cox Proportional Hazards (PH) regression model indicated that only mice on the low-fat/low-fiber diet (hazard ratio = 3.66, p-value = 0.004) had significantly worse survival as compared to mice on chow. P-value significance determined via Kaplan-Meier tests, shaded area shows a 95% CI (**** : p<0.0001, *** : p<0.001, ** : p<0.01, * : p<0.05, ns : p≥0.05).*
 
 ```{r, fig.height=17, fig.width=17}
-(figS10 <- plot_grid(newExp_dietVendor_surv_plot,
+(figS7 <- plot_grid(newExp_dietVendor_surv_plot,
           newExp_avWeight_plot +
             labs(title = 'Weight Change After Infection by Diet',
                  x = 'Days Post Infection'),
@@ -475,20 +504,26 @@ ggsave('fig7.pdf',
        width = 30,
        height = 13)
 
+## used to be supplemental figures 3 and 4 but they got combined
+ggsave('figS2.pdf',
+       plot = figS2,
+       width = 19,
+       height = 24)
+
 ## this used to be figure 4 but it got moved to supplemental
-ggsave('figS5.pdf',
-       plot = figS5,
+ggsave('figS3.pdf',
+       plot = figS3,
        width = 10,
        height = 6)
 
 ## this used to be figure 6 but it got moved to supplemental 
-ggsave('figS7.pdf',
-       plot = figS7,
-       width = 26.5,
+ggsave('figS4.pdf',
+       plot = figS4,
+       width = 28,
        height = 18)
 
-ggsave('figS10.pdf',
-       plot = figS10,
+ggsave('figS7.pdf',
+       plot = figS7,
        width = 17,
        height = 17)
 ```

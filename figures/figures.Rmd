@@ -24,22 +24,27 @@ Plots to go in figure:
 - experimental timeline diagram 
 - mouse survival curve plot and stats
 
-*Caption*:
-*a) Survival curves for the five tested diets after antibiotic induced gut microbiome dysbiosis and C. difficile infection. b) A heat map of log-normal pairwise comparisons of survival probability between the tested diets. P-value significance (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).*
+**manuscript specific plot edits**
+```{r}
+surv_stat_vis_v2 <- surv_stat_vis +
+                       scale_fill_viridis(option = 'C',
+                                          limits = c(0, 0.05),
+                                          direction = 1,
+                                          name = 'p-value') +
+                        theme(legend.position = 'right')
 
+diet_plot_final_v2 <- diet_plot_final +
+                        theme_bw(base_size = 20)
+```
+
+**actual manuscript figure**
 ```{r, warning=FALSE, fig.height=12, fig.width=15}
-fig1_bottom_row <- plot_grid(surv_stat_vis +
-                               scale_fill_viridis(option = 'C',
-                                                  limits = c(0, 0.05),
-                                                  direction = 1,
-                                                  name = 'p-value') +
-                               theme(legend.position = 'right'), NULL,
+fig1_bottom_row <- plot_grid(surv_stat_vis_v2, NULL,
                              rel_widths = c(0.8, 1),
                              labels = c('b)', ' '),
                              label_size = 20)
 
-plot_grid(diet_plot_final +
-            theme_bw(base_size = 18),
+plot_grid(diet_plot_final_v2,
           fig1_bottom_row,
           rel_heights = c(1, 0.5),
           nrow = 2,
@@ -56,22 +61,32 @@ Plots to go in figure:
 - cecal overall histopathology plot
 - cecal toxin/histo correlation plot (p-value significance should be overlaid) - TAKE OUT!!
 
-*Caption*:
-*a) C. difficile TcdA and TcdB toxin concentrations in the five tested diets, determined by ELISA. b) Histologic inflammation scoring of mouse cecal and colon contents at three days post C. difficile infection in the tested diets as determined by a blinded histologist. c) Linear regression comparison of C. difficile toxins TcdA/TcdB concentration to histologic inflammation scores. Statistical analysis was done using a Kruskal-Wallis test followed by a Dunn's Post Hoc test with p-values being corrected for multiple comparisons via Benjamini and Hochberg. P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).*
+**manuscript specific plot edits**
 changing the size of the labels on the plot
 ```{r}
 noDiet_histoCecum_toxStats_plot$layers[[4]]$aes_params$size <- 5.5
 ```
 
+```{r}
+neat_plot_v2 <- neat_plot +
+                  theme_bw(base_size = 20) +
+                  ylab('Concentration (ng/uL)') +
+                  ggtitle('Cecum C. difficile Toxin Concentration')
+
+all_day_plot_v2 <- all_day_plot +
+                     theme_bw(base_size = 20) +
+                     ggtitle('Histopathology Scores') +
+                     ylab('Score')
+
+noDiet_histoCecum_toxStats_plot_v2 <- noDiet_histoCecum_toxStats_plot +
+                                        theme_bw(base_size = 20)
+```
+
+
+**actual manuscript figure**
 ```{r, warning=FALSE, fig.height=11, fig.width=20}
-fig2_top_row <- plot_grid(neat_plot +
-                            theme_bw(base_size = 20) +
-                            ylab('Concentration (ng/uL)') +
-                            ggtitle('Cecum C. difficile Toxin Concentration'),
-                          all_day_plot +
-                            theme_bw(base_size = 20) +
-                            ggtitle('Histopathology Scores') +
-                            ylab('Score'),
+fig2_top_row <- plot_grid(neat_plot_v2,
+                          all_day_plot_v2,
                              labels = c('a)', 'b)'),
                              align = c('hv'),
                              axis = c('tblr'),
@@ -79,8 +94,7 @@ fig2_top_row <- plot_grid(neat_plot +
                             rel_widths = c(0.9, 1),
                              label_size = 20)
 
-fig2_bottom_row <- plot_grid(noDiet_histoCecum_toxStats_plot +
-                               theme_bw(base_size = 20),
+fig2_bottom_row <- plot_grid(noDiet_histoCecum_toxStats_plot_v2,
                             labels = c('c)'),
                             label_size = 20)
 plot_grid(fig2_top_row,
@@ -100,15 +114,24 @@ Plots to go in figure:
 - bile acid/toxin correlation comparison plots 
 - metabolomics plot
 
-*Caption*:
-*a) Bile acid cecal levels of C. difficile growth inhibitors (a-MCA, b-MCA, LCA, DCA) and C. difficile growth promoters (TCA, CA) across the tested diets. b) The ratios of C. difficile growth promoters:inhibitors across the tested diets (a higher ratio indicates a higher level of promoters relative to inhibitors for that diet). Statistical analysis for dietary bile acid concentration/ratio differences was done using a Kruskal-Wallis test followed by a Dunn's Post Hoc test with p-values being corrected for multiple comparisons via Benjamini and Hochberg. Linear regression comparison of C. difficile toxins TcdA/TcdB concentration to c) C. difficile growth inhibitors and d) C. difficile growth promoters. e) SCFA (acetate, butyrate, propionate) levels of mouse cecal contents three days post C. difficile infecion by the tested diets. P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1)*
+**manuscript specific plot edits**
+```{r}
+dca_sep_plot_v2 <- dca_sep_plot +
+                            theme_bw(base_size = 20)
 
-```{r, fig.height=17, fig.width=20}
-fig3_top_row <- plot_grid(dca_sep_plot +
-                            theme_bw(base_size = 20), 
-                          ratio_bile_plot +
+ratio_bile_plot_v2 <- ratio_bile_plot +
                             theme_bw(base_size = 20)+
-                            ggtitle('Cecum Bile Acid Ratio'),
+                            ggtitle('Cecum Bile Acid Ratio')
+
+butyrateOnly_plot_v2 <- butyrateOnly_plot +
+                               theme_bw(base_size = 20) +
+                               ggtitle('Cecum Butyrate Concentration')
+```
+
+**actual manuscript figure**
+```{r, fig.height=17, fig.width=20}
+fig3_top_row <- plot_grid(dca_sep_plot_v2, 
+                          ratio_bile_plot_v2,
                           labels = c('a)', 'b)'),
                           label_size = 20,
                           align = c('hv'),
@@ -123,9 +146,7 @@ fig3_middle_row <- plot_grid(panelC_fig3_redoWithlab,
                              axis = c('tblr'))
 
 
-fig3_bottom_row <- plot_grid(butyrateOnly_plot +
-                               theme_bw(base_size = 20) +
-                               ggtitle('Cecum Butyrate Concentration'),
+fig3_bottom_row <- plot_grid(butyrateOnly_plot_v2,
                              panelE_fig3_redoWithlab,
                              rel_widths = c(0.4, 1),
                              nrow = 1,
@@ -149,24 +170,30 @@ NOTE: stats have been redone log10 transformed
 Plots to go in figure:
 - faith's pd and stats
 
+```{r}
+viridis_pal(option = 'C')(3)
+```
+
+**manuscript specific plot edits**
 how you change the size of the labels in a ggplot object!!
 ```{r}
 faith_combStats_plot$layers[[4]]$aes_params$size <- 5
 ```
 
 ```{r}
-viridis_pal(option = 'C')(3)
+faith_plot_v2 <- faith_plot +
+                    theme_bw(base_size = 20)
+
+faith_stat_vis_v2 <- faith_stat_vis +
+                        scale_fill_gradient2(low = "#0D0887FF",
+                                             high = "#CC4678FF",
+                                             name = 'Group 1 -\nGroup 2')
 ```
 
-*Caption*:
-*a) Faith's Phylogenetic Diversity (alpha diversity) analysis by the five tested diets. The dashed red line at day negative three indicates the day the mice received oral antibiotics and the purple dashed line at day zero indicates with the mice were infected with C. difficile. b) Pairwise comparisons between diets as determined by a Kruskal-Wallis test followed by a Dunn's Post Hoc test with the color gradient indicating the difference in means.*P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).*
+**actual manuscript figure**
 ```{r, warning=FALSE, fig.height=14, fig.width=15}
-plot_grid(faith_plot +
-            theme_bw(base_size = 20), 
-          faith_stat_vis +
-            scale_fill_gradient2(low = "#0D0887FF",
-                                 high = "#CC4678FF",
-                                 name = 'Group 1 -\nGroup 2'),
+plot_grid(faith_plot_v2, 
+          faith_stat_vis_v2,
           faith_combStats_plot,
           ncol = 1,
           rel_heights = c(1, 0.7, 1),
@@ -188,8 +215,6 @@ Plots to go in figure:
 - filter low abundance asvs (anything that's in less than 20% of the samples)
 **- have a distance matrix for every single mouse by their taxonomic information via qiime or r (which taxa are showing more related patterns by diet in mice). then, run an adonis test on it.**
 
-*Caption*:
-*a) Relative abundances of key gut bacterial families by the five tested diets throughout the experimental timeline. The dashed red line at day negative three indicates the day the mice received oral antibiotics and the purple dashed line at day zero indicates with the mice were infected with C. difficile. b) Pairwise comparisons by days relative to infection (columns) and bacterial family (rows) per diet as determined by a Kruskal-Wallis test followed by a Dunn's Post Hoc test with the color gradient indicating the difference in means.*P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).*
 ```{r}
 microbeProd_relAbunStats_plot$layers[[6]]$aes_params$size <- 5
 ```
@@ -205,36 +230,11 @@ plot_grid(genusAbun_plots_together_withLabs,
 fig5
 ```
 
-```{r, fig.height=30, fig.width=29}
-fig5_part_two <- plot_grid(lachno_abun_plot +
-                            theme(axis.title.x = element_blank()) +
-                             labs(y = '',
-                                  subtitle = 'Lachnospiraceae',
-                                  title = 'Obligate Anaerobe Relative Abundance'),
-                            rumino_abun_plot +
-                              theme(plot.title = element_blank()) +
-                              labs(x = 'Days Relative to Infection',
-                                   y = '',
-                                   subtitle = 'Ruminococcaceae'),
-                            path_abun_plot,
-                            microbeProd_relAbunStats_plot,
-                            ncol = 1,
-                            labels = c('a)', ' ', 'b)', 'c)'),
-                            label_size = 20,
-                            rel_heights = c(0.5, 0.5, 1, 0.8),
-                            align = 'hv',
-                            axis = 'tblr')
-
-fig5_part_two_withLabs <- ggdraw(fig5_part_two) +
-  draw_label('Relative Abundace (log10)', x = 0, y = 0.82, angle = 90, size = 20, vjust = 1.5)
-
-fig5_part_two_withLabs
-```
-
-
 ## **Figure 6**
 New experiment culture/mortality results.
-```{r, fig.width=22, fig.height=17}
+
+**manuscript specific edits to plots**
+```{r, fig.width=15, fig.height=8}
 my_viridis_c_palette <- c("#0D0887FF",
                           "#5D01A6FF",
                           "#9C179EFF",
@@ -243,107 +243,97 @@ my_viridis_c_palette <- c("#0D0887FF",
                           "#FDB32FFF",
                           "#999999")
 
-fig6_bottom_row <- plot_grid(everything_stats +
-                               scale_fill_gradient2(low = "#0D0887FF",
-                                 high = "#CC4678FF",
-                                 name = 'Group 1 -\nGroup 2'), NULL,
+(everything_plot_v2 <- everything_plot +
+                        ggtitle('AMC Follow-Up Experiment Culture and Survival Results') +
+                        scale_color_manual(breaks = c('Enterococcus',
+                                    'Escherichia-Shigella',
+                                    'Proteus',
+                                    'enterococcus_escherichiaShigella_proteus',
+                                    'Lactobacillus',
+                                    'Other',
+                                    'None'),
+                         labels = c('Enterococcus',
+                                    'Escherichia-Shigella',
+                                    'Proteus',
+                                    'EC-ES-P',
+                                    'Lactobacillus',
+                                    'Other',
+                                    'None'),
+                         values = my_viridis_c_palette,
+                         name = 'Genus') +
+                        labs(tag = "**EC-ES-P: Enterococcus, Escherichia-Shigella, and Proteus") +
+                        theme(plot.tag.position = c(0.64, 0.30),
+                              plot.tag = element_text(size = 18, face = "bold")))
+
+(everything_stats_v2 <- everything_stats +
+                          ggtitle('AMC Follow-Up Experiment Culture Comparisons') +
+                          scale_fill_gradient2(low = "#0D0887FF",
+                                               high = "#CC4678FF",
+                                               name = 'Group 1 -\nGroup 2'))
+```
+
+**actual manuscript figure**
+```{r, fig.width=20, fig.height=17}
+fig6_bottom_row <- plot_grid(everything_stats_v2, NULL,
                              nrow = 1,
                              rel_widths = c(1, 0.7))
 
-fig6 <- plot_grid(everything_plot +
-                    scale_color_manual(breaks = c('Enterococcus',
-                                'Escherichia-Shigella',
-                                'Proteus',
-                                'enterococcus_escherichiaShigella_proteus',
-                                'Lactobacillus',
-                                'Other',
-                                'None'),
-                     labels = c('Enterococcus',
-                                'Escherichia-Shigella',
-                                'Proteus',
-                                'Enterococcus, Escherichia-Shigella,\nand Proteus',
-                                'Lactobacillus',
-                                'Other',
-                                'None'),
-                     values = my_viridis_c_palette,
-                     name = 'Genus'),
+(fig6 <- plot_grid(everything_plot_v2,
                   fig6_bottom_row,
                   ncol = 1,
                   labels = c('a)', 'b)'),
                   label_size = 20,
-                  rel_heights = c(1, 0.5))
-fig6
-```
-
-```{r, fig.width=30, fig.height=12}
-test_fig6_bottom_row <- plot_grid(everything_stats +
-                               scale_fill_gradient2(low = "#0D0887FF",
-                                 high = "#CC4678FF",
-                                 name = 'Group 1 -\nGroup 2'), NULL,
-                             ncol = 1,
-                             rel_heights = c(0.7, 1))
-
-test_fig6 <- plot_grid(everything_plot +
-                         scale_color_manual(breaks = c('Enterococcus',
-                                'Escherichia-Shigella',
-                                'Proteus',
-                                'enterococcus_escherichiaShigella_proteus',
-                                'Lactobacillus',
-                                'Other',
-                                'None'),
-                     labels = c('Enterococcus',
-                                'Escherichia-Shigella',
-                                'Proteus',
-                                'Enterococcus, Escherichia-Shigella,\nand Proteus',
-                                'Lactobacillus',
-                                'Other',
-                                'None'),
-                     values = my_viridis_c_palette,
-                     name = 'Genus'),
-                  test_fig6_bottom_row,
-                  nrow = 1,
-                  labels = c('a)', 'b)'),
-                  label_size = 20,
-                  rel_widths = c(1, 0.4))
-
-test_fig6
+                  rel_heights = c(1, 0.5)))
 ```
 
 ## **Figure 7**
 Comparison analysis between first set anschutz, u of arizona, and new anschutz experiment microbiome data at day -15 and day 3 with stats.
-```{r, fig.height=13, fig.width=30}
-fig7 <- plot_grid(miniVendor_genusAbun_plot +
-                    scale_fill_manual(values = c("#DB5C68FF", "#FEBC2AFF"),
-                                      name = 'Mouse Vendor',
-                                      labels = c('Charles River', 'Taconic')) +
-                    ggtitle('All Experiment Microbes by Vendor'), 
-                  mini_d3_genus_relAbun_stat_plot +
-                    scale_fill_gradient2(low = "#0D0887FF",
-                                 high = "#CC4678FF",
-                                 name = 'Group 1 -\nGroup 2') +
-                    scale_y_discrete(labels = c('New Anschutz\n(2024) - Charles River',
-                                                'New Anschutz\n(2024) - Taconic',
-                                                'U of Arizona\n- Charles River')) +
-                    ggtitle('All Experiment Microbe Comparisons'),
+
+**manuscript specific edits to plots**
+```{r, fig.height=15, fig.width=15}
+miniVendor_genusAbun_plot_v2 <- miniVendor_genusAbun_plot +
+                                  scale_fill_manual(values = c("#DB5C68FF", "#FEBC2AFF"),
+                                                    name = 'Mouse\nVendor',
+                                                    labels = c('Charles\nRiver', 'Taconic')) +
+                                  scale_x_continuous(breaks = c(1, 2, 3),
+                                                     labels = c('AMC-P',
+                                                                'UA',
+                                                                'AMC-FU')) +
+                                  ggtitle('All Experiment Microbes by Vendor')
+
+(miniVendor_genusAbun_plot_v2_w_legend <- ggdraw(add_sub(plot = miniVendor_genusAbun_plot_v2,
+               label = "**AMC-P: Previous AMC experiments (published)\n**UA: University of Arizona experiments\n**AMC-FU: AMC follow-up experiments",
+               x = 0, hjust = 0, fontface = "bold", size=18)))
+
+
+mini_d3_genus_relAbun_stat_plot_v2 <- mini_d3_genus_relAbun_stat_plot +
+                                          scale_fill_gradient2(low = "#0D0887FF",
+                                                               high = "#CC4678FF",
+                                                               name = 'Group 1 -\nGroup 2') +
+                                          scale_y_discrete(labels = c('AMC-FU:CR',
+                                                                      'AMC-FU:T',
+                                                                      'UA:CR')) +
+                                          scale_x_discrete(labels = c('AMC-\nP:T',
+                                                                      'AMC-\nFU:CR',
+                                                                      'AMC-\nFU:T')) +
+                                          ggtitle('All Experiment Microbe Comparisons')
+
+(mini_d3_genus_relAbun_stat_plot_v2_w_legend <- ggdraw(add_sub(plot = mini_d3_genus_relAbun_stat_plot_v2,
+                          label = "**CR: Charles River\n**T: Taconic",
+                          x = 0, hjust = 0, fontface = "bold", size=18)))
+```
+
+**actual manuscript figure**
+```{r, fig.height=13, fig.width=25}
+(fig7 <- plot_grid(miniVendor_genusAbun_plot_v2_w_legend, 
+                  mini_d3_genus_relAbun_stat_plot_v2_w_legend,
                   labels = c('a)', 'b)'),
                   label_size = 20,
                   nrow = 1,
-                  # align = 'hv',
-                  # axis = 'tblr',
-                  rel_heights = c(1, 1))
-
-fig7
-```
-this just isnt working ugh idk 
-```{r, fig.width=30, fig.height=25}
-plot_grid(test_fig6,
-          fig7,
-          nrow = 2,
-          align = 'hv',
-          axis = 'tblr')
+                  rel_heights = c(1, 1)))
 ```
 
-## *Supplemental Figure 3**
+## **Supplemental Figure 3**
 Plots to go in figure:
 - bile acid concentration/CD toxin/histopathology score correlation comparisons
 - raw concentrations of acetate and propionate at day 3
@@ -361,9 +351,6 @@ figS2
 ```
 
 
-
-
-
 ## **Supplemental Figure 3**
 Plots to go in figure:
 - overall hypoxia plot (location on x-axis)?
@@ -371,8 +358,6 @@ Plots to go in figure:
 - cecal hypoxia/histopathology correlation comparison plot (stats as supplementary since nothing is significant?)
 - only include panels b and e going forward!!
 
-*Caption*:
-*a) Hypoxia measurements for three intestinal locations (cecum, proximal colon, distal colon) in the tested diets, determined by fluorescence of the oxygen sensitive dye, pimonidazole, in the respective tissues. b) Cecal hypoxia measurements between the five tested diets. Statistical analysis was done using a Kruskal-Wallis test followed by a Dunn's Post Hoc test with p-values being corrected for multiple comparisons via Benjamini and Hochberg. c) Linear regression comparison of cecal histologic inflammation scoring to hypoxia across tested diets. d) Linear regression comparison o colon histologic inflammation scoring to hypoxia across tested diets. P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).
 
 **Figure S5**
 ```{r, fig.height=6, fig.width=10}
@@ -392,22 +377,31 @@ figS3
 
 ## **Supplemental Figure 4**
 
-*Caption*:
-*a) Unweighted UniFrac PCoA plots delimited by diet (columns) and by days relative to infection (rows). Individual points are colored by their associated Faith's PD score. b) Microbiome resilience determined using pairwise comparisons between day negative eight (seven days post diet switch and five days prior to oral antibiotic administration) and later time points. c) Microbiome homogeneity determined using pairwise Unweighted UniFrac distances within each time point by tested diets. The dashed red line at day negative three indicates the day the mice received oral antibiotics and the purple dashed line at day zero indicates with the mice were infected with C. difficile. Statistical analysis of microbiome d) resiliency and e) homogeneity was done with a Kruskal-Wallis test followed by a Dunn's Post Hoc test with the color gradient indicating the difference in means between the various groups.*P-value significance* (****p<0.0001, ***p<0.001, **p<0.01, *p<0.05, ns<1).*
+**manuscript specific edits to plots**
+```{r}
+uu_resil_stat_vis_v2 <- uu_resil_stat_vis +
+                          scale_fill_gradient2(high = "#0D0887FF",
+                                               low = "#CC4678FF",
+                                               name = 'Group 1 -\nGroup 2',
+                                               trans = 'reverse') +
+                          theme(legend.position = "None")
+
+uu_homog_stat_vis_v2 <- uu_homog_stat_vis +
+                          scale_fill_gradient2(high = "#0D0887FF",
+                                               low = "#CC4678FF",
+                                               name = 'Group 1 -\nGroup 2',
+                                               trans = 'reverse')
+
+unweighted_pcoa_v2 <- unweighted_pcoa +
+                        theme_bw(base_size = 20) +
+                        theme(strip.text.y.right = element_text(angle = 0)) +
+                        scale_fill_viridis(option = 'C', name = "Faith's\nPD")
+```
+**actual manuscript figure**
 ```{r, warning=FALSE, fig.width=28, fig.height=18}
 ## use NULL to create a ghost plot to alter your rows
 figS4_bottom_row <- plot_grid(uu_resil_plot, uu_homog_plot,
-                             uu_resil_stat_vis +
-                               scale_fill_gradient2(high = "#0D0887FF",
-                                 low = "#CC4678FF",
-                                 name = 'Group 1 -\nGroup 2',
-                                 trans = 'reverse') +
-                               theme(legend.position = "None"), 
-                             uu_homog_stat_vis +
-                               scale_fill_gradient2(high = "#0D0887FF",
-                                 low = "#CC4678FF",
-                                 name = 'Group 1 -\nGroup 2',
-                                 trans = 'reverse'),
+                             uu_resil_stat_vis_v2, uu_homog_stat_vis_v2,
                              nrow = 2,
                              rel_heights = c(1, 0.7),
                              rel_widths = c(0.90, 1),
@@ -423,10 +417,7 @@ figS4_top_right <- plot_grid(lacto_contam_plot,
 
                     
 figS4_top_row <- plot_grid(figS4_top_right,
-                          unweighted_pcoa +
-                            theme_bw(base_size = 20) +
-                            theme(strip.text.y.right = element_text(angle = 0)) +
-                            scale_fill_viridis(option = 'C', name = "Faith's\nPD"),
+                          unweighted_pcoa_v2,
                           nrow = 1,
                           rel_widths = c(0.9, 1),
                           labels = c('', 'c)'),
@@ -442,25 +433,32 @@ figS4
 
 ## **Supplemental Figure 7**
 
-*Caption:*
-*Mouse survival between diets for mice from the two different vendors. We conducted another round of mouse experiments in 2024 at the Anschutz Medical Campus to investigate the differences in survival results seen between our previous experiment and this one. This plot shows how mouse survival was not significantly different between vendors (except for in the LF/HF diet which had a p-value of 0.03) and that the survival trends are similar to what is depicted in Figures 1 and S7. A Cox Proportional Hazards (PH) regression model indicated that only mice on the low-fat/low-fiber diet (hazard ratio = 3.66, p-value = 0.004) had significantly worse survival as compared to mice on chow. P-value significance determined via Kaplan-Meier tests, shaded area shows a 95% CI (**** : p<0.0001, *** : p<0.001, ** : p<0.01, * : p<0.05, ns : p≥0.05).*
+**manuscript specific edits to plots**
+```{r}
+newExp_dietVendor_surv_plot_v2 <- newExp_dietVendor_surv_plot +
+                                    labs(title = 'Mouse Survival After Infection by Diet and Vendor',
+                                         subtitle = 'AMC Follow-Up Experiments',
+                                         x = 'Days Post Infection',
+                                         y = 'Survival Probability')
 
-```{r, fig.height=17, fig.width=17}
-(figS7 <- plot_grid(newExp_dietVendor_surv_plot,
-          newExp_avWeight_plot +
-            labs(title = 'Weight Change After Infection by Diet',
-                 x = 'Days Post Infection'),
-          labels = c('a)', 'b)'),
-          label_size = 20,
-          nrow = 2,
-          rel_heights = c(0.70, 1),
-          align = 'hv',
-          axis = 'tblr'))
+newExp_avWeight_plot_v2 <- newExp_avWeight_plot +
+                            labs(title = 'Weight Change After Infection by Diet',
+                                 x = 'Days Post Infection')
 ```
 
+**actual manuscript figure**
+```{r, fig.height=17, fig.width=17}
+(figS7 <- plot_grid(newExp_dietVendor_surv_plot_v2,
+                    newExp_avWeight_plot_v2,
+                    labels = c('a)', 'b)'),
+                    label_size = 20,
+                    nrow = 2,
+                    rel_heights = c(0.70, 1),
+                    align = 'hv',
+                    axis = 'tblr'))
+```
 
-
-**Saving my Outputs**
+## **Saving my Outputs**
 as a .pdf and not an rdata object (just to clarify)
 ```{r}
 ggsave('fig1.pdf',
@@ -496,12 +494,12 @@ ggsave('fig5.pdf',
 
 ggsave('fig6.pdf',
        plot = fig6,
-       width = 22,
+       width = 20,
        height = 17)
 
 ggsave('fig7.pdf',
        plot = fig7,
-       width = 30,
+       width = 25,
        height = 13)
 
 ## used to be supplemental figures 3 and 4 but they got combined

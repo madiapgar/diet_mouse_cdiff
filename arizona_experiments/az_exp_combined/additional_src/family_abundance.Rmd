@@ -1,0 +1,583 @@
+---
+title: "family_abundance"
+output: html_document
+date: "2023-06-27"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(qiime2R)
+library(tidyverse)
+library(cowplot)
+library(magrittr)
+library(vegan)
+library(viridis)
+library(broom)
+library(rstatix)
+library(ggpubr)
+library(ggh4x)
+```
+
+**Function**
+```{r}
+## abundance file prep and filtering function
+## combines all files into one large table
+family_abun_file_prep <- function(metadata_fp,
+                                  tax_fp,
+                                  otu_table_fp,
+                                  tax_level,
+                                  wanted_tax){
+  ## metadata
+  metadata <- read_tsv(metadata_fp)
+  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
+  ## taxonomy
+  taxonomy <- read_qza(tax_fp)$data %>% 
+  parse_taxonomy() %>% 
+  rownames_to_column('asv')
+  ## otu table 
+  otu_table <- read_qza(otu_table_fp)$data
+  otu_table %>% 
+    as_tibble(rownames = 'asv') %>% 
+    gather(-asv, key = sampleid, value = abun) %>% 
+    group_by(sampleid) %>% 
+    mutate(rel_abun = abun/sum(abun)) %>% 
+    mutate(rel_abun = rel_abun + 0.000001) -> otu_table
+  ## joining all tables together 
+  otu_table %>% 
+    left_join(metadata, by = 'sampleid') %>% 
+    left_join(taxonomy, by = 'asv') -> abun_table
+  abun_table %>% 
+    group_by(sampleid, day_post_inf, diet, mouse_id, 
+             purified_diet, high_fat, high_fiber, study,
+             seq_depth, .data[[tax_level]]) %>% 
+    summarise(rel_abund = sum(rel_abun)) %>% 
+    filter(.data[[tax_level]] %in% wanted_tax) %>% 
+    mutate(mouse_fact = as.factor(mouse_id),
+           day_fact = as.factor(day_post_inf)) %>% 
+    filter(!is.na(diet)) -> abun_filt
+  ## creating a list for my outputs
+  my_list <- list(Metadata = metadata,
+                  Taxonomy = taxonomy,
+                  OTUTable = otu_table,
+                  AbundanceTable = abun_filt)
+  return(my_list)
+}
+
+## takes large assembled table and creates the quantitative plot 
+abun_plots <- function(abundance_table,
+                       x_axis,
+                       y_axis,
+                       box_group_by,
+                       line_group_by,
+                       facet_rows,
+                       row_labs,
+                       col_labs,
+                       title,
+                       x_label,
+                       y_label){
+  ## microbe relative abundance plot!
+  abundance_table %>%
+    ggplot(aes(x = .data[[x_axis]], y = .data[[y_axis]])) +
+      scale_y_continuous(trans = 'log10') +
+      scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
+      geom_boxplot(aes(group = .data[[box_group_by]]), outlier.shape = NA) +
+      geom_vline(xintercept = -3, linetype = 'dashed', color = 'red', size = 0.2) +
+      geom_vline(xintercept = 0, linetype = 'dashed', color = 'purple', size = 0.2) +
+      geom_line(aes(group = .data[[line_group_by]]), alpha = 0.1) +
+      geom_smooth(se = FALSE) +
+      geom_jitter(width = 0.1, height = 0, alpha = 0.6) +
+      theme_bw(base_size = 20) +
+      facet_grid(.data[[facet_rows]]~diet, 
+                 labeller = labeller(diet = col_labs,
+                                     .rows = row_labs)) +
+      theme(strip.text.y = element_text(angle = 0)) +
+      ggtitle(title) +
+      ylab(y_label) +
+      xlab(x_label) -> abun_plot
+  return(abun_plot)
+}
+
+## runs statistics on the large assembled data table for stat visualization
+abun_stats <- function(filtered_table,
+                       tax_level){
+  ## linear modeling 
+  filtered_table %>%
+    na.omit() %>% 
+    filter(day_post_inf > -15) %>% 
+    group_by(.data[[tax_level]], day_post_inf) %>% 
+    do(glance(lm(rel_abund ~ (purified_diet * seq_depth) + high_fat * high_fiber,
+              data =.))) %>% 
+    ungroup() %>% 
+    na.omit() %>% 
+    mutate(adj.p = p.adjust(p.value, 
+                            method = "BH"),
+          test_id = paste(.data[[tax_level]], day_post_inf, sep = "_")) %>% 
+    filter(adj.p <= 0.05) -> lm_full
+  filtered_table %>%
+    na.omit() %>% 
+    group_by(.data[[tax_level]], day_post_inf) %>% 
+    mutate(test_id = paste(.data[[tax_level]], day_post_inf, sep = "_")) %>% 
+    filter(test_id %in% lm_full$test_id) %>% 
+    do(tidy(lm(rel_abund ~ (purified_diet * seq_depth) + high_fat * high_fiber,
+             data =.))) %>% 
+    na.omit() %>% 
+    filter(term != '(Intercept)') -> linear_model
+  linear_model['signif'] <- symnum(linear_model$p.value,
+                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                   symbols = c("****", "***", "**", "*", "ns"),
+                                   abbr.colnames = FALSE,
+                                   na = "")
+  ## kruskal wallis test 
+  filtered_table %>% 
+    na.omit() %>% 
+    group_by(.data[[tax_level]], day_post_inf) %>% 
+    do(tidy(kruskal.test(rel_abund ~ diet,
+               data = .))) %>% 
+    ungroup() %>% 
+    arrange(p.value) %>% 
+    mutate(p.adj = p.adjust(p.value,
+                            method = "BH"),
+           test_id = paste(.data[[tax_level]], day_post_inf, sep = "_")) %>% 
+    filter(p.adj <= 0.05) -> kruskal
+  ## dunn's post hoc test
+  filtered_table %>% 
+    na.omit() %>% 
+    group_by(.data[[tax_level]], day_post_inf) %>%
+    mutate(test_id = paste(.data[[tax_level]], day_post_inf, sep = "_")) %>% 
+    filter(test_id %in% kruskal$test_id) %>% 
+    dunn_test(rel_abund ~ diet,
+              p.adjust.method = 'BH',
+              data = .) -> dunn
+  ## editing my dunn's post hoc test to include the difference in means between groups 
+  filtered_table %>% 
+    group_by(diet, .data[[tax_level]], day_post_inf) %>% 
+    summarise(mean_rel_abund = mean(rel_abund)) -> mean_abun
+  dunn %>% 
+    merge(mean_abun, 
+          by.x = c('group1',
+                   'day_post_inf',
+                   tax_level),
+          by.y = c('diet',
+                   'day_post_inf',
+                   tax_level)) %>% 
+    rename('group1_rel_abun' = 'mean_rel_abund') %>% 
+    merge(mean_abun,
+          by.x = c('group2',
+                   'day_post_inf',
+                   tax_level),
+          by.y = c('diet',
+                   'day_post_inf',
+                   tax_level)) %>% 
+    rename('group2_rel_abun' = 'mean_rel_abund') %>% 
+    mutate(diff_means = (group1_rel_abun - group2_rel_abun),
+           stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
+  ## creating a list of my outputs
+  my_list <- list(LinearModel = linear_model,
+                  KruskalTest = kruskal,
+                  TestDunn = dunn,
+                  DunnPostHoc = new_dunn)
+  return(my_list)
+}
+
+## can drop the 'new' dunn test results into this function for the 
+## stat visualization 
+stat_plot <- function(new_dunn,
+                      tax_level,
+                      row_labs){
+  new_dunn %>% 
+    filter(day_post_inf != -15) %>% 
+    ggplot(aes(x = day_post_inf, y = group2)) +
+    geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
+    scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
+    geom_text(aes(label = p.adj.signif)) +
+    scale_x_continuous(breaks = c(-15, -8, -3, 0, 3)) +
+    scale_y_discrete(labels = c('HFt / HFb',
+                                'HFt / LFb',
+                                'LFt / HFb',
+                                'LFt / LFb')) +
+    facet_grid(.data[[tax_level]]~group1,
+               scales = 'free_x',
+               labeller = labeller(group1 = diet_stat_labs,
+                                   .rows = row_labs)) +
+    theme_bw(base_size = 20) +
+    ggtitle(label = 'Microbe Comparisons',
+            subtitle = 'Group 1') +
+    theme(strip.text.y = element_text(angle = 0),
+          plot.subtitle = element_text(hjust = 0.5)) +
+    xlab('Days Relative to Infection') +
+    ylab('Group 2') -> stat_plot
+  return(stat_plot)
+}
+```
+
+**Needed File Paths**
+```{r}
+## day 3 substituted with cecal samples and batch 1 filtered out
+otu_table_FP <- '../data/comp_qiime/tax_s1_filt.qza'
+tax_FP <- '../data/comp_qiime/taxonomy.qza'
+metadata_FP <- '../data/misc/s1_filt_comp_metadata.tsv'
+
+## for regular abundance plots
+diet_labs <- 
+  c('Chow', 
+    'High Fat / High Fiber', 
+    'High Fat / Low Fiber', 
+    'Low Fat / High Fiber', 
+    'Low Fat / Low Fiber')
+names(diet_labs) <- c('Chow', 
+                      'HF/HF', 
+                      'HF/LF', 
+                      'LF/HF', 
+                      'LF/LF')
+
+fam_row_labs <- c('Lachnospiraceae',
+                  'Ruminococcaceae',
+                  'Peptostreptococcaceae',
+                  'Lactobacillaceae',
+                  'Enterobacteriaceae',
+                  'Enterococcaceae',
+                  'Staphylococcaceae')
+names(fam_row_labs) <- c(1,
+                         2,
+                         3,
+                         4,
+                         5,
+                         6,
+                         7)
+
+poster_row_labs <- c('Lachnospiraceae',
+                      'Ruminococcaceae',
+                      'Enterobacteriaceae', 
+                      'Enterococcaceae', 
+                      'Staphylococcaceae')
+names(poster_row_labs) <- c(1,
+                            2,
+                            3,
+                            4,
+                            5)
+
+## for stat plots
+diet_stat_labs <- c('Chow', 
+                    'High Fat / High Fiber', 
+                    'High Fat / Low Fiber', 
+                    'Low Fat / High Fiber')
+names(diet_stat_labs) <- c('Chow', 
+                            'HF/HF', 
+                            'HF/LF', 
+                            'LF/HF')
+
+wanted_level <- 'Family'
+
+wanted_family <- c('Enterobacteriaceae', 
+                   'Lactobacillaceae', 
+                   'Lachnospiraceae', 
+                   'Enterococcaceae',
+                   'Ruminococcaceae',
+                   'Staphylococcaceae',
+                   'Peptostreptococcaceae')
+
+poster_wanted_family <- c('Lachnospiraceae',
+                          'Ruminococcaceae',
+                          'Enterobacteriaceae', 
+                          'Enterococcaceae', 
+                          'Staphylococcaceae')
+
+wanted_level2 <- 'Genus'
+wanted_genus <- c('Proteus', 
+                  'Escherichia-Shigella',
+                  'Enterococcus',
+                  'Staphylococcus',
+                  'Erysipelatoclostridium',
+                  '[Clostridium]_innocuum_group',
+                  'Bacteroides')
+```
+
+**Looking into peptostreptococcaceae genera and species**
+cathy wanted more info about these so here's the code i used to generate it 
+```{r}
+pepto_table <- read_qza(tax_FP)$data %>% 
+  parse_taxonomy() %>% 
+  filter(Family == 'Peptostreptococcaceae')
+
+pepto_genera <- pepto_table %>% 
+  count(Genus)
+
+pepto_species <- pepto_table %>% 
+  count(Species)
+
+pepto_genus_list <- pepto_genera$Genus
+
+pepto_abun_files <- family_abun_file_prep(metadata_fp = metadata_FP,
+                                         tax_fp = tax_FP,
+                                         otu_table_fp = otu_table_FP,
+                                         tax_level = wanted_level2,
+                                         wanted_tax = pepto_genus_list)
+
+pepto_abun_filt <- pepto_abun_files$AbundanceTable
+
+pepto_by_day <- pepto_abun_filt %>% 
+  filter(rel_abund > 0.00001) %>% 
+  group_by(day_post_inf, diet) %>% 
+  count(Genus) %>% 
+  na.omit() %>% 
+  spread(diet, n, fill = 0)
+
+pepto_by_day
+
+# write_tsv(pepto_by_day,
+#           '../data/misc/pepto_genus_info.tsv')
+```
+
+
+**File Prep for Plot Construction**
+```{r}
+## for regular plot 
+abun_files <- family_abun_file_prep(metadata_FP,
+                                    tax_FP,
+                                    otu_table_FP,
+                                    wanted_level,
+                                    wanted_family)
+
+abun_filt <- abun_files$AbundanceTable
+abun_filt %>% 
+  mutate(order = case_when(
+                  Family == 'Lachnospiraceae' ~ 1,
+                  Family == 'Ruminococcaceae' ~ 2,
+                  Family == 'Peptostreptococcaceae' ~ 3,
+                  Family == 'Lactobacillaceae' ~ 4,
+                  Family == 'Enterobacteriaceae' ~ 5,
+                  Family == 'Enterococcaceae' ~ 6,
+                  Family == 'Staphylococcaceae' ~ 7
+                ),
+         microbe_ident = ifelse(Family == 'Lachnospiraceae' | Family == 'Ruminococcaceae' |
+                                  Family == 'Peptostreptococcaceae', 'Obligate\nAnaerobe',
+                                'Facultative\nAnaerobe')) -> abun_filt
+tax <- abun_files$Taxonomy
+
+## for poster presentation plot (shortened)
+poster_abun_files <- family_abun_file_prep(metadata_FP,
+                                            tax_FP,
+                                            otu_table_FP,
+                                            wanted_level,
+                                            poster_wanted_family)
+
+poster_abun_filt <- poster_abun_files$AbundanceTable
+
+poster_abun_filt %>% 
+  mutate(order = ifelse(Family == 'Lachnospiraceae', 1, Family),
+         order = ifelse(Family == 'Ruminococcaceae', 2, order),
+         order = ifelse(Family == 'Enterobacteriaceae', 3, order),
+         order = ifelse(Family == 'Enterococcaceae', 4, order),
+         order = ifelse(Family == 'Staphylococcaceae', 5, order)) -> poster_abun_filt
+
+poster_abun_filt %>% 
+  filter(Family == 'Lachnospiraceae' | Family == 'Ruminococcaceae') -> mini_poster_obAn
+
+poster_abun_filt %>% 
+  filter(Family == 'Enterobacteriaceae' | Family == 'Enterococcaceae' | 
+           Family == 'Staphylococcaceae') -> mini_poster_facAn
+```
+
+**Family Abundance Plots**
+```{r, warning=FALSE, fig.width=18, fig.height=9}
+## full sized regular plot
+family_abun1 <- abun_plots(abundance_table = abun_filt,
+                           x_axis = 'day_post_inf',
+                           y_axis = 'rel_abund',
+                           box_group_by = 'day_post_inf',
+                           line_group_by = 'mouse_fact',
+                           facet_rows = 'order',
+                           row_labs = fam_row_labs,
+                           col_labs = diet_labs,
+                           title = 'Microbe Family Relative Abundance',
+                           x_label = 'Days Relative to Infection',
+                           y_label = 'Relative Abundance')
+
+## shortened plot for poster presentation
+poster_abun1 <- abun_plots(abundance_table = poster_abun_filt,
+                           x_axis = 'day_post_inf',
+                           y_axis = 'rel_abund',
+                           box_group_by = 'day_post_inf',
+                           line_group_by = 'mouse_fact',
+                           facet_rows = 'order',
+                           row_labs = poster_row_labs,
+                           col_labs = diet_labs,
+                           title = 'Microbe Family Relative Abundance',
+                           x_label = 'Days Relative to Infection',
+                           y_label = 'Relative Abundance')
+
+## poster presentation plot broken up to only include OBLIGATE anaerobes
+obAnaerobe_abun <- abun_plots(abundance_table = mini_poster_obAn,
+                             x_axis = 'day_post_inf',
+                             y_axis = 'rel_abund',
+                             box_group_by = 'day_post_inf',
+                             line_group_by = 'mouse_fact',
+                             facet_rows = 'order',
+                             row_labs = poster_row_labs,
+                             col_labs = diet_labs,
+                             title = 'Obligate Anaerobe Relative Abundance',
+                             x_label = 'Days Relative to Infection',
+                             y_label = 'Relative Abundance')
+
+## poster presentation plot broken up to only include FACULTATIVE anaerobes
+facAnaerobe_abun <- abun_plots(abundance_table = mini_poster_facAn,
+                             x_axis = 'day_post_inf',
+                             y_axis = 'rel_abund',
+                             box_group_by = 'day_post_inf',
+                             line_group_by = 'mouse_fact',
+                             facet_rows = 'order',
+                             row_labs = poster_row_labs,
+                             col_labs = diet_labs,
+                             title = 'Facultative Anaerobe Relative Abundance',
+                             x_label = 'Days Relative to Infection',
+                             y_label = 'Relative Abundance')
+
+
+obAnaerobe_abun
+facAnaerobe_abun
+family_abun1
+```
+
+```{r, fig.height=10, fig.width=17}
+poster_abun1
+```
+
+
+```{r, fig.height=13, fig.width=17}
+## regular stats
+fam_abun_stats <- abun_stats(abun_filt,
+                             'order')
+kruskal <- fam_abun_stats$KruskalTest
+new_dunn <- fam_abun_stats$DunnPostHoc
+family_abun_lm <- fam_abun_stats$LinearModel
+
+stat_plot1 <- stat_plot(new_dunn,
+                        'order',
+                        fam_row_labs)
+
+## poster presentation stats
+poster_abun_stats <- abun_stats(poster_abun_filt,
+                                'order')
+poster_kruskal <- poster_abun_stats$KruskalTest
+poster_new_dunn <- poster_abun_stats$DunnPostHoc
+poster_abun_lm <- poster_abun_stats$LinearModel
+
+poster_stat_plot1 <- stat_plot(poster_new_dunn,
+                              'order',
+                              poster_row_labs)
+
+
+
+stat_plot1
+poster_stat_plot1
+```
+
+**Putting my Plots Together**
+```{r, fig.height=12, fig.width=35}
+## regular plots 
+plot_grid(family_abun1, stat_plot1,
+          nrow = 1,
+          labels = c('a)', 'b)'),
+          label_size = 22,
+          rel_widths = c(1, 0.8)) -> plots_together
+
+## poster presentation plots
+plot_grid(poster_abun1, poster_stat_plot1,
+          nrow = 1,
+          labels = c('a)', 'b)'),
+          label_size = 22,
+          rel_widths = c(1, 0.9)) -> poster_plots_together
+
+plots_together
+```
+
+```{r, fig.height=10, fig.width=32}
+poster_plots_together
+```
+
+**Plotting the Relative Abundance of Genus Specifically**
+looking at genuses found in the blood culture results in our microbiome data. 
+```{r, warning=FALSE, fig.height=10, fig.width=17}
+genus_files <- family_abun_file_prep(metadata_FP,
+                                     tax_FP,
+                                     otu_table_FP,
+                                     wanted_level2,
+                                     wanted_genus)
+
+genus_abun_filt <- genus_files$AbundanceTable
+
+## plots
+genus_plot1 <- abun_plots(abundance_table = genus_abun_filt,
+                          x_axis = 'day_post_inf',
+                          y_axis = 'rel_abund',
+                          box_group_by = 'day_post_inf',
+                          line_group_by = 'mouse_fact',
+                          facet_rows = wanted_level2,
+                          row_labs = NULL,
+                          col_labs = diet_labs,
+                          title = 'Microbiome Genus Relative Abundance',
+                          x_label = 'Days Relative to Infection',
+                          y_label = 'Relative Abundance')
+genus_plot1
+```
+
+**Saving my Outputs**
+```{r}
+## microbe family relative abundance plots as a .pdf
+ggsave("family_abun1.pdf",
+       plot = family_abun1, 
+       width = 17, 
+       height = 13, 
+       path = '../plots')
+ggsave("../plots/mini_family_abun1.pdf",
+       plot = poster_abun1,
+       width = 17,
+       height = 10)
+ggsave("../plots/obAnaerobe_family_abun.pdf",
+       plot = obAnaerobe_abun,
+       width = 18,
+       height = 8)
+ggsave("../plots/facAnaerobe_family_abun.pdf",
+       plot = facAnaerobe_abun,
+       width = 18,
+       height = 9)
+ggsave("famAbun_stat_vis.pdf",
+       plot = stat_plot1, 
+       width = 17, 
+       height = 13, 
+       path = '../plots')
+ggsave("../plots/mini_famAbun_stat_vis.pdf",
+       plot = poster_stat_plot1,
+       width = 17,
+       height = 13)
+ggsave("famAbun_together.pdf",
+       plot = plots_together, 
+       width = 35, 
+       height = 12, 
+       path = '../plots')
+ggsave("../plots/genus_abun1.pdf",
+       plot = genus_plot1,
+       width = 17,
+       height = 10)
+
+## plots as an rdata object
+save(family_abun1,
+     file = '../../figures/short_fam_abun.rdata')
+save(stat_plot1,
+     file = '../../figures/short_fam_abun_stats.rdata')
+save(poster_abun1,
+     file = '../../posters/poster_fam_abun.rdat')
+save(poster_stat_plot1,
+     file = '../../posters/poster_fam_abun_stats.rdat')
+save(genus_plot1,
+     file = '../../figures/genus_abun.rdat')
+
+## linear modeling results
+write_tsv(family_abun_lm,
+          '../stats/family_abun_lm.tsv')
+write_tsv(new_dunn,
+          '../stats/family_abun_dunn.tsv')
+```

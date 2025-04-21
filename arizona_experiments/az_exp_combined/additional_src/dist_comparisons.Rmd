@@ -1,0 +1,106 @@
+---
+title: "distance_comparisons"
+output: html_document
+date: "2023-11-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(qiime2R)
+library(ggpubr)
+library(ggplot2)
+library(magrittr)
+library(ggh4x)
+library(knitr)
+library(DT)
+```
+
+**Needed File Paths**
+```{r}
+metadata_FP <- '../data/misc/s1_filt_comp_metadata.tsv'
+uw_dist_fp <- '../data/s1_filt_core/uw_dist_matrix.tsv'
+w_dist_fp <- '../data/s1_filt_core/w_dist_matrix.tsv'
+```
+
+**Reading in Distance Matrices and Metadata**
+```{r}
+metadata <- read_tsv(metadata_FP)
+names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
+
+uw_dist <- read_tsv(uw_dist_fp)
+names(uw_dist)[names(uw_dist) == '...1'] <- 'row_sampleid'
+
+w_dist <- read_tsv(w_dist_fp)
+names(w_dist)[names(w_dist) == '...1'] <- 'row_sampleid'
+```
+
+**Data Wrangling**
+```{r}
+metadata %>% 
+  select(sampleid, sample_type, mouse_id, diet) -> mini_meta
+
+uw_dist %>% 
+  gather(-row_sampleid, key = col_sampleid, value = dist) %>% 
+  merge(mini_meta, by.x = 'row_sampleid', by.y = 'sampleid') %>% 
+  merge(mini_meta, by.x = 'col_sampleid', by.y = 'sampleid') %>% 
+  mutate(dist_key = paste(row_sampleid, col_sampleid, sep = "_"),
+         samp_type_key = paste(sample_type.x, sample_type.y, sep = "_"),
+         mouse_id_key = paste(mouse_id.x, mouse_id.y, sep = "_")) -> uw_dist
+
+
+## stool sample paired by mouse id table
+uw_dist %>% 
+  filter(sample_type.x == 'colon',
+         sample_type.y == 'colon',
+         mouse_id.x == mouse_id.y) %>% 
+  mutate(class = 'stool_same_mouse') -> uw_dist_mouse
+
+## matched by mouse id cecal and stool sample table
+uw_dist %>% 
+  filter(sample_type.x != sample_type.y,
+         mouse_id.x == mouse_id.y) %>% 
+  mutate(class = 'cecal_stool_matched') -> uw_dist_cecStool_match
+
+## unmatched by mouse id cecal and stool sample table
+uw_dist %>% 
+  filter(sample_type.x != sample_type.y,
+         mouse_id.x != mouse_id.y) %>% 
+  mutate(class = 'cecal_stool_unmatched') -> uw_dist_cecStool_unmatch
+
+## putting all tables together
+rbind(uw_dist_mouse,
+      uw_dist_cecStool_match,
+      uw_dist_cecStool_unmatch) -> uw_dist_giant
+
+uw_dist_giant %>% 
+  filter(row_sampleid != col_sampleid) -> uw_dist_giant
+```
+
+**Tables I Created**
+```{r}
+DT::datatable(uw_dist_mouse)
+```
+
+```{r}
+DT::datatable(uw_dist_cecStool_match)
+```
+
+```{r}
+DT::datatable(uw_dist_cecStool_unmatch)
+```
+
+
+**Attempt at Some Kind of Plot**
+```{r, fig.width=13, fig.height=7}
+uw_dist_giant %>% 
+  ggplot(aes(x = class, y = dist)) +
+  geom_boxplot(aes(group = class, fill = class), alpha = 0.5) +
+  # geom_jitter(alpha = 0.3, width = 0.1, height = 0) +
+  theme_bw() 
+  # facet_wrap(~diet.x)
+```
+

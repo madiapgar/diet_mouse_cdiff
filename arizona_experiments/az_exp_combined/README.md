@@ -34,60 +34,13 @@ az_exp_combined
 │   └── timeline_fig.Rmd
 ├── data
 │   ├── comp_qiime
-│   │   ├── comp_tss_filt_table.qza
-│   │   ├── comp_tss_rem_table.qza
-│   │   ├── filt_comp_table.qza
-│   │   ├── lactoOnly_rep_seqs.fasta
-│   │   ├── lacto_rep_seqs.qza
-│   │   ├── lacto_table.qza
-│   │   ├── placements.qza
-│   │   ├── rem_comp_table.qza
-│   │   ├── tax_day3_filt.qza
-│   │   ├── tax_filt_actual.qza
 │   │   ├── tax_s1_filt.qza
 │   │   ├── taxonomy.qza
-│   │   ├── taxonomy_filtered.qza
-│   │   ├── taxonomy_filtered.qzv
-│   │   ├── tree.qza
-│   │   ├── tss_tax_filt.qza
-│   │   └── tss_tax_filt.qzv
-│   ├── day3_filt_core
-│   │   ├── bray_curtis_distance_matrix.qza
-│   │   ├── bray_curtis_emperor.qzv
-│   │   ├── bray_curtis_pcoa_results.qza
-│   │   ├── evenness_vector.qza
-│   │   ├── faith_pd.tsv
-│   │   ├── faith_pd_vector.qza
-│   │   ├── jaccard_distance_matrix.qza
-│   │   ├── jaccard_emperor.qzv
-│   │   ├── jaccard_pcoa_results.qza
-│   │   ├── observed_features_vector.qza
-│   │   ├── rarefied_table.qza
-│   │   ├── shannon_entropy.tsv
-│   │   ├── shannon_vector.qza
-│   │   ├── unweighted_unifrac_distance_matrix.qza
-│   │   ├── unweighted_unifrac_emperor.qzv
-│   │   ├── unweighted_unifrac_pcoa_results.qza
-│   │   ├── uw_dist_matrix.tsv
-│   │   ├── w_dist_matrix.tsv
-│   │   ├── weighted_unifrac_distance_matrix.qza
-│   │   ├── weighted_unifrac_emperor.qzv
-│   │   └── weighted_unifrac_pcoa_results.qza
+│   │   └── taxonomy_filtered.qza
 │   ├── misc
-│   │   ├── all_cecal_rep_seqs.qza
 │   │   ├── comp_metadata.tsv
 │   │   ├── comp_rep_seqs.qza
 │   │   ├── comp_table.qza
-│   │   ├── comp_tss_table.biom
-│   │   ├── comp_tss_table.qza
-│   │   ├── comp_tss_table.tsv
-│   │   ├── d3_filt_comp_metadata.tsv
-│   │   ├── euk_filt-mergedDietAim1rep-seqs_051523-Copy1.qza
-│   │   ├── euk_filt_mergedDietAim1table_051523-Copy1.qza
-│   │   ├── filt_cecal_table.qza
-│   │   ├── ml_base.csv
-│   │   ├── ml_base.tsv
-│   │   ├── pepto_genus_info.tsv
 │   │   └── s1_filt_comp_metadata.tsv
 │   └── s1_filt_core
 │       ├── bray_curtis_distance_matrix.qza
@@ -198,8 +151,6 @@ az_exp_combined
     ├── q_merge_tables.sh
     ├── resil_calc.R
     └── total_sum_scaling.R
-
-11 directories, 164 files
 ```
 
 **Additional information on directory contents:**

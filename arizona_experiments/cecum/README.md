@@ -1,6 +1,6 @@
 # University of Arizona Mouse Experiment: Cecal Content Samples
 
-Holds all of the general alpha/beta diversity, taxonomic relative abundance, histopathology, hypoxia, and metabolomic (SFCA, toxin, bile acids) analysis done for the cecal content samples collected upon sacrifice at day3. 
+Holds all of the general alpha/beta diversity, taxonomic relative abundance, histopathology, hypoxia, and metabolomic (SFCA, toxin, bile acids) analysis done for the cecal content samples collected upon sacrifice at day3.
 
 ## Paper Relevance:
 
@@ -14,15 +14,18 @@ Paper figures/tables generated from the contents of this directory:
 -   Supplemental Figure 2a-c
 -   Supplemental Figure 3a
 
-| Figure                   | Associated Scripts                                         |
-|--------------------------|------------------------------------------------------------|
-| Figure 2a-c              | a: `main_src/toxin.Rmd` <br/> b: `main_src/histopathology.Rmd`<br/> c: `main_src/toxin_meta_histo_comp.Rmd`                    |
-| Figure 3a-e              | a: `main_src/bile_acid.Rmd` <br/> b: `main_src/bile_acid.Rmd` <br/> c: `main_src/figure3_redo.Rmd` <br/> d: `main_src/metabolomics.Rmd` <br/> e: `main_src/figure3_redo.Rmd`                             |
-| Figure 4c                | c: `main_src/microbiome_cecum_comp.Rmd`                    |
-| Figure 5c                | c: `main_src/microbiome_cecum_comp.Rmd`                    |
-| Supplemental Figure 1a-b | a: `main_src/histo_hypoxia_comp.Rmd` \*\*CONSIDER CHANGING <br/> b: `main_src/histo_hypoxia_comp.Rmd` \*\*CONSIDER CHANGING |
-| Supplemental Figure 2a-c | a: `main_src/acetate_propionate_comp_redo.Rmd` <br/> b: `main_src/metabolomics.Rmd` <br/> c: `main_src/acetate_propionate_comp_redo.Rmd`             |
-| Supplemental Figure 3a   | a: `main_src/hypoxia.Rmd`                                  |
+> [!IMPORTANT] 
+> Plot names in the table also match the variable names of plots included in the [apppleplots](https://github.com/madiapgar/apppleplots) R package!
+
+| Figure                   | Associated Scripts                                                                                                                                                           | Plot Names                                                                                                                                      |
+|----------------------|---------------------------|-----------------------|
+| Figure 2a-c              | a: `main_src/toxin.Rmd` <br/> b: `main_src/histopathology.Rmd`<br/> c: `main_src/toxin_meta_histo_comp.Rmd`                                                                  | a: `neat_plot` <br/> b: `all_day_plot` <br/> c: `noDiet_histoCecum_toxStats_plot`                                                               |
+| Figure 3a-e              | a: `main_src/bile_acid.Rmd` <br/> b: `main_src/bile_acid.Rmd` <br/> c: `main_src/figure3_redo.Rmd` <br/> d: `main_src/metabolomics.Rmd` <br/> e: `main_src/figure3_redo.Rmd` | a: `dca_sep_plot` <br/> b: `ratio_bile_plot` <br/> c: `panelC_fig3_redoWithlab` <br/> d: `butyrateOnly_plot` <br/> e: `panelE_fig3_redoWithlab` |
+| Figure 4c                | c: `main_src/microbiome_cecum_comp.Rmd`                                                                                                                                      | c: `faith_combStats_plot`                                                                                                                       |
+| Figure 5c                | c: `main_src/microbiome_cecum_comp.Rmd`                                                                                                                                      | c: `microbeProd_relAbunStats_plot`                                                                                                              |
+| Supplemental Figure 1a-b | a: `main_src/histo_hypoxia_comp.Rmd` \*\*CONSIDER CHANGING <br/> b: `main_src/histo_hypoxia_comp.Rmd` \*\*CONSIDER CHANGING                                                  | a: `cecum_plot` <br/> b: `colon_plot`                                                                                                           |
+| Supplemental Figure 2a-c | a: `main_src/acetate_propionate_comp_redo.Rmd` <br/> b: `main_src/metabolomics.Rmd` <br/> c: `main_src/acetate_propionate_comp_redo.Rmd`                                     | a: `supp_fig2a` <br/> b: `supp_fig2bc` <br/> c: `supp_fig2bc`                                                                                   |
+| Supplemental Figure 3a   | a: `main_src/hypoxia.Rmd`                                                                                                                                                    | a: `hypoxia_cecum_plot`                                                                                                                         |
 
 ## Directory Key:
 

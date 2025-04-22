@@ -1,6 +1,6 @@
 # University of Arizona Mouse Experiment: Stool Samples
 
-Holds all of the general alpha/beta diversity and taxonomic relative abundance analysis done before stool results needed to be combined with cecal results due to lack of sampling in the high fiber diets at day 3 (`az_exp_combined/`). Survival results for the mice in these experiments is also included in this directory. 
+Holds all of the general alpha/beta diversity and taxonomic relative abundance analysis done before stool results needed to be combined with cecal results due to lack of sampling in the high fiber diets at day 3 (`az_exp_combined/`). Survival results for the mice in these experiments is also included in this directory.
 
 ## Paper Relevance:
 
@@ -9,10 +9,13 @@ Paper figures/tables generated from the contents of this directory:
 -   Figure 1c-d
 -   Supplemental Figure 6a-b
 
-| Figure                   | Associated Scripts            |
-|--------------------------|-------------------------------|
-| Figure 1c-d              | `main_src/mouse_survival.qmd` |
-| Supplemental Figure 6a-b | `main_src/mouse_survival.qmd` |
+> [!IMPORTANT]
+> Plot names in the table also match the variable names of plots included in the [apppleplots](https://github.com/madiapgar/apppleplots) R package!
+
+| Figure                   | Associated Scripts            | Plot Names                                                      |
+|------------------------|------------------------|------------------------|
+| Figure 1c-d              | `main_src/mouse_survival.qmd` | c: `diet_plot_final` <br/> d: `surv_stat_vis`                   |
+| Supplemental Figure 6a-b | `main_src/mouse_survival.qmd` | a: `liveCult_diet_plot_final` <br/> b: `liveCult_surv_stat_vis` |
 
 ## Directory Key:
 

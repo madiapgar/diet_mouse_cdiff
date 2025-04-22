@@ -1,0 +1,121 @@
+---
+title: "mouse_weight"
+output: html_document
+date: "2025-01-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(apppleplots)
+library(magrittr)
+library(readr)
+library(viridis)
+```
+
+**File paths**
+```{r}
+weight_fp <- '../data/misc/newExp_mouse_weightData.csv'
+
+## global renaming variables
+diet_legend_labs <- c('Chow',
+                      'HFt / HFb',
+                      'HFt / LFb',
+                      'LFt / HFb',
+                      'LFt / LFb')
+
+vendor_labs <- c('Charles River',
+                 'Taconic')
+names(vendor_labs) <- c('CharlesRiver',
+                        'Taconic')
+```
+
+**Reading in file**
+```{r}
+pre_weight_df <- read_csv(weight_fp) %>% 
+  select(SampleID, MouseSex, Diet, Vendor, 
+         ExperimentID, ExperimentDay, BaseWeight, DayWeight, 
+         PercChange, Temperature)
+```
+
+**Data wrangled**
+only use days 0-13 since we have sampling problems at day 14 for one of the experiments
+```{r}
+proc_weight_df <- pre_weight_df %>%
+   rename(sampleid = SampleID,
+          mouse_sex = MouseSex,
+          diet = Diet,
+          vendor = Vendor,
+          experiment = ExperimentID,
+          experiment_day = ExperimentDay,
+          base_weight = BaseWeight,
+          day_weight = DayWeight,
+          perc_change_weight = PercChange,
+          temp = Temperature) %>% 
+   mutate(day_post_inf = (experiment_day - 15)) %>% 
+   filter(experiment != 'CDD01') %>% 
+   na.omit()
+
+## taking the average percent change in weights per day and diet for plotting
+avWeight_per_dayDiet <- proc_weight_df %>% 
+   group_by(diet, day_post_inf, vendor) %>% 
+   summarise(av_perc_change = mean(perc_change_weight),
+             sd = sd(perc_change_weight)) %>% 
+   filter(day_post_inf <= 13)
+```
+
+**Plot**
+```{r, fig.width=12, fig.height=10}
+(newExp_avWeight_plot <- avWeight_per_dayDiet %>% 
+  ggplot(aes(x = day_post_inf, y = av_perc_change, group = diet)) +
+  geom_line(aes(color = diet), linewidth = 2) +
+  geom_point(aes(color = diet), size = 3.5, alpha = 0.5) +
+  geom_pointrange(aes(ymin = av_perc_change-sd, ymax = av_perc_change+sd, color = diet), 
+                  alpha = 0.5) +
+  scale_color_viridis(option = 'C',
+                      discrete = TRUE,
+                      name = 'Diet',
+                      labels = diet_legend_labs) +
+  scale_x_continuous(breaks = c(0, 3, 6, 9, 12)) +
+  theme_bw(base_size = 20) +
+  labs(x = 'Days Relative to Infection',
+       y = 'Average % Weight Change',
+       title = 'Average Weight Change After Infection by Diet') +
+  expand_limits(y = c(-20, 20)) +
+  facet_wrap(~vendor,
+             nrow=2,
+             labeller = labeller(vendor = vendor_labs)))
+```
+
+**Stats**
+idk what to do with the stats because i can't compare between diets by day since the LF/LF mice in charles river all died so they have no data after day 7...
+```{r}
+avWeight_stats <- apppleplots::kruskal_dunn_stats(input_table = avWeight_per_dayDiet,
+                                                  grouped_by = c('vendor'),
+                                                  adjust_method = 'BH',
+                                                  filter_adj_p_value = FALSE,
+                                                  formula_left = 'av_perc_change',
+                                                  formula_right = 'diet')
+
+avWeight_kruskal <- avWeight_stats$KruskalTest
+(avWeight_dunn <- avWeight_stats$DunnTest)
+```
+
+**Saving my Outputs**
+```{r}
+ggsave('../plots/avWeight_change_plot.pdf',
+       plot = newExp_avWeight_plot,
+       width = 12,
+       height = 10)
+
+write_tsv(avWeight_dunn,
+          '../stats/avWeight_change_dunn.tsv')
+
+## as an .rdat object to put in r package 
+save(newExp_avWeight_plot,
+     file = '../../figures/newExp_avWeight_change.rdat')
+```
+

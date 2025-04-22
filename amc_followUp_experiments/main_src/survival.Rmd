@@ -1,0 +1,439 @@
+---
+title: "survival"
+output: html_document
+date: "2024-07-23"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(survminer)
+require(survival)
+library(readr)
+library(magrittr)
+library(viridis)
+library(apppleplots)
+```
+
+**Functions**
+FOR FIT_SURVIVAL:
+- column names don't need to be passed in as a string because I'm using *substitute* in the function 
+- *substitute* is literally the only way I can pass variables in a function to *Surv()* bc it hates me 
+- I use *eval.parent()* instead of *return()* in this function because I'm creating an unevaluated expression with *substitute()*. *eval.parent()* evaluates the expression I create in the function (so in this case, the survival curve fit) and returns it to me. 
+```{r}
+fit_survival <- function(survival_table,
+                         survival_day_col,
+                         survival_results_col,
+                         test_between_col1,
+                         test_between_col2){
+  
+  params <- list(survival_table = substitute(survival_table),
+                 survival_day_col = substitute(survival_day_col),
+                 survival_results_col = substitute(survival_results_col),
+                 test_between_col1 = substitute(test_between_col1),
+                 test_between_col2 = substitute(test_between_col2))
+  
+  wanted_fit <- substitute(surv_fit(formula = Surv(survival_day_col, survival_results_col) ~ test_between_col1 +
+                                      test_between_col2,
+                          data = survival_table), params)
+  eval.parent(wanted_fit)
+}
+
+## to take p-values calculated and put them into a nice table
+pretty_pvalue <- function(pairwise_results){
+  
+  pvalue_table <- as_tibble(pairwise_results$p.value,
+                            rownames = 'group1')
+  pvalue_table %>% 
+    gather(-group1, key = group2, value = p.value) %>% 
+    na.omit() -> pvalue_table
+  
+  pvalue_table['signif'] <- symnum(pvalue_table$p.value,
+                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                   symbols = c("****", "***", "**", "*", "ns"),
+                                   abbr.colnames = FALSE,
+                                   na = "")
+  return(pvalue_table)
+}
+
+## making the survival heat map plot
+surv_vis <- function(pvalue_table,
+                     x_axis,
+                     y_axis,
+                     facet_by = NULL,
+                     x_labs = NULL,
+                     y_labs = NULL){
+  surv_stat_plot <- pvalue_table %>%
+        na.omit() %>% 
+        ggplot(aes(x = .data[[x_axis]], y = .data[[y_axis]])) +
+        geom_tile(aes(fill = p.value), alpha = 0.6, color = 'black') +
+        geom_text(aes(label = signif), size = 5) +
+        scale_fill_distiller(limits = c(0, 0.05), palette = 'Reds', name = "P-Value") +
+        theme_bw(base_size = 20) +
+        theme(axis.title.x = element_blank(),
+              axis.title.y = element_blank(),
+              legend.text = element_text(size = 16),
+              legend.title = element_text(size = 18),
+              legend.position = 'none')
+        # facet_wrap(~.data[[facet_by]])
+        # scale_x_discrete(labels = x_labs) +
+        # scale_y_discrete(labels = y_labs)
+  return(surv_stat_plot)
+}
+
+## editing my dunn's post hoc test to include the difference in means between groups 
+## this version of the function is for when you don't group by any variable for your stats 
+edit_dunn_test_v2 <- function(input_table,
+                              wanted_group,
+                              mean_value,
+                              dunn_test){
+  input_table %>% 
+    group_by(across(all_of(wanted_group))) %>% 
+    summarise(mean = mean(.data[[mean_value]])) -> mean_table
+  
+  ## doing some funky stuff to put the merge by columns together accurately and make my life easier
+  ## looks for the column in the dunn test df that matches the wanted_group param and adds it to the 
+  ## group1 and group2 lists for merging the dunn test df and mean_table together 
+  pre_group_list <- lapply(wanted_group, function(x) x[x %in% colnames(dunn_test)])
+  proc_group_list <- sapply(pre_group_list, function(x) paste(sort(x[x %in% wanted_group]), collapse=""))
+  wanted_col <- scan(text = proc_group_list, sep = "", what = character())
+  
+  group1_list <- append('group1', wanted_col)
+  group2_list <- append('group2', wanted_col)
+  
+  dunn_test %>% 
+    merge(mean_table, 
+          by.x = group1_list,
+          by.y = wanted_group) %>% 
+    rename_with(~paste0('group1_', mean_value, recycle0 = TRUE), contains('mean')) %>% 
+    merge(mean_table,
+          by.x = group2_list,
+          by.y = wanted_group) %>% 
+    rename_with(~paste0('group2_', mean_value, recycle0 = TRUE), contains('mean')) -> int_dunn
+  
+  group1_col <- paste0('group1_', mean_value)
+  group2_col <- paste0('group2_', mean_value)
+  
+  int_dunn %>% 
+    mutate(diff_means = (.data[[group1_col]] - .data[[group2_col]]),
+           stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
+  
+  return(new_dunn)
+}
+```
+
+**File Paths**
+```{r}
+surv_fp <- '../data/misc/survival_data.tsv'
+
+diet_labels <- c('Chow',
+                 'High Fat / High Fiber', 
+                 'High Fat / Low Fiber',
+                 'Low Fat / High Fiber',
+                 'Low Fat / Low Fiber')
+names(diet_labels) <- c('Chow',
+                        'HF/HF',
+                        'HF/LF',
+                        'LF/HF',
+                        'LF/LF')
+
+vendor_labels <- c('Charles River',
+                   'Taconic')
+names(vendor_labels) <- c('charles_river',
+                          'taconic')
+```
+
+**Reading in File**
+```{r}
+surv_table <- read_tsv(surv_fp,
+                       col_types = cols(vendor = col_character(),
+                                        mouse_id = col_character(),
+                                        experiment = col_character(),
+                                        mouse_sex = col_character(),
+                                        diet = col_character(),
+                                        sac_exptDay = col_integer(),
+                                        day_post_inf = col_integer(),
+                                        survival = col_integer()))
+
+## filtering out the first set of experiments since it could skew the results
+surv_table <- surv_table %>% 
+                filter(experiment != 'CDD01')
+```
+
+**IN THESE PLOTS:**
+- Day 0 on the x-axis is the day that the mice are infected with C. diff, so the day that the mice start dying is how soon after CDI that they succumb
+
+**Diet and Vendor Survival Curve**
+```{r, fig.width=17, fig.height=7}
+## fitting data
+dietVendor_surv_fit <- fit_survival(survival_table = surv_table,
+                                    survival_day_col = day_post_inf,
+                                    survival_results_col = actual_surv,
+                                    test_between_col1 = diet,
+                                    test_between_col2 = vendor)
+
+## plot
+dietVendor_base_plot <- ggsurvplot(dietVendor_surv_fit,
+                                   data = surv_table,
+                                   color = "black",
+                                   ggtheme = theme_bw(base_size = 20),
+                                   legend = "none",
+                                   conf.int = TRUE,
+                                   xlab = 'Days Post Infection',
+                                   ylab = 'Survival Probability',
+                                   title = 'Mouse Survival After Infection by Diet and Vendor',
+                                   subtitle = 'New Experiments')
+
+dietVendor_base_plot$plot +
+    facet_grid(cols = vars(diet),
+               rows = vars(vendor),
+               labeller = labeller(.cols = diet_labels,
+                                   .rows = vendor_labels)) +
+  theme(strip.text.y.right = element_text(angle = 0)) -> newExp_dietVendor_surv_plot
+
+newExp_dietVendor_surv_plot
+```
+
+**Diet and Experiment Survival Curve**
+```{r, fig.width=17, fig.height=7}
+## fitting data
+dietExp_surv_fit <- fit_survival(survival_table = surv_table,
+                                 survival_day_col = day_post_inf,
+                                 survival_results_col = actual_surv,
+                                 test_between_col1 = diet,
+                                 test_between_col2 = experiment)
+
+## plot
+dietExp_base_plot <- ggsurvplot(dietExp_surv_fit,
+                                data = surv_table,
+                                color = "black",
+                                ggtheme = theme_bw(base_size = 20),
+                                legend = "none",
+                                conf.int = TRUE,
+                                xlab = 'Days Post Infection',
+                                ylab = 'Survival Probability',
+                                title = 'Survival by Diet and Experiment')
+
+dietExp_base_plot$plot +
+    facet_grid(cols = vars(diet),
+               rows = vars(experiment),
+               labeller = labeller(.cols = diet_labels)) +
+  theme(strip.text.y.right = element_text(angle = 0)) -> dietExp_plot
+
+dietExp_plot
+```
+
+**Experiment and Vendor Survial Curve**
+```{r, fig.width=10, fig.height=6}
+## fitting data
+expVendor_surv_fit <- fit_survival(survival_table = surv_table,
+                                   survival_day_col = day_post_inf,
+                                   survival_results_col = actual_surv,
+                                   test_between_col1 = experiment,
+                                   test_between_col2 = vendor)
+
+## plot
+expVendor_base_plot <- ggsurvplot(expVendor_surv_fit,
+                                  data = surv_table,
+                                  color = "black",
+                                  ggtheme = theme_bw(base_size = 20),
+                                  legend = "none",
+                                  conf.int = TRUE,
+                                  xlab = 'Days Post Infection',
+                                  ylab = 'Survival Probability',
+                                  title = 'Survival by Experiment and Vendor')
+
+expVendor_base_plot$plot +
+    facet_grid(cols = vars(experiment),
+               rows = vars(vendor),
+               labeller = labeller(.rows = vendor_labels)) +
+    theme(strip.text.y.right = element_text(angle = 0)) -> expVendor_plot
+
+expVendor_plot
+```
+
+**Stats**
+```{r, fig.width=10, fig.height=10}
+## diet and vendor stats
+dietVendor_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, actual_surv) ~ vendor + diet,
+                                         data = surv_table,
+                                         p.adjust.method = "BH")
+
+dietVendor_pvalue <- pretty_pvalue(pairwise_results = dietVendor_pairwise)
+
+dietVendor_stat_vis <- surv_vis(pvalue_table = dietVendor_pvalue,
+                                x_axis = 'group2',
+                                y_axis = 'group1')
+
+dietVendor_stat_vis
+```
+
+running difference between survival by vendor individually for each diet and then smushing them together 
+```{r}
+test_out <- tibble()
+for(i in unique(unlist(surv_table['diet']))){
+  survdiff_res <- surv_table %>% 
+    filter(diet == i) %>% 
+     pairwise_survdiff(formula = Surv(day_post_inf, actual_surv) ~ vendor,
+                       data = .,
+                       p.adjust.method = "BH")
+  pretty_res <- pretty_pvalue(pairwise_results = survdiff_res) %>% 
+    mutate(diet = paste(i))
+  
+  test_out <- rbind(test_out, pretty_res)
+}
+```
+
+the stat vis for the stats above (it looks like a lot of work for not a lot of stats..its almost unnecessary)
+```{r, fig.width=5.5, fig.height=2.5}
+surv_vis(pvalue_table = test_out,
+         x_axis = 'diet',
+         y_axis = 'group2',
+         facet_by = 'group1')
+```
+
+idk why i didn't just run normal stats on this data bc I don't need the surminer package to do them 
+```{r}
+dietVendor_stat_list <- kruskal_dunn_stats(input_table = surv_table,
+                                           grouped_by = c("diet"),
+                                           adjust_method = "BH",
+                                           filter_adj_p_value = FALSE,
+                                           formula_left = "actual_surv",
+                                           formula_right = "vendor")
+
+dietVendor_kruskal <- dietVendor_stat_list$KruskalTest
+dietVendor_dunn <- dietVendor_stat_list$DunnTest
+
+dietVendor_dunn
+```
+
+```{r}
+## just overall diet stats
+diet_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, actual_surv) ~ diet,
+                                   data = surv_table,
+                                   p.adjust.method = "BH")
+
+diet_pvalue <- pretty_pvalue(pairwise_results = diet_pairwise)
+```
+
+```{r}
+## diet and experiment stats
+dietExp_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, actual_surv) ~ diet + experiment,
+                                      data = surv_table,
+                                      p.adjust.method = "BH")
+
+dietExp_pvalue <- pretty_pvalue(pairwise_results = dietExp_pairwise)
+```
+
+```{r}
+## experiment and vendor stats
+expVendor_pairwise <- pairwise_survdiff(formula = Surv(day_post_inf, actual_surv) ~ experiment + vendor,
+                                         data = surv_table,
+                                         p.adjust.method = "BH")
+
+expVendor_pvalue <- pretty_pvalue(pairwise_results = expVendor_pairwise)
+```
+
+**Cox PH Hazard Ratios**
+only doing this for the plot that is in the manuscript which is the `dietVendor_plot`
+
+Notes:
+- this calculates the hazard ratios for each diet compared to chow
+- the hazard ratio for vendor is compared to charles river which is why only taconic shows up in the results 
+- if you call summary(coxph_object), the exp(coef) column contains the actual hazard ratio for the variable and the Pr(>|z|) column contains the p-value 
+```{r}
+dietVendor_surv_obj <- Surv(time = surv_table$day_post_inf, event = surv_table$actual_surv)
+surv_table$diet_f = factor(surv_table$diet,
+                           levels = c("Chow",
+                                      "HF/HF",
+                                      "HF/LF",
+                                      "LF/HF",
+                                      "LF/LF"))
+diet.vendor.fit.cox <- coxph(dietVendor_surv_obj ~ diet_f + vendor, data = surv_table)
+
+dietVendor_summary_coxph <- summary(diet.vendor.fit.cox)
+
+dietVendor_summary_coxph
+```
+
+```{r}
+## pulling the hazard ratio from coxph summary 
+dietVendor_haz_df <- as.data.frame(dietVendor_summary_coxph$coefficients)
+dietVendor_haz_df["diet_vendor"] <- rownames(dietVendor_haz_df)
+
+dietVendor_haz_table <- as_tibble(dietVendor_haz_df) %>% 
+  mutate(diet_vendor = case_when(
+    diet_vendor == 'diet_fHF/HF' ~ 'HF/HF',
+    diet_vendor == 'diet_fHF/LF' ~ 'HF/LF',
+    diet_vendor == 'diet_fLF/HF' ~ 'LF/HF',
+    diet_vendor == 'diet_fLF/LF' ~ 'LF/LF',
+    diet_vendor == 'vendortaconic' ~ 'taconic'
+  )) %>% 
+  rename(haz_ratio = `exp(coef)`,
+         p_value = `Pr(>|z|)`)
+
+dietVendor_haz_table
+```
+```{r}
+## pulling confidence intervals from the coxph summary
+dietVendor_ci_df <- as.data.frame(dietVendor_summary_coxph$conf.int)
+dietVendor_ci_df["diet_vendor"] <- rownames(dietVendor_ci_df)
+
+dietVendor_ci_table <- as_tibble(dietVendor_ci_df) %>% 
+  mutate(diet_vendor = case_when(
+    diet_vendor == 'diet_fHF/HF' ~ 'HF/HF',
+    diet_vendor == 'diet_fHF/LF' ~ 'HF/LF',
+    diet_vendor == 'diet_fLF/HF' ~ 'LF/HF',
+    diet_vendor == 'diet_fLF/LF' ~ 'LF/LF',
+    diet_vendor == 'vendortaconic' ~ 'taconic'
+  )) %>% 
+  rename(lower_95_ci = `lower .95`,
+         upper_95_ci = `upper .95`) %>% 
+  select(diet_vendor, lower_95_ci, upper_95_ci)
+
+## combining the hazard ratio and confidence interval tables 
+final_dietVendor_haz_table <- dietVendor_haz_table %>% 
+  left_join(dietVendor_ci_table, by = 'diet_vendor') %>% 
+  select(diet_vendor, coef, haz_ratio, p_value, lower_95_ci, upper_95_ci)
+
+final_dietVendor_haz_table
+```
+
+**Saving my Outputs**
+```{r}
+## plots
+ggsave('../plots/dietVendor_survival.pdf',
+       plot = newExp_dietVendor_surv_plot,
+       width = 17,
+       height = 7)
+ggsave('../plots/dietExp_survival.pdf',
+       plot = dietExp_plot,
+       width = 17,
+       height = 7)
+ggsave('../plots/experimentVendor_survival.pdf',
+       plot = expVendor_plot,
+       width = 10,
+       height = 6)
+
+## as an .rdat object 
+save(newExp_dietVendor_surv_plot,
+     file = '../../figures/newExp_dietVendor_surv_plot.rdat')
+
+## stats
+write_tsv(dietVendor_pvalue,
+          '../stats/surv_dietVendor.tsv')
+write_tsv(dietVendor_dunn,
+          '../stats/surv_dietVendor_dunn.tsv')
+write_tsv(diet_pvalue,
+          '../stats/surv_diet.tsv')
+write_tsv(dietExp_pvalue,
+          '../stats/surv_dietExp.tsv')
+write_tsv(expVendor_pvalue,
+          '../stats/surv_expVendor.tsv')
+write_tsv(final_dietVendor_haz_table,
+          '../stats/surv_hazardRatio_results.tsv')
+```
+

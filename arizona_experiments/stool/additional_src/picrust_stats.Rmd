@@ -1,0 +1,424 @@
+---
+title: "tss3_picrust_stats"
+author: "Madi"
+date: "2023-06-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ape)
+library(ggpubr)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+library(broom)
+library(AICcmodavg)
+library(rstatix)
+```
+
+**Functions**
+```{r}
+stat_file_prep <- function(metadata_fp,
+                           tax_fp,
+                           ko_contrib_fp,
+                           ko_list,
+                           taxonomy_level){
+  ## metadata
+  metadata <- read_tsv(metadata_fp)
+  names(metadata)[names(metadata) == 'sampleid'] <- 'sample'
+  ## taxonomy file
+  read_qza(file = tax_fp)$data %>% 
+    parse_taxonomy() %>% 
+    as_tibble(rownames = 'taxon') %>% 
+    rename_all(tolower) -> taxonomy
+  ## ko meta contrib 
+  ko_contrib <- read_tsv(ko_contrib_fp)
+  ko_contrib %>% 
+    left_join(metadata, by = 'sample') %>% 
+    left_join(taxonomy, by = 'taxon') -> stat_biom
+  ## messing with biom table format so that the zeroes are represented
+  stat_biom %>% 
+    select(sample, ko, taxon_function_abun, study, diet, day_post_inf, 
+         .data[[taxonomy_level]], purified_diet, high_fat, high_fiber, mouse_id, seq_depth) %>% 
+    filter(ko %in% ko_list) %>% 
+    group_by(ko, sample, diet, day_post_inf, purified_diet, 
+             high_fat, high_fiber, mouse_id, seq_depth, .data[[taxonomy_level]], study) %>% 
+    summarise(taxon_function_abun = sum(taxon_function_abun)) %>% 
+    filter(!is.na(day_post_inf)) %>% 
+    spread(day_post_inf, taxon_function_abun, fill = 0) %>%
+    gather(-ko, -sample, -diet, -purified_diet, -high_fat, -high_fiber, -mouse_id, -seq_depth,
+           -.data[[taxonomy_level]], -study, key = day_post_inf, value = taxon_function_abun) %>%
+    ungroup() -> biom_long
+  return(biom_long)
+}
+
+## function for running statisical analysis on picrust kos of interest 
+## butyrate stats
+buty_stat_calc <- function(biom_table,
+                           taxonomy_level){
+  biom_table %>% 
+    group_by(class) %>% 
+    mutate(sum = sum(taxon_function_abun),
+          class = if_else(sum < 2000, "I don't want you", class)) %>% 
+    filter(class != "I don't want you") %>% 
+    ungroup() -> biom_table
+  ## linear modeling
+  biom_table %>% 
+    na.omit() %>%
+    group_by(day_post_inf, .data[[taxonomy_level]]) %>% 
+    do(glance(lm(taxon_function_abun ~ (purified_diet * seq_depth) + high_fat * high_fiber,
+               data = .))) %>% 
+    ungroup() %>% 
+    na.omit() %>% 
+    mutate(adj.p = p.adjust(p.value, 
+                            method = "BH"),
+          test_id = paste(day_post_inf, .data[[taxonomy_level]], sep = "_")) %>% 
+    filter(adj.p <= 0.05) -> lm_full
+  
+  biom_table %>% 
+    na.omit() %>% 
+    group_by(day_post_inf, .data[[taxonomy_level]]) %>% 
+    mutate(test_id = paste(day_post_inf, .data[[taxonomy_level]], sep = "_")) %>% 
+    filter(test_id %in% lm_full$test_id) %>% 
+    do(tidy(lm(taxon_function_abun ~ (purified_diet * seq_depth) + high_fat * high_fiber,
+               data = .))) %>%
+    ungroup() %>% 
+    na.omit() %>% 
+    filter(term != '(Intercept)') -> lm
+  
+  lm['signif'] <- symnum(lm$p.value,
+                         cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                         symbols = c("****", "***", "**", "*", "+", "ns"),
+                         abbr.colnames = FALSE,
+                         na = "")
+  ## kruskal wallis and dunns post hoc tests
+  biom_table %>% 
+    na.omit() %>% 
+    group_by(.data[[taxonomy_level]], day_post_inf) %>% 
+    do(tidy(kruskal.test(taxon_function_abun ~ diet,
+             data = .))) %>% 
+    ungroup() %>% 
+    arrange(p.value) %>% 
+    mutate(p.adj = p.adjust(p.value,
+                            method = "BH"),
+          test_id = paste(day_post_inf, .data[[taxonomy_level]], sep = "_")) %>% 
+    na.omit() -> kruskal
+  biom_table %>% 
+    na.omit() %>% 
+    group_by(.data[[taxonomy_level]], day_post_inf) %>% 
+    mutate(test_id = paste(day_post_inf, .data[[taxonomy_level]], sep = "_")) %>% 
+    filter(test_id %in% kruskal$test_id) %>% 
+    dunn_test(taxon_function_abun ~ diet,
+              p.adjust.method = 'BH',
+              data = .) -> dunn
+  ## creating a list 
+  my_list <- list(LinearModel = lm,
+                  KruskalTest = kruskal,
+                  DunnPostHoc = dunn)
+  return(my_list)
+}
+
+## bile acid stats
+bile_stat_calc <- function(biom_table,
+                           taxonomy_level){
+  biom_table %>% 
+    group_by(genus) %>% 
+      mutate(sum = sum(taxon_function_abun),
+            genus = if_else(sum < 346, "I don't want you", genus)) %>% 
+      filter(genus != "I don't want you") %>% 
+      ungroup() -> biom_table
+  ## linear modeling
+  biom_table %>% 
+    na.omit() %>% 
+    filter(day_post_inf != -15) %>% 
+    group_by(day_post_inf, .data[[taxonomy_level]]) %>% 
+    do(glance(lm(taxon_function_abun ~ (purified_diet * seq_depth) + high_fat * high_fiber,
+               data = .))) %>% 
+    ungroup() %>% 
+    na.omit() %>% 
+    mutate(adj.p = p.adjust(p.value, 
+                            method = "BH"),
+          test_id = paste(day_post_inf, .data[[taxonomy_level]], sep = "_")) %>% 
+    filter(adj.p <= 0.05) -> lm_full
+  biom_table %>% 
+    na.omit() %>% 
+    group_by(day_post_inf, .data[[taxonomy_level]]) %>% 
+    mutate(test_id = paste(day_post_inf, .data[[taxonomy_level]], sep = "_")) %>% 
+    filter(test_id %in% lm_full$test_id) %>% 
+    do(tidy(lm(taxon_function_abun ~ (purified_diet * seq_depth) + high_fat * high_fiber,
+               data = .))) %>%
+    na.omit() %>% 
+    filter(term != '(Intercept)') -> lm
+  lm['signif'] <- symnum(lm$p.value,
+                         cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                         symbols = c("****", "***", "**", "*", "+", "ns"),
+                         abbr.colnames = FALSE,
+                         na = "")
+  ## kruskal wallis and dunns post hoc tests
+  biom_table %>% 
+    na.omit() %>% 
+    group_by(.data[[taxonomy_level]], day_post_inf) %>% 
+    do(tidy(kruskal.test(taxon_function_abun ~ diet,
+             data = .))) %>% 
+    ungroup() %>% 
+    arrange(p.value) %>% 
+    mutate(p.adj = p.adjust(p.value,
+                            method = "BH"),
+          test_id = paste(day_post_inf, .data[[taxonomy_level]], sep = "_")) %>% 
+    na.omit() -> kruskal
+  biom_table %>% 
+    na.omit() %>% 
+    group_by(.data[[taxonomy_level]], day_post_inf) %>% 
+    mutate(test_id = paste(day_post_inf, .data[[taxonomy_level]], sep = "_")) %>% 
+    filter(test_id %in% kruskal$test_id) %>% 
+    dunn_test(taxon_function_abun ~ diet,
+              p.adjust.method = 'BH',
+              data = .) -> dunn
+  ## creating a list 
+  my_list <- list(LinearModel = lm,
+                  KruskalTest = kruskal,
+                  DunnPostHoc = dunn)
+  return(my_list)
+}
+
+## creating a function for this so I don't have to keep doing each one by hand 
+stat_plot_prep <- function(biom_table,
+                           dunn_test,
+                           value,
+                           taxonomy_level){
+  biom_table %>% 
+    group_by(diet, day_post_inf, .data[[taxonomy_level]]) %>% 
+    summarise(means = mean(.data[[value]])) -> mean_table
+  dunn_test %>% 
+    merge(mean_table, 
+          by.x = c('group1',
+                   'day_post_inf',
+                   taxonomy_level),
+          by.y = c('diet',
+                   'day_post_inf',
+                   taxonomy_level)) %>% 
+    rename('group1_means' = 'means') %>% 
+    merge(mean_table,
+          by.x = c('group2',
+                   'day_post_inf',
+                   taxonomy_level),
+          by.y = c('diet',
+                   'day_post_inf',
+                   taxonomy_level)) %>% 
+    rename('group2_means' = 'means') %>% 
+    mutate(diff_means = (group1_means - group2_means),
+           stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
+  return(new_dunn)
+}
+
+## creating one for my bile plots bc nothing is significant lol
+bile_stat_plot_prep <- function(biom_table,
+                           dunn_test,
+                           value,
+                           taxonomy_level){
+  biom_table %>% 
+    group_by(diet, day_post_inf, .data[[taxonomy_level]]) %>% 
+    summarise(means = mean(.data[[value]])) -> mean_table
+  dunn_test %>% 
+    merge(mean_table, 
+          by.x = c('group1',
+                   'day_post_inf',
+                   taxonomy_level),
+          by.y = c('diet',
+                   'day_post_inf',
+                   taxonomy_level)) %>% 
+    rename('group1_means' = 'means') %>% 
+    merge(mean_table,
+          by.x = c('group2',
+                   'day_post_inf',
+                   taxonomy_level),
+          by.y = c('diet',
+                   'day_post_inf',
+                   taxonomy_level)) %>% 
+    rename('group2_means' = 'means') %>% 
+    mutate(stat_diff_means = (group1_means - group2_means)) -> new_dunn
+  return(new_dunn)
+}
+
+
+stat_plot <- function(new_dunn,
+                      taxonomy_level,
+                      title){
+  new_dunn %>% 
+    filter(day_post_inf != -15) %>%
+    mutate(day_post_inf = as.numeric(day_post_inf)) %>% 
+    ggplot(aes(x = day_post_inf, y = group2)) +
+    geom_tile(aes(fill = stat_diff_means), alpha = 0.8, color = 'black') +
+    scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
+    geom_text(aes(label = p.adj.signif)) +
+    scale_x_continuous(breaks = c(-8, -3, 0, 3)) +
+    scale_y_discrete(labels = c('HFt / HFb',
+                                'HFt / LFb',
+                                'LFt / HFb',
+                                'LFt / LFb')) +
+    facet_grid(.data[[taxonomy_level]]~group1,
+              scales = 'free_x',
+              labeller = labeller(group1 = diet_labs)) +
+    theme_bw(base_size = 20) +
+    theme(strip.text.y = element_text(angle = 0)) +
+    xlab('Days Relative to Infection') +
+    ylab('Group 2') +
+    ggtitle(title) -> stat_vis
+  return(stat_vis)
+}
+
+```
+
+**Input File Paths**
+```{r}
+metadata_FP <- '../data/misc/processed_metadata.tsv'
+ko_contrib_FP <- '../data/picrust/tss3_meta_contrib.tsv'
+tax_FP <- '../data/qiime/taxonomy.qza'
+but_kin_ko <- 'K00929'
+but_coa_ko <- 'K01034'
+baiH_ko <- 'K15873'
+baiI_ko <- 'K15874'
+buty_level <- 'class'
+bile_level <- 'genus'
+
+diet_labs <- c('Chow',
+               'High Fat / High Fiber',
+               'High Fat / Low Fiber',
+               'Low Fat / High Fiber')
+names(diet_labs) <- c('Chow',
+                      'HF/HF',
+                      'HF/LF',
+                      'LF/HF')
+```
+
+**Testing out my stat_file_prep Function**
+yay!! it works!! 
+```{r}
+## butyrate kinase
+buk_long <- stat_file_prep(metadata_FP,
+                           tax_FP,
+                           ko_contrib_FP,
+                           but_kin_ko,
+                           buty_level)
+## butyryl coa transferase
+but_long <- stat_file_prep(metadata_FP,
+                           tax_FP,
+                           ko_contrib_FP,
+                           but_coa_ko,
+                           buty_level)
+
+## baiH
+baiH_long <- stat_file_prep(metadata_FP,
+                            tax_FP,
+                            ko_contrib_FP,
+                            baiH_ko,
+                            bile_level)
+## baiI
+baiI_long <- stat_file_prep(metadata_FP,
+                            tax_FP,
+                            ko_contrib_FP,
+                            baiI_ko,
+                            bile_level)
+```
+**Butyrate Kinase Statistical Analysis**
+```{r, fig.height=7, fig.width=14.5}
+buk_stats <- buty_stat_calc(buk_long,
+                            buty_level)
+
+buk_lm <- buk_stats$LinearModel
+buk_kruskal <- buk_stats$KruskalTest
+buk_dunn <- buk_stats$DunnPostHoc
+
+new_buk_dunn <- stat_plot_prep(buk_long,
+                                buk_dunn, 
+                                'taxon_function_abun',
+                               'class')
+
+buk_plot <- stat_plot(new_buk_dunn,
+                      'class',
+                      'Butyrate Kinase Functional Potential Over Time Between Diets')
+
+buk_plot
+```
+**Butyryl-CoA Transferase Statistical Analysis**
+```{r, fig.height=6.5, fig.width=14.5}
+but_stats <- buty_stat_calc(but_long,
+                            buty_level)
+
+but_lm <- but_stats$LinearModel
+but_kruskal <- but_stats$KruskalTest
+but_dunn <- but_stats$DunnPostHoc
+
+new_but_dunn <- stat_plot_prep(but_long,
+                                but_dunn, 
+                                'taxon_function_abun',
+                               'class')
+
+but_plot <- stat_plot(new_but_dunn,
+                      'class',
+                      'Butyryl-CoA Transferase Functional Potential Over Time Between Diets')
+
+but_plot
+```
+
+**baiH Statistical Analysis**
+```{r, fig.height=5.5, fig.width=16}
+baiH_stats <- bile_stat_calc(baiH_long,
+                             'genus')
+
+baiH_lm <- baiH_stats$LinearModel
+baiH_kruskal <- baiH_stats$KruskalTest
+baiH_dunn <- baiH_stats$DunnPostHoc
+
+new_baiH_dunn <- bile_stat_plot_prep(baiH_long,
+                                      baiH_dunn, 
+                                      'taxon_function_abun',
+                                     'genus')
+
+baiH_plot <- stat_plot(new_baiH_dunn,
+                      'genus',
+                      'BaiH Functional Potential Over Time Between Diets')
+
+baiH_plot
+```
+**baiI Statistical Analysis**
+```{r}
+baiI_stats <- bile_stat_calc(baiI_long,
+                             'genus')
+```
+
+
+**Saving my Outputs**
+```{r}
+## as a .pdf
+ggsave("buk_stat_vis.pdf",
+       plot = buk_plot, 
+       width = 14.5, 
+       height = 7, 
+       path = '../plots')
+ggsave("but_stat_vis.pdf",
+       plot = but_plot, 
+       width = 14.5, 
+       height = 6.5, 
+       path = '../plots')
+ggsave("baiH_stat_vis.pdf",
+       plot = baiH_plot, 
+       width = 16, 
+       height = 5.5, 
+       path = '../plots')
+
+## as an rdata object
+save(buk_plot,
+     file = '../../figures/buk_stats.rdata')
+save(but_plot,
+     file = '../../figures/but_stats.rdata')
+save(baiH_plot,
+     file = '../../figures/baiH_stats.rdata')
+```
+
+
+

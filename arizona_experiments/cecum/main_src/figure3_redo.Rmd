@@ -1,0 +1,552 @@
+---
+title: "figure3_redo"
+output: html_document
+date: "2024-10-28"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(broom)
+library(magrittr)
+library(cowplot)
+library(apppleplots)
+library(viridis)
+```
+
+**Functions**
+```{r}
+## will give the r2 and p values for each value in the specified column 
+lm_r2_p_value <- function(input_table,
+                          wanted_col1,
+                          wanted_col2 = NULL,
+                          formula_left,
+                          formula_right){
+  if (is.character(wanted_col1) & is.character(wanted_col2)) {
+    output <- tibble()
+    for(i in unique(unlist(input_table[wanted_col1]))) {
+      for(j in unique(unlist(input_table[wanted_col2]))) {
+        funky_formula <- paste(formula_left, formula_right, sep = "~")
+        lm <- input_table %>% 
+                filter(.data[[wanted_col1]] == i,
+                       .data[[wanted_col2]] == j) %>%
+                do(glance(lm(as.formula(funky_formula),
+                             data = .))) %>% 
+              mutate("{wanted_col1}" := paste(i),
+                     "{wanted_col2}" := paste(j))
+        output <- bind_rows(output, lm)
+        
+        stat_table <- output %>% 
+          select(r.squared, p.value, .data[[wanted_col1]], .data[[wanted_col2]]) %>% 
+          rename(r_squared = r.squared,
+                 p_value = p.value) %>% 
+          mutate(p_value = if_else(is.na(p_value), 1, p_value))
+      }
+    }
+    
+  } else {
+    output <- tibble()
+    for(i in unique(unlist(input_table[wanted_col1]))){
+        funky_formula <- paste(formula_left, formula_right, sep = "~")
+        lm <- input_table %>% 
+                filter(.data[[wanted_col1]] == i) %>%
+                do(glance(lm(as.formula(funky_formula),
+                             data = .))) %>% 
+              mutate("{wanted_col1}" := paste(i))
+        output <- bind_rows(output, lm)
+        
+        ## putting together actual stat table 
+        stat_table <- output %>% 
+          select(r.squared, p.value, .data[[wanted_col1]]) %>% 
+          rename(r_squared = r.squared,
+                 p_value = p.value) %>% 
+          mutate(p_value = if_else(is.na(p_value), 1, p_value))
+    }
+  }
+  
+  stat_table['signif'] <- symnum(stat_table$p_value,
+                                 cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                 symbols = c("****", "***", "**", "*", "ns"),
+                                 abbr.colnames = FALSE,
+                                 na = "")
+  return(stat_table)
+}
+
+## putting stats directly on correlation plots 
+stat_on_plot <- function(stat_table,
+                         wanted_col_list,
+                         x_col_name,
+                         x_col_value,
+                         y_col_name,
+                         y_col_value,
+                         plot,
+                         plot_text_size){
+  ## making table conducive to labeling plot 
+  proc_stat_table <- stat_table %>% 
+    filter(signif != 'ns') %>% 
+    select(all_of(wanted_col_list)) %>% 
+    ## created columns need to match up with the column names called for the x and y axis in the plot
+    ## numeric values added are the x and y coordinates for where the label will sit in the facet block 
+    mutate("{x_col_name}" := paste(x_col_value),
+           "{x_col_name}" := as.numeric(.data[[x_col_name]]),
+           "{y_col_name}" := paste(y_col_value),
+           "{y_col_name}" := as.numeric(.data[[y_col_name]]),
+           p_value = signif(p_value, digits = 3),
+           r_squared = signif(r_squared, digits = 3),
+           pVal_rSquare = paste0('p-value: ', p_value, "\n", 
+                                 'r2: ', r_squared))
+  
+  ## putting labels on plot 
+  plot_wStats <- plot +
+    geom_label(data = proc_stat_table, 
+               label = proc_stat_table$pVal_rSquare,
+               color = 'black',
+               fontface = 'bold',
+               size = plot_text_size)
+  
+  ## creating list of my outputs
+  my_list <- list(ProcStatTable = proc_stat_table,
+                  PlotwStats = plot_wStats)
+  
+  return(my_list)
+}
+```
+
+**File paths**
+```{r}
+histo_metabTox_fp <- '../data/misc/histoMetabToxin_results_comb.tsv'
+bile_acid_fp <- '../data/misc/processed_bile_acid.tsv'
+histo_fp <- '../data/misc/processed_histopathology.tsv'
+
+## plot relabeling variables
+tox_labs <- c('TcdA',
+              'TcdB')
+names(tox_labs) <- c('Total TcA Neat',
+                     'Total TcB Neat')
+
+cecum_labs <- c('Cecum')
+names(cecum_labs) <- c('cecum')
+
+## the color palette used for the points/lines previously!!
+  # scale_color_brewer(palette = 'Spectral',
+  #                    guide = 'none') +
+  # scale_fill_brewer(palette = 'Spectral',
+  #                   guide = 'none') +
+```
+
+**Data wrangling**
+```{r}
+histo_metabTox_table <- read_tsv(histo_metabTox_fp)
+
+## putting together histo and bile acid results so I can add it to the giant table 
+histo_table <- read_tsv(histo_fp) %>% 
+  select(mouse_id, sampleid, diet, score, tissue)
+
+bile_acid_table <- read_tsv(bile_acid_fp) %>% 
+  select(mouse_id, bile_acid, concentration, conc_normalized) %>% 
+  rename(microbe_product = bile_acid)
+
+histo_bileAcid_table <- histo_table %>% 
+  left_join(bile_acid_table, by = 'mouse_id') %>% 
+  na.omit()
+
+## making a big ass table 
+all_cecalProducts_table <- rbind(histo_metabTox_table,
+                                 histo_bileAcid_table)
+
+## to save for later if need downstream analysis
+noHisto_cecalProducts_table <- all_cecalProducts_table %>% 
+  select(!c('tissue', 'score'))
+```
+
+**Additional wrangling for the plots I want to make**
+- put the histopathology and toxin data in the same columns via rbind (comp_value and conc_score) since that's what I'll be doing correlation comparisons to dca and butyrate concentration
+```{r}
+## pulling out toxin data only 
+all_cecalProducts_table %>% 
+  filter(tissue == 'cecum',
+         microbe_product == "Total TcA Neat" | microbe_product == 'Total TcB Neat') %>% 
+  select(mouse_id, microbe_product, conc_normalized) %>% 
+  rename(comp_value = microbe_product,
+         conc_score = conc_normalized) -> toxOnly_table
+
+## pulling out cecal histopathology scores only 
+## making column names the same as table above so I can rbind them together 
+all_cecalProducts_table %>% 
+  filter(microbe_product == 'Total TcA Neat',
+         tissue == 'cecum') %>% 
+  select(mouse_id, tissue, score) %>% 
+  rename(comp_value = tissue,
+         conc_score = score) -> cecal_histoOnly_table
+
+## the rbinding in question
+## I also initially wanted to put these in the same plot with facets but that didn't work out 
+## so that's why you later see me filtering for either toxin or histopathology later
+histoTox_only_table <- rbind(toxOnly_table,
+                             cecal_histoOnly_table)
+```
+
+
+# **Panel C**
+this is deoxycholic acid concentration compared to toxin and histopathology score in the cecum 
+
+**More data wrangling**
+i probably made this way too hard for myself but that's how it happened bc I wanted to compare DCA and toxin concentration but they were in the same column so I had to do some funky data wrangling.
+
+I WANTED:
+- dca concentration per mouse and toxin/histopathology score data in separate columns so I could put them on the x and y axes 
+```{r}
+## combining my new long format table with the dca concentration data so I can do correlation comparisons between them 
+all_cecalProducts_table %>% 
+  select(!c('tissue', 'score')) %>% 
+  filter(microbe_product == 'Deoxycholic_acid_DCA') %>% 
+  left_join(histoTox_only_table, by = 'mouse_id',
+            relationship = "many-to-many") -> dca_toxHisto_table
+```
+
+**Attempt at the plot**
+toxin by dca concentration 
+```{r, fig.width=11, fig.height=5.5}
+## only pulling out toxin data
+dca_tox_table <- dca_toxHisto_table %>% 
+  filter(comp_value != "cecum") %>% 
+  mutate(log_conc_norm = log10(conc_normalized),
+         log_conc_score = log10(conc_score))
+
+dca_tox_plot <- apppleplots::correlation_plots(input_table = dca_tox_table,
+                                                    x_value = 'conc_normalized',
+                                                    y_value = 'conc_score',
+                                                    x_transform = TRUE,
+                                                    y_transform = TRUE,
+                                                    point_alpha = 0,
+                                                    regression_method = 'none',
+                                                    facet_rows = NULL,
+                                                    facet_cols = 'comp_value',
+                                                    row_labs = NULL,
+                                                    col_labs = tox_labs,
+                                                    x_name = ' ',
+                                                    y_name = 'Toxin Concentration (ng/uL) (log10)',
+                                                    title_content = 'Cecum Deoxycholic Acid Comparisons')
+
+dca_tox_plot <- dca_tox_plot +
+  ## this adds the black outline to the regression lines so you can see them better 
+  geom_smooth(aes(group = diet), color = 'black', 
+              linewidth = 1.5, method = 'lm', se = FALSE) +
+  ## this is the actual regression lines 
+  geom_smooth(aes(group = diet, color = diet), method = 'lm', se = FALSE, alpha = 0.7) +
+  scale_color_viridis(option = 'C',
+                      discrete = TRUE,
+                      guide = 'none') +
+  geom_jitter(aes(fill = diet), pch = 21, alpha = 0.7, size = 3) +
+  scale_fill_viridis(option = 'C',
+                     discrete = TRUE,
+                     guide = 'none') +
+  theme_bw(base_size = 20) +
+  labs(subtitle = 'C. difficile Toxin')
+
+## stats
+dca_tox_stats <- lm_r2_p_value(input_table = dca_tox_table,
+                                  wanted_col1 = 'comp_value',
+                                  wanted_col2 = NULL,
+                                  formula_left = 'log_conc_score',
+                                  formula_right = 'log_conc_norm * diet')
+
+
+## stats on plot
+dca_tox_list <- stat_on_plot(stat_table = dca_tox_stats,
+                               wanted_col_list = colnames(dca_tox_stats),
+                               x_col_name = 'conc_normalized',
+                               x_col_value = '5',
+                               y_col_name = 'conc_score',
+                               y_col_value = '15',
+                               plot = dca_tox_plot,
+                               plot_text_size = 4)
+
+dca_toxStats_plot <- dca_tox_list$PlotwStats
+
+dca_toxStats_plot
+```
+
+cecal histopathology score by dca concentration
+```{r}
+## only pulling out cecal histopathology data
+dca_histo_table <- dca_toxHisto_table %>% 
+  filter(comp_value == "cecum") %>% 
+  mutate(log_conc_norm = log10(conc_normalized))
+
+dca_histo_plot <- apppleplots::correlation_plots(input_table = dca_histo_table,
+                                                    x_value = 'conc_normalized',
+                                                    y_value = 'conc_score',
+                                                    x_transform = TRUE,
+                                                    y_transform = FALSE,
+                                                    point_alpha = 0,
+                                                    regression_method = 'none',
+                                                    facet_rows = NULL,
+                                                    facet_cols = 'comp_value',
+                                                    row_labs = NULL,
+                                                    col_labs = cecum_labs,
+                                                    x_name = ' ',
+                                                    y_name = 'Score',
+                                                    title_content = '')
+
+dca_histo_plot <- dca_histo_plot +
+  ## this adds the black outline to the regression lines so you can see them better 
+  geom_smooth(aes(group = diet), color = 'black', 
+              linewidth = 1.5, method = 'lm', se = FALSE) +
+  ## this is the actual regression lines 
+  geom_smooth(aes(group = diet, color = diet), method = 'lm', se = FALSE) +
+  scale_color_viridis(option = 'C',
+                      discrete = TRUE,
+                      guide = 'none') +
+  geom_jitter(aes(fill = diet), pch = 21, alpha = 0.7, size = 3) +
+  scale_fill_viridis(option = 'C',
+                     discrete = TRUE,
+                     name = 'Mouse Diet',
+                     labels = c('Chow',
+                               'HFt / HFb',
+                               'HFt / LFb',
+                               'LFt / HFb',
+                               'LFt / LFb')) +
+  theme_bw(base_size = 20) +
+  labs(subtitle = 'Histopathology')
+
+## stats
+dca_histo_stats <- lm_r2_p_value(input_table = dca_histo_table,
+                                  wanted_col1 = 'comp_value',
+                                  wanted_col2 = NULL,
+                                  formula_left = 'conc_score',
+                                  formula_right = 'log_conc_norm * diet')
+
+
+## stats on plot
+dca_histo_list <- stat_on_plot(stat_table = dca_histo_stats,
+                               wanted_col_list = colnames(dca_histo_stats),
+                               x_col_name = 'conc_normalized',
+                               x_col_value = '250',
+                               y_col_name = 'conc_score',
+                               y_col_value = '5',
+                               plot = dca_histo_plot,
+                               plot_text_size = 4)
+
+dca_histoStats_plot <- dca_histo_list$PlotwStats
+
+dca_histoStats_plot
+```
+
+putting them together via cowplot
+```{r, fig.height=5.5, fig.width=16.5}
+## creating universal y axis label since the y axis is the same for both plots 
+y_axis_label <- ggdraw() +
+  draw_label('DCA Concentration (pmol/mg) (log10)',
+             size = 20,
+             hjust = 0.5,
+             y = 1)
+
+panelC_fig3_redo <- plot_grid(dca_toxStats_plot, dca_histoStats_plot,
+                              nrow = 1,
+                              rel_widths = c(1, 0.75))
+
+panelC_fig3_redoWithlab <- plot_grid(panelC_fig3_redo,
+                                     y_axis_label,
+                                     ncol = 1,
+                                     rel_heights = c(1, 0.05),
+                                     align = c('hv'),
+                                     axis = c('tblr'))
+
+panelC_fig3_redoWithlab
+```
+
+# **Panel E**
+this is butyrate concentration compared to toxin and histopathology scores in the cecum (basically the same as above but with butyrate instead of dca)
+
+**More data wrangling**
+I WANTED:
+- butyrate concentration and toxin/histopathology score data in separate columns so I could put them on the x and y axes
+- this is slightly easier since i already have my `histo_toxOnly_table` put together so now I just need to combine it with my butyrate-filtered `all_cecalProducts_table`
+```{r}
+## combining my new long format table with the butyrate concentration data so I can do correlation comparisons between them 
+all_cecalProducts_table %>% 
+  select(!c('tissue', 'score')) %>% 
+  filter(microbe_product == 'n-Butanoic Acid (ug/g)') %>% 
+  left_join(histoTox_only_table, by = 'mouse_id',
+            relationship = "many-to-many") -> butyrate_toxHisto_table
+```
+
+**Plots**
+toxin by butyrate concentration
+```{r, fig.width=11, fig.height=5.5}
+## only pulling out toxin data
+butyrate_tox_table <- butyrate_toxHisto_table %>% 
+  filter(comp_value != "cecum") %>% 
+  mutate(log_conc_norm = log10(conc_normalized),
+         log_conc_score = log10(conc_score))
+
+butyrate_tox_plot <- apppleplots::correlation_plots(input_table = butyrate_tox_table,
+                                                    x_value = 'conc_normalized',
+                                                    y_value = 'conc_score',
+                                                    x_transform = TRUE,
+                                                    y_transform = TRUE,
+                                                    point_alpha = 0,
+                                                    regression_method = 'none',
+                                                    facet_rows = NULL,
+                                                    facet_cols = 'comp_value',
+                                                    row_labs = NULL,
+                                                    col_labs = tox_labs,
+                                                    x_name = ' ',
+                                                    y_name = 'Toxin Concentration (ng/uL) (log10)',
+                                                    title_content = 'Cecum Butyrate Comparisons')
+
+butyrate_tox_plot <- butyrate_tox_plot +
+  ## this adds the black outline to the regression lines so you can see them better 
+  geom_smooth(aes(group = diet), color = 'black', 
+              linewidth = 1.5, method = 'lm', se = FALSE) +
+  ## this is the actual regression lines 
+  geom_smooth(aes(group = diet, color = diet), method = 'lm', se = FALSE) +
+  scale_color_viridis(option = 'C',
+                      discrete = TRUE,
+                      guide = 'none') +
+  geom_jitter(aes(fill = diet), pch = 21, alpha = 0.7, size = 3) +
+  scale_fill_viridis(option = 'C',
+                     discrete = TRUE,
+                     guide = 'none') +
+  theme_bw(base_size = 20) +
+  labs(subtitle = 'C. difficile Toxin')
+
+butyrate_tox_stats <- lm_r2_p_value(input_table = butyrate_tox_table,
+                                    wanted_col1 = 'comp_value',
+                                    wanted_col2 = NULL,
+                                    formula_left = 'log_conc_score',
+                                    formula_right = 'log_conc_norm * diet')
+
+
+## stats on plot
+butyrate_tox_list <- stat_on_plot(stat_table = butyrate_tox_stats,
+                                  wanted_col_list = colnames(butyrate_tox_stats),
+                                  x_col_name = 'conc_normalized',
+                                  x_col_value = '15',
+                                  y_col_name = 'conc_score',
+                                  y_col_value = '15',
+                                  plot = butyrate_tox_plot,
+                                  plot_text_size = 4)
+
+butyrate_toxStats_plot <- butyrate_tox_list$PlotwStats
+
+butyrate_toxStats_plot
+```
+
+cecal histopathology score by butyrate concentration 
+```{r, fig.height=5.5, fig.width=7}
+## only pulling out cecal histopathology data
+butyrate_histo_table <- butyrate_toxHisto_table %>% 
+  filter(comp_value == "cecum") %>% 
+  mutate(log_conc_norm = log10(conc_normalized))
+
+butyrate_histo_plot <- apppleplots::correlation_plots(input_table = butyrate_histo_table,
+                                                    x_value = 'conc_normalized',
+                                                    y_value = 'conc_score',
+                                                    x_transform = TRUE,
+                                                    y_transform = FALSE,
+                                                    point_alpha = 0,
+                                                    regression_method = 'none',
+                                                    facet_rows = NULL,
+                                                    facet_cols = 'comp_value',
+                                                    row_labs = NULL,
+                                                    col_labs = cecum_labs,
+                                                    x_name = ' ',
+                                                    y_name = 'Score',
+                                                    title_content = '')
+
+butyrate_histo_plot <- butyrate_histo_plot +
+  geom_smooth(aes(group = diet), color = 'black', 
+              linewidth = 1.5, method = 'lm', se = FALSE) +
+  geom_smooth(aes(group = diet, color = diet), method = 'lm', se = FALSE) +
+  scale_color_viridis(option = 'C',
+                      discrete = TRUE,
+                      guide = 'none') +
+  geom_jitter(aes(fill = diet), pch = 21, alpha = 0.7, size = 3) +
+  scale_fill_viridis(option = 'C',
+                     discrete = TRUE,
+                     name = 'Mouse Diet',
+                     labels = c('Chow',
+                                'HFt / HFb',
+                                'HFt / LFb',
+                                'LFt / HFb',
+                                'LFt / LFb')) +
+                    theme_bw(base_size = 20) +
+  labs(subtitle = 'Histopathology')
+
+## stats
+butyrate_histo_stats <- lm_r2_p_value(input_table = butyrate_histo_table,
+                                      wanted_col1 = 'comp_value',
+                                      wanted_col2 = NULL,
+                                      formula_left = 'conc_score',
+                                      formula_right = 'log_conc_norm * diet')
+
+
+## stats on plot
+butyrate_histo_list <- stat_on_plot(stat_table = butyrate_histo_stats,
+                                   wanted_col_list = colnames(butyrate_histo_stats),
+                                   x_col_name = 'conc_normalized',
+                                   x_col_value = '200',
+                                   y_col_name = 'conc_score',
+                                   y_col_value = '5.75',
+                                   plot = butyrate_histo_plot,
+                                   plot_text_size = 4)
+
+butyrate_histoStats_plot <- butyrate_histo_list$PlotwStats
+
+butyrate_histoStats_plot
+```
+
+putting them together via cowplot
+```{r, fig.height=5.5, fig.width=16.5, warning=FALSE}
+## creating universal y axis label since the y axis is the same for both plots 
+y_axis_label2 <- ggdraw() +
+  draw_label('Butyrate Concentration (ug/g) (log10)',
+             size = 20,
+             hjust = 0.5,
+             y = 1)
+
+panelE_fig3_redo <- plot_grid(butyrate_toxStats_plot, butyrate_histoStats_plot,
+                              nrow = 1,
+                              rel_widths = c(1, 0.75))
+
+panelE_fig3_redoWithlab <- plot_grid(panelE_fig3_redo,
+                                     y_axis_label2,
+                                     ncol = 1,
+                                     rel_heights = c(1, 0.05),
+                                     align = c('hv'),
+                                     axis = c('tblr'))
+
+panelE_fig3_redoWithlab
+```
+
+
+# **Saving my Outputs**
+```{r}
+## dca comparison plots 
+ggsave('../plots/dca_toxHisto_plot.pdf',
+       plot = panelC_fig3_redoWithlab,
+       width = 16.5,
+       height = 5.5)
+
+save(panelC_fig3_redoWithlab,
+     file = "../../figures/panelC_fig3_redo.rdat")
+
+## butyrate comparison plots
+ggsave('../plots/butyrate_toxHisto_plot.pdf',
+       plot = panelE_fig3_redoWithlab,
+       width = 16.5,
+       height = 5.5)
+
+save(panelE_fig3_redoWithlab,
+     file = "../../figures/panelE_fig3_redo.rdat")
+
+## saving long format dataframe with all the measured cecal microbiome products 
+write_tsv(noHisto_cecalProducts_table,
+          '../data/misc/long_cecal_products.tsv')
+```
+

@@ -1,0 +1,168 @@
+---
+title: "histopathology"
+output: html_document
+date: "2023-11-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+library(broom)
+library(cowplot)
+library(rstatix)
+library(ggpubr)
+library(argparse)
+library(apppleplots)
+```
+**File Paths**
+Histopathology file has already been joined with metadata so it doesn't need to be read in. 
+```{r}
+histo_FP <- '../data/misc/processed_histopathology.tsv'
+tissue_labs <- c('Cecum',
+                 'Colon')
+names(tissue_labs) <- c('cecum',
+                        'colon')
+
+diet_x_labs <- c('Chow',
+                 'HFt/\nHFb',
+                 'HFt/\nLFb',
+                 'LFt/\nHFb',
+                 'LFt/\nLFb')
+```
+
+**Histopathology Calculations**
+```{r, fig.height=6, fig.width=12}
+## reading in histo file
+histo <- read_tsv(histo_FP)
+
+## kruskal wallis and dunns post hoc test 
+histo_krDunn <- apppleplots::kruskal_dunn_stats(input_table = histo,
+                                                grouped_by = 'tissue',
+                                                adjust_method = 'BH',
+                                                filter_adj_p_value = FALSE,
+                                                formula_left = 'score',
+                                                formula_right = 'diet')
+  
+
+kruskal <- histo_krDunn$KruskalTest
+dunn <- histo_krDunn$DunnTest
+
+## linear model
+linear_model <- apppleplots::linear_model(input_table = histo,
+                                          grouped_by = 'tissue',
+                                          adjust_method = 'BH',
+                                          filter_adj_p_value = FALSE,
+                                          formula_left = 'score',
+                                          formula_right = '(purified_diet * seq_depth) + high_fat * high_fiber')
+
+## overall plot 
+all_day_plot <- apppleplots::facet_once_plots(input_table = histo,
+                                              stat_on_plot = TRUE,
+                                              x_value = 'diet',
+                                              y_value = 'score',
+                                              x_value_type = 'discrete',
+                                              grouped_by = 'diet',
+                                              point_alpha = 0.4,
+                                              x_labels = diet_x_labs,
+                                              facet_by = 'tissue',
+                                              facet_labels = tissue_labs,
+                                              stat_table = dunn,
+                                              x_name = 'Diet',
+                                              y_name = 'Score',
+                                              title_content = 'Histopathology Score')
+
+## cecum only plot
+histo %>% 
+  filter(tissue == 'cecum') -> histo_cecumOnly
+dunn %>% 
+  filter(tissue == 'cecum') -> dunn_cecum
+
+cecum_histo_plot <- apppleplots::facet_once_plots(input_table = histo_cecumOnly,
+                                                  stat_on_plot = TRUE,
+                                                  x_value = 'diet',
+                                                  y_value = 'score',
+                                                  x_value_type = 'discrete',
+                                                  grouped_by = 'diet',
+                                                  point_alpha = 0.4,
+                                                  x_labels = diet_x_labs,
+                                                  facet_by = 'tissue',
+                                                  facet_labels = tissue_labs,
+                                                  stat_table = dunn_cecum,
+                                                  x_name = 'Diet',
+                                                  y_name = 'Score',
+                                                  title_content = 'Cecal Sample Histopathology')
+  
+
+## colon only plot 
+histo %>% 
+  filter(tissue == 'colon') -> histo_colonOnly
+dunn %>% 
+  filter(tissue == 'colon') -> dunn_colon
+
+colon_histo_plot <- apppleplots::facet_once_plots(input_table = histo_colonOnly,
+                                                  stat_on_plot = TRUE,
+                                                  x_value = 'diet',
+                                                  y_value = 'score',
+                                                  x_value_type = 'discrete',
+                                                  grouped_by = 'diet',
+                                                  point_alpha = 0.4,
+                                                  x_labels = diet_x_labs,
+                                                  facet_by = 'tissue',
+                                                  facet_labels = tissue_labs,
+                                                  stat_table = dunn_colon,
+                                                  x_name = 'Diet',
+                                                  y_name = 'Score',
+                                                  title_content = 'Colon Sample Histopathology Score')
+
+
+all_day_plot <- all_day_plot +
+                  theme_bw(base_size = 20) +
+                  facet_wrap(~tissue,
+                             scales = 'free_y',
+                             labeller = labeller(tissue = tissue_labs))
+
+cecum_histo_plot <- cecum_histo_plot +
+                      theme_bw(base_size = 20)
+
+colon_histo_plot <- colon_histo_plot +
+                      theme_bw(base_size = 20)
+
+all_day_plot
+cecum_histo_plot
+colon_histo_plot
+```
+
+**Saving my Outputs**
+```{r}
+ggsave("../plots/histopathology.pdf", 
+       plot = all_day_plot,
+       width = 12, 
+       height = 6)
+ggsave("../plots/cecal_histo.pdf", 
+       plot = cecum_histo_plot,
+       width = 8, 
+       height = 6)
+ggsave("../plots/colon_histo.pdf", 
+       plot = colon_histo_plot,
+       width = 8, 
+       height = 6)
+
+write_tsv(linear_model,
+          "../stats/histopathology_lm.tsv")
+write_tsv(dunn,
+          "../stats/histopathology_dunn.tsv")
+
+save(all_day_plot,
+     file = '../../figures/histo.rdata')
+save(cecum_histo_plot,
+     file = '../../figures/cecum_histo.rdata')
+save(colon_histo_plot,
+     file = '../../figures/colon_histo.rdata')
+```
+

@@ -1,0 +1,333 @@
+---
+title: "hypoxia_ancombc"
+output: html_document
+date: "2023-12-11"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(qiime2R)
+library(cowplot)
+library(magrittr)
+library(rstatix)
+library(vegan)
+library(broom)
+library(ANCOMBC)
+library(microViz)
+library(phyloseq)
+library(cowplot)
+```
+
+**Functions**
+```{r}
+## ancombc file prep and running it function
+run_ancombc <- function(otu_fp,
+                        tax_fp,
+                        metadata_table,
+                        wanted_tax_level=NULL,
+                        formula,
+                        adj_method){
+  ## metadata table 
+  metadata <- as.data.frame(metadata_table)
+  rownames(metadata) <- metadata$sampleid
+  ## otu table
+  otu_table <- read_qza(otu_fp)$data
+  otu_table %>% 
+    as_tibble(rownames = 'taxon') %>% 
+    gather(-taxon, key = sampleid, value = abun) %>% 
+    filter(sampleid %in% metadata$sampleid) %>% 
+    spread(sampleid, abun) -> otu_table
+
+  otu_table <- as.data.frame(otu_table)
+  rownames(otu_table) <- otu_table$taxon
+  proc_otu <- subset(otu_table,
+                     select = -taxon)
+  metadata %>% 
+    filter(metadata$sampleid %in% colnames(proc_otu)) -> metadata
+  ## taxonomy table
+  tax_table <- read_qza(tax_fp)$data %>% 
+    parse_taxonomy()
+  tax_table %>% 
+    filter(rownames(tax_table) %in% rownames(proc_otu)) -> tax_table
+  ## creating phyloseq object
+  pseq <- phyloseq::phyloseq(otu_table(proc_otu, taxa_are_rows = TRUE),
+                             tax_table(as.matrix(tax_table)),
+                             sample_data(metadata))
+  ## running ancombc
+  ## everything but data (pseq) can be a string
+  ancombc_res <- ancombc2(data = pseq,
+                          tax_level = wanted_tax_level,
+                          fix_formula = formula,
+                          p_adj_method = adj_method)
+  ## pulling wanted results out
+  results <- ancombc_res$res
+  ## creating a list of outputs
+  my_list <- list(ANCOMBCResults = results,
+                  Metadata = metadata,
+                  OTUTable = proc_otu,
+                  Taxonomy = tax_table,
+                  Pseq = pseq)
+  return(my_list)
+}
+
+## mini metadata filtering function
+meta_filter <- function(metadata_table,
+                        wanted_filter){
+  metadata_table %>% 
+    # select(sampleid, mouse_id, location, diet, fiber, fluorescence, batch, .data[[wanted_filter]]) -> filt_meta
+    filter(fiber == wanted_filter) -> filt_meta
+  return(filt_meta)
+}
+
+## creating a for loop to run ancombc on each day_post_inf and then put all the tables together into one giant table
+ancom_diet_for_loop <- function(otu_fp,
+                                tax_fp,
+                                metadata_table,
+                                wanted_tax_level=NULL,
+                                formula,
+                                adj_method,
+                                strat_column){
+  output <- list()
+  for (i in unique(unlist(metadata_table[strat_column]))) {
+    new_metadata <- meta_filter(metadata_table,
+                                i)
+    ancombc_results <- run_ancombc(otu_fp,
+                                    tax_fp,
+                                    new_metadata,
+                                    wanted_tax_level,
+                                    formula,
+                                    adj_method)
+    tmp_output <- ancombc_results$ANCOMBCResults
+    tmp_output[strat_column] <- i
+    output <- append(output, list(tmp_output))
+  }
+  output <- bind_rows(output)
+  return(output)
+}
+
+## function to put together plots of lfc by day for each diet baseline 
+baseline_plot <- function(baseline_table,
+                          facet_labs=NULL,
+                          names_of_labs=NULL,
+                          x_labels,
+                          title){
+  names(facet_labs) <- names_of_labs
+  baseline_table %>% 
+    ggplot(aes(x = component, y = taxon)) +
+    geom_tile(aes(fill = lfc), color = 'black') +
+    scale_fill_gradient2(low = 'blue', high = 'red') +
+    geom_text(aes(label = lfc), size = 3) +
+    theme_bw(base_size = 16) +
+    scale_x_discrete(labels = x_labels) +
+    # facet_grid(~order,
+    #            labeller = labeller(order = facet_labs)) +
+    theme(axis.title.x = element_blank(),
+          axis.title.y = element_blank(),
+          legend.title = element_blank(),
+          plot.title = element_text(face = "bold")) +
+    ggtitle(title) -> plot
+  return(plot)
+}
+```
+
+**File Paths**
+```{r}
+metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
+hypoxia_FP <- '../data/misc/pimid_fluor.csv'
+otu_table_FP <- '../data/cecal_qiime/tax_filt_actual.qza'
+tax_FP <- '../data/cecal_qiime/taxonomy.qza'
+
+col_names <- c('taxon',
+               'location',
+               'high_fat',
+               'high_fiber',
+               'purified_diet')
+
+strat_value <- 'fiber'
+
+hypoxia_facet_labs <- c('Cecum',
+                        'Proximal Colon',
+                        'Distal Colon')
+hypoxia_names_labs <- c(1,
+                        2,
+                        3)
+
+diet_comp_x_labs <- c('High\nFat',
+                      'High\nFiber',
+                      'Purified\nDiet')
+location_x_labs <- c('Cecum',
+                     'Proximal Colon',
+                     'Distal Colon')
+```
+
+**Combining Metadata Table with Hypoxia Data**
+Run it only on the cecum by fluorescence!! 'high_fat + high_fiber + purified_diet + fluorescence'
+- histo epithelium involvement and neutrophil invasion correlated with hypoxia? 
+
+We don't have hypoxia data for all mice that we have cecal data for (not sure what's going on here). 
+Mouse ID 9743 was duplicated in the hypoxia data but the rest of the values were different (i.e. fluorescence). I think the mouse ids are supposed to go 9740, 9741, 9743, 9742 but I will need to ask Keith. I'm temporarily altering the mouse ids to reflect that order (was 9740, 9742, 9743, 9743). 
+
+Mouse ID 9941 was also duplicated with separate values for each. Need to ask about this. Changed the first duplicate to 9939 (now 9939, 9941, 9943... was 9941, 9941, 9943). 
+```{r}
+## metadata
+hypox_metadata <- read_tsv(metadata_FP)
+
+## hypoxia 
+hypoxia <- read_csv(hypoxia_FP)
+
+hypoxia %>% 
+  # group_by(mouse_id, diet, fiber, batch) %>%
+  # pivot_wider(names_from = location,
+  #             values_from = fluorescence) %>%
+  # ungroup() %>%
+  mutate(fiber = ifelse(diet == 'Chow', 'chow', fiber)) -> hypoxia
+
+hypoxia[[1]][[4]] <- '9939'
+hypoxia[[1]][[37]] <- '9939'
+hypoxia[[1]][[70]] <- '9939'
+
+hypox_metadata %>% 
+  select(sampleid, mouse_id, high_fat, high_fiber, purified_diet) %>% 
+  mutate(mouse_id = as.character(mouse_id)) %>% 
+  left_join(hypoxia, by = 'mouse_id') %>% 
+  na.omit() -> hypox_metadata
+```
+Attempting to run this analysis stratified by fiber content of the diets - tried to run it stratified by each diet with HF/HF filtered out and ANCOMBC still wouldn't run (I have a feeling that there aren't enough samples so there isn't enough power to run the statistical test). Just read the ANCOMBC paper - the authors said that ANCOMBC may not work well on a small sample size (n < 10). 
+```{r, warning=FALSE}
+hypox_metadata %>% 
+  filter(location == 'Cecum') -> hypox_meta_cecum
+
+cecum_res <- ancom_diet_for_loop(otu_table_FP,
+                                 tax_FP,
+                                 hypox_meta_cecum,
+                                 NULL,
+                                 'fluorescence',
+                                 'BH',
+                                 strat_value)
+```
+
+```{r}
+cecum_res %>% 
+  filter(diff_fluorescence == TRUE) %>% 
+  mutate(lfc_fluorescence_corr = (lfc_fluorescence * diff_fluorescence)) %>% 
+  select(taxon, fiber, contains('corr')) -> cecum_lfc
+
+colnames(cecum_lfc) <- c('asv',
+                         'fiber',
+                         'fluorescence')
+
+cecum_lfc %>% 
+  gather(-asv, -fiber, key = component, value = lfc) %>% 
+  mutate(lfc = as.numeric(lfc),
+         lfc = signif(lfc, digits = 2),
+         lfc = ifelse(is.na(lfc), 0, lfc)) -> cecum_lfc
+```
+
+```{r}
+taxonomy <- read_qza(tax_FP)$data %>% 
+  parse_taxonomy() %>% 
+  as_tibble(rownames = 'asv')
+
+merge(cecum_lfc, taxonomy) -> cecum_tax_lfc
+
+cecum_tax_lfc %>% 
+  mutate(Phylum = paste0('p_', Phylum),
+         Class = paste0('c_', Class),
+         Order = paste0('o_', Order),
+         Family = paste0('f_', Family),
+         Genus = paste0('g_', Genus),
+         Species = paste0('s_', Species),
+         last_few = paste(Family, Genus, Species, sep = ";"),
+         mini_asv = substr(asv, 0, 3),
+         last_few = paste(mini_asv, last_few, sep = "_")) -> cecum_tax_lfc
+```
+
+
+```{r, fig.width=13, fig.height=8}
+fiber_facet_labs <- c('High Fiber',
+                      'Low Fiber')
+names(fiber_facet_labs) <- c('high_fiber',
+                             'low_fiber')
+
+cecum_tax_lfc %>% 
+    ggplot(aes(x = fiber, y = last_few)) +
+    geom_tile(aes(fill = lfc), color = 'black') +
+    scale_fill_gradient2(low = 'blue', high = 'red') +
+    geom_text(aes(label = lfc), size = 3.5) +
+    theme_bw(base_size = 16) +
+    scale_x_discrete(labels = fiber_facet_labs) +
+    theme(axis.title.y = element_blank(),
+          axis.title.x = element_blank(),
+          legend.title = element_blank(),
+          plot.title = element_text(face = "bold")) +
+    ggtitle('ASV Level Hypoxia Significant Log Fold Changes\nby Taxonomic Classification') -> cecum_lfc_plot
+
+cecum_lfc_plot
+```
+# **ANCOMBC Between Gut Locations ONLY**
+
+**ANCOMBC**
+```{r}
+location_res <- run_ancombc(otu_table_FP,
+                            tax_FP,
+                            hypox_metadata_long,
+                            'Family',
+                            'Cecum + Prox_colon + Dist_colon',
+                            'BH')
+
+location_ancom <- location_res$ANCOMBCResults
+```
+
+**Data Wrangling**
+```{r}
+location_ancom %>% 
+  filter(diff_Cecum == TRUE | diff_Prox_colon == TRUE | diff_Dist_colon == TRUE) %>% 
+  mutate(lfc_cecum_corr = (lfc_Cecum * diff_Cecum),
+         lfc_prox_colon_corr = (lfc_Prox_colon * diff_Prox_colon),
+         lfc_dist_colon_corr = (lfc_Dist_colon * diff_Dist_colon)) %>% 
+  select(taxon, contains('corr')) -> location_lfc
+
+colnames(location_lfc) <- c('taxon',
+                            'Cecum',
+                            'Prox_colon',
+                            'Dist_colon')
+
+location_lfc %>% 
+  gather(-taxon, key = location, value = lfc) %>% 
+  mutate(lfc = as.numeric(lfc),
+         lfc = signif(lfc, digits = 5)) %>% 
+  mutate(component = ifelse(location == 'Cecum', 1, location),
+         component = ifelse(component == 'Prox_colon', 2, component),
+         component = ifelse(component == 'Dist_colon', 3, component),
+         lfc = ifelse(is.na(lfc), 0, lfc)) %>% 
+    arrange(component) -> location_lfc
+```
+
+**Plot**
+```{r, fig.width=10, fig.height=7}
+location_plot <- baseline_plot(location_lfc,
+                               NULL,
+                               NULL,
+                               location_x_labs,
+                               'Log Fold Change of Hypoxia by\nLocation (Family Level)')
+
+location_plot
+```
+
+
+**Saving my Outputs**
+```{r}
+ggsave('../plots/hypoxia_cecum_asvLevel.pdf',
+       plot = cecum_lfc_plot,
+       width = 13,
+       height = 8)
+# ggsave('../plots/hypoxia_locationFam_ancombc.pdf',
+#        plot = location_plot,
+#        width = 10, 
+#        height = 7)
+```
+

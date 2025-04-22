@@ -263,7 +263,6 @@ cecum
     -   *cecal_qiime:* qiime analysis outputs for cecal samples
     -   *core_outputs:* qiime core metrics analysis outputs
     -   *misc:* raw data/metadata files used in the analysis
-    -   *picrust:* picrust2 meta contrib file on this dataset
 -   *main_src:* scripts for the results featured in the paper
 -   *plots:* all plots generated from `additional_src` and `main_src` analysis
 -   *stats:* all stats generated from `additional_src` and `main_src` analysis

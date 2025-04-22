@@ -1,7 +1,0 @@
-group1	group2	p.value	signif
-experiment=CDD02, vendor=taconic      	experiment=CDD02, vendor=charles_river	0.6922912972808163	ns
-experiment=CDD03, vendor=charles_river	experiment=CDD02, vendor=charles_river	0.6922912972808163	ns
-experiment=CDD03, vendor=taconic      	experiment=CDD02, vendor=charles_river	0.02599280030532458	*
-experiment=CDD03, vendor=charles_river	experiment=CDD02, vendor=taconic      	0.9334222787195019	ns
-experiment=CDD03, vendor=taconic      	experiment=CDD02, vendor=taconic      	0.011393828530912989	*
-experiment=CDD03, vendor=taconic      	experiment=CDD03, vendor=charles_river	0.01066521299350872	*

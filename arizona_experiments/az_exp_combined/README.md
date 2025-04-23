@@ -1,6 +1,6 @@
 # University of Arizona Mouse Experiment: Stool and Cecal Content Samples Combined
 
-Holds all of the general alpha/beta diversity and taxonomic relative abundance analysis done with the stool and cecal content samples combined (cecal content samples were substituted for day 3 stool samples due to undersampling of the high fiber diets) and batch 1 of the experiments filtered out since those mice did not get infected with *C. difficile*. Preliminary analysis was done with the day 3 stool and cecal content samples together and it was determined that the cecal content samples were not significantly different at day 3 and could be substituted to increase power.
+Holds all of the general 16S sequencing alpha/beta diversity and taxonomic relative abundance analysis done with the stool and cecal content samples combined (cecal content samples were substituted for day 3 stool samples due to undersampling of the high fiber diets) and batch 1 of the experiments filtered out since those mice did not get infected with *C. difficile*. Preliminary analysis was done with the day 3 stool and cecal content samples together and it was determined that the cecal content samples were not significantly different at day 3 and could be substituted to increase power.
 
 ## Paper Relevance:
 
@@ -23,7 +23,19 @@ Paper figures/tables generated from the contents of this directory:
 
 ## Directory Key:
 
-File structure of `az_exp_combined/` looks like so:
+**File structure of `az_exp_combined/` looks like so:**
+
+-   *additional_src:* all the rest of the analysis that was done for this dataset that wasn't included in the paper
+-   *data:*
+    -   *comp_qiime:* qiime analysis outputs for stool and cecal samples combined
+    -   *misc:* raw data/metadata files used in the analysis
+    -   *s1_filt_core:* qiime core metrics analysis outputs (first batch is filtered out since mice were not infected with C. diff)
+-   *main_src:* scripts for the results featured in the paper
+-   *plots:* all plots generated from `additional_src` and `main_src` analysis
+-   *stats:* all stats generated from `additional_src` and `main_src` analysis
+-   *workflow_src:* R scripts used in the workflow pipeline to generate basic plots/stats for downstream analysis
+
+**Directory Tree:**
 
 ``` bash
 az_exp_combined
@@ -155,15 +167,3 @@ az_exp_combined
     ├── resil_calc.R
     └── total_sum_scaling.R
 ```
-
-**Additional information on directory contents:**
-
--   *additional_src:* all the rest of the analysis that was done for this dataset that wasn't included in the paper
--   *data:*
-    -   *comp_qiime:* qiime analysis outputs for stool and cecal samples combined
-    -   *misc:* raw data/metadata files used in the analysis
-    -   *s1_filt_core:* qiime core metrics analysis outputs (first batch is filtered out since mice were not infected with C. diff)
--   *main_src:* scripts for the results featured in the paper
--   *plots:* all plots generated from `additional_src` and `main_src` analysis
--   *stats:* all stats generated from `additional_src` and `main_src` analysis
--   *workflow_src:* R scripts used in the workflow pipeline to generate basic plots/stats for downstream analysis

@@ -19,7 +19,21 @@ Paper figures/tables generated from the contents of this directory:
 
 ## Directory Key:
 
-File structure of `stool/` looks like so:
+**File structure of `stool/` looks like so:**
+
+-   *additional_src:* all the rest of the analysis that was done for this dataset that wasn't included in the paper
+-   *data:*
+    -   *lacto_qiime:* mouse purified diet sequencing data qiime analysis (lactococcus investigation)
+    -   *misc:* raw data/metadata files used in the analysis
+    -   *picrust:* picrust2 meta contrib file on this dataset
+    -   *qiime:* qiime analysis files
+        -   *core_outputs:* qiime core metrics analysis output files
+-   *main_src:* scripts for the results featured in the paper
+-   *plots:* all plots generated from `additional_src` and `main_src` analysis
+-   *stats:* all stats generated from `additional_src` and `main_src` analysis
+-   *workflow_src:* R scripts used in the workflow pipeline to generate basic plots/stats for downstream analysis
+
+**Directory Tree:**
 
 ``` bash
 stool
@@ -38,14 +52,8 @@ stool
 │   └── tax_barplot.Rmd
 ├── data
 │   ├── lacto_qiime
-│   │   ├── filt_lacto_table.qza
-│   │   ├── placements.qza
-│   │   ├── rem_lacto_table.qza
 │   │   ├── tax_filt_actual.qza
-│   │   ├── taxonomy.qza
-│   │   ├── taxonomy_filtered.qza
-│   │   ├── taxonomy_filtered.qzv
-│   │   └── tree.qza
+│   │   └── taxonomy.qza
 │   ├── misc
 │   │   ├── aim1a_survival.csv
 │   │   ├── combined_metadata.tsv
@@ -87,14 +95,8 @@ stool
 │       │   ├── weighted_unifrac_distance_matrix.qza
 │       │   ├── weighted_unifrac_emperor.qzv
 │       │   └── weighted_unifrac_pcoa_results.qza
-│       ├── placements.qza
 │       ├── tax_filt_actual.qza
-│       ├── taxonomy.qza
-│       ├── taxonomy_filtered.qza
-│       ├── total_sum_scaling.biom
-│       ├── total_sum_scaling.qza
-│       ├── total_sum_scaling.tsv
-│       └── tree.qza
+│       └── taxonomy.qza
 ├── main_src
 │   ├── metadata_wrangling.Rmd
 │   └── mouse_survival.qmd
@@ -197,20 +199,4 @@ stool
     ├── total_sum_scaling.R
     ├── toxin.R
     └── toxin_fixing.R
-
-12 directories, 163 files
 ```
-
-**Additional information on directory contents:**
-
--   *additional_src:* all the rest of the analysis that was done for this dataset that wasn't included in the paper
--   *data:*
-    -   *lacto_qiime:* mouse purified diet sequencing data qiime analysis (lactococcus investigation)
-    -   *misc:* raw data/metadata files used in the analysis
-    -   *picrust:* picrust2 meta contrib file on this dataset
-    -   *qiime:* qiime analysis files
-        -   *core_outputs:* qiime core metrics analysis output files
--   *main_src:* scripts for the results featured in the paper
--   *plots:* all plots generated from `additional_src` and `main_src` analysis
--   *stats:* all stats generated from `additional_src` and `main_src` analysis
--   *workflow_src:* R scripts used in the workflow pipeline to generate basic plots/stats for downstream analysis

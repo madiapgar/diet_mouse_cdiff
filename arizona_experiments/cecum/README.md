@@ -1,6 +1,6 @@
 # University of Arizona Mouse Experiment: Cecal Content Samples
 
-Holds all of the general alpha/beta diversity, taxonomic relative abundance, histopathology, hypoxia, and metabolomic (SFCA, toxin, bile acids) analysis done for the cecal content samples collected upon sacrifice at day3.
+Holds all of the general 16S sequencing alpha/beta diversity, taxonomic relative abundance, histopathology, hypoxia, and metabolomic (SFCA, toxin, bile acids) analysis done for the cecal content samples collected upon sacrifice at day3.
 
 ## Paper Relevance:
 
@@ -29,7 +29,19 @@ Paper figures/tables generated from the contents of this directory:
 
 ## Directory Key:
 
-File structure of `cecum/` looks like so:
+**File structure of `cecum/` looks like so:**
+
+-   *additional_src:* all the rest of the analysis that was done for this dataset that wasn't included in the paper
+-   *data:*
+    -   *cecal_qiime:* qiime analysis outputs for cecal samples
+    -   *core_outputs:* qiime core metrics analysis outputs
+    -   *misc:* raw data/metadata files used in the analysis
+-   *main_src:* scripts for the results featured in the paper
+-   *plots:* all plots generated from `additional_src` and `main_src` analysis
+-   *stats:* all stats generated from `additional_src` and `main_src` analysis
+-   *workflow_src:* R scripts used in the workflow pipeline to generate basic plots/stats for downstream analysis
+
+**Directory Tree:**
 
 ``` bash
 cecum
@@ -50,32 +62,8 @@ cecum
 │   └── toxin_metab_histo_comp.Rmd
 ├── data
 │   ├── cecal_qiime
-│   │   ├── placements.qza
 │   │   ├── tax_filt_actual.qza
-│   │   ├── taxonomy.qza
-│   │   ├── taxonomy_filtered.qza
-│   │   ├── taxonomy_filtered.qzv
-│   │   ├── total_sum_filt_table.qza
-│   │   ├── total_sum_rem_table.qza
-│   │   └── tree.qza
-│   ├── cecal_qiime_upper
-│   │   ├── SEQ069
-│   │   │   ├── S69_barcodes.txt
-│   │   │   ├── cecal_s69_barcodes.txt
-│   │   │   └── s69_paired_end_seqs.qza
-│   │   ├── SEQ070
-│   │   │   ├── S70_barcodes.txt
-│   │   │   ├── cecal_s70_barcodes.txt
-│   │   │   ├── s70_demux.qza
-│   │   │   ├── s70_demux.qzv
-│   │   │   ├── s70_demux_details.qza
-│   │   │   └── s70_paired_end_seqs.qza
-│   │   ├── SEQ071
-│   │   │   ├── S71_barcodes.txt
-│   │   │   ├── cecal_s71_barcodes.txt
-│   │   │   └── s71_paired_end_seqs.qza
-│   │   ├── meta2.txt
-│   │   └── meta3.txt
+│   │   └── taxonomy.qza
 │   ├── core_outputs
 │   │   ├── bray_curtis_distance_matrix.qza
 │   │   ├── bray_curtis_emperor.qzv
@@ -127,8 +115,6 @@ cecum
 │   │   ├── toxin.csv
 │   │   ├── toxin_final_data.tsv
 │   │   └── updated_cecal_metadata.tsv
-│   └── picrust
-│       └── meta_contrib.tsv
 ├── main_src
 │   ├── acetate_propionate_comp_redo.Rmd
 │   ├── bile_acid.Rmd
@@ -252,18 +238,4 @@ cecum
     ├── total_sum_scaling.R
     ├── toxin.R
     └── toxinMetab_histoBile_file_prep.R
-
-15 directories, 205 files
 ```
-
-**Additional information on directory contents:**
-
--   *additional_src:* all the rest of the analysis that was done for this dataset that wasn't included in the paper
--   *data:*
-    -   *cecal_qiime:* qiime analysis outputs for cecal samples
-    -   *core_outputs:* qiime core metrics analysis outputs
-    -   *misc:* raw data/metadata files used in the analysis
--   *main_src:* scripts for the results featured in the paper
--   *plots:* all plots generated from `additional_src` and `main_src` analysis
--   *stats:* all stats generated from `additional_src` and `main_src` analysis
--   *workflow_src:* R scripts used in the workflow pipeline to generate basic plots/stats for downstream analysis

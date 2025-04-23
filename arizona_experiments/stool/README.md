@@ -1,6 +1,6 @@
 # University of Arizona Mouse Experiment: Stool Samples
 
-Holds all of the general alpha/beta diversity and taxonomic relative abundance analysis done before stool results needed to be combined with cecal results due to lack of sampling in the high fiber diets at day 3 (`az_exp_combined/`). Survival results for the mice in these experiments is also included in this directory.
+Holds all of the general 16S sequencing alpha/beta diversity and taxonomic relative abundance analysis done before stool results needed to be combined with cecal results due to lack of sampling in the high fiber diets at day 3 (`az_exp_combined/`). Survival results for the mice in these experiments are also included in this directory.
 
 ## Paper Relevance:
 

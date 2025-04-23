@@ -1,0 +1,448 @@
+---
+title: "extra_relAbun_stats"
+output: html_document
+date: "2024-10-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(broom)
+library(apppleplots)
+library(rstatix)
+library(qiime2R)
+```
+
+**Functions**
+```{r}
+family_abun_file_prep <- function(metadata_fp,
+                                  tax_fp,
+                                  otu_table_fp,
+                                  tax_level,
+                                  wanted_tax){
+  ## metadata
+  metadata <- read_tsv(metadata_fp)
+  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
+  ## taxonomy
+  taxonomy <- read_qza(tax_fp)$data %>% 
+    parse_taxonomy() %>% 
+    rownames_to_column('asv')
+  ## otu table 
+  otu_table <- read_qza(otu_table_fp)$data
+  otu_table %>% 
+    as_tibble(rownames = 'asv') %>% 
+    gather(-asv, key = sampleid, value = abun) %>% 
+    group_by(sampleid) %>% 
+    mutate(rel_abun = abun/sum(abun)) %>% 
+    mutate(rel_abun = rel_abun + 0.000001) -> otu_table
+  ## joining all tables together 
+  otu_table %>% 
+    left_join(metadata, by = 'sampleid') %>% 
+    left_join(taxonomy, by = 'asv') -> abun_table
+  abun_table %>% 
+    group_by(sampleid, diet, mouse_id,
+             experiment_set, vendor, mouse_sex, day_post_inf,
+             .data[[tax_level]]) %>% 
+    summarise(rel_abund = sum(rel_abun)) %>% 
+    filter(.data[[tax_level]] %in% wanted_tax) %>% 
+    mutate(mouse_fact = as.factor(mouse_id)) -> abun_filt
+  ## creating a list for my outputs
+  my_list <- list(Metadata = metadata,
+                  Taxonomy = taxonomy,
+                  OTUTable = otu_table,
+                  AbundanceTable = abun_filt)
+  return(my_list)
+}
+
+## preps dunns post hoc results for statistical visualization
+stat_plot_prep <- function(filtered_table,
+                           first_group,
+                           second_group,
+                           mean_value,
+                           dunn_test){
+  filtered_table %>% 
+    group_by(filtered_table[first_group], filtered_table[second_group]) %>%
+    summarise(mean = mean(.data[[mean_value]])) -> mean_table
+  
+  dunn_test %>% 
+    merge(mean_table, 
+          by.x = c('group1',
+                   second_group),
+          by.y = c(first_group,
+                   second_group)) %>%
+    rename_with(~paste0('group1_', mean_value, recycle0 = TRUE), contains('mean')) %>% 
+    merge(mean_table,
+          by.x = c('group2',
+                   second_group),
+          by.y = c(first_group,
+                   second_group)) %>%
+    rename_with(~paste0('group2_', mean_value, recycle0 = TRUE), contains('mean')) -> int_dunn
+  
+  group1_col <- paste0('group1_', mean_value)
+  group2_col <- paste0('group2_', mean_value)
+  
+  int_dunn %>% 
+    mutate(diff_means = (.data[[group1_col]] - .data[[group2_col]]),
+           stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
+  
+  return(new_dunn)
+}
+
+## statistical visualization 
+stat_plot <- function(new_dunn,
+                      facet_by,
+                      title,
+                      wanted_subtitle){
+  new_dunn %>% 
+    ggplot(aes(x = group1, y = group2)) +
+    geom_tile(aes(fill = stat_diff_means), alpha = 1, color = 'black') +
+    scale_fill_gradient2(low = 'blue', high = 'green', name = 'Group 1 -\nGroup 2') +
+    geom_text(aes(label = p.adj.signif)) +
+    facet_wrap(~.data[[facet_by]],
+               nrow = 2) +
+    theme_bw(base_size = 20) +
+    ggtitle(label = title,
+            subtitle = wanted_subtitle) +
+    theme(strip.text.y = element_text(angle = 0),
+          plot.subtitle = element_text(hjust = 0.5),
+          axis.text.x = element_text(angle = 45, hjust = 1)) +
+    xlab('Group 1') +
+    ylab('Group 2') -> stat_vis
+  return(stat_vis)
+}
+```
+
+**File paths**
+```{r}
+## baseline microbiome only
+baseline_metadata_FP <- '../data/misc/oldNew_comp_d15_metadata.tsv'
+baseline_otu_table_FP <- '../data/baseline_qiime/total_sum_otu_table.qza'
+baseline_tax_FP <- '../data/baseline_qiime/taxonomy.qza'
+
+## baseline and day 3 microbiome
+d3_metadata_FP <- '../data/misc/oldNew_comp_d15-d3_metadata.tsv'
+d3_otu_table_FP <- '../data/baseline_day3_qiime/total_sum_otu_table.qza'
+d3_tax_FP <- '../data/baseline_day3_qiime/taxonomy.qza'
+
+## global lists
+wanted_family <- c('Enterobacteriaceae', 'Lactobacillaceae', 'Lachnospiraceae', 'Enterococcaceae',
+                   'Staphylococcaceae', 'Bacteroidaceae', 'Tannerellaceae', 'Morganellaceae')
+wanted_genus <- c('Akkermansia', 'Enterococcus', 'Escherichia-Shigella', 'Proteus', 
+                  'Bacteroides', 'Lactobacillus', 'Staphylococcus', 'Muribaculaceae',
+                  'Clostridioides')
+```
+
+## **Family level**
+**Abundance table**
+```{r}
+## baseline microbiome 
+baseline_family_abun_files <- family_abun_file_prep(metadata_fp = baseline_metadata_FP,
+                                          tax_fp = baseline_tax_FP,
+                                          otu_table_fp = baseline_otu_table_FP,
+                                          tax_level = 'Family',
+                                          wanted_tax = wanted_family)
+baseline_family_abun_table <- baseline_family_abun_files$AbundanceTable
+
+## adding a separate column the dataframe so I can do stats on it 
+proc_baseline_familyAbun_table <- baseline_family_abun_table %>% 
+  mutate(exp_vendor = paste(experiment_set, vendor, sep = ":")) %>% 
+  ungroup()
+
+## baseline and day 3 microbiome 
+d3_family_abun_files <- family_abun_file_prep(metadata_fp = d3_metadata_FP,
+                                          tax_fp = d3_tax_FP,
+                                          otu_table_fp = d3_otu_table_FP,
+                                          tax_level = 'Family',
+                                          wanted_tax = wanted_family)
+d3_family_abun_table <- d3_family_abun_files$AbundanceTable
+
+proc_d3_familyAbun_table <- d3_family_abun_table %>% 
+  mutate(exp_vendor = paste(experiment_set, vendor, sep = ":")) %>% 
+  ungroup()
+```
+
+**Linear modeling**
+```{r}
+## baseline microbiome
+baseline_family_relAbun_lm <- apppleplots::linear_model(input_table = proc_baseline_familyAbun_table,
+                                               grouped_by = 'Family',
+                                               adjust_method = 'BH',
+                                               filter_adj_p_value = FALSE,
+                                               formula_left = 'rel_abund',
+                                               formula_right = 'exp_vendor')
+
+## baseline and day 3 microbiome 
+d3_family_relAbun_lm <- apppleplots::linear_model(input_table = proc_d3_familyAbun_table,
+                                               grouped_by = c('Family', 'day_post_inf'),
+                                               adjust_method = 'BH',
+                                               filter_adj_p_value = FALSE,
+                                               formula_left = 'rel_abund',
+                                               formula_right = 'exp_vendor')
+```
+
+**Kruskal-Wallis and Dunn's Post Hoc test**
+i think i want to use the results from the dunn's post hoc test for the stat visualization
+```{r}
+## baseline microbiome 
+baseline_family_relAbun_krDunn <- apppleplots::kruskal_dunn_stats(input_table = proc_baseline_familyAbun_table,
+                                                         grouped_by = 'Family',
+                                                         adjust_method = 'BH',
+                                                         filter_adj_p_value = FALSE,
+                                                         formula_left = 'rel_abund',
+                                                         formula_right = 'exp_vendor')
+
+baseline_family_relAbun_kruskal <- baseline_family_relAbun_krDunn$KruskalTest
+baseline_family_relAbun_dunn <- baseline_family_relAbun_krDunn$DunnTest
+
+## baseline and day 3 microbiome 
+d3_family_relAbun_krDunn <- apppleplots::kruskal_dunn_stats(input_table = proc_d3_familyAbun_table,
+                                                         grouped_by = c('Family', 'day_post_inf'),
+                                                         adjust_method = 'BH',
+                                                         filter_adj_p_value = FALSE,
+                                                         formula_left = 'rel_abund',
+                                                         formula_right = 'exp_vendor')
+
+d3_family_relAbun_kruskal <- d3_family_relAbun_krDunn$KruskalTest
+d3_family_relAbun_dunn <- d3_family_relAbun_krDunn$DunnTest
+```
+
+**Wrangling Dunn test for stat visualization**
+```{r}
+## baseline microbiome
+proc_baseline_family_relAbun_dunn <- stat_plot_prep(filtered_table = proc_baseline_familyAbun_table,
+                                           first_group = 'exp_vendor',
+                                           second_group = 'Family',
+                                           mean_value = 'rel_abund',
+                                           dunn_test = baseline_family_relAbun_dunn)
+
+## baseline and day 3 microbiome 
+proc_d3_family_relAbun_dunn <- stat_plot_prep(filtered_table = proc_d3_familyAbun_table,
+                                           first_group = 'exp_vendor',
+                                           second_group = c('Family', 'day_post_inf'),
+                                           mean_value = 'rel_abund',
+                                           dunn_test = d3_family_relAbun_dunn)
+```
+
+**Stat visualization**
+```{r, fig.width=15, fig.height=9}
+## baseline microbiome 
+baseline_family_relAbun_stat_plot <- stat_plot(new_dunn = proc_baseline_family_relAbun_dunn,
+                                      facet_by = 'Family',
+                                      title = 'All Exp Microbe Relative Abundance at Baseline',
+                                      wanted_subtitle = 'Microbe Family')
+
+baseline_family_relAbun_stat_plot
+```
+```{r, fig.width=23, fig.height=9}
+## baseline and day 3 microbiome 
+d3_family_relAbun_stat_plot <- stat_plot(new_dunn = proc_d3_family_relAbun_dunn,
+                                      facet_by = 'Family',
+                                      title = 'All Exp Microbe Relative Abundance',
+                                      wanted_subtitle = 'Microbe Family')
+
+d3_family_relAbun_stat_plot <- d3_family_relAbun_stat_plot +
+  facet_grid(day_post_inf~Family)
+
+d3_family_relAbun_stat_plot
+```
+
+
+## **Genus level**
+**Abundance table**
+```{r}
+## baseline microbiome
+baseline_genus_abun_files <- family_abun_file_prep(metadata_fp = baseline_metadata_FP,
+                                          tax_fp = baseline_tax_FP,
+                                          otu_table_fp = baseline_otu_table_FP,
+                                          tax_level = 'Genus',
+                                          wanted_tax = wanted_genus)
+baseline_genus_abun_table <- baseline_genus_abun_files$AbundanceTable
+
+## adding a separate column the dataframe so I can do stats on it
+proc_baseline_genusAbun_table <- baseline_genus_abun_table %>% 
+  mutate(exp_vendor = paste(experiment_set, vendor, sep = ":")) %>% 
+  ungroup()
+
+## baseline and day 3 microbiome
+d3_genus_abun_files <- family_abun_file_prep(metadata_fp = d3_metadata_FP,
+                                          tax_fp = d3_tax_FP,
+                                          otu_table_fp = d3_otu_table_FP,
+                                          tax_level = 'Genus',
+                                          wanted_tax = wanted_genus)
+d3_genus_abun_table <- d3_genus_abun_files$AbundanceTable
+
+proc_d3_genusAbun_table <- d3_genus_abun_table %>% 
+  mutate(exp_vendor = paste(experiment_set, vendor, sep = ":")) %>% 
+  ungroup()
+```
+
+**Linear modeling**
+```{r}
+## baseline microbiome
+baseline_genus_relAbun_lm <- apppleplots::linear_model(input_table = proc_baseline_genusAbun_table,
+                                              grouped_by = 'Genus',
+                                              adjust_method = 'BH',
+                                              filter_adj_p_value = FALSE,
+                                              formula_left = 'rel_abund',
+                                              formula_right = 'exp_vendor')
+
+## baseline and day 3 microbiome
+d3_genus_relAbun_lm <- apppleplots::linear_model(input_table = proc_d3_genusAbun_table,
+                                              grouped_by = c('Genus', 'day_post_inf'),
+                                              adjust_method = 'BH',
+                                              filter_adj_p_value = FALSE,
+                                              formula_left = 'rel_abund',
+                                              formula_right = 'exp_vendor')
+```
+
+**Kruskal-Wallis and Dunn's Post Hoc test**
+```{r}
+## baseline microbiome
+baseline_genus_relAbun_krDunn <- apppleplots::kruskal_dunn_stats(input_table = proc_baseline_genusAbun_table,
+                                                                 grouped_by = 'Genus',
+                                                                 adjust_method = 'BH',
+                                                                 filter_adj_p_value = FALSE,
+                                                                 formula_left = 'rel_abund',
+                                                                 formula_right = 'exp_vendor')
+
+baseline_genus_relAbun_kruskal <- baseline_genus_relAbun_krDunn$KruskalTest
+baseline_genus_relAbun_dunn <- baseline_genus_relAbun_krDunn$DunnTest
+
+## baseline and day 3 microbiome 
+d3_genus_relAbun_krDunn <- apppleplots::kruskal_dunn_stats(input_table = proc_d3_genusAbun_table,
+                                                           grouped_by = c('Genus', 'day_post_inf'),
+                                                           adjust_method = 'BH',
+                                                           filter_adj_p_value = FALSE,
+                                                           formula_left = 'rel_abund',
+                                                           formula_right = 'exp_vendor')
+
+d3_genus_relAbun_kruskal <- d3_genus_relAbun_krDunn$KruskalTest
+d3_genus_relAbun_dunn <- d3_genus_relAbun_krDunn$DunnTest
+
+## mini version
+mini_d3_genusAbun_table <- proc_d3_genusAbun_table %>% 
+  filter(Genus == 'Escherichia-Shigella' | Genus == 'Enterococcus' | Genus == 'Proteus' |
+           Genus == 'Staphylococcus' | Genus == 'Clostridioides') %>% 
+  mutate(log_rel_abund = log10(rel_abund))
+
+mini_d3_genus_relAbun_krDunn <- apppleplots::kruskal_dunn_stats(input_table = mini_d3_genusAbun_table,
+                                                                grouped_by = c('Genus', 'day_post_inf'),
+                                                                adjust_method = 'BH',
+                                                                filter_adj_p_value = FALSE,
+                                                                formula_left = 'log_rel_abund',
+                                                                formula_right = 'exp_vendor')
+
+mini_d3_genus_relAbun_kruskal <- mini_d3_genus_relAbun_krDunn$KruskalTest
+mini_d3_genus_relAbun_dunn <- mini_d3_genus_relAbun_krDunn$DunnTest
+```
+
+**Wrangling Dunn test for stat visualization**
+```{r}
+## baseline microbiome
+proc_baseline_genus_relAbun_dunn <- stat_plot_prep(filtered_table = proc_baseline_genusAbun_table,
+                                                   first_group = 'exp_vendor',
+                                                   second_group = 'Genus',
+                                                   mean_value = 'rel_abund',
+                                                   dunn_test = baseline_genus_relAbun_dunn)
+
+## baseline and day 3 microbiome
+proc_d3_genus_relAbun_dunn <- stat_plot_prep(filtered_table = proc_d3_genusAbun_table,
+                                             first_group = 'exp_vendor',
+                                             second_group = c('Genus', 'day_post_inf'),
+                                             mean_value = 'rel_abund',
+                                             dunn_test = d3_genus_relAbun_dunn)
+
+## mini version
+procMini_d3_genus_relAbun_dunn <- stat_plot_prep(filtered_table = mini_d3_genusAbun_table,
+                                             first_group = 'exp_vendor',
+                                             second_group = c('Genus', 'day_post_inf'),
+                                             mean_value = 'log_rel_abund',
+                                             dunn_test = mini_d3_genus_relAbun_dunn)
+
+```
+
+**Stat visualization**
+```{r, fig.width=15, fig.height=9}
+## baseline microbiome
+baseline_genus_relAbun_stat_plot <- stat_plot(new_dunn = proc_baseline_genus_relAbun_dunn,
+                                              facet_by = 'Genus',
+                                              title = 'All Exp Microbe Relative Abundance at Baseline',
+                                              wanted_subtitle = 'Microbe Genus')
+
+baseline_genus_relAbun_stat_plot
+```
+
+```{r, fig.width=24.5, fig.height=9}
+## baseline and day 3 microbiome
+d3_genus_relAbun_stat_plot <- stat_plot(new_dunn = proc_d3_genus_relAbun_dunn,
+                                        facet_by = 'Genus',
+                                        title = 'All Exp Microbe Relative Abundance',
+                                        wanted_subtitle = 'Microbe Genus')
+
+d3_genus_relAbun_stat_plot <- d3_genus_relAbun_stat_plot +
+  facet_grid(day_post_inf~Genus)
+
+d3_genus_relAbun_stat_plot
+```
+
+mini version of the stats
+```{r, fig.width=15, fig.height=9}
+## new plot labels 
+exp_x_labs <- c('Old\nAnschutz\n(2020) -\nTaconic',
+                'New\nAnschutz\n(2024) -\nCharles\nRiver',
+                'New\nAnschutz\n(2024) -\nTaconic')
+
+exp_y_labs <- c('New Anschutz (2024) - Charles River',
+                'New Anschutz (2024) - Taconic',
+                'U of Arizona - Charles River')
+
+mini_d3_genus_relAbun_stat_plot <- stat_plot(new_dunn = procMini_d3_genus_relAbun_dunn,
+                                             facet_by = 'Genus',
+                                             title = 'All Exp Microbe Relative Abundance',
+                                             wanted_subtitle = 'Timeline Day')
+
+mini_d3_genus_relAbun_stat_plot <- mini_d3_genus_relAbun_stat_plot +
+  facet_grid(Genus~day_post_inf) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 0.5)) +
+  scale_x_discrete(labels = exp_x_labs) +
+  scale_y_discrete(labels = exp_y_labs)
+
+mini_d3_genus_relAbun_stat_plot
+```
+
+
+## **Saving my outputs**
+```{r}
+## baseline microbiome only 
+ggsave('../baseline/plots/famAbun_stat_vis.pdf',
+       plot = baseline_family_relAbun_stat_plot,
+       width = 15, 
+       height = 9)
+ggsave('../baseline/plots/genusAbun_stat_vis.pdf',
+       plot = baseline_genus_relAbun_stat_plot,
+       width = 15,
+       height = 9)
+
+## baseline and day 3 microbiome 
+ggsave('../baseline_day3/plots/famAbun_stat_vis.pdf',
+       plot = d3_family_relAbun_stat_plot,
+       width = 23, 
+       height = 9)
+ggsave('../baseline_day3/plots/genusAbun_stat_vis.pdf',
+       plot = d3_genus_relAbun_stat_plot,
+       width = 24.5,
+       height = 9)
+ggsave('../baseline_day3/plots/mini_genusAbun_stat_vis.pdf',
+       plot = mini_d3_genus_relAbun_stat_plot,
+       width = 15,
+       height = 9)
+
+## saving as an .rdat object to be put together in a figure
+save(mini_d3_genus_relAbun_stat_plot,
+     file = '../../figures/miniComparison_genusAbun_stat_vis.rdat')
+```
+

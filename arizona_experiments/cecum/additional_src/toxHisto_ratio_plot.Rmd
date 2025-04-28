@@ -1,0 +1,86 @@
+---
+title: "toxinHisto_ratio_plot"
+output: html_document
+date: "2025-04-28"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(broom)
+library(cowplot)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+library(naniar)
+library(ggpubr)
+library(rstatix)
+library(viridis)
+library(apppleplots)
+```
+
+**File Paths**
+```{r}
+tox_histo_table_FP <- '../data/misc/histoMetabToxin_results_comb.tsv'
+
+## lists to redo the diet names on the facet labels of the ggplot created below 
+diet_x_labs <- c('Chow', 
+                  'HFt/\nHFb', 
+                  'HFt/\nLFb', 
+                  'LFt/\nHFb', 
+                  'LFt/\nLFb')
+
+neat_labs <- c('TcdA', 'TcdB')
+names(neat_labs) <- c('Total TcA Neat', 'Total TcB Neat')
+```
+
+**Reading in Files**
+```{r}
+tox_histo_table <- read_tsv(tox_histo_table_FP)
+```
+
+**Data Wrangled**
+calculating the ratio of toxin concentration to histopathology score per mouse
+- should I be normalizing the score/concentration before I calculate the ratio bc they have very different units??
+- note: normalized both score/toxin concentration using min/max normalization (or scaling)
+```{r}
+(toxHisto_ratio_table <- tox_histo_table %>% 
+  filter(microbe_product == 'Total TcA Neat' | microbe_product == 'Total TcB Neat',
+         tissue == 'cecum') %>% 
+  mutate(score_norm = ((score - min(score)) / (max(score) - min(score))),
+         tox_norm = ((concentration - min(concentration)) / (max(concentration) - min(concentration)))) %>% 
+  group_by(mouse_id, microbe_product) %>% 
+  mutate(tox_histo_ratio = (tox_norm/score_norm),
+         tox_histo_ratio = ifelse(tox_histo_ratio == 'Inf', 0, tox_histo_ratio),
+         tox_histo_ratio = ifelse(tox_histo_ratio == 0, tox_histo_ratio + 0.001, tox_histo_ratio)))
+```
+
+**Plot**
+scales are not log10 transformed
+```{r, fig.width=10, fig.height=5}
+(toxHisto_ratio_plot <- toxHisto_ratio_table %>% 
+  ggplot(aes(x = diet, y = tox_histo_ratio)) +
+  geom_boxplot(aes(group = diet), outlier.shape = NA) +
+  geom_jitter(alpha = 0.5, size = 3, width = 0.1, height = 0) +
+  theme_bw(base_size = 20) +
+  facet_wrap(~microbe_product,
+             labeller = labeller(microbe_product = neat_labs)) +
+  scale_x_discrete(labels = diet_x_labs) +
+  labs(x = 'Diet',
+       y = 'Ratio (conc./score)',
+       title = 'Cecum Toxin:Histopathology Ratio'))
+```
+scales are log10 transformed
+```{r, fig.width=10, fig.height=5}
+(log10_toxHisto_ratio_plot <- toxHisto_ratio_plot +
+   scale_y_continuous(trans = 'log10',
+                      labels = scales::comma))
+```
+
+**Saving my Outputs**
+```{r}
+## yayyayay plots go here!
+```
+

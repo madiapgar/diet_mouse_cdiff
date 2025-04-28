@@ -1,0 +1,254 @@
+---
+title: "histoScore_breakdown"
+output: html_document
+date: "2025-04-28"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(magrittr)
+library(tidyverse)
+library(broom)
+library(cowplot)
+library(rstatix)
+library(ggpubr)
+```
+
+**Functions**
+```{r}
+## prepping all of my files for downstream analysis
+file_prep <- function(histo_fp,
+                      histo_cat_fp,
+                      metadata_fp){
+  ## reading in histo and histo categories file
+  histo <- read_csv(histo_fp)
+  colnames(histo) <- c('mouse_id',
+                       'cecum_total',
+                       'colon_total')
+  histo_cat <- read_tsv(histo_cat_fp)
+  
+  histo <- histo %>% 
+    left_join(histo_cat, by = 'mouse_id') %>% 
+    na.omit()
+  ## reading in metadata file
+  metadata <- read_tsv(metadata_fp) %>% 
+    select(!c(tube_num, date, day_post_inf, sample_type, corr_sample_num))
+  ## putting them together
+  big_histo <- metadata %>% 
+    left_join(histo, by = 'mouse_id') %>% 
+    gather(contains(c('cecum', 'colon')), key = category, value = score) %>% 
+    separate_wider_delim(cols = 'category',
+                         delim = '_',
+                         names = c('tissue',
+                                   'category'),
+                         cols_remove = FALSE,
+                         too_many = 'merge')
+  ## creating a list of outputs
+  my_list <- list(Histopathology = histo,
+                  Metadata = metadata,
+                  HistoTable = big_histo)
+  return(my_list)
+}
+
+## statistical analysis for histopathology plots only
+histo_stats <- function(histo_table,
+                        wanted_filter){
+  ## kruskal wallis test 
+  histo_table %>% 
+    filter(tissue == wanted_filter) %>% 
+    group_by(category) %>% 
+    do(tidy(kruskal.test(score ~ diet,
+               data = .))) %>% 
+    ungroup() %>% 
+    arrange(p.value) %>% 
+    mutate(p.adj = p.adjust(p.value,
+                            method = "BH"),
+          test_id = paste(category)) -> kruskal
+  ## dunns post hoc test
+  histo_table %>% 
+    filter(tissue == wanted_filter) %>% 
+    group_by(category) %>% 
+    mutate(test_id = paste(category)) %>% 
+    filter(test_id %in% kruskal$test_id) %>% 
+    dunn_test(score ~ diet,
+              p.adjust.method = 'BH',
+              data = .) %>% 
+    add_xy_position(scales = 'free',
+                   fun = 'max') -> dunn
+  ## list of my outputs
+  my_list <- list(KruskalTest = kruskal,
+                  DunnsPostHocTest = dunn)
+  return(my_list)
+}
+
+## plots for histopathology plots only
+histo_plot <- function(histo_table,
+                        wanted_filter,
+                        x_labs,
+                        facet_labs, 
+                        dunn_test,
+                        title){
+  histo_table %>% 
+    filter(tissue == wanted_filter) %>% 
+    ggplot(aes(x = diet, y = score)) +
+    geom_boxplot(aes(group = diet)) +
+    geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
+    theme_bw(base_size = 20) +
+    scale_x_discrete(labels = x_labs) +
+    facet_wrap(~category,
+               nrow = 1,
+               scales = "free_y",
+               labeller = labeller(category = facet_labs)) +
+    stat_pvalue_manual(dunn_test,
+                       tip.length = 0.01,
+                       step.increase = 0.05,
+                       step.group.by = 'category',
+                       label = 'p.adj.signif',
+                       hide.ns = TRUE) +
+    labs(x = 'Diet',
+         y = 'Score',
+         title = title) -> plot
+  return(plot)
+}
+```
+
+**File Paths**
+```{r}
+histo_cat_FP <- '../data/misc/histo_categories.txt'
+histo_FP <- '../data/misc/histo_data.csv'
+metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
+
+diet_x_labs <- c('Chow',
+                 'HFt/\nHFb',
+                 'HFt/\nLFb',
+                 'LFt/\nHFb',
+                 'LFt/\nLFb')
+
+diet_y_labs <- c('Chow',
+                  'HFt/HFb',
+                  'HFt/LFb',
+                  'LFt/HFb',
+                  'LFt/LFb')
+
+diet_labs <- 
+    c('Chow', 
+      'High Fat / High Fiber', 
+      'High Fat / Low Fiber', 
+      'Low Fat / High Fiber', 
+      'Low Fat / Low Fiber')
+
+names(diet_labs) <- c('Chow', 
+                      'HF/HF', 
+                      'HF/LF', 
+                      'LF/HF', 
+                      'LF/LF')
+
+cecum_labels <- c('Total',
+                  'Submucosal Edema',
+                  'Neutrophil Infiltration',
+                  'Number of Goblet Cells',
+                  'Epithelial Integrity')
+names(cecum_labels) <- c('cecum_total',
+                         'cecum_submuc_edema',
+                        'cecum_PNM_infil',
+                        'cecum_num_gobletCells',
+                        'cecum_epithelial_integrity')
+
+colon_labels <- c('Total',
+                  'Severity of Inflammation',
+                  'Extent of Injury',
+                  'Epithelial Regeneration',
+                  'Crypt Damage')
+names(colon_labels) <- c('colon_total',
+                         'colon_inflamm_sev',
+                        'colon_injury_extent',
+                        'colon_epithelial_regen',
+                        'colon_crypt_damage')
+
+tissue_labs <- c('Cecum',
+                 'Colon')
+names(tissue_labs) <- c('cecum',
+                        'colon')
+```
+
+**Data Wrangling**
+This data does not contain replicate one!
+```{r}
+wanted_files <- file_prep(histo_FP,
+                          histo_cat_FP,
+                          metadata_FP)
+
+histo <- wanted_files$Histopathology
+metadata <- wanted_files$Metadata
+big_histo <- wanted_files$HistoTable
+```
+
+**Stats**
+```{r}
+## cecal stats
+cecal_stats <- histo_stats(big_histo,
+                           'cecum')
+
+cecal_kruskal <- cecal_stats$KruskalTest
+cecal_dunn <- cecal_stats$DunnsPostHocTest
+
+## colon stats
+colon_stats <- histo_stats(big_histo,
+                           'colon')
+
+colon_kruskal <- colon_stats$KruskalTest
+colon_dunn <- colon_stats$DunnsPostHocTest
+```
+
+**Plots**
+```{r, fig.height=5.5, fig.width=19}
+## cecal plot
+cecum_plot <- histo_plot(big_histo,
+                         'cecum',
+                         diet_x_labs,
+                         cecum_labels,
+                         cecal_dunn,
+                         'Cecal Tissue Damage Scoring by Diet')
+
+## colon plot
+colon_plot <- histo_plot(big_histo,
+                         'colon',
+                         diet_x_labs,
+                         colon_labels,
+                         colon_dunn,
+                         'Colon Tissue Damage Scoring by Diet')
+
+cecum_plot
+colon_plot
+```
+
+**Histopathology Plots Together**
+```{r, fig.width=19.5, fig.height=10.5}
+plot_grid(cecum_plot,
+          colon_plot,
+          nrow = 2,
+          labels = c('a)', 'b)'),
+          align = c('hv'),
+          axis = c('tblr')) -> tissue_plots
+
+tissue_plots
+```
+
+**Saving my Outputs**
+```{r}
+ggsave('../plots/histo_categories.pdf',
+       plot = tissue_plots,
+       width = 19.5,
+       height = 10.5)
+
+## as an rdata object 
+save(cecum_plot,
+     file = '../../../figures/cecum_histo_categories.rdata')
+save(colon_plot,
+     file = '../../../figures/colon_histo_categories.rdata')
+```
+

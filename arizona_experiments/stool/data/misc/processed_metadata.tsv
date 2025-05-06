@@ -28,7 +28,7 @@ sampleid	diet	day_post_inf	mouse_id	study	sample_type	diet_true	high_fat	high_fi
 2_0425_9740	Chow	-8	9740	2	colon	Chow	0	0	0	barrier_2	39932
 2_0430_9740	Chow	-3	9740	2	colon	Chow	0	0	0	barrier_2	51208
 2_0503_9740	Chow	0	9740	2	colon	Chow	0	0	0	barrier_2	40565
-2B_0506_9740	Chow	3	9740	2	colon	Chow	0	0	0	barrier_2	39112
+2_0506_9740_B	Chow	3	9740	2	colon	Chow	0	0	0	barrier_2	39112
 2_0506_9740	Chow	3	9740	2	colon	Chow	0	0	0	barrier_2	42001
 2_0418_9741	Chow	-15	9741	2	colon	Chow	0	0	0	barrier_2	38891
 2_0425_9741	Chow	-8	9741	2	colon	Chow	0	0	0	barrier_2	52548

@@ -24,6 +24,7 @@ library(apppleplots)
 **File Paths**
 ```{r}
 tox_histo_table_FP <- '../data/misc/histoMetabToxin_results_comb.tsv'
+histo_cat_FP <- '../data/misc/histo_categories.txt'
 
 ## lists to redo the diet names on the facet labels of the ggplot created below 
 diet_x_labs <- c('Chow', 
@@ -34,14 +35,43 @@ diet_x_labs <- c('Chow',
 
 neat_labs <- c('TcdA', 'TcdB')
 names(neat_labs) <- c('Total TcA Neat', 'Total TcB Neat')
+
+cecum_labels <- c('Submucosal Edema',
+                  'Neutrophil Infiltration',
+                  'Number of Goblet Cells',
+                  'Epithelial Integrity')
+names(cecum_labels) <- c('cecum_submuc_edema',
+                        'cecum_PNM_infil',
+                        'cecum_num_gobletCells',
+                        'cecum_epithelial_integrity')
+
+colon_labels <- c('Severity of Inflammation',
+                  'Extent of Injury',
+                  'Epithelial Regeneration',
+                  'Crypt Damage')
+names(colon_labels) <- c('colon_inflamm_sev',
+                        'colon_injury_extent',
+                        'colon_epithelial_regen',
+                        'colon_crypt_damage')
 ```
 
 **Reading in Files**
 ```{r}
 tox_histo_table <- read_tsv(tox_histo_table_FP)
+
+## histo categories tables 
+cecum_histoCat_table <- read_tsv(histo_cat_FP) %>% 
+  gather(contains('cecum'), key = 'cecum_category', value = 'cecum_score') %>% 
+  select(mouse_id, cecum_category, cecum_score)
+
+colon_histoCat_table <- read_tsv(histo_cat_FP) %>% 
+  gather(contains('colon'), key = 'colon_category', value = 'colon_score') %>% 
+  select(mouse_id, colon_category, colon_score)
 ```
 
 **Data Wrangled**
+
+*for toxin/histo score ratio*
 calculating the ratio of toxin concentration to histopathology score per mouse
 - should I be normalizing the score/concentration before I calculate the ratio bc they have very different units??
 - note: normalized both score/toxin concentration using min/max normalization (or scaling)
@@ -57,7 +87,27 @@ calculating the ratio of toxin concentration to histopathology score per mouse
          tox_histo_ratio = ifelse(tox_histo_ratio == 0, tox_histo_ratio + 0.001, tox_histo_ratio)))
 ```
 
-**Plot**
+*for toxin/histo score categories correlation plot*
+```{r}
+## cecum
+(cecum_toxHisto_cat_table <- tox_histo_table %>% 
+   filter(tissue == 'cecum') %>% 
+   select(mouse_id, diet, sampleid, microbe_product, concentration, conc_normalized) %>% 
+   filter(microbe_product == 'Total TcA Neat' | microbe_product == 'Total TcB Neat') %>% 
+   left_join(cecum_histoCat_table, by = 'mouse_id', relationship = "many-to-many"))
+
+## colon
+(colon_toxHisto_cat_table <- tox_histo_table %>% 
+   filter(tissue == 'colon') %>% 
+   select(mouse_id, diet, sampleid, microbe_product, concentration, conc_normalized) %>% 
+   filter(microbe_product == 'Total TcA Neat' | microbe_product == 'Total TcB Neat') %>% 
+   left_join(colon_histoCat_table, by = 'mouse_id', relationship = "many-to-many"))
+```
+
+
+**Plots**
+
+*for toxin/histo score ratio*
 scales are not log10 transformed
 ```{r, fig.width=10, fig.height=5}
 (toxHisto_ratio_plot <- toxHisto_ratio_table %>% 
@@ -79,8 +129,87 @@ scales are log10 transformed
                       labels = scales::comma))
 ```
 
+*for toxin/histo score categories correlation plot*
+cecum
+```{r, fig.width=15, fig.height=10}
+(cecum_toxHisto_cat_plot <- apppleplots::correlation_plots(input_table = cecum_toxHisto_cat_table,
+                                                           x_value = 'conc_normalized',
+                                                           y_value = 'cecum_score',
+                                                           x_transform = TRUE,
+                                                           y_transform = FALSE,
+                                                           point_alpha = 0,
+                                                           regression_method = "lm",
+                                                           facet_rows = 'cecum_category',
+                                                           facet_cols = 'microbe_product',
+                                                           row_labs = cecum_labels,
+                                                           col_labs = neat_labs,
+                                                           x_name = 'Concentration (ng/uL)(log10)',
+                                                           y_name = 'Score',
+                                                           title_content = 
+                                                             'Cecum Toxin vs Cecum Histopathology Scoring Category')+
+                    geom_jitter(aes(fill = diet), pch = 21, alpha = 0.6, size = 4) +
+                    scale_fill_viridis(option = 'C',
+                                       discrete = TRUE,
+                                       name = 'Mouse Diet',
+                                       labels = c('Chow',
+                                                 'HFt / HFb',
+                                                 'HFt / LFb',
+                                                 'LFt / HFb',
+                                                 'LFt / LFb')) +
+                    theme_bw(base_size = 20) +
+                    theme(strip.text.y.right = element_text(angle = 0)))
+```
+
+colon
+```{r, fig.width=15, fig.height=10}
+(colon_toxHisto_cat_plot <- apppleplots::correlation_plots(input_table = colon_toxHisto_cat_table,
+                                                           x_value = 'conc_normalized',
+                                                           y_value = 'colon_score',
+                                                           x_transform = TRUE,
+                                                           y_transform = FALSE,
+                                                           point_alpha = 0,
+                                                           regression_method = "lm",
+                                                           facet_rows = 'colon_category',
+                                                           facet_cols = 'microbe_product',
+                                                           row_labs = colon_labels,
+                                                           col_labs = neat_labs,
+                                                           x_name = 'Concentration (ng/uL)(log10)',
+                                                           y_name = 'Score',
+                                                           title_content = 
+                                                             'Cecum Toxin vs Colon Histopathology Scoring Category')+
+                    geom_jitter(aes(fill = diet), pch = 21, alpha = 0.6, size = 4) +
+                    scale_fill_viridis(option = 'C',
+                                       discrete = TRUE,
+                                       name = 'Mouse Diet',
+                                       labels = c('Chow',
+                                                 'HFt / HFb',
+                                                 'HFt / LFb',
+                                                 'LFt / HFb',
+                                                 'LFt / LFb')) +
+                    theme_bw(base_size = 20) +
+                    theme(strip.text.y.right = element_text(angle = 0)))
+```
+
 **Saving my Outputs**
 ```{r}
-## yayyayay plots go here!
+## toxin:cecum histo score ratio plots
+ggsave('../plots/cecum_toxHisto_ratio_plot.pdf',
+       plot = toxHisto_ratio_plot,
+       width = 10, 
+       height = 5)
+ggsave('../plots/cecum_toxHisto_ratioLog10_plot.pdf',
+       plot = log10_toxHisto_ratio_plot,
+       width = 10, 
+       height = 5)
+
+## toxin to cecum/colon histo scores per category plots
+ggsave('../plots/cecum_toxHisto_cat_plot.pdf',
+       plot = cecum_toxHisto_cat_plot,
+       width = 15, 
+       height = 10)
+ggsave('../plots/colon_toxHisto_cat_plot.pdf',
+       plot = colon_toxHisto_cat_plot,
+       width = 15, 
+       height = 10)
 ```
 

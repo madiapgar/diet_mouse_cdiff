@@ -1,0 +1,751 @@
+---
+title: "qiita_data_sheets"
+output: html_document
+date: "2025-04-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(readr)
+```
+
+**Functions**
+```{r}
+## allows you to read in a metadata file with a specified sampleid column and just pull the mouse ids
+## associated with the sampleids
+pull_mouseid <- function(input_table_fp,
+                         sampleid_col){
+  table <- read_tsv(input_table_fp) %>% 
+    select(all_of(sampleid_col), mouse_id) %>% 
+    rename(sample_name = sampleid_col,
+           host_subject_id = mouse_id)
+  return(table)
+}
+
+## puts together sample info table with qiita-approved columns (i think)
+make_qiita_sample_info <- function(input_table,
+                                   sampleid_col,
+                                   collection_date_col,
+                                   date_delim,
+                                   des_entry,
+                                   scien_name_entry,
+                                   tax_id_entry,
+                                   q_sampleType_entry,
+                                   sampleType_entry,
+                                   geo_loc_entry,
+                                   elevation_entry,
+                                   empo4_entry,
+                                   env_material_entry,
+                                   lat_entry,
+                                   long_entry,
+                                   host_habitat_entry,
+                                   host_bodySite_entry,
+                                   host_bodyProduct_entry){
+  qiita_sampleInfo_table <- input_table %>% 
+    rename("sample_name" = sampleid_col,
+           ## idk if this is right for the tube id 
+           tube_id = BarcodeName,
+           "collection_date" = collection_date_col) %>% 
+    select(sample_name, tube_id, collection_date) %>% 
+    mutate(collection_date = paste(gsub(collection_date, pattern = date_delim, replacement = "-")),
+           title = paste("Dietary fiber reduces mortality from secondary blood infections in a murine model of antibiotic-induced Clostridioides difficile infection"),
+           scientific_name = paste(scien_name_entry),
+           taxon_id = paste(tax_id_entry),
+           description = paste(des_entry), ## differs
+           qiita_sample_type = paste(q_sampleType_entry), ## differs
+           sample_type = paste(sampleType_entry), ## differs
+           geo_loc_name = paste(geo_loc_entry), ## differs
+           country = paste("USA"),
+           elevation = paste(elevation_entry), ## differs
+           empo_1 = paste("Host-associated"),
+           empo_2 = paste("Host-associated (non-saline)"),
+           empo_3 = paste("Animal (non-saline)"),
+           empo_4 = paste(empo4_entry), ## differs
+           env_biome = paste("urban biome"),
+           env_feature = paste("animal-associated habitat"),
+           env_material = paste(env_material_entry), ## differs 
+           env_package = paste("host-associated"),
+           latitude = paste(lat_entry), ## differs
+           longitude = paste(long_entry), ## differs
+           collection_timestamp = paste(collection_date),
+           dna_extracted = paste(TRUE),
+           physical_speciman_location = paste("University of Colorado Anschutz"), 
+           ## idk if we have any speciman remaining - need to ask keith
+           physical_speciman_remaining = paste(FALSE),
+           host_age = paste(6),
+           host_age_units = paste("weeks"),
+           # host_subject_id = paste("MOUSE ID HERE"),
+           host_taxid = paste(10090),
+           host_scientific_name = paste("Mus musculus"),
+           host_common_name = paste("mouse"),
+           ## idk if these mice are juvenile or adult
+           host_life_stage = paste("juvenile"),
+           sex = paste("female"),
+           host_height = paste("not applicable"),
+           host_height_units = paste("not applicable"),
+           # host_weight = paste("MOUSE STARTING WEIGHT GOES HERE"),
+           host_weight_units = paste("g"),
+           host_body_mass_index = paste("not applicable"),
+           host_body_habitat = paste(host_habitat_entry), ## differs
+           host_body_site = paste(host_bodySite_entry), ## differs
+           host_body_product = paste(host_bodyProduct_entry), ## differs
+           depth = paste("not applicable"),
+           altitude = paste("not applicable"),
+           isolate_strain_taxonomy_id = paste("not applicable"),
+           isolate_scientific_name = paste("not applicable"))
+  
+  return(qiita_sampleInfo_table)
+}
+
+## puts together qiita prep information file for each sequencing run
+make_qiita_prep_info <- function(input_table,
+                                 sampleid_col,
+                                 run_date_col,
+                                 sub_date_delim = NULL,
+                                 expDes_description_entry,
+                                 run_prefix_entry){
+  
+  qiita_prepInfo_table <- input_table %>% 
+      rename(sample_name = sampleid_col,
+             barcode = BarcodeSequence,
+             primer = LinkerPrimerSequence,
+             run_date = run_date_col) %>% 
+      select(sample_name, barcode, primer, run_date) %>% 
+      filter(!grepl('Mock|PCR', sample_name),
+             !is.na(sample_name)) %>% 
+      mutate(experiment_design_description = paste(expDes_description_entry), ## changes 
+             library_construction_protocol = paste('Earth Microbiome Project, 16S'),
+             ## idk if this one is right
+             linker = paste('GT'),
+             platform = paste('Illumina'),
+             run_center = paste('Anschutz Center for Microbiome Excellence (ACME)'),
+             run_prefix = paste(run_prefix_entry), ## changes 
+             ## are these primers correct??
+             pcr_primers = paste('FWD:GTGCCAGCMGCCGCGGTAA; REV:GGACTACHVGGGTWTCTAAT'),
+             sequencing_method = paste('Sequencing by Synthesis'),
+             target_gene = paste('16S rRNA'),
+             target_subfragment = paste('V4'),
+             center_name = paste('University of Colorado Anschutz'),
+             ## idk if this is right either 
+             center_project_name = paste('Diet Mouse C. diff'),
+             instrument_model = paste('Illumina MiSeq'))
+  
+  if (is.character(sub_date_delim)){
+    qiita_prepInfo_table <- qiita_prepInfo_table %>% 
+      mutate(run_date = paste(gsub(run_date, pattern = sub_date_delim, replacement = "/")))
+  }
+  
+  return(qiita_prepInfo_table)
+}
+```
+
+**File Paths**
+i think i want all the barcodes files for this!
+```{r}
+qiita_sampleInfo_fp <- '../../qiita_templates/QIITA_sample_information.txt'
+
+## arizona stool samples 
+s40_fp <- '../arizona_experiments/stool/data/raw_data/S40_barcodes.txt'
+s44_fp <- '../arizona_experiments/stool/data/raw_data/S44_KH_barcodes.txt'
+s45_fp <- '../arizona_experiments/stool/data/raw_data/S45_KH_barcodes.txt'
+az_stool_meta_fp <- '../arizona_experiments/stool/data/misc/processed_metadata.tsv'
+az_weights_fp <- '../arizona_experiments/stool/data/misc/weight_all_sheets_combined_with_diet.csv'
+
+## arizona cecal samples
+s69_fp <- '../arizona_experiments/cecum/data/cecal_qiime_upper/SEQ069/cecal_s69_barcodes.txt'
+s70_fp <- '../arizona_experiments/cecum/data/cecal_qiime_upper/SEQ070/cecal_s70_barcodes.txt'
+s71_fp <- '../arizona_experiments/cecum/data/cecal_qiime_upper/SEQ071/cecal_s71_barcodes.txt'
+## was using filt_cecal_processed_metadata.tsv but i cant remember what I filtered out
+az_cecum_meta_fp <- '../arizona_experiments/cecum/data/misc/cecal_processed_metadata.tsv'
+
+## amc follow-up stool samples
+s88_fp <- '../amc_followUp_experiments/data/SEQ088/s88_barcodes.txt'
+s96_fp <- '../amc_followUp_experiments/data/SEQ096/s96_barcodes.txt'
+amcFU_stool_meta_fp <- '../amc_followUp_experiments/data/misc/proc_newExp_d15-d3_metadata.tsv'
+
+## NOTE: culture data is mixed in with the amc stool sequencing runs (i think for CDD03)
+## amc follow-up culture samples
+amcFU_culture_fp <- '../amc_followUp_experiments/data/new_culture_seqs/new_culture_barcodes.txt'
+amcFU_culture_meta_fp <- '../amc_followUp_experiments/data/misc/proc_cdd02-3_culture_metadata.tsv'
+
+amcFU_weights_fp <- '../amc_followUp_experiments/data/misc/newExp_mouse_weightData.csv'
+```
+
+**Reading in sequencing files**
+im lazy so i wrote a for loop to read in all the files as a dataframe and populate the filename as the variable name 
+```{r}
+## tsvs
+fp_list <- c(qiita_sampleInfo_fp,
+             s40_fp, s44_fp, s45_fp,
+             s69_fp, s70_fp, s71_fp,
+             s88_fp, s96_fp, amcFU_culture_fp)
+
+for (fp in unique(unlist(fp_list))){
+  table_name <- paste(gsub(basename(fp), pattern = ".txt", replacement = ""))
+  
+  assign(table_name,
+         read_tsv(fp))
+}
+
+## csvs
+csv_fp_list <- c(az_weights_fp,
+                 amcFU_weights_fp)
+
+for (fp in unique(unlist(csv_fp_list))){
+  table_name <- paste(gsub(basename(fp), pattern = ".csv", replacement = ""))
+  
+  assign(table_name,
+         read_csv(fp))
+}
+```
+
+**Reading in processed metadata files**
+to pull out sampleids and mouseids
+named vectors (c()) in r are like dictionaries in python!
+```{r}
+meta_fp_list <- c('az_stool_meta' = az_stool_meta_fp, 
+                  'az_cecum_meta' = az_cecum_meta_fp,
+                  'amc_stool_meta' = amcFU_stool_meta_fp)
+
+meta_sampleid_list <- c('az_stool_meta' = 'sampleid',
+                        'az_cecum_meta' = 'sampleid',
+                        'amc_stool_meta' = '#SampleID')
+
+
+for (fp_name in unique(unlist(names(meta_fp_list)))){
+    meta_name <- paste(names(meta_fp_list[fp_name]))
+    
+    assign(meta_name,
+           pull_mouseid(input_table_fp = meta_fp_list[fp_name],
+                        sampleid_col = meta_sampleid_list[[fp_name]]))
+}
+
+```
+
+# **QIITA all sequenced samples metadata (sample information file)**
+
+## **arizona cecal samples!**
+
+**weight data**
+cannot find weights for these mice!!:
+ - 9751
+ - 9752
+ - 9753
+ - 9754
+ - 118
+```{r}
+az_unwanted_days <- c(-1, 1, 2)
+
+az_weight_table <- weight_all_sheets_combined_with_diet %>% 
+  select(mouse_id, day, weight) %>% 
+  mutate(day_post_inf = case_when(
+           day == 0 ~ -15,
+           day == 8 ~ -8,
+           day == 13 ~ -3,
+           day == 14 ~ -1, 
+           day == 15 ~ 0,
+           day == 16 ~ 1,
+           day == 17 ~ 2,
+           day == 18 ~ 3
+         )) %>% 
+  filter(!(day_post_inf %in% az_unwanted_days)) %>%
+  select(-day)
+
+## stool 
+az_stool_weights <- read_tsv(az_stool_meta_fp) %>% 
+  select(sampleid, mouse_id, day_post_inf) %>% 
+  left_join(az_weight_table, by = c('mouse_id', 'day_post_inf')) %>% 
+  mutate(weight = as.numeric(weight)) %>% 
+  select(sampleid, weight) %>% 
+  rename(sample_name = sampleid,
+         host_weight = weight)
+## cecum
+mini_az_weight_table <- az_weight_table %>% 
+  filter(day_post_inf == 3) %>% 
+  rename(host_subject_id = mouse_id)
+
+az_cecum_weights <- az_cecum_meta %>% 
+  left_join(mini_az_weight_table, by = 'host_subject_id') %>% 
+  mutate(weight = as.numeric(weight)) %>% 
+  rename(host_weight = weight) %>% 
+  select(sample_name, host_weight)
+```
+
+host_subject_id = mouse_id! need to have 
+NOTE: may join mouse id and weight later!!
+```{r}
+az_cecum_df_list <- list(cecal_s69_barcodes,
+                         cecal_s70_barcodes,
+                         cecal_s71_barcodes)
+
+
+az_cecum_qiita_dfs <- tibble()
+
+for (df in unique(az_cecum_df_list)){
+  mini_az_cecum_samp_info <- make_qiita_sample_info(input_table = df,
+                                                 sampleid_col = "#SampleID",
+                                                 collection_date_col = "Collection_Date",
+                                                 date_delim = "([.])",
+                                                 des_entry = "University of Arizona:mouse:cecum content",
+                                                 scien_name_entry = "mouse gut metagenome",
+                                                 tax_id_entry = 410661,
+                                                 q_sampleType_entry = "[division] content",
+                                                 sampleType_entry = "cecum content",
+                                                 geo_loc_entry = "USA:AZ:Tucson",
+                                                 elevation_entry = 728,
+                                                 empo4_entry = "Animal distal gut (non-saline)",
+                                                 env_material_entry = "intestine environment",
+                                                 lat_entry = 32.23951,
+                                                 long_entry = 110.94564,
+                                                 host_habitat_entry = "UBERON:gastrointestinal system",
+                                                 host_bodySite_entry = "UBERON:colon",
+                                                 host_bodyProduct_entry = "UBERON:lumen of gut")
+  
+  az_cecum_qiita_dfs <- rbind(az_cecum_qiita_dfs, mini_az_cecum_samp_info)
+}
+
+## combine mouse ids
+az_cecum_qiita_dfs <- az_cecum_qiita_dfs %>% 
+  left_join(az_cecum_meta, by = 'sample_name') %>% 
+  left_join(az_cecum_weights, by = 'sample_name')
+
+```
+
+## **arizona stool samples**
+NOTE: can't find sampleid 3_0516_9898 or mouse_id 9898 anywhere but its in the sequencing barcodes files !!
+```{r}
+names(S45_KH_barcodes)[names(S45_KH_barcodes) == "Sample Time Point"] <- "Sample_Date"
+
+az_stool_df_list <- list(S40_barcodes,
+                         S44_KH_barcodes,
+                         S45_KH_barcodes)
+
+
+az_stool_qiita_dfs <- tibble()
+
+for (df in unique(az_stool_df_list)){
+  mini_az_stool_samp_info <- make_qiita_sample_info(input_table = df,
+                                                 sampleid_col = "#SampleID",
+                                                 collection_date_col = "Sample_Date",
+                                                 date_delim = "([/])",
+                                                 des_entry = "University of Arizona:mouse:fecal sample",
+                                                 scien_name_entry = "mouse gut metagenome",
+                                                 tax_id_entry = 410661,
+                                                 q_sampleType_entry = "feces",
+                                                 sampleType_entry = "feces",
+                                                 geo_loc_entry = "USA:AZ:Tucson",
+                                                 elevation_entry = 728,
+                                                 empo4_entry = "Animal distal gut (non-saline)",
+                                                 env_material_entry = "fecal material",
+                                                 lat_entry = 32.23951,
+                                                 long_entry = 110.94564,
+                                                 host_habitat_entry = "UBERON:feces",
+                                                 host_bodySite_entry = "UBERON:feces",
+                                                 host_bodyProduct_entry = "UBERON:feces")
+  
+  az_stool_qiita_dfs <- rbind(az_stool_qiita_dfs, mini_az_stool_samp_info)
+}
+
+## take out all mock and PCR blank samples
+unwanted_az_stool_samples <- az_stool_qiita_dfs %>% 
+  filter(sample_name == "PCR Blank" | sample_name == "PCR blank" | sample_name != str_match(sample_name, "Mock")) %>% 
+  select(sample_name)
+
+az_stool_qiita_dfs <- az_stool_qiita_dfs %>% 
+  filter(!(sample_name %in% unwanted_az_stool_samples$sample_name))
+
+## combine with mouse ids
+az_stool_qiita_dfs <- az_stool_qiita_dfs %>% 
+  left_join(az_stool_meta, by = 'sample_name') %>% 
+  left_join(az_stool_weights, by = 'sample_name') %>% 
+  filter(!is.na(sample_name))
+```
+
+## **amc follow-up experiments**
+**weight data** 
+BaseWeight 19.72, DayWeight 19.50 = CDD03.Tc.HFLF.2
+BaseWeight 19.00, DayWeight 16.18 = CDD03.CR.LFHF.5
+
+idk what to do because some of these mouse ids aren't matching up with a weight at all and I can't figure out how to fix it 
+```{r}
+proc_amc_weights <- newExp_mouse_weightData %>% 
+  select(SampleID, ExperimentID, ExperimentDay, BaseWeight, DayWeight) %>% 
+  rename(sample_name = SampleID) %>% 
+  filter(ExperimentID != 'CDD01') %>% 
+  mutate(day_post_inf = (ExperimentDay - 15),
+         mouse_id = gsub(sample_name, pattern = ".[0-9]{2}$", replacement = ""))
+
+## baseline/day neg 15
+amc_dNeg15_weights <- proc_amc_weights %>%
+  filter(!is.na(BaseWeight)) %>% 
+  group_by(mouse_id) %>% 
+  summarise(weight = mean(BaseWeight)) %>% 
+  mutate(day_post_inf = -15)
+
+## day 3 
+amc_d3_weights <- proc_amc_weights %>% 
+    filter(day_post_inf == 3) %>% 
+    rename(weight = DayWeight) %>% 
+    select(mouse_id, weight, day_post_inf)
+
+## these mice died before day 3 so I'm taking the last recorded weight for them as day 3
+noWeight_d3_mice <- amc_dNeg15_weights %>% 
+  filter(!(mouse_id %in% amc_d3_weights$mouse_id)) %>% 
+  mutate(weight = case_when(
+    mouse_id == 'CDD02.Tc.Chow.3' ~ 17.1,
+    mouse_id == 'CDD02.Tc.HFHF.1' ~ 21.0
+  ),
+  day_post_inf = 3) 
+
+# proc_amc_weights %>% 
+#   filter(mouse_id %in% noWeight_d3_mice$mouse_id)
+
+## putting them together
+pre_amc_weight_table <- rbind(amc_dNeg15_weights,
+                              amc_d3_weights,
+                              noWeight_d3_mice)
+
+amc_weight_table <- read_tsv(amcFU_stool_meta_fp) %>% 
+  select(`#SampleID`, mouse_id, day_post_inf) %>% 
+  rename(sample_name = `#SampleID`) %>% 
+  left_join(pre_amc_weight_table, by = c('mouse_id', 'day_post_inf'))
+
+mini_amc_weight_table <- amc_weight_table %>% 
+  select(sample_name, weight) %>% 
+  rename(host_weight = weight)
+```
+
+**weights for amc culture data**
+```{r}
+amc_culture_weights <- amc_weight_table %>% 
+  filter(day_post_inf == 3) %>% 
+  select(mouse_id, weight) %>% 
+  rename(host_subject_id = mouse_id)
+
+amc_culture_meta <- read_tsv(amcFU_culture_meta_fp)  %>% 
+    select(sampleid, mouse_id, location) %>% 
+    rename(sample_name = sampleid,
+           host_subject_id = mouse_id) %>% 
+    left_join(amc_culture_weights, by = 'host_subject_id') %>% 
+    ## idk whats up with this stupid sample but its fine whatever
+    mutate(weight = ifelse(sample_name == 'CDD03.Tc.HFLF.2.Blood', 19.50, weight)) %>% 
+    rename(host_weight = weight)
+```
+
+**stool samples**
+```{r}
+amc_stool_df_list <- list(s88_barcodes,
+                          s96_barcodes)
+
+amc_stool_qiita_dfs <- tibble()
+
+for (df in unique(amc_stool_df_list)){
+  mini_az_stool_samp_info <- make_qiita_sample_info(input_table = df,
+                                                 sampleid_col = "SampleID",
+                                                 collection_date_col = "Date",
+                                                 date_delim = "([/])",
+                                                 des_entry = "University of Colorado Anschutz:mouse:fecal sample",
+                                                 scien_name_entry = "mouse gut metagenome",
+                                                 tax_id_entry = 410661,
+                                                 q_sampleType_entry = "feces",
+                                                 sampleType_entry = "feces",
+                                                 geo_loc_entry = "USA:CO:Aurora",
+                                                 elevation_entry = 1668,
+                                                 empo4_entry = "Animal distal gut (non-saline)",
+                                                 env_material_entry = "fecal material",
+                                                 lat_entry = 39.74545,
+                                                 long_entry = -104.83932,
+                                                 host_habitat_entry = "UBERON:feces",
+                                                 host_bodySite_entry = "UBERON:feces",
+                                                 host_bodyProduct_entry = "UBERON:feces")
+  
+  amc_stool_qiita_dfs <- rbind(amc_stool_qiita_dfs, mini_az_stool_samp_info)
+}
+
+## take out all mock and PCR blank samples
+unwanted_amc_stool_samples <- amc_stool_qiita_dfs %>% 
+  filter(sample_name != str_match(sample_name, "PCR_Blank") | sample_name != str_match(sample_name, "EW.Mock")) %>% 
+  select(sample_name)
+
+amc_stool_qiita_dfs <- amc_stool_qiita_dfs %>% 
+  filter(!(sample_name %in% unwanted_amc_stool_samples$sample_name),
+         ## pulling out culture data sampleids 
+         !(sample_name %in% amc_culture_meta$sample_name)) %>% 
+  left_join(amc_stool_meta, by = 'sample_name') %>% 
+  na.omit() %>% 
+  left_join(mini_amc_weight_table, by = 'sample_name')
+```
+
+## **amc follow-up experiment culture samples**
+there's only one sequencing run for these so don't need the for loop actually (i just need to do a lot of other funky stuff lmao)
+- may need to change scientific name: mouse metagenome, taxon_id: 1441287
+
+spleen!!
+```{r}
+## spleen
+## pulling just spleen sampleids out of the metadata
+amc_spleen_df <- amc_culture_meta %>% 
+  filter(location == 'spleen') %>% 
+  select(-location) 
+
+## using those sampleids to trim down the barcodes file 
+spleen_barcodes <- new_culture_barcodes %>% 
+  filter(`#SampleID` %in% amc_spleen_df$sample_name)
+
+amc_spleen_qiita_df <- make_qiita_sample_info(input_table = spleen_barcodes,
+                                               sampleid_col = "#SampleID",
+                                               collection_date_col = "Date",
+                                               date_delim = "([/])",
+                                               des_entry = "University of Colorado Anschutz:mouse:spleen sample",
+                                               scien_name_entry = "mouse metagenome",
+                                               tax_id_entry = 1441287,
+                                               q_sampleType_entry = "spleen",
+                                               sampleType_entry = "spleen",
+                                               geo_loc_entry = "USA:CO:Aurora",
+                                               elevation_entry = 1668,
+                                               empo4_entry = "Animal corpus (non-saline)",
+                                               env_material_entry = "organic material",
+                                               lat_entry = 39.74545,
+                                               long_entry = -104.83932,
+                                               host_habitat_entry = "UBERON:spleen",
+                                               host_bodySite_entry = "UBERON:spleen",
+                                               host_bodyProduct_entry = "UBERON:parenchyma")
+
+## combining mouse ids 
+amc_spleen_qiita_df <- amc_spleen_qiita_df %>% 
+  left_join(amc_spleen_df, by = 'sample_name')
+```
+
+liver!!
+```{r}
+## liver
+## pulling just liver sampleids out of the metadata
+amc_liver_df <- amc_culture_meta %>% 
+  filter(location == 'liver') %>% 
+  select(-location) 
+
+## using those sampleids to trim down the barcodes file 
+liver_barcodes <- new_culture_barcodes %>% 
+  filter(`#SampleID` %in% amc_liver_df$sample_name)
+
+amc_liver_qiita_df <- make_qiita_sample_info(input_table = liver_barcodes,
+                                               sampleid_col = "#SampleID",
+                                               collection_date_col = "Date",
+                                               date_delim = "([/])",
+                                               des_entry = "University of Colorado Anschutz:mouse:liver sample",
+                                               scien_name_entry = "mouse metagenome",
+                                               tax_id_entry = 1441287,
+                                               q_sampleType_entry = "liver",
+                                               sampleType_entry = "liver",
+                                               geo_loc_entry = "USA:CO:Aurora",
+                                               elevation_entry = 1668,
+                                               empo4_entry = "Animal corpus (non-saline)",
+                                               env_material_entry = "organic material",
+                                               lat_entry = 39.74545,
+                                               long_entry = -104.83932,
+                                               host_habitat_entry = "UBERON:hepatobiliary system",
+                                               host_bodySite_entry = "UBERON:liver",
+                                               host_bodyProduct_entry = "UBERON:parenchyma")
+
+## combining mouse ids 
+amc_liver_qiita_df <- amc_liver_qiita_df %>% 
+  left_join(amc_liver_df, by = 'sample_name')
+```
+
+blood!!
+```{r}
+## blood
+## pulling just blood sampleids out of the metadata
+amc_blood_df <- amc_culture_meta %>% 
+  filter(location == 'blood') %>% 
+  select(-location) 
+
+## using those sampleids to trim down the barcodes file 
+blood_barcodes <- new_culture_barcodes %>% 
+  filter(`#SampleID` %in% amc_blood_df$sample_name)
+
+amc_blood_qiita_df <- make_qiita_sample_info(input_table = blood_barcodes,
+                                               sampleid_col = "#SampleID",
+                                               collection_date_col = "Date",
+                                               date_delim = "([/])",
+                                               des_entry = "University of Colorado Anschutz:mouse:blood sample",
+                                               scien_name_entry = "mouse metagenome",
+                                               tax_id_entry = 1441287,
+                                               q_sampleType_entry = "blood",
+                                               sampleType_entry = "blood",
+                                               geo_loc_entry = "USA:CO:Aurora",
+                                               elevation_entry = 1668,
+                                               empo4_entry = "Animal secretion (non-saline)",
+                                               env_material_entry = "blood material",
+                                               lat_entry = 39.74545,
+                                               long_entry = -104.83932,
+                                               host_habitat_entry = "UBERON:blood",
+                                               host_bodySite_entry = "UBERON:blood",
+                                               host_bodyProduct_entry = "UBERON:blood")
+
+## combining mouse ids 
+amc_blood_qiita_df <- amc_blood_qiita_df %>% 
+  left_join(amc_blood_df, by = 'sample_name')
+```
+
+reproductive (should just be one sample)!!
+- filling out qiita info as if it was the uterus since don't have much other information
+```{r}
+## reproductive
+## pulling just reproductive sampleids out of the metadata
+amc_repro_df <- amc_culture_meta %>% 
+  filter(location == 'reproductive') %>% 
+  select(-location) 
+
+## using those sampleids to trim down the barcodes file 
+repro_barcodes <- new_culture_barcodes %>% 
+  filter(`#SampleID` %in% amc_repro_df$sample_name)
+
+amc_repro_qiita_df <- make_qiita_sample_info(input_table = repro_barcodes,
+                                               sampleid_col = "#SampleID",
+                                               collection_date_col = "Date",
+                                               date_delim = "([/])",
+                                               des_entry = "University of Colorado Anschutz:mouse:uterine sample",
+                                               scien_name_entry = "mouse metagenome",
+                                               tax_id_entry = 1441287,
+                                               q_sampleType_entry = "uterus",
+                                               sampleType_entry = "uterus",
+                                               geo_loc_entry = "USA:CO:Aurora",
+                                               elevation_entry = 1668,
+                                               empo4_entry = "Animal corpus (non-saline)",
+                                               env_material_entry = "organic material",
+                                               lat_entry = 39.74545,
+                                               long_entry = -104.83932,
+                                               host_habitat_entry = "UBERON:genitourinary system",
+                                               host_bodySite_entry = "UBERON:uterus",
+                                               host_bodyProduct_entry = "UBERON:mucosa")
+
+## combining mouse ids 
+amc_repro_qiita_df <- amc_repro_qiita_df %>% 
+  left_join(amc_repro_df, by = 'sample_name')
+```
+
+## **ALL QIITA SAMPLE INFO DFS TOGETHER!!**
+nas for weights could = "not collected" or "missing" 
+```{r}
+all_qiita_dfs <- rbind(az_stool_qiita_dfs,
+                       az_cecum_qiita_dfs,
+                       amc_stool_qiita_dfs,
+                       amc_spleen_qiita_df,
+                       amc_liver_qiita_df,
+                       amc_blood_qiita_df,
+                       amc_repro_qiita_df)
+
+
+## saving sample information df as a .tsv
+write_tsv(all_qiita_dfs,
+          'qiita_sample_information.tsv')
+```
+
+# **QIITA prep information file**
+
+arizona experiments - stool samples 
+```{r}
+az_seq_df_list <- list(SEQ040 = S40_barcodes, 
+                       SEQ044 = S44_KH_barcodes,
+                       SEQ045 = S45_KH_barcodes)
+
+az_seq_runDate_list <- c('SEQ040' = 'Extraction_Date',
+                         'SEQ044' = 'Sample_Date',
+                         'SEQ045' = 'Sample_Date')
+
+
+for (seq_name in unique(unlist(names(az_seq_df_list)))){
+    seq_file_var <- paste0(names(az_seq_df_list[seq_name]), "_prep_file")
+    seq_file_name <- paste0(names(az_seq_df_list[seq_name]), "_qiita_prep_information.tsv")
+    
+    int_file <- make_qiita_prep_info(input_table = az_seq_df_list[[seq_name]],
+                                     sampleid_col = '#SampleID',
+                                     run_date_col = az_seq_runDate_list[[seq_name]],
+                                     sub_date_delim = NULL,
+                                     expDes_description_entry = 'Isolated bacteria to describe gut microbiome',
+                                     run_prefix_entry = seq_name)
+    
+    ## write results out to current wd as .tsv
+    write_tsv(int_file,
+              file = seq_file_name)
+    
+    ## assign results to variable so can look at them in global environment 
+    assign(seq_file_var,
+           int_file)
+}
+
+```
+
+arizona experiments - cecal samples 
+```{r}
+az_cecum_seq_list <- list(SEQ069 = cecal_s69_barcodes, 
+                          SEQ070 = cecal_s70_barcodes,
+                          SEQ071 = cecal_s71_barcodes)
+
+
+for (seq_name in unique(unlist(names(az_cecum_seq_list)))){
+    seq_file_var <- paste0(names(az_cecum_seq_list[seq_name]), "_prep_file")
+    seq_file_name <- paste0(names(az_cecum_seq_list[seq_name]), "_qiita_prep_information.tsv")
+    
+    int_file <- make_qiita_prep_info(input_table = az_cecum_seq_list[[seq_name]],
+                                     sampleid_col = '#SampleID',
+                                     run_date_col = 'Extraction_Date',
+                                     sub_date_delim = "([.])",
+                                     expDes_description_entry = 'Isolated bacteria to describe gut microbiome',
+                                     run_prefix_entry = seq_name)
+    ## write results out to current wd as .tsv
+    write_tsv(int_file,
+              file = seq_file_name)
+    
+    ## assign results to variable so can look at them in global environment 
+    assign(seq_file_var,
+           int_file)
+}
+```
+
+amc follow-up experiments
+```{r}
+culture_sampleids <- s96_barcodes %>% 
+  filter(sampleType == 'culture') %>% 
+  rename(sample_name = 'SampleID')
+
+amc_seq_df_list <- list(SEQ088 = s88_barcodes, 
+                        SEQ096 = s96_barcodes)
+
+
+for (seq_name in unique(unlist(names(amc_seq_df_list)))){
+    seq_file_var <- paste0(names(amc_seq_df_list[seq_name]), "_prep_file")
+    seq_file_name <- paste0(names(amc_seq_df_list[seq_name]), "_qiita_prep_information.tsv")
+    
+    int_file <- make_qiita_prep_info(input_table = amc_seq_df_list[[seq_name]],
+                                     sampleid_col = 'SampleID',
+                                     run_date_col = 'Extraction_Date',
+                                     sub_date_delim = "([.])",
+                                     expDes_description_entry = 'Isolated bacteria to describe gut microbiome',
+                                     run_prefix_entry = seq_name)
+    
+    ## changing experiment_design_description entry for the culture sequencing samples (only present in
+    ## SEQ096)
+    if (seq_name == "SEQ096"){
+      int_file <- int_file %>% 
+        mutate(experiment_design_description = ifelse(sample_name %in% culture_sampleids$sample_name, 
+                                                      'Isolated bacteria to detect bacteremia',
+                                                      experiment_design_description))
+    }
+    
+    ## write results out to current wd as .tsv
+    write_tsv(int_file,
+              file = seq_file_name)
+    
+    ## assign results to variable so can look at them in global environment 
+    assign(seq_file_var,
+           int_file)
+}
+```
+

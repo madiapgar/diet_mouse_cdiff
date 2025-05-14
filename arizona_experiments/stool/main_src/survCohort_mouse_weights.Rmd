@@ -1,0 +1,227 @@
+---
+title: "survCohort_mouse_weights"
+output: html_document
+date: "2025-05-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(apppleplots)
+library(magrittr)
+library(readr)
+library(viridis)
+```
+**Functions**
+```{r}
+## calculates percent change between the first value in the timeline and each subsequent one
+## then calculates the average percent change (based on timeline day and another variable) and the 
+## standard deviation
+## outputs the processed table 
+calculate_percent_change <- function(input_table,
+                                     ## id per subject (i.e. mouse_id)
+                                     ident_col,
+                                     ## which column denotes the timeline day?
+                                     time_col,
+                                     ## the column you actually want the percent change calculated for
+                                     calc_wanted_col,
+                                     ## any other variables you want the average and sd calc grouped by 
+                                     ## (besides timeline day)
+                                     other_var_col){
+  proc_table <- input_table %>% 
+    group_by(.data[[ident_col]]) %>% 
+    arrange(.data[[time_col]], .by_group = TRUE) %>% 
+    mutate(perc_change = ((.data[[calc_wanted_col]] - 
+                             first(.data[[calc_wanted_col]]))/first(.data[[calc_wanted_col]])) * 100) %>% 
+    group_by(.data[[time_col]], .data[[other_var_col]]) %>% 
+    mutate(av_perc_change = mean(perc_change),
+           sd_perc_change = sd(perc_change)) %>% 
+    ungroup()
+  
+  return(proc_table)
+}
+
+## puts together ggplot for average percent change over time of some variable 
+## to be used on output table from function above 
+make_weights_plot <- function(input_table,
+                              x_axis,
+                              y_axis,
+                              color_by,
+                              sd_col,
+                              viridis_pal_option,
+                              legend_name,
+                              legend_labels,
+                              x_name,
+                              y_name,
+                              wanted_title){
+  plot <- input_table %>% 
+    ggplot(aes(x = .data[[x_axis]], y = .data[[y_axis]], group = .data[[color_by]])) +
+    geom_line(aes(color = .data[[color_by]]), linewidth = 2) +
+    geom_point(aes(color = .data[[color_by]]), size = 3.5, alpha = 0.5) +
+    geom_pointrange(aes(ymin = .data[[y_axis]]-.data[[sd_col]], ymax = .data[[y_axis]]+.data[[sd_col]], 
+                        color = .data[[color_by]]),
+                    alpha = 0.5) +
+    scale_color_viridis(option = viridis_pal_option,
+                        discrete = TRUE,
+                        name = legend_name,
+                        labels = legend_labels) +
+    theme_bw(base_size = 20) +
+    labs(x = x_name,
+         y = y_name,
+         title = wanted_title)
+  
+  return(plot)
+}
+```
+
+**File paths**
+```{r}
+spore_weights_fp <- '../data/misc/survivalCohort_weight_data.csv'
+liveCult_weights_fp <- '../data/misc/liveCult_weight_data.csv'
+
+## global renaming variables
+diet_legend_labs <- c('Chow',
+                      'HFt / HFb',
+                      'HFt / LFb',
+                      'LFt / HFb',
+                      'LFt / LFb')
+
+liveCult_diet_labs <- c('Chow',
+                        'HFt / LFb',
+                        'LFt / LFb')
+```
+
+**Reading in files**
+idk if i can do an average percent weight change calculation since i dont have a base weight for these mice
+```{r}
+spore_weights_table <- read_csv(spore_weights_fp) %>% 
+  na.omit() %>% 
+  mutate(day_post_inf = (day - 15)) %>% 
+  filter(day_post_inf >= 0)
+
+
+liveCult_weights_table <- read_csv(liveCult_weights_fp) %>% 
+  na.omit() %>% 
+  mutate(day_post_inf = (day - 15)) %>% 
+  filter(day_post_inf >= 0)
+```
+
+**Data wrangled**
+calculating the percent weight change from day 0 instead of day -15 to match the amc follow up experiments weight change plot 
+```{r}
+weight_dfs_list <- list(spore = spore_weights_table,
+                        liveCult = liveCult_weights_table)
+
+for (weight_table in unique(unlist(names(weight_dfs_list)))){
+  var_name <- paste0("proc_", names(weight_dfs_list[weight_table]), "_weights_table")
+  
+  int_table <- calculate_percent_change(input_table = weight_dfs_list[[weight_table]],
+                                        ident_col = 'mouse_id',
+                                        time_col = 'day_post_inf',
+                                        calc_wanted_col = 'weight',
+                                        other_var_col = 'diet')
+  assign(var_name,
+         int_table)
+}
+```
+
+**Plots**
+spore infections (survival cohort in manuscript)
+```{r, fig.width=14, fig.height=7}
+(az_spore_weights_plot <- make_weights_plot(input_table = proc_spore_weights_table,
+                                        x_axis = 'day_post_inf',
+                                        y_axis = 'av_perc_change',
+                                        color_by = 'diet',
+                                        sd_col = 'sd_perc_change',
+                                        viridis_pal_option = 'C',
+                                        legend_name = 'Diet',
+                                        legend_labels = diet_legend_labs,
+                                        x_name = 'Days Post Infection',
+                                        y_name = 'Average % Weight Change',
+                                        wanted_title = 'Average Weight Change After Infection by Diet') +
+  scale_x_continuous(breaks = c(0, 3, 6, 9, 12)))
+```
+
+live culture infections (in supplemental)
+```{r, fig.width=14, fig.height=7}
+(az_liveCult_weights_plot <- make_weights_plot(input_table = proc_liveCult_weights_table,
+                                        x_axis = 'day_post_inf',
+                                        y_axis = 'av_perc_change',
+                                        color_by = 'diet',
+                                        sd_col = 'sd_perc_change',
+                                        viridis_pal_option = 'C',
+                                        legend_name = 'Diet',
+                                        legend_labels = liveCult_diet_labs,
+                                        x_name = 'Days Post Infection',
+                                        y_name = 'Average % Weight Change',
+                                        wanted_title = 'Average Weight Change After Infection by Diet') +
+  scale_x_continuous(breaks = c(0, 3, 6, 9, 12)) +
+  expand_limits(y = c(-20, 20)))
+```
+
+**Stats**
+spore infections 
+```{r}
+## the zeroes at day 0 were causing problems in dunn test (creating NAs) so im filtering them out
+noZero_spore_weights_table <- proc_spore_weights_table %>% 
+  filter(day_post_inf != 0)
+
+spore_avWeight_stats <- apppleplots::kruskal_dunn_stats(input_table = noZero_spore_weights_table,
+                                                        grouped_by = c('day_post_inf'),
+                                                        adjust_method = 'BH',
+                                                        filter_adj_p_value = FALSE,
+                                                        formula_left = 'av_perc_change',
+                                                        formula_right = 'diet')
+
+spore_avWeight_kruskal <- spore_avWeight_stats$KruskalTest
+(spore_avWeight_dunn <- spore_avWeight_stats$DunnTest %>% 
+    ## only including significant results bc hundreds of rows if not
+    filter(p.adj.signif != 'ns'))
+```
+
+live culture infections 
+```{r}
+## the zeroes at day 0 were causing problems in dunn test (creating NAs) so im filtering them out
+noZero_liveCult_weights_table <- proc_liveCult_weights_table %>% 
+  filter(day_post_inf != 0)
+
+liveCult_avWeight_stats <- apppleplots::kruskal_dunn_stats(input_table = noZero_liveCult_weights_table,
+                                                        grouped_by = c('day_post_inf'),
+                                                        adjust_method = 'BH',
+                                                        filter_adj_p_value = FALSE,
+                                                        formula_left = 'av_perc_change',
+                                                        formula_right = 'diet')
+
+liveCult_avWeight_kruskal <- liveCult_avWeight_stats$KruskalTest
+(liveCult_avWeight_dunn <- liveCult_avWeight_stats$DunnTest %>% 
+    ## only including significant results bc hundreds of rows if not
+    filter(p.adj.signif != 'ns'))
+```
+
+**Saving my outputs**
+```{r}
+ggsave('../plots/spore_avWeight_change_plot.pdf',
+       plot = az_spore_weights_plot,
+       width = 14,
+       height = 7)
+ggsave('../plots/liveCult_avWeight_change_plot.pdf',
+       plot = az_liveCult_weights_plot,
+       width = 14,
+       height = 7)
+
+## stats
+write_tsv(spore_avWeight_dunn,
+          '../stats/spore_avWeight_change_dunnTest.tsv')
+write_tsv(liveCult_avWeight_dunn,
+          '../stats/liveCult_avWeight_change_dunnTest.tsv')
+
+## as an .rdat object
+save(az_spore_weights_plot,
+     file = "../../../figures/az_spore_avWeight_change.rdat")
+save(az_liveCult_weights_plot,
+     file = "../../../figures/az_liveCult_avWeight_change.rdat")
+```
+

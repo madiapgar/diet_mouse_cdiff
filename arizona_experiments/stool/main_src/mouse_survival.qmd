@@ -358,19 +358,25 @@ ggforest(diet.fit.cox.liveCult)
 
 **Putting Survival Plot by Diet with Statistical Visualization**
 
-```{r, fig.height=10, fig.width=10}
+also combining this with the weight data plot for the supplemental figure
+
+```{r, fig.height=11, fig.width=22}
 liveCult_bottom_row <- plot_grid(liveCult_surv_stat_vis, NULL,
                                  rel_widths = c(1, 0.8),
-                                 labels = c('b)', ' '),
+                                 labels = c('c)', ' '),
                                  label_size = 20)
 
 plot_grid(liveCult_diet_plot_final +
-            theme_bw(base_size = 18),
+            theme_bw(base_size = 20), 
+          az_liveCult_weights_plot +
+            labs(x = 'Days Post Infection',
+                 y = 'Average % Weight Change',
+                 title = 'Weight Change After Infection by Diet'),
           liveCult_bottom_row,
-          rel_heights = c(1, 0.5),
+          rel_heights = c(1, 0.4),
           nrow = 2,
-          labels = c('a)', ' '),
-          align = 'h',
+          labels = c('a)', 'b) ', ' '),
+          align = 'hv',
           label_size = 20) -> liveCult_surv_res
 
 liveCult_surv_res
@@ -400,8 +406,8 @@ ggsave('../plots/survival_curve_stats.pdf',
        height = 3)
 ggsave('../plots/liveCult_survival.pdf',
        plot = liveCult_surv_res,
-       width = 10,
-       height = 10)
+       width = 22,
+       height = 11)
 
 ## as an rdata object
 save(diet_plot_final,

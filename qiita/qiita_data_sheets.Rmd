@@ -48,11 +48,12 @@ make_qiita_sample_info <- function(input_table,
                                    host_bodyProduct_entry){
   qiita_sampleInfo_table <- input_table %>% 
     rename("sample_name" = sampleid_col,
-           ## idk if this is right for the tube id 
-           tube_id = BarcodeName,
            "collection_date" = collection_date_col) %>% 
-    select(sample_name, tube_id, collection_date) %>% 
-    mutate(collection_date = paste(gsub(collection_date, pattern = date_delim, replacement = "-")),
+    select(sample_name, collection_date) %>% 
+    filter(!grepl('Mock|PCR', sample_name),
+           !is.na(sample_name)) %>%
+    mutate(tube_id = paste(sample_name), ## nichole said tube id = sampleid 
+           collection_date = paste(gsub(collection_date, pattern = date_delim, replacement = "-")),
            title = paste("Dietary fiber reduces mortality from secondary blood infections in a murine model of antibiotic-induced Clostridioides difficile infection"),
            scientific_name = paste(scien_name_entry),
            taxon_id = paste(tax_id_entry),
@@ -75,20 +76,16 @@ make_qiita_sample_info <- function(input_table,
            collection_timestamp = paste(collection_date),
            dna_extracted = paste(TRUE),
            physical_speciman_location = paste("University of Colorado Anschutz"), 
-           ## idk if we have any speciman remaining - need to ask keith
-           physical_speciman_remaining = paste(FALSE),
+           physical_speciman_remaining = paste(FALSE), ## false is okay
            host_age = paste(6),
            host_age_units = paste("weeks"),
-           # host_subject_id = paste("MOUSE ID HERE"),
            host_taxid = paste(10090),
            host_scientific_name = paste("Mus musculus"),
            host_common_name = paste("mouse"),
-           ## idk if these mice are juvenile or adult
-           host_life_stage = paste("juvenile"),
+           host_life_stage = paste("adult"), ## keith says mice are young adults
            sex = paste("female"),
            host_height = paste("not applicable"),
            host_height_units = paste("not applicable"),
-           # host_weight = paste("MOUSE STARTING WEIGHT GOES HERE"),
            host_weight_units = paste("g"),
            host_body_mass_index = paste("not applicable"),
            host_body_habitat = paste(host_habitat_entry), ## differs
@@ -120,18 +117,15 @@ make_qiita_prep_info <- function(input_table,
              !is.na(sample_name)) %>% 
       mutate(experiment_design_description = paste(expDes_description_entry), ## changes 
              library_construction_protocol = paste('Earth Microbiome Project, 16S'),
-             ## idk if this one is right
              linker = paste('GT'),
              platform = paste('Illumina'),
              run_center = paste('Anschutz Center for Microbiome Excellence (ACME)'),
              run_prefix = paste(run_prefix_entry), ## changes 
-             ## are these primers correct??
-             pcr_primers = paste('FWD:GTGCCAGCMGCCGCGGTAA; REV:GGACTACHVGGGTWTCTAAT'),
+             pcr_primers = paste('FWD:GTGYCAGCMGCCGCGGTAA; REV:GGACTACNVGGGTWTCTAAT'),
              sequencing_method = paste('Sequencing by Synthesis'),
              target_gene = paste('16S rRNA'),
              target_subfragment = paste('V4'),
              center_name = paste('University of Colorado Anschutz'),
-             ## idk if this is right either 
              center_project_name = paste('Diet Mouse C. diff'),
              instrument_model = paste('Illumina MiSeq'))
   
@@ -232,12 +226,14 @@ for (fp_name in unique(unlist(names(meta_fp_list)))){
 ## **arizona cecal samples!**
 
 **weight data**
-cannot find weights for these mice!!:
- - 9751
- - 9752
- - 9753
- - 9754
- - 118
+mice re-tagged to:
+ - 9751 = 9755
+ - 9752 = 9756
+ - 9753 = 9757
+ - 9754 = 9758
+ 
+ cannot find weights for these mice!!:
+ - 118 - keith thinks its 98 but that doesn't make sense to me since we have a sample from 0801 for 98
 ```{r}
 az_unwanted_days <- c(-1, 1, 2)
 
@@ -259,6 +255,13 @@ az_weight_table <- weight_all_sheets_combined_with_diet %>%
 ## stool 
 az_stool_weights <- read_tsv(az_stool_meta_fp) %>% 
   select(sampleid, mouse_id, day_post_inf) %>% 
+  mutate(mouse_id = case_when(
+    sampleid == '2_0418_9751' ~ 9755,
+    sampleid == '2_0418_9752' ~ 9756,
+    sampleid == '2_0418_9753' ~ 9757,
+    sampleid == '2_0418_9754' ~ 9758,
+    .default = mouse_id
+  )) %>% 
   left_join(az_weight_table, by = c('mouse_id', 'day_post_inf')) %>% 
   mutate(weight = as.numeric(weight)) %>% 
   select(sampleid, weight) %>% 
@@ -313,11 +316,10 @@ for (df in unique(az_cecum_df_list)){
 az_cecum_qiita_dfs <- az_cecum_qiita_dfs %>% 
   left_join(az_cecum_meta, by = 'sample_name') %>% 
   left_join(az_cecum_weights, by = 'sample_name')
-
 ```
 
 ## **arizona stool samples**
-NOTE: can't find sampleid 3_0516_9898 or mouse_id 9898 anywhere but its in the sequencing barcodes files !!
+NOTE: can't find sampleid 3_0516_9898 or mouse_id 9898 anywhere but its in the sequencing barcodes files !! - fixed mouse id to 9848 since it was a typo 
 ```{r}
 names(S45_KH_barcodes)[names(S45_KH_barcodes) == "Sample Time Point"] <- "Sample_Date"
 
@@ -351,17 +353,19 @@ for (df in unique(az_stool_df_list)){
   az_stool_qiita_dfs <- rbind(az_stool_qiita_dfs, mini_az_stool_samp_info)
 }
 
-## take out all mock and PCR blank samples
-unwanted_az_stool_samples <- az_stool_qiita_dfs %>% 
-  filter(sample_name == "PCR Blank" | sample_name == "PCR blank" | sample_name != str_match(sample_name, "Mock")) %>% 
-  select(sample_name)
-
-az_stool_qiita_dfs <- az_stool_qiita_dfs %>% 
-  filter(!(sample_name %in% unwanted_az_stool_samples$sample_name))
 
 ## combine with mouse ids
+corr_az_stool_meta <- az_stool_meta %>% 
+  mutate(host_subject_id = case_when(
+    sample_name == '2_0418_9751' ~ 9755,
+    sample_name == '2_0418_9752' ~ 9756,
+    sample_name == '2_0418_9753' ~ 9757,
+    sample_name == '2_0418_9754' ~ 9758,
+    .default = host_subject_id
+  ))
+
 az_stool_qiita_dfs <- az_stool_qiita_dfs %>% 
-  left_join(az_stool_meta, by = 'sample_name') %>% 
+  left_join(corr_az_stool_meta, by = 'sample_name') %>% 
   left_join(az_stool_weights, by = 'sample_name') %>% 
   filter(!is.na(sample_name))
 ```
@@ -413,7 +417,8 @@ pre_amc_weight_table <- rbind(amc_dNeg15_weights,
 amc_weight_table <- read_tsv(amcFU_stool_meta_fp) %>% 
   select(`#SampleID`, mouse_id, day_post_inf) %>% 
   rename(sample_name = `#SampleID`) %>% 
-  left_join(pre_amc_weight_table, by = c('mouse_id', 'day_post_inf'))
+  left_join(pre_amc_weight_table, by = c('mouse_id', 'day_post_inf')) %>% 
+  mutate(weight = as.numeric(weight))
 
 mini_amc_weight_table <- amc_weight_table %>% 
   select(sample_name, weight) %>% 
@@ -467,17 +472,11 @@ for (df in unique(amc_stool_df_list)){
   amc_stool_qiita_dfs <- rbind(amc_stool_qiita_dfs, mini_az_stool_samp_info)
 }
 
-## take out all mock and PCR blank samples
-unwanted_amc_stool_samples <- amc_stool_qiita_dfs %>% 
-  filter(sample_name != str_match(sample_name, "PCR_Blank") | sample_name != str_match(sample_name, "EW.Mock")) %>% 
-  select(sample_name)
 
 amc_stool_qiita_dfs <- amc_stool_qiita_dfs %>% 
-  filter(!(sample_name %in% unwanted_amc_stool_samples$sample_name),
-         ## pulling out culture data sampleids 
-         !(sample_name %in% amc_culture_meta$sample_name)) %>% 
+  ## pulling out culture data sampleids 
+  filter(!(sample_name %in% amc_culture_meta$sample_name)) %>% 
   left_join(amc_stool_meta, by = 'sample_name') %>% 
-  na.omit() %>% 
   left_join(mini_amc_weight_table, by = 'sample_name')
 ```
 
@@ -522,6 +521,7 @@ amc_spleen_qiita_df <- amc_spleen_qiita_df %>%
 ```
 
 liver!!
+- CDD03.CR.HFLF.5.Liver collection date missing, guessing 6/8/24 since day 18 stool sample was also taken that day and they were extracted on the same day (08.21.2024)
 ```{r}
 ## liver
 ## pulling just liver sampleids out of the metadata
@@ -531,7 +531,9 @@ amc_liver_df <- amc_culture_meta %>%
 
 ## using those sampleids to trim down the barcodes file 
 liver_barcodes <- new_culture_barcodes %>% 
-  filter(`#SampleID` %in% amc_liver_df$sample_name)
+  filter(`#SampleID` %in% amc_liver_df$sample_name) %>% 
+  ## fixing missing collection date 
+  mutate(Date = ifelse(`#SampleID` == 'CDD03.CR.HFLF.5.Liver', '6/8/24', Date))
 
 amc_liver_qiita_df <- make_qiita_sample_info(input_table = liver_barcodes,
                                                sampleid_col = "#SampleID",

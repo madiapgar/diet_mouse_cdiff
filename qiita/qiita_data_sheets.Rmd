@@ -21,7 +21,7 @@ library(readr)
 pull_mouseid <- function(input_table_fp,
                          sampleid_col){
   table <- read_tsv(input_table_fp) %>% 
-    select(all_of(sampleid_col), mouse_id) %>% 
+    select(all_of(sampleid_col), mouse_id, diet, day_post_inf) %>% 
     rename(sample_name = sampleid_col,
            host_subject_id = mouse_id)
   return(table)
@@ -45,7 +45,8 @@ make_qiita_sample_info <- function(input_table,
                                    long_entry,
                                    host_habitat_entry,
                                    host_bodySite_entry,
-                                   host_bodyProduct_entry){
+                                   host_bodyProduct_entry,
+                                   exp_set_entry){
   qiita_sampleInfo_table <- input_table %>% 
     rename("sample_name" = sampleid_col,
            "collection_date" = collection_date_col) %>% 
@@ -94,7 +95,8 @@ make_qiita_sample_info <- function(input_table,
            depth = paste("not applicable"),
            altitude = paste("not applicable"),
            isolate_strain_taxonomy_id = paste("not applicable"),
-           isolate_scientific_name = paste("not applicable"))
+           isolate_scientific_name = paste("not applicable"),
+           experiment_set = paste(exp_set_entry))
   
   return(qiita_sampleInfo_table)
 }
@@ -141,8 +143,6 @@ make_qiita_prep_info <- function(input_table,
 **File Paths**
 i think i want all the barcodes files for this!
 ```{r}
-qiita_sampleInfo_fp <- '../../qiita_templates/QIITA_sample_information.txt'
-
 ## arizona stool samples 
 s40_fp <- '../arizona_experiments/stool/data/raw_data/S40_barcodes.txt'
 s44_fp <- '../arizona_experiments/stool/data/raw_data/S44_KH_barcodes.txt'
@@ -174,8 +174,7 @@ amcFU_weights_fp <- '../amc_followUp_experiments/data/misc/newExp_mouse_weightDa
 im lazy so i wrote a for loop to read in all the files as a dataframe and populate the filename as the variable name 
 ```{r}
 ## tsvs
-fp_list <- c(qiita_sampleInfo_fp,
-             s40_fp, s44_fp, s45_fp,
+fp_list <- c(s40_fp, s44_fp, s45_fp,
              s69_fp, s70_fp, s71_fp,
              s88_fp, s96_fp, amcFU_culture_fp)
 
@@ -307,7 +306,8 @@ for (df in unique(az_cecum_df_list)){
                                                  long_entry = 110.94564,
                                                  host_habitat_entry = "UBERON:gastrointestinal system",
                                                  host_bodySite_entry = "UBERON:colon",
-                                                 host_bodyProduct_entry = "UBERON:lumen of gut")
+                                                 host_bodyProduct_entry = "UBERON:lumen of gut",
+                                                 exp_set_entry = "arizona_experiments")
   
   az_cecum_qiita_dfs <- rbind(az_cecum_qiita_dfs, mini_az_cecum_samp_info)
 }
@@ -315,7 +315,12 @@ for (df in unique(az_cecum_df_list)){
 ## combine mouse ids
 az_cecum_qiita_dfs <- az_cecum_qiita_dfs %>% 
   left_join(az_cecum_meta, by = 'sample_name') %>% 
-  left_join(az_cecum_weights, by = 'sample_name')
+  left_join(az_cecum_weights, by = 'sample_name') %>% 
+  ## qiita doesn't want '+' or '-' in sample names/tube ids so replacing those w nothing
+  mutate(sample_name = paste(gsub(sample_name, pattern = "([+])", replacement = "")),
+         sample_name = paste(gsub(sample_name, pattern = "([-])", replacement = "")),
+         tube_id = paste(gsub(tube_id, pattern = "([+])", replacement = "")),
+         tube_id = paste(gsub(tube_id, pattern = "([-])", replacement = "")))
 ```
 
 ## **arizona stool samples**
@@ -348,7 +353,8 @@ for (df in unique(az_stool_df_list)){
                                                  long_entry = 110.94564,
                                                  host_habitat_entry = "UBERON:feces",
                                                  host_bodySite_entry = "UBERON:feces",
-                                                 host_bodyProduct_entry = "UBERON:feces")
+                                                 host_bodyProduct_entry = "UBERON:feces",
+                                                 exp_set_entry = "arizona_experiments")
   
   az_stool_qiita_dfs <- rbind(az_stool_qiita_dfs, mini_az_stool_samp_info)
 }
@@ -367,7 +373,10 @@ corr_az_stool_meta <- az_stool_meta %>%
 az_stool_qiita_dfs <- az_stool_qiita_dfs %>% 
   left_join(corr_az_stool_meta, by = 'sample_name') %>% 
   left_join(az_stool_weights, by = 'sample_name') %>% 
-  filter(!is.na(sample_name))
+  mutate(host_weight = ifelse(host_subject_id == 118, "not collected", host_weight),
+         ## qiita doesn't want underscores in sample names so replacing those w periods
+         sample_name = paste(gsub(sample_name, pattern = "([_])", replacement = ".")),
+         tube_id = paste(gsub(tube_id, pattern = "([_])", replacement = ".")))
 ```
 
 ## **amc follow-up experiments**
@@ -418,7 +427,7 @@ amc_weight_table <- read_tsv(amcFU_stool_meta_fp) %>%
   select(`#SampleID`, mouse_id, day_post_inf) %>% 
   rename(sample_name = `#SampleID`) %>% 
   left_join(pre_amc_weight_table, by = c('mouse_id', 'day_post_inf')) %>% 
-  mutate(weight = as.numeric(weight))
+  mutate(weight = round(weight, 2))
 
 mini_amc_weight_table <- amc_weight_table %>% 
   select(sample_name, weight) %>% 
@@ -433,12 +442,13 @@ amc_culture_weights <- amc_weight_table %>%
   rename(host_subject_id = mouse_id)
 
 amc_culture_meta <- read_tsv(amcFU_culture_meta_fp)  %>% 
-    select(sampleid, mouse_id, location) %>% 
+    select(sampleid, mouse_id, location, diet) %>% 
     rename(sample_name = sampleid,
            host_subject_id = mouse_id) %>% 
     left_join(amc_culture_weights, by = 'host_subject_id') %>% 
     ## idk whats up with this stupid sample but its fine whatever
-    mutate(weight = ifelse(sample_name == 'CDD03.Tc.HFLF.2.Blood', 19.50, weight)) %>% 
+    mutate(weight = ifelse(sample_name == 'CDD03.Tc.HFLF.2.Blood', 19.50, weight),
+           day_post_inf = paste("not applicable")) %>% 
     rename(host_weight = weight)
 ```
 
@@ -467,7 +477,8 @@ for (df in unique(amc_stool_df_list)){
                                                  long_entry = -104.83932,
                                                  host_habitat_entry = "UBERON:feces",
                                                  host_bodySite_entry = "UBERON:feces",
-                                                 host_bodyProduct_entry = "UBERON:feces")
+                                                 host_bodyProduct_entry = "UBERON:feces",
+                                                 exp_set_entry = "amc_followUp_experiments")
   
   amc_stool_qiita_dfs <- rbind(amc_stool_qiita_dfs, mini_az_stool_samp_info)
 }
@@ -513,7 +524,8 @@ amc_spleen_qiita_df <- make_qiita_sample_info(input_table = spleen_barcodes,
                                                long_entry = -104.83932,
                                                host_habitat_entry = "UBERON:spleen",
                                                host_bodySite_entry = "UBERON:spleen",
-                                               host_bodyProduct_entry = "UBERON:parenchyma")
+                                               host_bodyProduct_entry = "UBERON:parenchyma",
+                                               exp_set_entry = "amc_followUp_experiments")
 
 ## combining mouse ids 
 amc_spleen_qiita_df <- amc_spleen_qiita_df %>% 
@@ -552,7 +564,8 @@ amc_liver_qiita_df <- make_qiita_sample_info(input_table = liver_barcodes,
                                                long_entry = -104.83932,
                                                host_habitat_entry = "UBERON:hepatobiliary system",
                                                host_bodySite_entry = "UBERON:liver",
-                                               host_bodyProduct_entry = "UBERON:parenchyma")
+                                               host_bodyProduct_entry = "UBERON:parenchyma",
+                                               exp_set_entry = "amc_followUp_experiments")
 
 ## combining mouse ids 
 amc_liver_qiita_df <- amc_liver_qiita_df %>% 
@@ -588,7 +601,8 @@ amc_blood_qiita_df <- make_qiita_sample_info(input_table = blood_barcodes,
                                                long_entry = -104.83932,
                                                host_habitat_entry = "UBERON:blood",
                                                host_bodySite_entry = "UBERON:blood",
-                                               host_bodyProduct_entry = "UBERON:blood")
+                                               host_bodyProduct_entry = "UBERON:blood",
+                                               exp_set_entry = "amc_followUp_experiments")
 
 ## combining mouse ids 
 amc_blood_qiita_df <- amc_blood_qiita_df %>% 
@@ -625,7 +639,8 @@ amc_repro_qiita_df <- make_qiita_sample_info(input_table = repro_barcodes,
                                                long_entry = -104.83932,
                                                host_habitat_entry = "UBERON:genitourinary system",
                                                host_bodySite_entry = "UBERON:uterus",
-                                               host_bodyProduct_entry = "UBERON:mucosa")
+                                               host_bodyProduct_entry = "UBERON:mucosa",
+                                               exp_set_entry = "amc_followUp_experiments")
 
 ## combining mouse ids 
 amc_repro_qiita_df <- amc_repro_qiita_df %>% 
@@ -673,13 +688,17 @@ for (seq_name in unique(unlist(names(az_seq_df_list)))){
                                      expDes_description_entry = 'Isolated bacteria to describe gut microbiome',
                                      run_prefix_entry = seq_name)
     
+    ## qiita doesn't want underscores in sample names so replacing those w periods
+    proc_int_file <- int_file %>% 
+      mutate(sample_name = paste(gsub(sample_name, pattern = "([_])", replacement = ".")))
+    
     ## write results out to current wd as .tsv
-    write_tsv(int_file,
+    write_tsv(proc_int_file,
               file = seq_file_name)
     
     ## assign results to variable so can look at them in global environment 
     assign(seq_file_var,
-           int_file)
+           proc_int_file)
 }
 
 ```
@@ -701,13 +720,19 @@ for (seq_name in unique(unlist(names(az_cecum_seq_list)))){
                                      sub_date_delim = "([.])",
                                      expDes_description_entry = 'Isolated bacteria to describe gut microbiome',
                                      run_prefix_entry = seq_name)
+    
+    ## qiita doesn't want '+' or '-' in sample names so replacing those w nothing
+    proc_int_file <- int_file %>% 
+      mutate(sample_name = paste(gsub(sample_name, pattern = "([+])", replacement = "")),
+             sample_name = paste(gsub(sample_name, pattern = "([-])", replacement = "")))
+    
     ## write results out to current wd as .tsv
-    write_tsv(int_file,
+    write_tsv(proc_int_file,
               file = seq_file_name)
     
     ## assign results to variable so can look at them in global environment 
     assign(seq_file_var,
-           int_file)
+           proc_int_file)
 }
 ```
 

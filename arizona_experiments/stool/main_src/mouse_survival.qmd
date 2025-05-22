@@ -1,0 +1,421 @@
+---
+title: "mouse_survival"
+format: html
+editor: visual
+---
+
+```{r, include=FALSE}
+library(tidyverse)
+library(survminer)
+require(survival)
+library(readr)
+library(viridis)
+library(cowplot)
+library(apppleplots)
+```
+
+**Input File Path**
+
+```{r}
+survival_fp <- '../data/misc/aim1a_survival.csv'
+diet_labs <- 
+  c('Chow', 
+    'High Fat / High Fiber', 
+    'High Fat / Low Fiber', 
+    'Low Fat / High Fiber', 
+    'Low Fat / Low Fiber')
+names(diet_labs) <- c('chow',
+                      'HF+fiber',
+                      'HF/LF',
+                      'LF+fiber',
+                      'LF/LF')
+
+fib_labs <- c('High Fiber',
+              'Low Fiber')
+names(fib_labs) <- c('high_fiber',
+                     'low_fiber')
+
+fat_labs <- c('High Fat',
+              'Low Fat')
+names(fat_labs) <- c('high_fat',
+                     'low_fat')
+```
+
+**Reading in Mouse Survival Data**
+
+col_types tells R what to classify the data in each column as
+
+```{r}
+survival <- read_csv(survival_fp,
+                     col_types = cols(Day = col_integer(),
+                                      status = col_integer(), 
+                                      diet = col_character(),
+                                      group = col_integer()))
+
+spore_survival <- survival %>% 
+  filter(inf_stock == 'spores')
+
+liveCult_survival <- survival %>% 
+  filter(inf_stock == 'culture')
+```
+
+## Spore Infection Survival Data
+
+**Creating Survival Plot by Diet**
+
+Legit can't figure out how to take color by diet off of this plot so rip.
+
+```{r, fig.height=10, fig.width=15}
+diet_fit <- surv_fit(Surv(Day, status) ~ diet, data = spore_survival)
+ggsurvplot(diet_fit, 
+           data = spore_survival,
+           color = 'black',
+           ggtheme = theme_bw(base_size = 20),
+           legend = "none",
+           conf.int = TRUE, 
+           xlab = 'Days Post Infection',
+           ylab = 'Survival Probability',
+           title = 'Mouse Survival After Infection by Diet') -> diet_plot
+
+diet_plot$plot +
+    facet_wrap(~factor(diet, levels = c('chow',
+                                        'HF+fiber',
+                                        'HF/LF',
+                                        'LF+fiber',
+                                        'LF/LF')),
+               labeller = labeller(.cols = diet_labs),
+               nrow = 2) +
+    scale_fill_grey() -> diet_plot_final
+
+diet_plot_final
+```
+
+**Pairwise Comparisons**
+
+```{r}
+pairwise_survdiff(Surv(Day, status) ~ diet,
+                  data = spore_survival, 
+                  p.adjust.method = "BH") -> diet_pairwise
+
+diet_pvalue <- as_tibble(diet_pairwise$p.value,
+                         rownames = 'diet')
+
+## changing format from wide to long so I can work with it 
+diet_pvalue %>% 
+  gather(-diet, key = diet2, value = p.value) -> diet_pvalue
+
+names(diet_pvalue)[names(diet_pvalue) == 'diet'] <- 'diet1'
+
+
+diet_pvalue['signif'] <- symnum(diet_pvalue$p.value,
+                                cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                symbols = c("****", "***", "**", "*", "+", "ns"),
+                                abbr.colnames = FALSE,
+                                na = "")
+
+```
+
+**Pairwise Comparison Visualization**
+
+```{r, fig.height=3.5, fig.width=6.5}
+diet_pvalue %>%
+  na.omit() %>% 
+  ggplot(aes(x = diet2, y = diet1)) +
+  geom_tile(aes(fill = p.value), alpha = 0.6, color = 'black') +
+  geom_text(aes(label = signif), size = 5) +
+  scale_fill_viridis(option = 'C', limits = c(0, 0.05), direction = 1,  name = 'p-value') +
+  # scale_fill_distiller(limits = c(0, 0.05), palette = 'Reds', name = "P-Value") +
+  theme_bw(base_size = 20) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18),
+        legend.position = 'right') +
+  scale_x_discrete(labels = c("Chow",
+                              "HFt/\nLFb",
+                              "HFt/\nHFb",
+                              "LFt/\nLFb")) +
+  scale_y_discrete(labels = c("HFt / LFb",
+                               "HFt / HFb",
+                               "LFt / LFb",
+                               "LFt / HFb")) -> surv_stat_vis
+
+surv_stat_vis
+```
+
+**Cox PH for Diet**
+
+this calculates the hazard ratios for each diet compared to chow
+
+could assign each diet a numeric key and run that way so that there isn't a reference diet but idk if that will replace pairwise comparisons in general
+
+if you call *summary(coxph_object)*, the *exp(coef)* column contains the actual hazard ratio for the variable and the *Pr(\>\|z\|)* column contains the p-value
+
+```{r}
+spore_surv_obj <- Surv(time = spore_survival$Day, event = spore_survival$status)
+spore_survival$diet_f = factor(spore_survival$diet, 
+                               levels = c("chow",
+                                          "HF+fiber",
+                                          "HF/LF", 
+                                          "LF+fiber",
+                                          "LF/LF"))
+diet.fit.cox.spore <- coxph(spore_surv_obj ~ diet_f, data = spore_survival)
+
+spore_summary_coxph <- summary(diet.fit.cox.spore)
+```
+
+```{r}
+## pulling the hazard ratio from coxph summary 
+spore_haz_df <- as.data.frame(spore_summary_coxph$coefficients)
+spore_haz_df["diet"] <- rownames(spore_haz_df)
+
+spore_haz_table <- as_tibble(spore_haz_df) %>% 
+  mutate(diet = case_when(
+    diet == 'diet_fHF+fiber' ~ 'HF/HF',
+    diet == 'diet_fHF/LF' ~ 'HF/LF',
+    diet == 'diet_fLF+fiber' ~ 'LF/HF',
+    diet == 'diet_fLF/LF' ~ 'LF/LF'
+  )) %>% 
+  rename(haz_ratio = `exp(coef)`,
+         p_value = `Pr(>|z|)`)
+
+spore_haz_table
+```
+
+```{r}
+## pulling confidence intervals from the coxph summary
+spore_ci_df <- as.data.frame(spore_summary_coxph$conf.int)
+spore_ci_df["diet"] <- rownames(spore_ci_df)
+
+spore_ci_table <- as_tibble(spore_ci_df) %>% 
+  mutate(diet = case_when(
+    diet == 'diet_fHF+fiber' ~ 'HF/HF',
+    diet == 'diet_fHF/LF' ~ 'HF/LF',
+    diet == 'diet_fLF+fiber' ~ 'LF/HF',
+    diet == 'diet_fLF/LF' ~ 'LF/LF'
+  )) %>% 
+  rename(lower_95_ci = `lower .95`,
+         upper_95_ci = `upper .95`) %>% 
+  select(diet, lower_95_ci, upper_95_ci)
+
+## combining the hazard ratio and confidence interval tables 
+final_spore_haz_table <- spore_haz_table %>% 
+  left_join(spore_ci_table, by = 'diet') %>% 
+  select(diet, coef, haz_ratio, p_value, lower_95_ci, upper_95_ci) %>% 
+  mutate(infection_type = paste('spores'))
+
+final_spore_haz_table
+```
+
+forest plot for the hazard ratio because it's nice to look at
+
+```{r}
+ggforest(diet.fit.cox.spore)
+```
+
+**Putting Survival Plot by Diet with Statistical Visualization**
+
+```{r, fig.width=20, fig.height=8}
+plot_grid(diet_plot_final, surv_stat_vis,
+          ncol = 2, 
+          labels = c('a)', 'b)'),
+          label_size = 22,
+          rel_widths = c(1, 0.5))
+```
+
+## Live Culture Survival Data
+
+**Survival Plot**
+
+```{r, fig.height=7, fig.width=10}
+liveCult_diet_fit <- surv_fit(Surv(Day, status) ~ diet, data = liveCult_survival)
+ggsurvplot(liveCult_diet_fit, 
+           data = liveCult_survival,
+           color = 'black',
+           ggtheme = theme_bw(base_size = 20),
+           legend = "none",
+           conf.int = TRUE, 
+           xlab = 'Days Post Infection',
+           ylab = 'Survival Probability',
+           title = 'Mouse Survival After Infection by Diet (Live Cultures)') -> liveCult_diet_plot
+
+liveCult_diet_plot$plot +
+    facet_wrap(~factor(diet, levels = c('chow',
+                                        'HF/LF',
+                                        'LF/LF')),
+               labeller = labeller(.cols = diet_labs),
+               nrow = 2) +
+    scale_fill_grey() -> liveCult_diet_plot_final
+
+liveCult_diet_plot_final
+```
+
+**Pairwise Comparisons**
+
+```{r}
+pairwise_survdiff(Surv(Day, status) ~ diet,
+                  data = liveCult_survival, 
+                  p.adjust.method = "BH") -> liveCult_diet_pairwise
+
+liveCult_diet_pvalue <- as_tibble(liveCult_diet_pairwise$p.value,
+                         rownames = 'diet')
+
+## changing format from wide to long so I can work with it 
+liveCult_diet_pvalue %>% 
+  gather(-diet, key = diet2, value = p.value) -> liveCult_diet_pvalue
+
+names(liveCult_diet_pvalue)[names(liveCult_diet_pvalue) == 'diet'] <- 'diet1'
+
+
+liveCult_diet_pvalue['signif'] <- symnum(liveCult_diet_pvalue$p.value,
+                                        cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                        symbols = c("****", "***", "**", "*", "+", "ns"),
+                                        abbr.colnames = FALSE,
+                                        na = "")
+```
+
+**Pairwise Comparison Visualization**
+
+```{r, fig.height=3.5, fig.width=5.5}
+liveCult_diet_pvalue %>%
+  na.omit() %>% 
+  ggplot(aes(x = diet2, y = diet1)) +
+  geom_tile(aes(fill = p.value), alpha = 0.6, color = 'black') +
+  geom_text(aes(label = signif), size = 5) +
+  scale_fill_viridis(option = 'C', limits = c(0, 0.05), direction = 1, name = 'p-value') +
+  ##scale_fill_distiller(limits = c(0, 0.05), palette = 'Reds', name = "P-Value") +
+  theme_bw(base_size = 20) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18),
+        legend.position = 'right') +
+  scale_x_discrete(labels = c("Chow",
+                              "HFt/\nLFb")) +
+  scale_y_discrete(labels = c("HFt / LFb",
+                               "LFt / LFb")) -> liveCult_surv_stat_vis
+
+liveCult_surv_stat_vis
+```
+
+**Cox PH for Diet**
+
+this calculates the hazard ratios for each diet compared to chow
+
+```{r}
+liveCult_surv_obj <- Surv(time = liveCult_survival$Day, event = liveCult_survival$status)
+liveCult_survival$diet_f = factor(liveCult_survival$diet, 
+                                  levels = c("chow",
+                                             "HF/LF",
+                                             "LF/LF"))
+diet.fit.cox.liveCult <- coxph(liveCult_surv_obj ~ diet_f, data = liveCult_survival)
+
+liveCult_summary_coxph <- summary(diet.fit.cox.liveCult)
+```
+
+```{r}
+## pulling the hazard ratio from coxph summary 
+liveCult_haz_df <- as.data.frame(liveCult_summary_coxph$coefficients)
+liveCult_haz_df["diet"] <- rownames(liveCult_haz_df)
+
+liveCult_haz_table <- as_tibble(liveCult_haz_df) %>% 
+  mutate(diet = case_when(
+    diet == 'diet_fHF/LF' ~ 'HF/LF',
+    diet == 'diet_fLF/LF' ~ 'LF/LF'
+  )) %>% 
+  rename(haz_ratio = `exp(coef)`,
+         p_value = `Pr(>|z|)`)
+
+liveCult_haz_table
+```
+
+```{r}
+## pulling confidence intervals from the coxph summary
+liveCult_ci_df <- as.data.frame(liveCult_summary_coxph$conf.int)
+liveCult_ci_df["diet"] <- rownames(liveCult_ci_df)
+
+liveCult_ci_table <- as_tibble(liveCult_ci_df) %>% 
+  mutate(diet = case_when(
+    diet == 'diet_fHF/LF' ~ 'HF/LF',
+    diet == 'diet_fLF/LF' ~ 'LF/LF'
+  )) %>% 
+  rename(lower_95_ci = `lower .95`,
+         upper_95_ci = `upper .95`) %>% 
+  select(diet, lower_95_ci, upper_95_ci)
+
+## combining the hazard ratio and confidence interval tables 
+final_liveCult_haz_table <- liveCult_haz_table %>% 
+  left_join(liveCult_ci_table, by = 'diet') %>% 
+  select(diet, coef, haz_ratio, p_value, lower_95_ci, upper_95_ci) %>% 
+  mutate(infection_type = paste('live_culture'))
+
+final_liveCult_haz_table
+```
+
+```{r}
+ggforest(diet.fit.cox.liveCult)
+```
+
+**Putting Survival Plot by Diet with Statistical Visualization**
+
+also combining this with the weight data plot for the supplemental figure
+
+```{r, fig.height=11, fig.width=22}
+liveCult_bottom_row <- plot_grid(liveCult_surv_stat_vis, NULL,
+                                 rel_widths = c(1, 0.8),
+                                 labels = c('c)', ' '),
+                                 label_size = 20)
+
+plot_grid(liveCult_diet_plot_final +
+            theme_bw(base_size = 20), 
+          az_liveCult_weights_plot +
+            labs(x = 'Days Post Infection',
+                 y = 'Average % Weight Change',
+                 title = 'Weight Change After Infection by Diet'),
+          liveCult_bottom_row,
+          rel_heights = c(1, 0.4),
+          nrow = 2,
+          labels = c('a)', 'b) ', ' '),
+          align = 'hv',
+          label_size = 20) -> liveCult_surv_res
+
+liveCult_surv_res
+```
+
+## Combining the Hazard Ratio Tables
+
+for the spore and live culture c. diff infections
+
+```{r}
+combined_haz_ratio_table <- rbind(final_spore_haz_table,
+                                  final_liveCult_haz_table)
+combined_haz_ratio_table
+```
+
+## Saving my Outputs
+
+```{r}
+## as a pdf
+ggsave('../plots/survival_curve_all.pdf',
+       plot = diet_plot_final,
+       width = 15,
+       height = 10)
+ggsave('../plots/survival_curve_stats.pdf',
+       plot = surv_stat_vis,
+       width = 4.5,
+       height = 3)
+ggsave('../plots/liveCult_survival.pdf',
+       plot = liveCult_surv_res,
+       width = 22,
+       height = 11)
+
+## as an rdata object
+save(diet_plot_final,
+     file = '../../figures/survival.rdata')
+save(surv_stat_vis,
+     file = '../../figures/survival_stats.rdata')
+
+## saving the hazard ratio table results 
+write_tsv(combined_haz_ratio_table,
+          '../stats/survival_hazardRatio_results.tsv')
+```

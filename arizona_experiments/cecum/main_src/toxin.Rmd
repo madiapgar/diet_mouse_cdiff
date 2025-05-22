@@ -1,0 +1,148 @@
+---
+title: "toxin"
+output: html_document
+date: "2023-11-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(broom)
+library(cowplot)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+library(ggpubr)
+library(rstatix)
+library(glue)
+library(argparse)
+library(apppleplots)
+```
+
+**File Paths**
+```{r}
+neat_toxin_FP <- '../data/misc/processed_neatToxin.tsv'
+dil_toxin_FP <- '../data/misc/processed_dilutedToxin.tsv'
+
+## labeling lists
+neat_labs <- c('TcdA', 'TcdB')
+names(neat_labs) <- c('Total TcA Neat', 'Total TcB Neat')
+neat_x_labs <- c('Chow', 
+                 'HFt/\nHFb', 
+                 'HFt/\nLFb',
+                 'LFt/\nHFb', 
+                 'LFt/\nLFb')
+neat_title <- 'Cecal Toxin Neat Concentration by Mouse Diet'
+
+dil_labs <- c('TcdA', 'TcdB')
+names(dil_labs) <- c('Total TcA 1:10', 'Total TcB 1:10')
+dil_x_labs <- c('HFt/\nHFb', 
+                'HFt/\nLFb',
+                'LFt/\nHFb', 
+                'LFt/\nLFb')
+dil_title <- 'Cecal Toxin Diluted Concentration (1:10) by Mouse Diet'
+```
+
+**Reading in Needed Files**
+Metadata has already been joined with the toxin data so it doesn't need to be read in. 
+```{r}
+neat_tox_table <- read_tsv(neat_toxin_FP)
+dil_tox_table <- read_tsv(dil_toxin_FP)
+```
+
+**Stats**
+```{r}
+## neat dunn's post hoc and kruskal wallis
+neat_krDunn <- apppleplots::kruskal_dunn_stats(input_table = neat_tox_table,
+                                               grouped_by = 'neat_toxin',
+                                               adjust_method = 'BH',
+                                               filter_adj_p_value = FALSE,
+                                               formula_left = 'neat_conc',
+                                               formula_right = 'diet')
+
+neat_dunn <- neat_krDunn$DunnTest
+neat_kruskal <- neat_krDunn$KruskalTest
+
+## diluted dunn's post hoc and kruskal wallis
+dil_krDunn <- apppleplots::kruskal_dunn_stats(input_table = dil_tox_table,
+                                              grouped_by = 'dil_toxin',
+                                              adjust_method = 'BH',
+                                              filter_adj_p_value = FALSE,
+                                              formula_left = 'dil_conc',
+                                              formula_right = 'diet')
+
+dil_dunn <- dil_krDunn$DunnTest
+dil_kruskal <- dil_krDunn$KruskalTest
+```
+
+**Plots**
+```{r, fig.height=5, fig.width=10}
+## neat 
+neat_plot <- apppleplots::facet_once_plots(input_table = neat_tox_table,
+                                           stat_on_plot = TRUE,
+                                           x_value = 'diet',
+                                           y_value = 'neat_conc',
+                                           x_value_type = 'discrete',
+                                           grouped_by = 'diet',
+                                           point_alpha = 0.4,
+                                           x_labels = neat_x_labs,
+                                           facet_by = 'neat_toxin',
+                                           facet_labels = neat_labs,
+                                           stat_table = neat_dunn,
+                                           x_name = 'Diet',
+                                           y_name = 'Concentration (ng/uL)',
+                                           title_content = neat_title)
+
+
+## diluted
+dil_plot <- apppleplots::facet_once_plots(input_table = dil_tox_table,
+                                          stat_on_plot = TRUE,
+                                          x_value = 'diet',
+                                          y_value = 'dil_conc',
+                                          x_value_type = 'discrete',
+                                          grouped_by = 'diet',
+                                          point_alpha = 0.4,
+                                          x_labels = dil_x_labs,
+                                          facet_by = 'dil_toxin',
+                                          facet_labels = dil_labs,
+                                          stat_table = dil_dunn,
+                                          x_name = 'Diet',
+                                          y_name = 'Concentration (ng/uL)',
+                                          title_content = dil_title)
+
+neat_plot
+dil_plot
+```
+
+**Saving my Outputs**
+```{r}
+## plots
+ggsave("../plots/neat_toxin.pdf",
+       plot = neat_plot,
+       width = 8,
+       height = 5)
+
+ggsave("../plots/dil_toxin.pdf",
+       plot = dil_plot,
+       width = 8,
+       height = 5)
+
+## as an Rdata object for manuscript figures
+save(neat_plot,
+     file = '../../figures/neat_toxin.rdata')
+save(dil_plot,
+     file = '../../figures/dil_toxin.rdata')
+
+## stats
+write_tsv(neat_kruskal,
+          "../stats/neatToxin_kruskal_test.tsv")
+write_tsv(neat_dunn,
+          "../stats/neatToxin_dunn_test.tsv")
+write_tsv(dil_kruskal,
+          "../stats/dilToxin_kruskal_test.tsv")
+write_tsv(dil_dunn,
+          "../stats/dilToxin_dunn_test.tsv")
+```
+

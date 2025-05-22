@@ -1,0 +1,262 @@
+---
+title: "tax_barplot"
+output: html_document
+date: "2024-03-14"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(qiime2R)
+library(tidyverse)
+library(cowplot)
+library(magrittr)
+library(viridis)
+library(microshades)
+library(phyloseq)
+library(ggh4x)
+```
+
+**Functions**
+```{r}
+## needed functions in order that they are used
+## 1
+micro_file_prep <- function(metadata_fp,
+                            otu_table_fp,
+                            tax_table_fp){
+  ## metadata file prep 
+  metadata <- read_tsv(metadata_fp) %>% 
+    rename(sampleid = `#SampleID`)
+  metadata <- as.data.frame(metadata)
+  rownames(metadata) <- metadata$sampleid
+  ## otu file prep
+  otu_table <- read_qza(file = otu_table_fp)$data
+  ## taxonomy file prep
+  tax_table <- read_qza(file = tax_table_fp)$data %>% 
+    parse_taxonomy()
+  tax_table %>% 
+    filter(rownames(tax_table) %in% rownames(otu_table)) -> tax_table
+  ## creating my named list 
+  my_list <- list(Metadata = metadata,
+                  OTUTable = otu_table,
+                  Taxonomy = tax_table)
+  return(my_list)
+}
+
+
+# ## 2
+# pseq <- phyloseq(otu_table(pseq_otu, taxa_are_rows = TRUE),
+#                  tax_table(as.matrix(pseq_tax)),
+#                  sample_data(pseq_meta))
+
+## 3 
+## generating color palettes based on the phyloseq object you generated
+## generate pseq like normal since there's already a nice function for it 
+## just returns the color_objs_GP for you, you'll need to extract the mdf/cdf for the next function 
+mdf_cdf_gp <- function(pseq, tax_table, tax_rank, tax_subgroup){
+  pseq %>% 
+    tax_glom(tax_subgroup) %>% 
+    phyloseq::transform_sample_counts(function(x) {
+      x/sum(x)
+    }) %>% 
+    psmelt() %>% 
+    filter(Abundance > 0) -> mdf_prep
+  phylum_table <- tax_glom(pseq, taxrank=tax_rank, ) %>% otu_table()
+  phyla.otunames <- rownames(phylum_table)
+  phylums <- tax_table(as.matrix(tax_table))[phyla.otunames,tax_rank]
+  sorted_phylums <- phylums[order(rowSums(phylum_table), decreasing=T)]
+  ## can take ranked phylums out if you don't have issues with top abund. phylums being repeated
+  # ranked_phylums <- sort(unique(sorted_phylums[40:1]))
+  color_objs_GP <- create_color_dfs(mdf_prep,
+                                    subgroup_level = tax_subgroup,
+                                    ## decreased to 4 bc there were only 4 phylums in these samples
+                                    selected_groups = sorted_phylums[4:1])
+  return(color_objs_GP)
+}
+
+## 4 
+tax_barplot <- function(mdf_GP, cdf_GP){
+  barplot <- plot_microshades(mdf_GP, cdf_GP)
+  barplot_1 <- barplot + scale_y_continuous(labels = scales::percent, expand = expansion(0)) +
+    theme_bw(base_size = 20) +
+    theme(legend.position = "none") +
+    theme(axis.text.x = element_blank())
+  return(barplot_1)
+}
+
+## 5 
+tax_barplot_legend <- function(mdf_GP, cdf_GP, tax_subgroup){
+  GP_legend <-custom_legend(mdf_GP, cdf_GP, 
+                            legend_key_size=unit(0.4, "cm"),
+                            legend_text_size=15, subgroup_level=tax_subgroup)
+  return(GP_legend)
+}
+
+## whole microshades function put together
+## outputs the metadata, otu, and taxonomy files as well as the 
+## main taxa barplot and legend so that they can be easily editable by the user
+microshades_tax_barplot <- function(meta_fp, 
+                                    otu_fp, 
+                                    tax_fp,
+                                    tax_rank, 
+                                    tax_subgroup,
+                                    title_text, 
+                                    y_text){
+  pseq_files <- micro_file_prep(meta_fp,
+                                otu_fp,
+                                tax_fp)
+  pseq_meta <- pseq_files$Metadata
+  pseq_otu <- pseq_files$OTUTable
+  pseq_tax <- pseq_files$Taxonomy 
+  pseq <- phyloseq(otu_table(pseq_otu, taxa_are_rows = TRUE),
+                   tax_table(as.matrix(pseq_tax)),
+                   sample_data(pseq_meta))
+  mdf_and_cdf <- mdf_cdf_gp(pseq, 
+                            pseq_tax, 
+                            tax_rank, 
+                            tax_subgroup)
+  mdf_GP <- mdf_and_cdf$mdf
+  cdf_GP <- mdf_and_cdf$cdf
+  main_barplot <- tax_barplot(mdf_GP, cdf_GP) +
+    ggtitle(title_text) +
+    ylab(y_text)
+  legend <- tax_barplot_legend(mdf_GP, 
+                               cdf_GP, 
+                               tax_subgroup)
+  my_list <- list(Metadata = pseq_meta,
+                  OTUTable = pseq_otu,
+                  Taxonomy = pseq_tax,
+                  TaxBarplot = main_barplot,
+                  TaxLegend = legend)
+  return(my_list)
+}
+```
+
+**File Paths**
+```{r}
+## CDD01 blood culture data 
+bc_metadata_FP <- '../data/misc/proc_blood_culture_meta.tsv'
+bc_tax_FP <- '../data/bloodCulture_qiime/bc_taxonomy.qza'
+bc_otu_table_FP <- '../data/bloodCulture_qiime/filt_bc_otu_table.qza'
+bc_title <- 'Blood Culture Taxa Barplot'
+bc_diet_labs <- 
+  c('Chow',
+    'Low Fat / Low Fiber')
+
+names(bc_diet_labs) <- c('Chow',
+                      'LF/LF')
+
+
+## CDD02/CDD03 gut microbiome data
+newExp_metadata_FP <- '../data/misc/proc_newExp_d15-d3_metadata.tsv'
+newExp_tax_FP <- '../data/qiime/taxonomy.qza'
+newExp_otu_table_FP <- '../data/qiime/total_sum_otu_table.qza'
+newExp_title <- 'New Experiment Taxa Barplot'
+newExp_diet_labs <- 
+  c('Chow',
+    'High Fat / High Fiber',
+    'High Fat / Low Fiber',
+    'Low Fat / High Fiber',
+    'Low Fat / Low Fiber')
+
+names(newExp_diet_labs) <- c('Chow',
+                             'HF/HF',
+                             'HF/LF',
+                             'LF/HF',
+                             'LF/LF')
+
+
+## variables used for both
+tax_rank <- "Phylum"
+tax_subgroup <- "Genus"
+y_axis_name <- "Relative Abundance"
+```
+
+**Running the Overall Microshades Taxa Barplot Function**
+```{r}
+## CDD01 blood culture data
+bc_barplot_files <- microshades_tax_barplot(bc_metadata_FP, 
+                                             bc_otu_table_FP, 
+                                             bc_tax_FP,
+                                             tax_rank, 
+                                             tax_subgroup,
+                                             bc_title, 
+                                             y_axis_name) 
+
+## CDD02/CDD03 gut microbiome data 
+newExp_barplot_files <- microshades_tax_barplot(newExp_metadata_FP, 
+                                             newExp_otu_table_FP, 
+                                             newExp_tax_FP,
+                                             tax_rank, 
+                                             tax_subgroup,
+                                             newExp_title, 
+                                             y_axis_name) 
+```
+
+**CDD01 Blood Culture Tax Barplot**
+```{r, warning=FALSE, fig.height=6, fig.width=13.5}
+## pulling the tax barplot out of the named list output of the microshades_tax_barplot function
+bc_main_barplot <- bc_barplot_files$TaxBarplot
+
+bc_main_barplot + 
+  facet_grid2(~diet, scales="free_x", independent = "x",
+              labeller = labeller(diet = bc_diet_labs)) +
+  theme(legend.text = element_text(size = 8.5),
+        strip.text.y = element_text(angle = 0)) -> bc_main_barplot 
+
+bc_legend <- bc_barplot_files$TaxLegend
+
+## putting them together in the same plot via cowplot 
+bc_tax_all <- plot_grid(bc_main_barplot, 
+                     bc_legend,  
+                     rel_widths = c(1, .25),
+                     align = 'tblr',
+                     axis = 'tblr')
+
+bc_tax_all
+```
+
+**CDD02/CDD03 Gut Microbiome Tax Barplot**
+```{r, fig.width=20, fig.height=8}
+## pulling the tax barplot out of the named list output of the microshades_tax_barplot function
+newExp_main_barplot <- newExp_barplot_files$TaxBarplot
+
+newExp_main_barplot + 
+  facet_grid2(day_post_inf~diet, scales="free_x", independent = "x",
+              labeller = labeller(diet = newExp_diet_labs)) +
+  theme(legend.text = element_text(size = 8.5),
+        strip.text.y = element_text(angle = 0)) -> newExp_main_barplot 
+
+newExp_legend <- newExp_barplot_files$TaxLegend
+
+## putting them together in the same plot via cowplot 
+newExp_tax_all <- plot_grid(newExp_main_barplot, 
+                     newExp_legend,  
+                     rel_widths = c(1, .25),
+                     align = 'tblr',
+                     axis = 'tblr')
+
+newExp_tax_all
+```
+
+
+**Saving my Outputs** 
+```{r}
+## saving the output barplot 
+ggsave("../plots/bloodCulture_tax_barplot.pdf",
+       plot = bc_tax_all, 
+       width = 13.5, 
+       height = 6)
+
+ggsave("../plots/newExp_stool_tax_barplot.pdf",
+       plot = newExp_tax_all, 
+       width = 20, 
+       height = 8)
+
+
+## saving it as an rdat object 
+save(bc_tax_all,
+     file = '../../posters/bloodCulture_tax_barplot.rdat')
+```

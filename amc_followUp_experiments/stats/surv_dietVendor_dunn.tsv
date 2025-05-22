@@ -1,0 +1,6 @@
+diet	.y.	group1	group2	n1	n2	statistic	p	p.adj	p.adj.signif	y.position	groups	xmin	xmax
+Chow	actual_surv	charles_river	taconic	10	10	0.45693676673168765	0.6477164962454824	0.6477164962454824	ns	1		1	2
+HF/HF	actual_surv	charles_river	taconic	10	9	-0.9814954576223637	0.3263484733220722	0.3263484733220722	ns	1		1	2
+HF/LF	actual_surv	charles_river	taconic	10	10	-1.3708103001950631	0.17043409920147165	0.17043409920147165	ns	1		1	2
+LF/HF	actual_surv	charles_river	taconic	10	10	-2.1794494717703365	0.029298294404550614	0.029298294404550614	*	1.12		1	2
+LF/LF	actual_surv	charles_river	taconic	10	10	-1.4529663145135578	0.14623310699121014	0.14623310699121014	ns	1		1	2

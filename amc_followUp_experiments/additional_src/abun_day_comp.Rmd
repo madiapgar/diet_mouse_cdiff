@@ -1,0 +1,192 @@
+---
+title: "abun_day_comp"
+output: html_document
+date: "2024-06-19"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggpubr)
+library(ggplot2)
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+library(broom)
+library(cowplot)
+library(vegan)
+library(viridis)
+library(apppleplots)
+```
+
+**Functions**
+```{r}
+family_abun_file_prep <- function(metadata_fp,
+                                  tax_fp,
+                                  otu_table_fp,
+                                  tax_level,
+                                  wanted_tax){
+  ## metadata
+  metadata <- read_tsv(metadata_fp) %>% 
+            rename(sampleid = `#SampleID`)
+  ## taxonomy
+  taxonomy <- read_qza(tax_fp)$data %>% 
+    parse_taxonomy() %>% 
+    rownames_to_column('asv')
+  ## otu table 
+  otu_table <- read_qza(otu_table_fp)$data
+  otu_table %>% 
+    as_tibble(rownames = 'asv') %>% 
+    gather(-asv, key = sampleid, value = abun) %>% 
+    group_by(sampleid) %>% 
+    mutate(rel_abun = abun/sum(abun)) %>% 
+    mutate(rel_abun = rel_abun + 0.000001) -> otu_table
+  ## joining all tables together 
+  otu_table %>% 
+    left_join(metadata, by = 'sampleid') %>% 
+    left_join(taxonomy, by = 'asv') -> abun_table
+  abun_table %>% 
+    group_by(sampleid, day_post_inf, diet, mouse_id, vendor,
+             purified_diet, high_fat, high_fiber, 
+             .data[[tax_level]]) %>% 
+    summarise(rel_abund = sum(rel_abun)) %>% 
+    filter(.data[[tax_level]] %in% wanted_tax) %>% 
+    mutate(mouse_fact = as.factor(mouse_id),
+           day_fact = as.factor(day_post_inf)) -> abun_filt
+  ## creating a list for my outputs
+  my_list <- list(Metadata = metadata,
+                  Taxonomy = taxonomy,
+                  OTUTable = otu_table,
+                  AbundanceTable = abun_filt)
+  return(my_list)
+}
+```
+
+**File Paths**
+```{r}
+metadata_FP <- '../data/misc/proc_newExp_d15-d3_metadata.tsv'
+tax_FP <- '../data/qiime/taxonomy.qza'
+otu_FP <- '../data/qiime/total_sum_otu_table.qza'
+
+wanted_level <- 'Family'
+wanted_family <- c('Enterobacteriaceae', 'Morganellaceae', 'Lachnospiraceae', 'Enterococcaceae',
+                   'Tannerellaceae', 'Bacteroidaceae', 'Ruminococcaceae', 'Peptostreptococcaceae')
+
+vendor_x_labs <- c('Charles\nRiver',
+                   'Taconic')
+
+diet_labs <- 
+  c('Chow', 
+    'High Fat / High Fiber', 
+    'High Fat / Low Fiber', 
+    'Low Fat / High Fiber', 
+    'Low Fat / Low Fiber')
+names(diet_labs) <- c('Chow', 
+                      'HF/HF', 
+                      'HF/LF', 
+                      'LF/HF', 
+                      'LF/LF')
+```
+
+**Data Wrangling**
+```{r}
+abun_files <- family_abun_file_prep(metadata_FP,
+                                    tax_FP,
+                                    otu_FP,
+                                    wanted_level,
+                                    wanted_family)
+abun_table <- abun_files$AbundanceTable
+```
+
+**Attempting to do something**
+```{r}
+## spreading out the relative abundance of key families by day 
+day_abun_table <- abun_table %>% 
+                    ungroup() %>% 
+                    select(!c('purified_diet', 'high_fat', 'high_fiber', 'mouse_fact', 'day_fact', 'sampleid')) %>% 
+                    spread(day_post_inf, rel_abund) %>% 
+                    na.omit() %>% 
+                    rename('day_neg15' = '-15',
+                           'day_3' = '3')
+
+## subtracting the relative abundance at day -15 by day 3
+## negative diff_abun values mean that the rel abun at day 3 is higher than day -15
+## positive diff_abun values mean that rel abun at day 3 is lower than day -15
+day_abun_table <- day_abun_table %>% 
+                    group_by(mouse_id, Family) %>% 
+                    mutate(diff_abun = (day_neg15 - day_3))
+
+## creating mini tables bc having all the data on one plot is super confusing 
+obAn_day_abun_table <- day_abun_table %>% 
+                        filter(Family == 'Lachnospiraceae' | Family == 'Ruminococcaceae' | Family == 'Bacteroidaceae' | Family == 'Tannerellaceae' | Family == 'Peptostreptococcaceae')
+
+facAn_day_abun_table <- day_abun_table %>% 
+                          filter(Family == 'Enterobacteriaceae' | Family == 'Enterococcaceae' | 
+                                   Family == 'Morganellaceae' | Family == 'Lactobacillaceae')
+```
+
+**Obligate Anaerobe Plot**
+```{r, fig.height=9, fig.width=16, warning=FALSE}
+obAn_deltas_plot <- apppleplots::facet_twice_plots(input_table = obAn_day_abun_table,
+                                                   x_value = 'vendor',
+                                                   y_value = 'diff_abun',
+                                                   x_value_type = 'discrete',
+                                                   y_transform = FALSE,
+                                                   x_labels = vendor_x_labs,
+                                                   box_group_by = 'vendor',
+                                                   line_group_by = 'mouse_id',
+                                                   point_alpha = 0.5,
+                                                   facet_rows = 'Family',
+                                                   facet_cols = 'diet',
+                                                   row_labs = NULL,
+                                                   col_labs = diet_labs,
+                                                   x_name = 'Vendor',
+                                                   y_name = 'Deltas (Day -15 - Day 3)',
+                                                   title_content = 'Difference in Obligate Anaerobe Relative Abundance')
+obAn_deltas_plot <- obAn_deltas_plot +
+                      theme_bw(base_size = 20) +
+                      geom_hline(yintercept = 0, linetype = 'dashed', size = 0.5, color = 'blue') +
+                      theme(strip.text.y = element_text(angle = 0)) 
+
+obAn_deltas_plot
+```
+**Facultative Anaerobe Plot**
+```{r, fig.height=7, fig.width=15, warning=FALSE}
+facAn_deltas_plot <- apppleplots::facet_twice_plots(input_table = facAn_day_abun_table,
+                                                    x_value = 'vendor',
+                                                    y_value = 'diff_abun',
+                                                    x_value_type = 'discrete',
+                                                    y_transform = FALSE,
+                                                    x_labels = vendor_x_labs,
+                                                    box_group_by = 'vendor',
+                                                    line_group_by = 'mouse_id',
+                                                    point_alpha = 0.5,
+                                                    facet_rows = 'Family',
+                                                    facet_cols = 'diet',
+                                                    row_labs = NULL,
+                                                    col_labs = diet_labs,
+                                                    x_name = 'Vendor',
+                                                    y_name = 'Deltas (Day -15 - Day 3)',
+                                                    title_content = 'Difference in Facultative Anaerobe Relative Abundance')
+
+facAn_deltas_plot <- facAn_deltas_plot +
+                       theme_bw(base_size = 20) +
+                       geom_hline(yintercept = 0, linetype = 'dashed', size = 0.5, color = 'blue') +
+                       theme(strip.text.y = element_text(angle = 0)) 
+
+facAn_deltas_plot
+```
+**Saving my Outputs**
+```{r}
+ggsave('../plots/obAn_deltas_plot.pdf',
+       plot = obAn_deltas_plot,
+       width = 16,
+       height = 9)
+ggsave('../plots/facAn_deltas_plot.pdf',
+       plot = facAn_deltas_plot,
+       width = 15,
+       height = 7)
+```
+

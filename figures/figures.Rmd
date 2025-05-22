@@ -34,21 +34,28 @@ surv_stat_vis_v2 <- surv_stat_vis +
                         theme(legend.position = 'right')
 
 diet_plot_final_v2 <- diet_plot_final +
-                        theme_bw(base_size = 20)
+                        theme_bw(base_size = 18)
+
+az_spore_weights_plot_v2 <- az_spore_weights_plot +
+  theme_bw(base_size = 18) +
+  labs(x = 'Days Post Infection',
+       y = 'Average % Weight Change',
+       title = 'Weight Change After Infection by Diet')
 ```
 
 **actual manuscript figure**
-```{r, warning=FALSE, fig.height=12, fig.width=15}
-fig1_bottom_row <- plot_grid(surv_stat_vis_v2, NULL,
+```{r, warning=FALSE, fig.height=15, fig.width=15}
+fig1_middle_row <- plot_grid(surv_stat_vis_v2, NULL,
                              rel_widths = c(0.8, 1),
-                             labels = c('b)', ' '),
+                             labels = c('d)', ' '),
                              label_size = 20)
 
 plot_grid(diet_plot_final_v2,
-          fig1_bottom_row,
-          rel_heights = c(1, 0.5),
-          nrow = 2,
-          labels = c('a)', ' '),
+          fig1_middle_row,
+          az_spore_weights_plot_v2,
+          rel_heights = c(1, 0.5, 0.7),
+          nrow = 3,
+          labels = c('c)', ' ', 'e)'),
           align = 'h',
           label_size = 20) -> fig1
 
@@ -464,7 +471,7 @@ as a .pdf and not an rdata object (just to clarify)
 ggsave('fig1.pdf',
        plot = fig1,
        width = 15,
-       height = 12)
+       height = 15)
 
 ggsave('fig2.pdf',
        plot = fig2,

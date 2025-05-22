@@ -1,0 +1,391 @@
+---
+title: "combined_cfu_plot"
+output: html_document
+date: "2024-11-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggpubr)
+library(ggplot2)
+library(qiime2R)
+library(tidyverse)
+library(ggh4x)
+library(viridis)
+library(ggrepel)
+library(cowplot)
+library(grid)
+library(gridExtra)
+library(apppleplots)
+```
+
+**Functions**
+```{r}
+## editing my dunn's post hoc test to include the difference in means between groups 
+edit_dunn_test <- function(filtered_table,
+                           first_group,
+                           second_group,
+                           mean_value,
+                           dunn_test){
+  filtered_table %>% 
+    group_by(.data[[first_group]], .data[[second_group]]) %>% 
+    summarise(mean = mean(.data[[mean_value]])) -> mean_table
+  
+  dunn_test %>% 
+    merge(mean_table, 
+          by.x = c('group1',
+                   second_group),
+          by.y = c(first_group,
+                   second_group)) %>% 
+    rename_with(~paste0('group1_', mean_value, recycle0 = TRUE), contains('mean')) %>% 
+    merge(mean_table,
+          by.x = c('group2',
+                   second_group),
+          by.y = c(first_group,
+                   second_group)) %>% 
+    rename_with(~paste0('group2_', mean_value, recycle0 = TRUE), contains('mean')) -> int_dunn
+  
+  group1_col <- paste0('group1_', mean_value)
+  group2_col <- paste0('group2_', mean_value)
+  
+  int_dunn %>% 
+    mutate(diff_means = (.data[[group1_col]] - .data[[group2_col]]),
+           stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
+  
+  return(new_dunn)
+}
+```
+
+**File Paths**
+```{r}
+cult_genusAbun_fp <- '../data/misc/culture_genusAbun_table.tsv'
+cfu_count_fp <- '../data/misc/proc_combined_CDD_cfuCounts.tsv'
+
+location_y_labs <- c('Blood',
+                     'Liver',
+                     'Spleen')
+diet_fill_labs <- c('Chow',
+                    'HFt/HFb',
+                    'HFt/LFb',
+                    'LFt/HFb',
+                    'LFt/LFb')
+short_diet_fill_labs <- c('Chow',
+                          'LFt/LFb')
+presAbs_labs <- c('Absent',
+                  'Present')
+surv_labs <- c("Didn't Survive",
+               'Survived')
+surv_presAbs_title <- 'Survival and\nMicrobe Status'
+surv_presAbs_labs <- c("Didn't Survive, Absent",
+                       "Didn't Survive, Present",
+                       "Survived, Absent",
+                       "Survived, Present")
+diet_labs <- c('Chow',
+               'High Fat / High Fiber',
+               'High Fat / Low Fiber',
+               'Low Fat / High Fiber',
+               'Low Fat / Low Fiber')
+names(diet_labs) <- c('Chow',
+                      'HF/HF',
+                      'HF/LF',
+                      'LF/HF',
+                      'LF/LF')
+
+diet_order_labs <- c('High Fat / Low Fiber',
+                     'Low Fat / Low Fiber',
+                     'High Fat / High Fiber',
+                     'Low Fat / High Fiber',
+                     'Chow')
+names(diet_order_labs) <- c(1,
+                            2, 
+                            3,
+                            4,
+                            5)
+
+vendor_labs <- c('Charles River',
+                 'Taconic')
+names(vendor_labs) <- c('charles_river',
+                        'taconic')
+```
+
+**Reading in Files**
+```{r}
+cult_genusAbun_table <- read_tsv(cult_genusAbun_fp)
+proc_cfu_count <- read_tsv(cfu_count_fp)
+```
+
+**Wrangling the taxonomy of positive cultures**
+info on culture results:
+- samples taken from 40 different mice
+- 64 samples total from different locations 
+```{r}
+## pulling out mice/locations that have culture results that include enterococcus, escherichia-shigella,
+## and proteus 
+cult_genusAbun_table %>% 
+  select(location, mouse_id, Genus, rel_abund) %>% 
+  filter(Genus == 'Enterococcus' | Genus == 'Escherichia-Shigella' | Genus == 'Proteus',
+         rel_abund < 0.9) %>% 
+  spread(key = 'Genus', value = 'rel_abund', fill = 0) %>% 
+  mutate(total_abun = (Enterococcus + `Escherichia-Shigella` + Proteus)) %>% 
+  filter(total_abun >= 0.8) %>% 
+  mutate(Genus = paste("enterococcus", "escherichiaShigella", "proteus", sep = "_"),
+         sanity = paste(mouse_id, location, sep = "_")) %>% 
+  rename(rel_abund = total_abun) %>% 
+  select(mouse_id, location, Genus, sanity, rel_abund) -> big3_polymicro_table
+
+## pulling out mice/locations with culture results that are 90% or above one microbe
+cult_genusAbun_table %>%
+    select(mouse_id, Genus, rel_abund, location) %>%
+    group_by(mouse_id, Genus) %>%
+    filter(rel_abund > 0.9) %>% 
+  mutate(sanity = paste(mouse_id, location, sep = "_")) -> top_tax_table
+
+append(top_tax_table$sanity,
+      big3_polymicro_table$sanity) -> sanity_list
+
+## pulling out the last mice/locations that are not included in either of the tables above 
+cult_genusAbun_table %>% 
+  group_by(mouse_id, location) %>% 
+  filter(rel_abund == max(rel_abund)) %>% 
+  mutate(sanity = paste(mouse_id, location, sep = "_")) %>% 
+  filter(!(sanity %in% sanity_list)) %>% 
+  select(mouse_id, Genus, rel_abund, location, sanity) -> missing_mice
+
+## putting all tables together and more data wrangling 
+proc_cult_genusAbun <- rbind(top_tax_table,
+                             big3_polymicro_table,
+                             missing_mice)
+
+proc_cult_genusAbun <- proc_cult_genusAbun %>% 
+  mutate(top_tax = ifelse(is.na(Genus), 'Unknown', Genus))
+```
+
+**Combining all tables together for the plot**
+```{r}
+## added staph to the other list bc there's only one sample with it 
+other_list <- c('Unknown',
+                'Micrococcus',
+                'Oceanobacillus',
+                'Dietzia',
+                'Gemella',
+                'Corynebacterium',
+                'Bacillus',
+                'Streptococcus',
+                'Staphylococcus',
+                'Cutibacterium',
+                'Kocuria')
+
+
+comb_cfu_genusAbun <- proc_cfu_count %>% 
+  left_join(proc_cult_genusAbun, by = c("mouse_id", "location")) %>% 
+  filter(experiment != 'CDD01')  %>% 
+  mutate(top_tax = ifelse(is.na(top_tax), 'None', top_tax),
+         top_tax = ifelse(top_tax %in% other_list, 'Other', top_tax),
+         diet_order = case_when(
+           diet == 'HF/LF' ~ 1,
+           diet == 'LF/LF' ~ 2,
+           diet == 'HF/HF' ~ 3,
+           diet == 'LF/HF' ~ 4,
+           diet == 'Chow' ~ 5
+         ))
+```
+
+**Putting together color palettes**
+color palette?
+took the hexcodes from scale_color_brewers 'Paired' palette and put gray in the middle for the "None" category. 
+```{r}
+##RColorBrewer::brewer.pal(n = 8, name = 'Spectral')
+my_spectral_palette <- c("#D53E4F",
+                         "#F46D43",
+                         "#FDAE61",
+                         "#FEE08B",
+                         "#E6F598",
+                         "#ABDDA4",
+                         "#66C2A5",
+                         "#3288BD",
+                         "#999999")
+
+my_paired_palette <- c("#A6CEE3", 
+                       "#1F78B4",
+                       "#B2DF8A",
+                       "#33A02C",
+                       # "#FB9A99",
+                       # "#E31A1C",
+                       # "#FDBF6F",
+                       # "#FF7F00",
+                       "#CAB2D6",
+                       "#6A3D9A",
+                       "#999999")
+
+
+## get hexcodes of viridis color palette option C
+# viridis_pal(option = 'C')(6)
+
+my_viridis_c_palette <- c("#0D0887FF",
+                          "#6A00A8FF",
+                          "#B12A90FF",
+                          "#E16462FF",
+                          "#FCA636FF",
+                          "#F0F921FF",
+                          "#999999")
+```
+
+**Combined CFU/Survival Plot**
+```{r, fig.width=22, fig.height=12}
+comb_cfu_genusAbun %>% 
+  ggplot(aes(x = mouse_id, y = location)) +
+  theme_bw(base_size = 20) +
+  theme(axis.text.x = element_blank()) +
+  geom_point(aes(color = top_tax, shape = status_microbePres, alpha = status_microbePres), size = 6, 
+             stroke = 2) +
+  scale_y_discrete(labels = location_y_labs) +
+  facet_nested_wrap(~diet_order + vendor,
+                    scales = "free_x",
+                    labeller = labeller(diet_order = diet_order_labs,
+                                        vendor = vendor_labs),
+                    nrow = 3) +
+  scale_color_manual(breaks = c('Enterococcus',
+                                'Escherichia-Shigella',
+                                'Proteus',
+                                'enterococcus_escherichiaShigella_proteus',
+                                'Lactobacillus',
+                                'Other',
+                                'None'),
+                     labels = c('Enterococcus',
+                                'Escherichia-Shigella',
+                                'Proteus',
+                                'Enterococcus, Escherichia-Shigella,\nand Proteus',
+                                'Lactobacillus',
+                                'Other',
+                                'None'),
+                     values = my_viridis_c_palette,
+                     name = 'Genus') +
+  scale_shape_manual(values = c(4, 4, 16, 16),
+                     name = surv_presAbs_title,
+                     labels = surv_presAbs_labs) +
+  scale_alpha_manual(values = c(0.15, 1, 0.15, 1),
+                     name = surv_presAbs_title,
+                     labels = surv_presAbs_labs) +
+  labs(x = 'Mouse',
+       y = 'Location',
+       title = 'New Experiment Culture and Survival Results') -> everything_plot
+
+everything_plot
+```
+
+**Combined CFU/Survival Stats**
+status column:
+- survived = 1
+- didnt_survive = 0
+status_microbePres column:
+- didnt_survive,0 = 1
+- didnt_survive,1 = 2
+- survived,0 = 3
+- survived,1 = 4
+```{r}
+num_cfu_table <- proc_cfu_count %>% 
+  mutate(status = ifelse(status == 'survived', 1, 0),
+         status_microbePres = case_when(
+           status_microbePres == 'didnt_survive,0' ~ 1,
+           status_microbePres == 'didnt_survive,1' ~ 2,
+           status_microbePres == 'survived,0' ~ 3,
+           status_microbePres == 'survived,1' ~ 4
+         ))
+
+num_cfu_table
+```
+
+```{r}
+cfu_stats <- apppleplots::kruskal_dunn_stats(input_table = num_cfu_table,
+                                              grouped_by = c('vendor'),
+                                              adjust_method = 'BH',
+                                              filter_adj_p_value = FALSE,
+                                              formula_left = 'microbe_presence',
+                                              formula_right = 'diet')
+
+cfu_kruskal <- cfu_stats$KruskalTest
+cfu_dunn <- cfu_stats$DunnTest
+
+new_cfu_dunn <- edit_dunn_test(filtered_table = num_cfu_table,
+                               first_group = 'diet',
+                               second_group = 'vendor',
+                               mean_value = 'microbe_presence',
+                               dunn_test = cfu_dunn)
+```
+
+**Stat Plot**
+```{r, fig.height=5, fig.width=10}
+diet_stat_x_labs <- c('Chow',
+                      'HFt/\nHFb',
+                      'HFt/\nLFb',
+                      'LFt/\nHFb')
+diet_stat_y_labs <- c('HFt / HFb',
+                      'HFt / LFb',
+                      'LFt / HFb',
+                      'LFt / LFb')
+
+everything_stats <- apppleplots::stat_heat_plot(input_table = new_cfu_dunn,
+                                                x_value = 'group1',
+                                                y_value = 'group2',
+                                                x_value_type = 'discrete',
+                                                y_value_type = 'discrete',
+                                                pairwise = TRUE,
+                                                correlation = FALSE,
+                                                tile_fill = 'stat_diff_means',
+                                                text_value = 'p.adj.signif',
+                                                legend_name = 'Group 1 -\nGroup2',
+                                                x_labels = diet_stat_x_labs,
+                                                y_labels = diet_stat_y_labs,
+                                                facet_by = 'vendor',
+                                                facet_labels = vendor_labs,
+                                                x_name = 'Group 1',
+                                                y_name = 'Group 2',
+                                                title_content = 'New Experiment Culture Comparisons')
+
+everything_stats <- everything_stats +
+  labs(subtitle = 'Vendor') +
+  theme_bw(base_size = 20) +
+  theme(plot.subtitle = element_text(hjust = 0.5))
+
+everything_stats
+```
+
+**To Save for Later!**
+```{r}
+proc_cfuCount_topTax <- proc_cfu_count %>% 
+  left_join(proc_cult_genusAbun, by = c("mouse_id", "location")) %>% 
+  filter(experiment != 'CDD01')  %>% 
+  mutate(top_tax = ifelse(is.na(top_tax), 'None', top_tax)) %>% 
+  select(!c('Genus', 'sanity')) %>%
+  rename(cult_rel_abund = rel_abund) %>% 
+  mutate(cult_rel_abund = ifelse(is.na(cult_rel_abund), 0, cult_rel_abund))
+
+proc_cfuCount_topTax  
+```
+
+**Saving my Outputs**
+```{r}
+## as a pdf
+ggsave('../plots/allExp_culture_withMicrobes.pdf',
+       plot = everything_plot,
+       width = 22,
+       height = 12)
+ggsave('../plots/allExp_culture_withMicrobes_stats.pdf',
+       plot = everything_stats,
+       width = 10,
+       height = 5)
+
+## as an .rdat object
+save(everything_plot,
+     file = '../../figures/allExp_culture_withMicrobes.rdat')
+save(everything_stats,
+     file = '../../figures/allExp_culture_withMicrobes_stats.rdat')
+
+
+write_tsv(proc_cfuCount_topTax,
+          '../data/misc/proc_tax_CDD_cfuCounts.tsv')
+```
+

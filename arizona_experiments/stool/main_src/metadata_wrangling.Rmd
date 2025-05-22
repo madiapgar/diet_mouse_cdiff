@@ -1,0 +1,158 @@
+---
+title: "metadata_wrangling"
+output: html_document
+date: "2023-11-01"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(broom)
+library(qiime2R)
+```
+
+**File Paths**
+```{r}
+colon_meta_fp <- '../data/misc/processed_metadata.tsv'
+cecum_meta_fp <- '../../cecum/data/misc/cecal_processed_metadata.tsv'
+preProc_cecum_fp <- '../../cecum/data/misc/cecal_metadata.tsv'
+updated_meta_fp <- '../../cecum/data/misc/updated_cecal_metadata.tsv'
+preProc_colon_fp <- '../data/misc/updated_stool_metadata.tsv'
+newExp_meta_fp <- '../../new_experiments/data/misc/proc_newExp_d15-d3_metadata.tsv'
+```
+
+**Reading in Files**
+```{r}
+colon_meta <- read_tsv(colon_meta_fp)
+cecum_meta <- read_tsv(cecum_meta_fp)
+preProc_cecum <- read_tsv(preProc_cecum_fp)
+updated_meta <- read_tsv(updated_meta_fp)
+preProc_colon <- read_tsv(preProc_colon_fp)
+newExp_meta <- read_tsv(newExp_meta_fp)
+```
+
+**Putting together cecum and colon processed metadata files**
+```{r}
+cecum_meta %>% 
+  select(!c(tube_num,
+            date,
+            corr_sample_num)) -> mini_cecum_meta
+
+colon_meta %>% 
+  select(-diet_true) -> mini_colon_meta
+
+rbind(mini_cecum_meta,
+      mini_colon_meta) -> combined_metadata
+```
+
+**Adding study (batch/replicates to pre-processed cecal metadata)**
+```{r}
+cecum_meta %>% 
+  select(sampleid, facility, study) -> to_join_preProc
+
+names(to_join_preProc)[names(to_join_preProc) == 'sampleid'] <- '#SampleID'
+
+preProc_cecum %>% 
+  left_join(to_join_preProc) %>% 
+  filter(study != 1) -> new_preProc_cecum
+```
+
+**Adding study (batch/replicates) to updated cecal metadata**
+This one is needed for metadata processing
+```{r}
+updated_meta %>% 
+  left_join(to_join_preProc) %>% 
+  filter(study != 1) -> new_updated_meta
+```
+
+**Putting together qiime approved processed combined metadata file**
+should I filter study 1 out of the cecal data only and not the colon data or should I filter out study 1 overall? this table currently doesn't have study 1 filtered out at all. 
+```{r}
+mini_cecum_meta %>% 
+  select(diet, sampleid) -> cecum_diet_id
+
+mini_cecum_meta %>% 
+  select(-diet) -> cecum_for_q
+
+cecum_for_q %>% 
+  left_join(cecum_diet_id) -> cecum_for_q
+  
+rbind(cecum_for_q,
+      mini_colon_meta) -> comp_metadata
+
+names(comp_metadata)[names(comp_metadata) == 'sampleid'] <- '#SampleID'
+```
+
+**Comparison metadata without day 3 for colon samples**
+```{r}
+mini_colon_meta %>% 
+  filter(day_post_inf != 3) -> colon_for_q
+
+rbind(cecum_for_q,
+      colon_for_q) %>% 
+  filter(study != 1) -> filt_comp_metadata
+
+names(filt_comp_metadata)[names(filt_comp_metadata) == 'sampleid'] <- '#SampleID'
+```
+
+**Combining metadata for the U of Arizona experiments and the new experiments (2024)**
+These are filtered to only have day -15 in the timeline for baseline microbiome comparisons!
+```{r}
+filt_comp_metadata %>% 
+  filter(day_post_inf == -15) %>% 
+  mutate(mouse_sex = paste('Female'),
+         experiment_set = paste('second_set_arizona'),
+         vendor = paste('charles_river')) %>% 
+  select(!c('facility')) -> prep_comp_metadata
+
+newExp_meta %>% 
+  filter(day_post_inf == -15) %>% 
+  select(!c('experiment', 'experiment_day')) -> prep_newExp_meta
+
+names(prep_newExp_meta)[names(prep_newExp_meta) == 'sampleid'] <- '#SampleID'
+
+rbind(prep_comp_metadata,
+      prep_newExp_meta) -> newExp_comp_d15_metadata
+```
+
+**Combining metadata for the U of Arizona experiments and the new experiments (2024) - INCLUDES DAY 3**
+These are filtered to only have day -15 AND day 3 in the timeline for microbiome comparisons!
+```{r}
+filt_comp_metadata %>% 
+  filter(day_post_inf == -15 | day_post_inf == 3) %>% 
+  mutate(mouse_sex = paste('Female'),
+         experiment_set = paste('second_set_arizona'),
+         vendor = paste('charles_river')) %>% 
+  select(-facility) -> prep_comp_metadata_d15_d3
+
+newExp_meta %>% 
+  filter(day_post_inf == -15 | day_post_inf == 3) %>% 
+  select(!c('experiment', 'experiment_day')) -> prep_newExp_meta_d15_d3
+
+rbind(prep_comp_metadata_d15_d3,
+      prep_newExp_meta_d15_d3) -> newExp_comp_d15_d3_metadata
+```
+
+
+**Saving my outputs**
+```{r}
+write_tsv(combined_metadata,
+          '../../comparisons/data/combined_metadata.tsv')
+write_tsv(new_preProc_cecum,
+          '../cecum/data/misc/filt_cecal_metadata.tsv')
+write_tsv(new_updated_meta,
+          '../cecum/data/misc/filt_updated_cecal_metadata.tsv')
+write_tsv(comp_metadata,
+          '../../comparisons/data/misc/comp_metadata.tsv')
+write_tsv(filt_comp_metadata,
+          '../../comparisons/data/misc/s1_filt_comp_metadata.tsv')
+write_tsv(newExp_comp_d15_metadata,
+          '../../comparisons/data/misc/newExp_comp_d15_metadata.tsv')
+write_tsv(newExp_comp_d15_d3_metadata,
+          '../../comparisons/data/misc/newExp_comp_d15-d3_metadata.tsv')
+```
+

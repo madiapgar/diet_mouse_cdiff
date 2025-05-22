@@ -1,0 +1,126 @@
+---
+title: "lacto_food_abun"
+output: html_document
+date: "2024-01-24"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(qiime2R)
+library(tidyverse)
+library(cowplot)
+library(magrittr)
+library(vegan)
+library(viridis)
+library(broom)
+library(rstatix)
+```
+
+**Functions**
+```{r}
+## abundance file prep and filtering function
+## combines all files into one large table
+family_abun_file_prep <- function(metadata_fp,
+                                  food_samples,
+                                  tax_fp,
+                                  otu_table_fp,
+                                  tax_level){
+  ## metadata
+  metadata <- read_tsv(metadata_fp)
+  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
+  metadata %>% 
+    filter(sampleid == food_samples) %>% 
+    select(sampleid, diet) -> metadata
+  ## taxonomy
+  taxonomy <- read_qza(tax_fp)$data %>% 
+  parse_taxonomy() %>% 
+  rownames_to_column('asv')
+  ## otu table 
+  otu_table <- read_qza(otu_table_fp)$data
+  otu_table %>% 
+    as_tibble(rownames = 'asv') %>% 
+    gather(-asv, key = sampleid, value = abun) %>% 
+    filter(sampleid %in% food_samples) %>% 
+    group_by(sampleid) %>% 
+    mutate(rel_abun = abun/sum(abun)) %>% 
+    mutate(rel_abun = rel_abun + 0.000001) -> otu_table
+  ## joining all tables together 
+  otu_table %>% 
+    left_join(metadata, by = 'sampleid') %>% 
+    left_join(taxonomy, by = 'asv') %>% 
+    select(sampleid, .data[[tax_level]], diet, rel_abun, abun, asv) -> abun_filt
+  ## creating a list for my outputs
+  my_list <- list(Metadata = metadata,
+                  Taxonomy = taxonomy,
+                  OTUTable = otu_table,
+                  AbundanceTable = abun_filt)
+  return(my_list)
+}
+```
+
+**File Paths**
+```{r}
+meta_fp <- '../data/misc/merged_metadata1.tsv'
+tax_FP <- '../data/lacto_qiime/taxonomy.qza'
+otu_FP <- '../data/lacto_qiime/tax_filt_actual.qza'
+
+wanted_food <- c('EW.WD',
+                 'EW.LF.Pure',
+                 'EW.WD.Fiber',
+                 'EW.LF.Fiber')
+```
+
+**Data Prep**
+```{r}
+lacto_files <- family_abun_file_prep(meta_fp,
+                                     wanted_food,
+                                     tax_FP,
+                                     otu_FP,
+                                     'Genus')
+
+metadata <- lacto_files$Metadata
+taxonomy <- lacto_files$Taxonomy
+otu_table <- lacto_files$OTUTable
+lacto_abun_table <- lacto_files$AbundanceTable
+
+lacto_abun_table %>% 
+  group_by(diet) %>% 
+  summarise(abun = sum(abun)) %>% 
+  ungroup() %>% 
+  mutate(total_abun = sum(abun),
+         percent = (abun/total_abun)*100,
+         percent = signif(percent, 4)) -> lacto_abun_table
+```
+
+**Plot**
+oh my god why is this so hard this is like four data points agh
+```{r, fig.width=7, fig.height=5}
+lacto_abun_table %>% 
+  ggplot(aes(x = diet, y = percent)) +
+  geom_bar(aes(fill = diet), stat = 'identity', color = 'black', alpha = 0.6) +
+  geom_text(aes(label = percent), vjust = 1.5) +
+  theme_bw(base_size = 20) +
+  scale_fill_brewer(palette = 'Spectral') +
+  scale_x_discrete(labels = c('HFt/\nHFb',
+                              'HFt/\nLFb',
+                              'LFt/\nHFb',
+                              'LFt/\nLFb')) +
+  labs(y = 'Percent',
+       x = 'Diet',
+       title = 'Lactococcus Contamination of\nPurified Diet Food') +
+  theme(legend.position = 'none') -> lacto_plot
+
+lacto_plot
+```
+
+**Saving my Output**
+```{r}
+ggsave('../plots/lacto_food_contam.pdf',
+       plot = lacto_plot,
+       width = 7,
+       height = 5)
+```
+

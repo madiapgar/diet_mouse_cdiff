@@ -1,0 +1,16 @@
+sampleid	experiment	vendor	diet	num	cultured_from	oxygen_tol	sample_type
+CDD01.CR.Chow.1.spleen	CDD01	charles_river	Chow	1	spleen	idk	culture
+CDD01.CR.Chow.2.spleen	CDD01	charles_river	Chow	2	spleen	idk	culture
+CDD01.Tc.LFLF.1.aer	CDD01	taconic	LF/LF	1	blood	aerobic	culture
+CDD01.CR.LFLF.3.aer	CDD01	charles_river	LF/LF	3	blood	aerobic	culture
+CDD01.CR.LFLF.2.aer	CDD01	charles_river	LF/LF	2	blood	aerobic	culture
+CDD01.Tc.LFLF.2.an	CDD01	taconic	LF/LF	2	blood	anaerobic	culture
+CDD01.Tc.LFLF.1.an	CDD01	taconic	LF/LF	1	blood	anaerobic	culture
+CDD01.CR.LFLF.2.an	CDD01	charles_river	LF/LF	2	blood	anaerobic	culture
+CDD01.CR.Chow.2.aer	CDD01	charles_river	Chow	2	blood	aerobic	culture
+CDD01.CR.LFLF.1.aer	CDD01	charles_river	LF/LF	1	blood	aerobic	culture
+CDD01.Tc.LFLF.2.aer	CDD01	taconic	LF/LF	2	blood	aerobic	culture
+CDD01.CR.Chow.2.an	CDD01	charles_river	Chow	2	blood	anaerobic	culture
+CDD01.CR.LFLF.1.an	CDD01	charles_river	LF/LF	1	blood	anaerobic	culture
+CDD01.Tc.LFLF.3.aer	CDD01	taconic	LF/LF	3	blood	aerobic	culture
+CDD01.CR.LFLF.3.an	CDD01	charles_river	LF/LF	3	blood	anaerobic	culture

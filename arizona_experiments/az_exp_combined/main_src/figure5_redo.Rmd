@@ -1,0 +1,602 @@
+---
+title: "obAnaerobe_investigation"
+output: html_document
+date: "2024-12-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(qiime2R)
+library(tidyverse)
+library(cowplot)
+library(magrittr)
+library(vegan)
+library(viridis)
+library(broom)
+library(rstatix)
+library(ggpubr)
+library(ggh4x)
+library(apppleplots)
+library(viridis)
+```
+
+**Functions**
+```{r}
+## abundance file prep and filtering function
+## combines all files into one large table
+abun_file_prep <- function(metadata_fp,
+                           tax_fp,
+                           otu_table_fp,
+                           tax_level,
+                           wanted_tax){
+  ## metadata
+  metadata <- read_tsv(metadata_fp)
+  names(metadata)[names(metadata) == '#SampleID'] <- 'sampleid'
+  ## taxonomy
+  taxonomy <- read_qza(tax_fp)$data %>% 
+  parse_taxonomy() %>% 
+  rownames_to_column('asv')
+  ## otu table 
+  otu_table <- read_qza(otu_table_fp)$data
+  otu_table %>% 
+    as_tibble(rownames = 'asv') %>% 
+    gather(-asv, key = sampleid, value = abun) %>% 
+    group_by(sampleid) %>% 
+    mutate(rel_abun = abun/sum(abun)) %>% 
+    mutate(rel_abun = rel_abun + 0.000001) -> otu_table
+  ## joining all tables together 
+  otu_table %>% 
+    left_join(metadata, by = 'sampleid') %>% 
+    left_join(taxonomy, by = 'asv') -> abun_table
+  abun_table %>% 
+    group_by(sampleid, day_post_inf, diet, mouse_id,
+             .data[[tax_level]], Genus) %>% 
+    summarise(rel_abund = sum(rel_abun)) %>% 
+    filter(.data[[tax_level]] %in% wanted_tax) %>% 
+    mutate(mouse_fact = as.factor(mouse_id),
+           day_fact = as.factor(day_post_inf)) %>% 
+    filter(!is.na(diet)) -> abun_filt
+  ## creating a list for my outputs
+  my_list <- list(Metadata = metadata,
+                  Taxonomy = taxonomy,
+                  OTUTable = otu_table,
+                  AbundanceTable = abun_filt)
+  return(my_list)
+}
+
+## plot for the top 5 genera in a family according to relative abundance 
+sum_abun_plot <- function(input_table,
+                          x_axis, 
+                          y_axis,
+                          bar_group_by,
+                          bar_fill_by,
+                          nudge_text_y,
+                          x_axis_order,
+                          x_name,
+                          y_name,
+                          title_content){
+  plot <- input_table %>% 
+    ggplot(aes(x = .data[[x_axis]], y = .data[[y_axis]])) +
+    geom_bar(aes(group = .data[[bar_group_by]], fill = .data[[bar_fill_by]]), stat = 'identity', color = 'black') +
+    geom_text(aes(label = .data[[y_axis]]), nudge_y = nudge_text_y, fontface = 'bold') +
+    scale_x_discrete(limit = x_axis_order) +
+    scale_y_continuous(expand = c(0.025, 0.025)) +
+    scale_fill_discrete(breaks = x_axis_order) +
+    theme_bw(base_size = 20) +
+    theme(legend.title = element_blank(),
+          axis.text.x = element_blank()) +
+    labs(x = x_name,
+         y = y_name,
+         title = title_content)
+  
+  return(plot)
+}
+
+## plot of trend lines of genera per family only (no points/boxes)
+smooth_abun_plot <- function(input_table,
+                             x_axis,
+                             y_axis,
+                             line_group_by,
+                             line_color_by,
+                             viridis_palette,
+                             legend_order,
+                             legend_labels,
+                             x_axis_breaks,
+                             facet_by,
+                             facet_labels,
+                             x_name,
+                             y_name,
+                             title_content){
+  plot <- input_table %>% 
+    ggplot(aes(x = .data[[x_axis]], y = .data[[y_axis]])) +
+    geom_smooth(aes(group = .data[[line_group_by]]), color = 'black',
+                linewidth = 1.5, method = 'loess', se = FALSE, show.legend = T) +
+    geom_smooth(aes(group = .data[[line_group_by]], color = .data[[line_color_by]]), 
+                se = FALSE, method = 'loess', alpha = 0.7) +
+    # guides(color = guide_legend(override.aes=list(shape = 22))) +
+    scale_color_viridis(option = viridis_palette,
+                        discrete = TRUE,
+                        breaks = legend_order,
+                        labels = legend_labels) +
+    theme_bw(base_size = 20) +
+    scale_y_continuous(transform = 'log10') +
+    scale_x_continuous(breaks = x_axis_breaks,
+                       labels = x_axis_breaks) +
+    facet_wrap(~.data[[facet_by]],
+               nrow = 1,
+               labeller = labeller(.cols = facet_labels)) +
+    labs(y = y_name,
+         x = x_name,
+         title = title_content)
+  
+  return(plot)
+}
+
+## preps dunns post hoc results for statistical visualization
+stat_plot_prep <- function(filtered_table,
+                           first_group,
+                           second_group,
+                           mean_value,
+                           dunn_test){
+  filtered_table %>% 
+    group_by(filtered_table[first_group], filtered_table[second_group]) %>%
+    summarise(mean = mean(.data[[mean_value]])) -> mean_table
+  
+  dunn_test %>% 
+    merge(mean_table, 
+          by.x = c('group1',
+                   second_group),
+          by.y = c(first_group,
+                   second_group)) %>%
+    rename_with(~paste0('group1_', mean_value, recycle0 = TRUE), contains('mean')) %>% 
+    merge(mean_table,
+          by.x = c('group2',
+                   second_group),
+          by.y = c(first_group,
+                   second_group)) %>%
+    rename_with(~paste0('group2_', mean_value, recycle0 = TRUE), contains('mean')) -> int_dunn
+  
+  group1_col <- paste0('group1_', mean_value)
+  group2_col <- paste0('group2_', mean_value)
+  
+  int_dunn %>% 
+    mutate(diff_means = (.data[[group1_col]] - .data[[group2_col]]),
+           stat_diff_means = if_else(p.adj > 0.05, 0, diff_means)) -> new_dunn
+  
+  return(new_dunn)
+}
+```
+
+**File paths**
+```{r}
+otu_table_FP <- '../data/comp_qiime/tax_s1_filt.qza'
+tax_FP <- '../data/comp_qiime/taxonomy.qza'
+metadata_FP <- '../data/misc/s1_filt_comp_metadata.tsv'
+
+diet_labs <- 
+  c('Chow', 
+    'High Fat / High Fiber', 
+    'High Fat / Low Fiber', 
+    'Low Fat / High Fiber', 
+    'Low Fat / Low Fiber')
+names(diet_labs) <- c('Chow', 
+                      'HF/HF', 
+                      'HF/LF', 
+                      'LF/HF', 
+                      'LF/LF')
+
+diet_y_labs <- c('HFt / HFb',
+                 'HFt / LFb',
+                 'LFt / HFb',
+                 'LFt / LFb')
+
+day_x_breaks <- c(-15, -8, -3, 0, 3)
+
+wanted_level <- 'Family'
+
+wanted_family <- c('Lachnospiraceae',
+                   'Ruminococcaceae',
+                   'Enterobacteriaceae',
+                   'Peptostreptococcaceae',
+                   'Enterococcaceae',
+                   'Staphylococcaceae')
+
+path_genus_labs <- c('Clostridioides',
+                     'Enterococcus',
+                     'Unclassified\nEnterobacteriaceae',
+                     'Staphylococcus')
+names(path_genus_labs) <- c(1, 
+                            2, 
+                            3, 
+                            4)
+```
+
+**Data wrangled**
+```{r}
+abun_files <- abun_file_prep(metadata_fp = metadata_FP,
+                             tax_fp = tax_FP,
+                             otu_table_fp = otu_table_FP,
+                             tax_level = wanted_level,
+                             wanted_tax = wanted_family)
+
+abun_table <- abun_files$AbundanceTable
+```
+## **Pulling top genera per family**
+```{r}
+## lachnospiraceae
+top_lachno <- abun_table %>% 
+  filter(Family == 'Lachnospiraceae') %>% 
+  group_by(Genus) %>% 
+  summarise(sum_abund = round(sum(rel_abund), digits = 3)) %>% 
+  slice_max(sum_abund, n = 15)
+
+## ruminococcaceae
+top_rumino <- abun_table %>% 
+  filter(Family == 'Ruminococcaceae') %>% 
+  group_by(Genus) %>% 
+  summarise(sum_abund = round(sum(rel_abund), digits = 3)) %>% 
+  slice_max(sum_abund, n = 15)
+```
+
+**Lachnospiraceae plot**
+```{r, fig.width=12, fig.height=5}
+lachno_order <- c("Lachnospiraceae_NK4A136_group",
+                  NA,
+                  "Lachnoclostridium",
+                  "Blautia",
+                  "Roseburia",
+                  "uncultured",
+                  "Marvinbryantia",
+                  "[Eubacterium]_fissicatena_group",
+                  "A2",
+                  "Lachnospiraceae_UCG-001")
+
+lachno_plot <- sum_abun_plot(input_table = top_lachno,
+                             x_axis = 'Genus',
+                             y_axis = 'sum_abund',
+                             bar_group_by = 'Genus',
+                             bar_fill_by = 'Genus',
+                             nudge_text_y = 0.25,
+                             x_axis_order = lachno_order,
+                             x_name = 'Genus',
+                             y_name = 'Sum Abundance',
+                             title_content = 'Lachnospiraceae')
+
+lachno_plot
+```
+
+**Ruminococcaceae plot**
+```{r, fig.width=12, fig.height=5}
+rumino_order <- c("Incertae_Sedis",
+                  "Anaerotruncus",
+                  "UBA1819",
+                  "uncultured",
+                  "Paludicola",
+                  "Ruminococcaceae",
+                  "CAG-352",
+                  NA,
+                  "Ruminococcus",
+                  "Caproiciproducens")
+
+rumino_plot <- sum_abun_plot(input_table = top_rumino,
+                             x_axis = 'Genus',
+                             y_axis = 'sum_abund',
+                             bar_group_by = 'Genus',
+                             bar_fill_by = 'Genus',
+                             nudge_text_y = 0.05,
+                             x_axis_order = rumino_order,
+                             x_name = 'Genus',
+                             y_name = 'Sum Abundance',
+                             title_content = 'Ruminococccaceae')
+
+rumino_plot
+```
+
+**Putting plots together**
+```{r, fig.width=12, fig.height=10}
+obAnaerobe_plots <- plot_grid(lachno_plot,
+                              rumino_plot,
+                              ncol = 1,
+                              align = 'hv',
+                              axis = 'tblr')
+
+obAnaerobe_plots
+```
+
+## **Relative abundance plots**
+
+**Data wrangled (part two)**
+```{r}
+## lachnospiraceae
+wanted_lachno <- c('Lachnospiraceae_NK4A136_group', 
+                   'unclassified',
+                   'Lachnoclostridium', 
+                   'Blautia', 
+                   'Roseburia')
+
+lachno_abun_table <- abun_table %>% 
+  mutate(Genus = ifelse(is.na(Genus), 'unclassified', Genus)) %>% 
+  filter(Family == 'Lachnospiraceae',
+         Genus %in% wanted_lachno)
+
+## ruminococcaceae
+wanted_rumino <- c('Incertae_Sedis',
+                   'Anaerotruncus',
+                   'UBA1819',
+                   'uncultured')
+
+rumino_abun_table <- abun_table %>% 
+  filter(Family == 'Ruminococcaceae',
+         Genus %in% wanted_rumino)
+
+## potential pathogens
+path_families <- c('Enterobacteriaceae',
+                   'Peptostreptococcaceae',
+                   'Enterococcaceae',
+                   'Staphylococcaceae')
+wanted_pathogens <- c('Clostridioides',
+                      'Enterococcus',
+                      'Unclassified\nEnterobacteriaceae',
+                      'Staphylococcus')
+
+path_abun_table <- abun_table %>% 
+  filter(Family %in% path_families) %>% 
+  mutate(Genus = ifelse(is.na(Genus), paste0('Unclassified', '\n', Family), Genus)) %>% 
+  filter(Genus %in% wanted_pathogens) %>% 
+  mutate(genus_order = case_when(
+    Genus == 'Clostridioides' ~ 1,
+    Genus == 'Enterococcus' ~ 2,
+    Genus == 'Unclassified\nEnterobacteriaceae' ~ 3,
+    Genus == 'Staphylococcus' ~ 4
+  ))
+```
+
+**Lachnospiraceae plot**
+```{r, fig.width=20, fig.height=5}
+lachno_legend_labs <- c('Lachnospiraceae\nNK4A136 group',
+                        'Unclassified',
+                        'Lachnoclostridium',
+                        'Blautia',
+                        'Roseburia')
+
+
+lachno_abun_plot <- smooth_abun_plot(input_table = lachno_abun_table,
+                                     x_axis = 'day_post_inf',
+                                     y_axis = 'rel_abund',
+                                     line_group_by = 'Genus',
+                                     line_color_by = 'Genus',
+                                     viridis_palette = 'C',
+                                     legend_order = wanted_lachno,
+                                     legend_labels = lachno_legend_labs,
+                                     x_axis_breaks = day_x_breaks,
+                                     facet_by = 'diet',
+                                     facet_labels = diet_labs,
+                                     x_name = 'Days Relative to Infection',
+                                     y_name = 'Relative Abundance (log10)',
+                                     title_content = 'Lachnospiraceae')
+
+lachno_abun_plot
+```
+
+**Ruminococcaceae plot**
+```{r, fig.width=20, fig.height=5}
+rumino_legend_labs <- c('Incertae Sedis',
+                        'Anaerotruncus',
+                        'UBA1819',
+                        'Uncultured')
+
+rumino_abun_plot <- smooth_abun_plot(input_table = rumino_abun_table,
+                                     x_axis = 'day_post_inf',
+                                     y_axis = 'rel_abund',
+                                     line_group_by = 'Genus',
+                                     line_color_by = 'Genus',
+                                     viridis_palette = 'C',
+                                     legend_order = wanted_rumino,
+                                     legend_labels = rumino_legend_labs,
+                                     x_axis_breaks = day_x_breaks,
+                                     facet_by = 'diet',
+                                     facet_labels = diet_labs,
+                                     x_name = 'Days Relative to Infection',
+                                     y_name = 'Relative Abundance (log10)',
+                                     title_content = 'Ruminococcaceae')
+
+rumino_abun_plot
+```
+
+**Potential pathogen plot**
+unclassified enterobacteriaceae, enterococcus, staphylococcus, and clostridioides
+```{r, fig.width=16, fig.height=8}
+path_abun_plot <- apppleplots::facet_twice_plots(input_table = path_abun_table,
+                                                 x_value = 'day_post_inf',
+                                                 y_value = 'rel_abund',
+                                                 x_value_type = 'numeric',
+                                                 y_transform = TRUE,
+                                                 x_labels = c(-15, -8, -3, 0, 3),
+                                                 box_group_by = 'day_post_inf',
+                                                 line_group_by = 'mouse_id',
+                                                 point_alpha = 0.4,
+                                                 facet_rows = 'genus_order',
+                                                 facet_cols = 'diet',
+                                                 row_labs = path_genus_labs,
+                                                 col_labs = diet_labs,
+                                                 x_name = 'Days Relative to Infection',
+                                                 y_name = 'Relative Abundance (log10)',
+                                                 title_content = 'Potential Pathogen Relative Abundance') +
+  theme_bw(base_size = 20) +
+  theme(strip.text.y.right = element_text(angle = 0))
+
+path_abun_plot
+```
+
+**Putting relative abundance plots together**
+```{r, fig.width=22, fig.height=21}
+plots_together <- plot_grid(lachno_abun_plot +
+                                  theme(axis.title.x = element_blank()) +
+                                  labs(y = '',
+                                       subtitle = 'Lachnospiraceae',
+                                       title = 'Obligate Anaerobe Relative Abundance'),
+                                rumino_abun_plot +
+                                  theme(plot.title = element_blank()) +
+                                  labs(x = 'Days Relative to Infection',
+                                       y = '',
+                                       subtitle = 'Ruminococcaceae'),
+                                path_abun_plot,
+                                ncol = 1,
+                                labels = c('a)', ' ', 'b)'),
+                                label_size = 20,
+                                rel_heights = c(0.45, 0.45, 1),
+                                align = 'hv',
+                                axis = 'tblr')
+
+genusAbun_plots_together_withLabs <- ggdraw(plots_together) +
+  draw_label('Relative Abundace (log10)', x = 0, y = 0.765, angle = 90, size = 20, vjust = 1.5)
+
+
+genusAbun_plots_together_withLabs
+```
+
+## **Stats**
+**Data wrangled (part three)**
+```{r}
+diff_abun_tables <- rbind(lachno_abun_table,
+                          rumino_abun_table,
+                          path_abun_table)
+
+diff_abun_tables <- diff_abun_tables %>% 
+  mutate(log_rel_abund = log10(rel_abund),
+         Genus = ifelse(Genus == 'unclassified' | Genus == 'uncultured', 
+                        paste0(Genus, '\n', Family), Genus),
+         genus_order = case_when(
+           Genus == 'Lachnospiraceae_NK4A136_group' ~ 1, 
+           Genus == 'unclassified\nLachnospiraceae' ~ 2,
+           Genus == 'Lachnoclostridium' ~ 3, 
+           Genus == 'Blautia' ~ 4, 
+           Genus == 'Roseburia' ~ 5,
+           Genus == 'Incertae_Sedis' ~ 6,
+           Genus == 'Anaerotruncus' ~ 7,
+           Genus == 'UBA1819' ~ 8,
+           Genus == 'uncultured\nRuminococcaceae' ~ 9,
+           Genus == 'Clostridioides' ~ 10,
+           Genus == 'Enterococcus' ~ 11,
+           Genus == 'Unclassified\nEnterobacteriaceae' ~ 12,
+           Genus == 'Staphylococcus' ~ 13
+         ))
+```
+
+**Kruskal-Wallis and Dunn's Post Hoc test**
+```{r}
+abun_krDunn <- apppleplots::kruskal_dunn_stats(input_table = diff_abun_tables,
+                                               grouped_by = c('genus_order', 'day_post_inf'),
+                                               adjust_method = 'BH',
+                                               filter_adj_p_value = FALSE,
+                                               formula_left = 'log_rel_abund',
+                                               formula_right = 'diet')
+
+abun_kruskal <- abun_krDunn$KruskalTest
+abun_dunn <- abun_krDunn$DunnTest
+
+## prepping dunn test for stat visualization
+new_abun_dunn <- stat_plot_prep(filtered_table = diff_abun_tables,
+                                first_group = 'diet',
+                                second_group = c('genus_order', 'day_post_inf'),
+                                mean_value = 'log_rel_abund',
+                                dunn_test = abun_dunn)
+```
+
+**Stat visualization**
+```{r, fig.width=16, fig.height=19}
+genus_stat_labs <- c('Lachnospiraceae\nNK4A136 group',
+                     'Unclassified\nLachnospiraceae',
+                     'Lachnoclostridium',
+                     'Blautia',
+                     'Roseburia',
+                     'Incertae Sedis',
+                     'Anaerotruncus',
+                     'UBA1819',
+                     'Uncultured\nRuminococcaceae',
+                     'Clostridioides',
+                     'Enterococcus',
+                     'Unclassified\nEnterobacteriaceae',
+                     'Staphylococcus')
+names(genus_stat_labs) <- c(1, 
+                            2,
+                            3, 
+                            4, 
+                            5,
+                            6,
+                            7,
+                            8,
+                            9,
+                            10,
+                            11,
+                            12,
+                            13)
+
+abun_stat_plot <- apppleplots::stat_heat_plot(input_table = new_abun_dunn,
+                                              x_value = 'day_post_inf',
+                                              y_value = 'group2',
+                                              x_value_type = 'continuous',
+                                              y_value_type = 'discrete',
+                                              pairwise = TRUE,
+                                              correlation = FALSE,
+                                              tile_fill = 'stat_diff_means',
+                                              text_value = 'p.adj.signif',
+                                              low_color = "#0D0887FF",
+                                              high_color = "#CC4678FF",
+                                              legend_name = 'Group 1 -\nGroup 2',
+                                              x_labels = day_x_breaks,
+                                              y_labels = diet_y_labs,
+                                              facet_by = 'group1',
+                                              facet_labels = diet_labs,
+                                              x_name = 'Days Relative to Infection',
+                                              y_name = 'Group 2',
+                                              title_content = 'Figure 5 Genus Comparisons') +
+                    theme_bw(base_size = 20) +
+                    theme(strip.text.y.right = element_text(angle = 0),
+                          plot.subtitle = element_text(hjust = 0.5)) +
+                    facet_grid(rows = vars(genus_order),
+                               cols = vars(group1),
+                               labeller = labeller(group1 = diet_labs, genus_order = genus_stat_labs))
+
+abun_stat_plot
+```
+
+
+## **Saving my outputs**
+```{r}
+ggsave('../plots/top_lachno_rumino.pdf',
+       plot = obAnaerobe_plots,
+       width = 12,
+       height = 10)
+ggsave('../plots/lachno_genera_by_day.pdf',
+       plot = lachno_abun_plot,
+       width = 20,
+       height = 5)
+ggsave('../plots/rumino_genera_by_day.pdf',
+       plot = rumino_abun_plot,
+       width = 20,
+       height = 5)
+ggsave('../plots/potential_new_fig5.pdf',
+       plot = genusAbun_plots_together_withLabs,
+       width = 22,
+       height = 21)
+ggsave('../plots/new_fig5_stats.pdf',
+       plot = abun_stat_plot,
+       width = 16,
+       height = 19)
+
+## as an .rdat object
+save(genusAbun_plots_together_withLabs,
+     file = '../../figures/genusAbun_plots_together_withLabs.rdat')
+save(lachno_abun_plot,
+     file = '../../figures/lachno_abun_plot.rdat')
+save(rumino_abun_plot,
+     file = '../../figures/rumino_abun_plot.rdat')
+save(path_abun_plot,
+     file = '../../figures/pathogen_abun_plot.rdat')
+```
+
+

@@ -2,7 +2,7 @@
 
 This repository includes all files produced through [QIIME2](https://qiime2.org/) microbiome profiling of 16S rDNA sequencing FASTQ files along with visualizations and statistical analysis run in R. Analysis was optimized through a pipeline generated in [Snakemake](https://snakemake.github.io/), associated files are contained in the workflow directory. 
 
-WORKFLOW FLOWCHART GOES HERE!!!
+![](diet_mouse_cdiff_flowchart.png)
 
 ## Directory contents are as follows:
 > [!IMPORTANT] 
@@ -11,7 +11,8 @@ WORKFLOW FLOWCHART GOES HERE!!!
 - [**amc_followUp_experiments:**](https://github.com/madiapgar/diet_mouse_cdiff/tree/cleanup/amc_followUp_experiments) Follow-up experiments conducted at AMC (Anschutz Medical Campus)
 - [**arizona_experiments:**](https://github.com/madiapgar/diet_mouse_cdiff/tree/cleanup/arizona_experiments) Main mouse experiments done at the University of Arizona 
 - [**comparisons:**](https://github.com/madiapgar/diet_mouse_cdiff/tree/cleanup/comparisons) A combination of baseline (day -15) and day 3 microbiome data from the Arizona experiments, AMC follow-up experiments, and previously published data from [this study](https://www.nature.com/articles/s41522-022-00276-1) to make comparisons between studies.
-- [**figures:**](https://github.com/madiapgar/diet_mouse_cdiff/tree/cleanup/figures) Compiled manuscript figures, plots taken from all directories. 
+- [**figures:**](https://github.com/madiapgar/diet_mouse_cdiff/tree/cleanup/figures) Compiled manuscript figures and the script used to produce them, plots taken from all directories.
+- [**qiita:**](https://github.com/madiapgar/diet_mouse_cdiff/tree/cleanup/qiita) QIITA sample and preparation metadata files and the script used to produce them (also can be downloaded directly from QIITA). 
 - [**workflow:**](https://github.com/madiapgar/diet_mouse_cdiff/tree/cleanup/workflow) Contains the pipeline built for the purpose of this data analysis in Snakemake (the [tutorial](https://github.com/madiapgar/diet_mouse_cdiff/blob/master/workflow/tutorial/tutorial.md) is here!).
 
 

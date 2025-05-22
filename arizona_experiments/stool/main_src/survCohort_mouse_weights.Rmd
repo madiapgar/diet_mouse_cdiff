@@ -189,11 +189,11 @@ noZero_liveCult_weights_table <- proc_liveCult_weights_table %>%
   filter(day_post_inf != 0)
 
 liveCult_avWeight_stats <- apppleplots::kruskal_dunn_stats(input_table = noZero_liveCult_weights_table,
-                                                        grouped_by = c('day_post_inf'),
-                                                        adjust_method = 'BH',
-                                                        filter_adj_p_value = FALSE,
-                                                        formula_left = 'av_perc_change',
-                                                        formula_right = 'diet')
+                                                           grouped_by = c('day_post_inf'),
+                                                           adjust_method = 'BH',
+                                                           filter_adj_p_value = FALSE,
+                                                           formula_left = 'av_perc_change',
+                                                           formula_right = 'diet')
 
 liveCult_avWeight_kruskal <- liveCult_avWeight_stats$KruskalTest
 (liveCult_avWeight_dunn <- liveCult_avWeight_stats$DunnTest %>% 

@@ -1,13 +1,14 @@
-## config file for arizona experiment stool and cecal sample combined dataset
-## (datasets were combined due to a lack of stool samples at day 3)
-## batch 1 and day 3 of the stool samples is filtered out of the metadata
+## arizona cecal sample raw sequences config file!
+## will run through qiime core metrics to give alpha and beta diversity outputs 
+## can take these outputs and put into associated r scripts for downstream analysis (double-check filepaths)
 
-dataset_dir: "arizona_experiments/az_exp_combined/"
+dataset_dir: "arizona_experiments/cecum/"
+## assumes that you already have qiime2 installed in a conda environment w this name (if not, change it)
 qiime_env: "qiime2-2023.5"
 
 ## --GLOBAL OPTIONS--
 ## are you starting with raw 16S sequences?
-raw_sequences: "no" ## options: yes and no 
+raw_sequences: "yes" ## options: yes and no 
 
 ## do you want to run taxonomic classification? chances are yes since you're running this workflow
 tax_class: "yes" ## options: yes and no, default is yes 
@@ -25,21 +26,19 @@ microbiome_r_outputs: "no" ## options: yes, no, or no downstream
 
 ## --NEEDED FILE PATHS--
 ## include if raw_sequences = "yes"
-raw_seq_dir: NA ## where you've put the raw sequence .fastq.gz files you downloaded from qiita, assumes they're under arizona_experiments/stool/ (or whatever you put for dataset_dir above)
-raw_seqs: NA ## assumes that everything after this is "_paired_end_seqs.qza", need to create qiime2 paired end seqs object first outside of pipeline
-barcodes: NA ## assumes that everything after this is "_barcodes.txt"
+raw_seq_dir: "data/raw_data/" ## where you've put the raw sequence .fastq.gz files you downloaded from qiita, assumes they're under arizona_experiments/stool/ (or whatever you put for dataset_dir above)
+raw_seqs: ["SEQ069/SEQ069", "SEQ070/SEQ070", "SEQ071/SEQ071"] ## assumes that everything after this is "_paired_end_seqs.qza", need to create qiime2 paired end seqs object first outside of pipeline
+barcodes: ["SEQ069/SEQ069", "SEQ070/SEQ070", "SEQ071/SEQ071"] ## assumes that everything after this is "_barcodes.txt"
 ## all sequences in this project are trimmed/truncated at the same places so data can be combined
-dada2_trim_left_for: NA
-dada2_trim_left_rev: NA
-dada2_trunc_len_for: NA
-dada2_trunc_len_rev: NA
+dada2_trim_left_for: 13
+dada2_trim_left_rev: 13
+dada2_trunc_len_for: 230
+dada2_trunc_len_rev: 160
 
 ## include if tax_class = "yes"
-## assumes that you've merged the biom/rep seqs for arizona stool and cecal samples already!
-## see arizona_experiments/az_exp_combined/workflow_src/q_merge_tables.sh
-biom_table: "data/misc/comp_table.qza" ## changed since NOT starting from raw seqs
-rep_seqs: "data/misc/comp_rep_seqs.qza" ## changed since NOT starting from raw seqs
-metadata: "data/misc/s1_filt_comp_metadata.tsv"
+biom_table: "data/qiime/merged_table.qza" ## dont need to change since starting from raw seqs
+rep_seqs: "data/qiime/merged_rep_seqs.qza" ## dont need to change since starting from raw seqs
+metadata: "data/misc/filt_updated_cecal_metadata.tsv"
 
 ## include if total_sum_scaling = "yes"
 r_script_dir: "workflow_src/"

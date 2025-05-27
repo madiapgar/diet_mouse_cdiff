@@ -199,7 +199,7 @@ for (fp in unique(unlist(csv_fp_list))){
 
 **Reading in processed metadata files**
 to pull out sampleids and mouseids
-named vectors (c()) in r are like dictionaries in python!
+named vectors (c()) in r are like dictionaries in python! {key: value}
 ```{r}
 meta_fp_list <- c('az_stool_meta' = az_stool_meta_fp, 
                   'az_cecum_meta' = az_cecum_meta_fp,

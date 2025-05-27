@@ -1,4 +1,6 @@
-## config file for arizona and new anschutz experiment stool sample comparisons
+## config file for previous amc, arizona and amc follow-up experiment stool sample comparisons at day -15 only!
+## previous amc experiment raw sequences/metadata are on qiita and were just demultiplexed/put through dada2 before 
+## biom/rep seqs were combined with others for this analysis 
 
 dataset_dir: "comparisons/"
 qiime_env: "qiime2-2023.5"
@@ -33,19 +35,19 @@ dada2_trunc_len_for: NA
 dada2_trunc_len_rev: NA
 
 ## include if tax_class = "yes"
-biom_table: "data/qiime/allExp_combined_d15-d3_table.qza"
-rep_seqs: "data/qiime/allExp_combined_d15-d3_seqs.qza"
-metadata: "data/misc/oldNew_comp_d15-d3_metadata.tsv"
+biom_table: "data/baseline_qiime/allExp_comp_d15_table.qza"
+rep_seqs: "data/baseline_qiime/allExp_comp_d15_seqs.qza"
+metadata: "data/misc/oldNew_comp_d15_metadata.tsv"
 
 ## include if total_sum_scaling = "yes"
-r_script_dir: "scripts/"
+r_script_dir: "workflow_src/"
 
 ## include if core_metrics = "yes"
 core_metrics_sampling_depth: 4437 ## might need a new sampling depth!
 
 ## include if microbiome_r_outputs = "yes"
 ## r script directory if you haven't already (r_script_dir: "scripts/")
-processed_metadata: "data/misc/oldNew_comp_d15-d3_metadata.tsv"
+processed_metadata: "data/misc/oldNew_comp_d15_metadata.tsv"
 ## ---------------------
 
 ## madis cecal dataset plots/stats in R (measurements at only ONE time point) - you will NOT use this 

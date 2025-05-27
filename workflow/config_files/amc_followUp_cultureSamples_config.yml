@@ -1,11 +1,13 @@
-## overall config file for first set of experiments stool sample dataset
+## amc follow-up experiment culture sequencing data config file!
+## culture data was also on SEQ096 so only pulling barcodes for them
+## will only do taxonomic classification 
 
-dataset_dir: "new_experiments/"
+dataset_dir: "amc_followUp_experiments/culture/"
 qiime_env: "qiime2-2023.5"
 
 ## --GLOBAL OPTIONS--
 ## are you starting with raw 16S sequences?
-raw_sequences: "no" ## options: yes and no 
+raw_sequences: "yes" ## options: yes and no 
 
 ## do you want to run taxonomic classification? chances are yes since you're running this workflow
 tax_class: "yes" ## options: yes and no, default is yes 
@@ -23,28 +25,29 @@ microbiome_r_outputs: "no" ## options: yes, no, or no downstream
 
 ## --NEEDED FILE PATHS--
 ## include if raw_sequences = "yes"
-raw_seq_dir: "data/new_culture_seqs/"
-raw_seqs: "culture_mock" ## assumes that everything after this is "_paired_end_seqs.qza"
-barcodes: "culture_mock" ## assumes that everything after this is "_barcodes.txt"
+raw_seq_dir: "data/raw_data/" ## where you've put the raw sequence .fastq.gz files you downloaded from qiita, assumes they're under amc_followUp_experiments/culture/ (or whatever you put for dataset_dir above)
+raw_seqs: "SEQ096/SEQ096_culture" ## assumes that everything after this is "_paired_end_seqs.qza"
+barcodes: "SEQ096/SEQ096_culture" ## assumes that everything after this is "_barcodes.txt"
+## all sequences in this project are trimmed/truncated at the same places so data can be combined
 dada2_trim_left_for: 13
 dada2_trim_left_rev: 13
 dada2_trunc_len_for: 230
 dada2_trunc_len_rev: 160
 
 ## include if tax_class = "yes"
-biom_table: "data/qiime/culture_mock_table.qza"
-rep_seqs: "data/qiime/culture_mock_rep_seqs.qza"
-metadata: "data/new_culture_seqs/culture_mock_barcodes.txt"
+biom_table: "data/qiime/merged_table.qza" ## dont need to change since starting from raw seqs
+rep_seqs: "data/qiime/merged_rep_seqs.qza" ## dont need to change since starting from raw seqs
+metadata: "../data/misc/culture_metadata.txt" ## under amc_followUp_experiments/data/misc/culture_metadata.txt
 
 ## include if total_sum_scaling = "yes"
-r_script_dir: "scripts/"
+r_script_dir: "workflow_src/"
 
 ## include if core_metrics = "yes"
 core_metrics_sampling_depth: 957 ## might need a new sampling depth!
 
 ## include if microbiome_r_outputs = "yes"
 ## r script directory if you haven't already (r_script_dir: "scripts/")
-processed_metadata: "data/new_culture_seqs/culture_mock_barcodes.txt"
+processed_metadata: NA
 ## ---------------------
 
 ## madis cecal dataset plots/stats in R (measurements at only ONE time point) - you will NOT use this 

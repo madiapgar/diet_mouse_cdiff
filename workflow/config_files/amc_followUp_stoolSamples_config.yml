@@ -1,11 +1,14 @@
-## overall config file for new anschutz experiments stool sample dataset
+## amc follow-up experiment stool sample raw sequences config file!
+## will run through qiime core metrics to give alpha and beta diversity outputs 
+## can take these outputs and put into associated r scripts for downstream analysis (double-check filepaths)
 
-dataset_dir: "new_experiments/"
+dataset_dir: "amc_followUp_experiments/"
+## assumes that you already have qiime2 installed in a conda environment w this name (if not, change it)
 qiime_env: "qiime2-2023.5"
 
 ## --GLOBAL OPTIONS--
 ## are you starting with raw 16S sequences?
-raw_sequences: "no" ## options: yes and no 
+raw_sequences: "yes" ## options: yes and no 
 
 ## do you want to run taxonomic classification? chances are yes since you're running this workflow
 tax_class: "yes" ## options: yes and no, default is yes 
@@ -18,33 +21,34 @@ core_metrics: "yes" ## options: yes and no
 
 ## would you like basic R plots/stats for your microbiome data? if so, this requires you to edit your R scripts directory for the exact visualizations you want
 ## (see more in the tutorial)
-microbiome_r_outputs: "yes" ## options: yes, no, or no downstream 
+microbiome_r_outputs: "no" ## options: yes, no, or no downstream 
 ## -------------------
 
 ## --NEEDED FILE PATHS--
 ## include if raw_sequences = "yes"
-raw_seq_dir: NA
-raw_seqs: NA ## assumes that everything after this is "_paired_end_seqs.qza"
-barcodes: NA ## assumes that everything after this is "_barcodes.txt"
-dada2_trim_left_for: NA
-dada2_trim_left_rev: NA
-dada2_trunc_len_for: NA
-dada2_trunc_len_rev: NA
+raw_seq_dir: "data/raw_data/" ## where you've put the raw sequence .fastq.gz files you downloaded from qiita, assumes they're under arizona_experiments/stool/ (or whatever you put for dataset_dir above)
+raw_seqs: ["SEQ088/SEQ088", "SEQ096/SEQ096"] ## assumes that everything after this is "_paired_end_seqs.qza", need to create qiime2 paired end seqs object first outside of pipeline
+barcodes: ["SEQ088/SEQ088", "SEQ096/SEQ096"] ## assumes that everything after this is "_barcodes.txt"
+## all sequences in this project are trimmed/truncated at the same places so data can be combined
+dada2_trim_left_for: 13
+dada2_trim_left_rev: 13
+dada2_trunc_len_for: 230
+dada2_trunc_len_rev: 160
 
 ## include if tax_class = "yes"
-biom_table: "data/qiime/newExp_d15-d3_allBatch_table.qza"
-rep_seqs: "data/qiime/newExp_d15-d3_allBatch_seqs.qza"
+biom_table: "data/qiime/merged_table.qza" ## dont need to change since starting from raw seqs
+rep_seqs: "data/qiime/merged_rep_seqs.qza" ## dont need to change since starting from raw seqs
 metadata: "data/misc/proc_newExp_d15-d3_metadata.tsv"
 
 ## include if total_sum_scaling = "yes"
-r_script_dir: "scripts/"
+r_script_dir: "workflow_src/"
 
 ## include if core_metrics = "yes"
 core_metrics_sampling_depth: 97683 ## might need a new sampling depth!
 
 ## include if microbiome_r_outputs = "yes"
 ## r script directory if you haven't already (r_script_dir: "scripts/")
-processed_metadata: "data/misc/proc_newExp_d15-d3_metadata.tsv"
+processed_metadata: NA
 ## ---------------------
 
 ## madis cecal dataset plots/stats in R (measurements at only ONE time point) - you will NOT use this 
@@ -57,4 +61,3 @@ toxin: NA
 histo: NA
 metab: NA
 hypoxia: NA
-

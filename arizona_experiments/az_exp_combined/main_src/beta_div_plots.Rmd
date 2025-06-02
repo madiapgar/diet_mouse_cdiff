@@ -277,7 +277,7 @@ ggsave('../plots/weighted_unifrac_pcoa.pdf',
 
 ## saving outputs as an rdata object 
 save(unweighted_pcoa,
-     file = '../../figures/unweighted_pcoa.rdata')
+     file = '../../../figures/unweighted_pcoa.rdata')
 save(weighted_pcoa,
-     file = '../../figures/weighted_pcoa.rdata')
+     file = '../../../figures/weighted_pcoa.rdata')
 ```

@@ -408,12 +408,17 @@ ggsave('../plots/liveCult_survival.pdf',
        plot = liveCult_surv_res,
        width = 22,
        height = 11)
+## saving supplemental figure with all other figures 
+ggsave('../../../figures/figS6.pdf',
+       plot = liveCult_surv_res,
+       width = 22,
+       height = 11)
 
 ## as an rdata object
 save(diet_plot_final,
-     file = '../../figures/survival.rdata')
+     file = '../../../figures/survival.rdata')
 save(surv_stat_vis,
-     file = '../../figures/survival_stats.rdata')
+     file = '../../../figures/survival_stats.rdata')
 
 ## saving the hazard ratio table results 
 write_tsv(combined_haz_ratio_table,

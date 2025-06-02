@@ -510,8 +510,8 @@ ggsave('../plots/relAbun_microbeProd_plot.pdf',
 
 ## as an rdat object
 save(faith_combStats_plot,
-     file = '../../figures/alphaDiv_microbeProd_plot.rdat')
+     file = '../../../figures/alphaDiv_microbeProd_plot.rdat')
 save(microbeProd_relAbunStats_plot,
-     file = '../../figures/relAbun_microbeProd_plot.rdat')
+     file = '../../../figures/relAbun_microbeProd_plot.rdat')
 ```
 

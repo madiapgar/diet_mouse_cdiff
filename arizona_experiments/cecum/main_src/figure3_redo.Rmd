@@ -534,7 +534,7 @@ ggsave('../plots/dca_toxHisto_plot.pdf',
        height = 5.5)
 
 save(panelC_fig3_redoWithlab,
-     file = "../../figures/panelC_fig3_redo.rdat")
+     file = "../../../figures/panelC_fig3_redo.rdat")
 
 ## butyrate comparison plots
 ggsave('../plots/butyrate_toxHisto_plot.pdf',
@@ -543,7 +543,7 @@ ggsave('../plots/butyrate_toxHisto_plot.pdf',
        height = 5.5)
 
 save(panelE_fig3_redoWithlab,
-     file = "../../figures/panelE_fig3_redo.rdat")
+     file = "../../../figures/panelE_fig3_redo.rdat")
 
 ## saving long format dataframe with all the measured cecal microbiome products 
 write_tsv(noHisto_cecalProducts_table,

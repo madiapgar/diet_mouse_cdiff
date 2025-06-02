@@ -665,22 +665,22 @@ write_tsv(everything_table,
 
 ## as an rdata object
 save(neat_histo_cecum_plot,
-     file = '../../figures/neat_histo_cecum.rdata')
+     file = '../../../figures/neat_histo_cecum.rdata')
 save(neat_cecumHisto_stats_plot,
-     file = '../../figures/neat_cecumHisto_stats.rdata')
+     file = '../../../figures/neat_cecumHisto_stats.rdata')
 save(neat_histo_colon_plot,
-     file = '../../figures/neat_histo_colon.rdata')
+     file = '../../../figures/neat_histo_colon.rdata')
 save(neat_tox_stat_vis,
-     file = '../../figures/neat_histo_stats.rdata')
+     file = '../../../figures/neat_histo_stats.rdata')
 save(histo_metabCecum_plot,
-     file = '../../figures/histo_metab_cecum.rdata')
+     file = '../../../figures/histo_metab_cecum.rdata')
 save(histo_metabColon_plot,
-     file = '../../figures/histo_metab_colon.rdata')
+     file = '../../../figures/histo_metab_colon.rdata')
 save(metab_stat_vis,
-     file = '../../figures/histo_metab_stats.rdata')
+     file = '../../../figures/histo_metab_stats.rdata')
 save(mini_neat_cecumHisto_stats_plot,
-     file = '../../posters/mini_neat_cecumHisto_stats.rdat')
+     file = '../../../posters/mini_neat_cecumHisto_stats.rdat')
 save(noDiet_histoCecum_toxStats_plot,
-     file = '../../figures/noDiet_histoCecum_tox_plot.rdat')
+     file = '../../../figures/noDiet_histoCecum_tox_plot.rdat')
 ```
 

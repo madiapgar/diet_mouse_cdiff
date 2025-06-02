@@ -247,13 +247,13 @@ ggsave('../plots/hypoxia_location_facetDiet.pdf',
 
 ## as an rdata object
 save(hypoxia_locationDiet_plot,
-     file = '../../figures/hypoxia_diet_facetLocation.rdata')
+     file = '../../../figures/hypoxia_diet_facetLocation.rdata')
 save(hypoxia_locationFiber_plot,
-     file = '../../figures/hypoxia_fiber_facetLocation.rdata')
+     file = '../../../figures/hypoxia_fiber_facetLocation.rdata')
 save(hypoxia_dietLocation_plot,
-     file = '../../figures/hypoxia_location_facetDiet.rdata')
+     file = '../../../figures/hypoxia_location_facetDiet.rdata')
 save(hypoxia_cecum_plot,
-     file = '../../figures/hypoxia_cecumONLY.rdata')
+     file = '../../../figures/hypoxia_cecumONLY.rdata')
 
 ## stats
 write_tsv(dietLocation_dunn,

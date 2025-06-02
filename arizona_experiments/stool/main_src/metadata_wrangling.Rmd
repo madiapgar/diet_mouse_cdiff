@@ -141,18 +141,18 @@ rbind(prep_comp_metadata_d15_d3,
 **Saving my outputs**
 ```{r}
 write_tsv(combined_metadata,
-          '../../comparisons/data/combined_metadata.tsv')
+          '../../../comparisons/data/combined_metadata.tsv')
 write_tsv(new_preProc_cecum,
           '../cecum/data/misc/filt_cecal_metadata.tsv')
 write_tsv(new_updated_meta,
           '../cecum/data/misc/filt_updated_cecal_metadata.tsv')
 write_tsv(comp_metadata,
-          '../../comparisons/data/misc/comp_metadata.tsv')
+          '../../../comparisons/data/misc/comp_metadata.tsv')
 write_tsv(filt_comp_metadata,
-          '../../comparisons/data/misc/s1_filt_comp_metadata.tsv')
+          '../../../comparisons/data/misc/s1_filt_comp_metadata.tsv')
 write_tsv(newExp_comp_d15_metadata,
-          '../../comparisons/data/misc/newExp_comp_d15_metadata.tsv')
+          '../../../comparisons/data/misc/newExp_comp_d15_metadata.tsv')
 write_tsv(newExp_comp_d15_d3_metadata,
-          '../../comparisons/data/misc/newExp_comp_d15-d3_metadata.tsv')
+          '../../../comparisons/data/misc/newExp_comp_d15-d3_metadata.tsv')
 ```
 

@@ -360,6 +360,6 @@ ggsave('../plots/supp_bileAcid_comp_plot.pdf',
        height = 10)
 
 save(supp_fig2a,
-     file = '../../figures/supp_fig2a.rdat')
+     file = '../../../figures/supp_fig2a.rdat')
 ```
 

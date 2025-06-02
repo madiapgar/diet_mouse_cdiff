@@ -131,9 +131,9 @@ ggsave("../plots/dil_toxin.pdf",
 
 ## as an Rdata object for manuscript figures
 save(neat_plot,
-     file = '../../figures/neat_toxin.rdata')
+     file = '../../../figures/neat_toxin.rdata')
 save(dil_plot,
-     file = '../../figures/dil_toxin.rdata')
+     file = '../../../figures/dil_toxin.rdata')
 
 ## stats
 write_tsv(neat_kruskal,

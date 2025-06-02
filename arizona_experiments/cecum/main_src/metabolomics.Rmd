@@ -104,10 +104,13 @@ butyrate_table <- metab %>%
   filter(metabolite == "n-Butanoic Acid (ug/g)")
 
 butyrate_dunn <- dunn %>% 
-  filter(metabolite == "n-Butanoic Acid (ug/g)")
+  filter(metabolite == "n-Butanoic Acid (ug/g)",
+         p.adj.signif != 'ns') %>% 
+  add_xy_position(scales = "free_y",
+                  step.increase = 0.02)
 
 butyrateOnly_plot <- apppleplots::facet_once_plots(input_table = butyrate_table,
-                                                  stat_on_plot = TRUE,
+                                                  stat_on_plot = FALSE,
                                                   x_value = 'diet',
                                                   y_value = 'concentration',
                                                   x_value_type = 'discrete',
@@ -126,8 +129,13 @@ butyrateOnly_plot <- apppleplots::facet_once_plots(input_table = butyrate_table,
 butyrateOnly_plot <- butyrateOnly_plot + 
                       theme_bw(base_size = 20) +
                       facet_wrap(~metabolite,
-                                 scales = "free_y",
-                                 labeller = labeller(metabolite = metab_labs))
+                                 scales = "fixed",
+                                 labeller = labeller(metabolite = metab_labs)) +
+                      stat_pvalue_manual(butyrate_dunn,
+                                         tip.length = 0.01,
+                                         step.increase = 0.01,
+                                         label = 'p.adj.signif',
+                                         hide.ns = TRUE)
 
 butyrateOnly_plot
 ```
@@ -186,11 +194,11 @@ ggsave('../plots/noButyrate_metab.pdf',
 
 ## as an rdata object
 save(metab_plot,
-     file = '../../figures/metab.rdata')
+     file = '../../../figures/metab.rdata')
 save(butyrateOnly_plot,
-     file = '../../figures/butyrateOnly_metab.rdat')
+     file = '../../../figures/butyrateOnly_metab.rdat')
 save(notButy_plot,
-     file = '../../figures/noButyrate_metab.rdat')
+     file = '../../../figures/noButyrate_metab.rdat')
 
 ## statistical tests 
 write_tsv(linear_model,

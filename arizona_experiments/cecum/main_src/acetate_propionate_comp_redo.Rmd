@@ -353,6 +353,6 @@ ggsave('../plots/supp_acetProp_comp_plot.pdf',
        height = 14.5)
 
 save(supp_fig2bc,
-     file = '../../figures/supp_fig2bc.rdat')
+     file = '../../../figures/supp_fig2bc.rdat')
 ```
 

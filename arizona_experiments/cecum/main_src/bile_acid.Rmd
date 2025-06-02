@@ -267,13 +267,13 @@ ggsave('../plots/dcaSep_overall_bileAcid.pdf',
 
 ## rdata object 
 save(overall_plot,
-     file = '../../figures/overall_bile_acid.rdata')
+     file = '../../../figures/overall_bile_acid.rdata')
 save(bile_plot,
-     file = '../../figures/bile_acid.rdata')
+     file = '../../../figures/bile_acid.rdata')
 save(ratio_bile_plot,
-     file = '../../figures/bile_acid_ratio.rdata')
+     file = '../../../figures/bile_acid_ratio.rdata')
 save(dca_sep_plot,
-     file = '../../figures/dcaSep_overall_bileAcid.rdat')
+     file = '../../../figures/dcaSep_overall_bileAcid.rdat')
 
 ## stats
 write_tsv(dunn,

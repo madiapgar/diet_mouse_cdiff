@@ -252,8 +252,8 @@ ggsave('../plots/lacto_relAbun_withStats.pdf',
 
 ## as an rdat object for figure construction
 save(lacto_contam_plot,
-     file = '../../figures/lacto_contam_relAbun.rdat')
+     file = '../../../figures/lacto_contam_relAbun.rdat')
 save(lacto_stat_plot,
-     file = '../../figures/lacto_contam_relAbun_stats.rdat')
+     file = '../../../figures/lacto_contam_relAbun_stats.rdat')
 ```
 

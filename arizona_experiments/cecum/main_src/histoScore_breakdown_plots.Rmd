@@ -244,6 +244,12 @@ ggsave('../plots/histo_categories.pdf',
        plot = tissue_plots,
        width = 19.5,
        height = 10.5)
+## saving with all other figures too 
+ggsave('../../../figures/figS1.pdf',
+       plot = tissue_plots,
+       width = 19.5,
+       height = 10.5)
+
 
 ## as an rdata object 
 save(cecum_plot,

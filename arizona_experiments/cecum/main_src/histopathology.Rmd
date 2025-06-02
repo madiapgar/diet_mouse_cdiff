@@ -159,10 +159,10 @@ write_tsv(dunn,
           "../stats/histopathology_dunn.tsv")
 
 save(all_day_plot,
-     file = '../../figures/histo.rdata')
+     file = '../../../figures/histo.rdata')
 save(cecum_histo_plot,
-     file = '../../figures/cecum_histo.rdata')
+     file = '../../../figures/cecum_histo.rdata')
 save(colon_histo_plot,
-     file = '../../figures/colon_histo.rdata')
+     file = '../../../figures/colon_histo.rdata')
 ```
 

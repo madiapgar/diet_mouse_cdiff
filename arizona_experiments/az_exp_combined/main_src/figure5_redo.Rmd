@@ -587,16 +587,22 @@ ggsave('../plots/new_fig5_stats.pdf',
        plot = abun_stat_plot,
        width = 16,
        height = 19)
+## save with all other figures too 
+ggsave('../../../figures/figS5.pdf',
+       plot = abun_stat_plot,
+       width = 16,
+       height = 19)
+
 
 ## as an .rdat object
 save(genusAbun_plots_together_withLabs,
-     file = '../../figures/genusAbun_plots_together_withLabs.rdat')
+     file = '../../../figures/genusAbun_plots_together_withLabs.rdat')
 save(lachno_abun_plot,
-     file = '../../figures/lachno_abun_plot.rdat')
+     file = '../../../figures/lachno_abun_plot.rdat')
 save(rumino_abun_plot,
-     file = '../../figures/rumino_abun_plot.rdat')
+     file = '../../../figures/rumino_abun_plot.rdat')
 save(path_abun_plot,
-     file = '../../figures/pathogen_abun_plot.rdat')
+     file = '../../../figures/pathogen_abun_plot.rdat')
 ```
 
 

@@ -321,9 +321,9 @@ ggsave("shannon_stats.pdf",
 
 ## as an rdata object
 save(faith_stat_vis,
-     file = '../../figures/faith_stats.rdata')
+     file = '../../../figures/faith_stats.rdata')
 save(shannon_stat_vis,
-     file = '../../figures/shannon_stats.rdata')
+     file = '../../../figures/shannon_stats.rdata')
 
 ## example of how to write results out as a .tsv 
 write_tsv(new_faith_dunn, '../stats/faith_dunn.tsv')

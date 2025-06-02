@@ -205,7 +205,7 @@ ggsave('../plots/shannon_entropy.pdf',
 
 ## as an rdata object
 save(faith_plot,
-     file = '../../figures/faith_pd.rdata')
+     file = '../../../figures/faith_pd.rdata')
 save(shannon_entropy_plot,
-     file = '../../figures/shannon.rdata')
+     file = '../../../figures/shannon.rdata')
 ```

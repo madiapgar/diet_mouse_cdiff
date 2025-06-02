@@ -14,6 +14,9 @@ library(apppleplots)
 library(magrittr)
 library(readr)
 library(viridis)
+library(survival)
+library(survminer)
+library(rstatix)
 ```
 **Functions**
 ```{r}
@@ -74,6 +77,77 @@ make_weights_plot <- function(input_table,
          title = wanted_title)
   
   return(plot)
+}
+
+## weight loss hazard stats via coxph 
+## p-values corrected via benjamini and hochberg
+calculate_weight_loss_stats <- function(input_table,
+                                        inf_method){
+  ## putting together weight loss table for stats
+  weight_loss_df <- input_table %>% 
+    ## any percent weight change value less than 0 is 1
+    mutate(weight_loss = ifelse(perc_change < 0, 1, 0),
+           ## creating levels for every 3 days after infection 
+           time_levels = as.factor(case_when(
+             between(day_post_inf, 0, 3) ~ 'days 0 to 3',
+             between(day_post_inf, 4, 6) ~ 'days 4 to 6',
+             between(day_post_inf, 7, 9) ~ 'days 7 to 9',
+             between(day_post_inf, 10, 12) ~ 'days 10 to 12',
+             between(day_post_inf, 13, 15) ~ 'days 13 to 15',
+           )),
+           ## makeshift sampleid using mouse id, day, and infection method
+           sampleid = paste(mouse_id, day, inf_method, sep = ".")) %>% 
+    select(sampleid, day_post_inf, diet, time_levels, weight_loss) 
+  
+  ## running coxph stratified by diet and time level
+  coxph_out <- tibble()
+  
+  for (baseline_diet in unique(unlist(weight_loss_df$diet))){
+    for (time_period in unique(unlist(weight_loss_df$time_levels))){
+        
+        ## filtering the df to only include one time period 
+        filt_df <- weight_loss_df %>% 
+          filter(time_levels == time_period)
+        
+        surv_obj <- Surv(time = filt_df$day_post_inf, event = filt_df$weight_loss)
+        filt_df$diet <- as.factor(filt_df$diet)
+        ## releveling diets so that different baseline diet to compare against each time 
+        ## or else it defaults to chow as the baseline every time 
+        filt_df$diet <- relevel(filt_df$diet, baseline_diet)
+        
+        fit.cox <- coxph(surv_obj ~ diet, data = filt_df)
+        
+        coxph_res <- summary(fit.cox)
+        
+        ## pulling the hazard ratio from coxph summary 
+        haz_df <- as.data.frame(coxph_res$coefficients)
+        haz_df["diet"] <- rownames(haz_df)
+        
+        ## making the output table pretty 
+        haz_table <- as_tibble(haz_df) %>% 
+          rename(haz_ratio = `exp(coef)`,
+                 p_value = `Pr(>|z|)`) %>% 
+          mutate(p_adj = p.adjust(p_value,
+                                  method = 'BH'),
+                 signif = as.character(symnum(p_adj,
+                                       cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                       symbols = c("****", "***", "**", "*", "ns"),
+                                       abbr.colnames = FALSE,
+                                       na = "")),
+                 time_frame = paste(time_period),
+                 baseline = paste(baseline_diet),
+                 haz_ratio = round(haz_ratio, 3),
+                 p_adj = round(p_adj, 3),
+                 ## will tell you if hazard of weight loss is greater or less than baseline diet
+                 weightLoss_haz_toBaseline = ifelse(haz_ratio >= 1, 'greater', 'less'),
+                 diet = gsub(diet, pattern = "diet", replacement = "")) %>% 
+          select(baseline, diet, time_frame, everything())
+        
+        coxph_out <- rbind(coxph_out, haz_table)
+    
+    }
+  }
+  return(coxph_out)
 }
 ```
 
@@ -163,42 +237,17 @@ live culture infections (in supplemental)
 ```
 
 **Stats**
-spore infections 
+- stats are being done on the full percent weight change data (per mouse) and not the average percent weight change per day and diet ! (i.e. what's plotted)
+
+method: creating binary column (0/1) for whether there was weight loss (1) at a given time point or not (0), then calculating the hazard ratio per diet/day based on that
 ```{r}
-## the zeroes at day 0 were causing problems in dunn test (creating NAs) so im filtering them out
-noZero_spore_weights_table <- proc_spore_weights_table %>% 
-  filter(day_post_inf != 0)
+## spore infection
+(spores_coxph_out <- calculate_weight_loss_stats(input_table = proc_spore_weights_table,
+                                                 inf_method = "spores"))
 
-spore_avWeight_stats <- apppleplots::kruskal_dunn_stats(input_table = noZero_spore_weights_table,
-                                                        grouped_by = c('day_post_inf'),
-                                                        adjust_method = 'BH',
-                                                        filter_adj_p_value = FALSE,
-                                                        formula_left = 'av_perc_change',
-                                                        formula_right = 'diet')
-
-spore_avWeight_kruskal <- spore_avWeight_stats$KruskalTest
-(spore_avWeight_dunn <- spore_avWeight_stats$DunnTest %>% 
-    ## only including significant results bc hundreds of rows if not
-    filter(p.adj.signif != 'ns'))
-```
-
-live culture infections 
-```{r}
-## the zeroes at day 0 were causing problems in dunn test (creating NAs) so im filtering them out
-noZero_liveCult_weights_table <- proc_liveCult_weights_table %>% 
-  filter(day_post_inf != 0)
-
-liveCult_avWeight_stats <- apppleplots::kruskal_dunn_stats(input_table = noZero_liveCult_weights_table,
-                                                           grouped_by = c('day_post_inf'),
-                                                           adjust_method = 'BH',
-                                                           filter_adj_p_value = FALSE,
-                                                           formula_left = 'av_perc_change',
-                                                           formula_right = 'diet')
-
-liveCult_avWeight_kruskal <- liveCult_avWeight_stats$KruskalTest
-(liveCult_avWeight_dunn <- liveCult_avWeight_stats$DunnTest %>% 
-    ## only including significant results bc hundreds of rows if not
-    filter(p.adj.signif != 'ns'))
+## live culture infection
+(liveCult_coxph_out <- calculate_weight_loss_stats(input_table = proc_liveCult_weights_table,
+                                                   inf_method = "liveCulture"))
 ```
 
 **Saving my outputs**
@@ -213,10 +262,10 @@ ggsave('../plots/liveCult_avWeight_change_plot.pdf',
        height = 7)
 
 ## stats
-write_tsv(spore_avWeight_dunn,
-          '../stats/spore_avWeight_change_dunnTest.tsv')
-write_tsv(liveCult_avWeight_dunn,
-          '../stats/liveCult_avWeight_change_dunnTest.tsv')
+write_tsv(spores_coxph_out,
+          '../stats/spore_weightLoss_haz_coxph_res.tsv')
+write_tsv(liveCult_coxph_out,
+          '../stats/liveCult_weightLoss_haz_coxph_res.tsv')
 
 ## as an .rdat object
 save(az_spore_weights_plot,

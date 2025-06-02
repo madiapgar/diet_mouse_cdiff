@@ -14,6 +14,78 @@ library(apppleplots)
 library(magrittr)
 library(readr)
 library(viridis)
+library(survival)
+library(survminer)
+```
+**Functions**
+```{r}
+## weight loss hazard stats via coxph 
+## p-values corrected via benjamini and hochberg
+calculate_weight_loss_stats <- function(input_table){
+  ## putting together weight loss table for stats
+  weight_loss_df <- input_table %>% 
+    ## any percent weight change value less than 0 is 1
+    mutate(weight_loss = ifelse(perc_change_weight < 0, 1, 0),
+           ## creating levels for every 3 days after infection 
+           time_levels = as.factor(case_when(
+             between(day_post_inf, 0, 3) ~ 'days 0 to 3',
+             between(day_post_inf, 4, 6) ~ 'days 4 to 6',
+             between(day_post_inf, 7, 9) ~ 'days 7 to 9',
+             between(day_post_inf, 10, 12) ~ 'days 10 to 12',
+             between(day_post_inf, 13, 15) ~ 'days 13 to 15',
+           ))) %>% 
+    select(sampleid, day_post_inf, diet, time_levels, weight_loss) 
+  
+  ## running coxph stratified by diet and time level
+  coxph_out <- tibble()
+  
+  for (baseline_diet in unique(unlist(weight_loss_df$diet))){
+    for (time_period in unique(unlist(weight_loss_df$time_levels))){
+        
+        ## filtering the df to only include one time period 
+        filt_df <- weight_loss_df %>% 
+          filter(time_levels == time_period)
+        
+        surv_obj <- Surv(time = filt_df$day_post_inf, event = filt_df$weight_loss)
+        filt_df$diet <- as.factor(filt_df$diet)
+        ## releveling diets so that different baseline diet to compare against each time 
+        ## or else it defaults to chow as the baseline every time 
+        filt_df$diet <- relevel(filt_df$diet, baseline_diet)
+        
+        fit.cox <- coxph(surv_obj ~ diet, data = filt_df)
+        
+        coxph_res <- summary(fit.cox)
+        
+        ## pulling the hazard ratio from coxph summary 
+        haz_df <- as.data.frame(coxph_res$coefficients)
+        haz_df["diet"] <- rownames(haz_df)
+        
+        ## making the output table pretty 
+        haz_table <- as_tibble(haz_df) %>% 
+          rename(haz_ratio = `exp(coef)`,
+                 p_value = `Pr(>|z|)`) %>% 
+          mutate(p_adj = p.adjust(p_value,
+                                  method = 'BH'),
+                 signif = as.character(symnum(p_adj,
+                                       cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+                                       symbols = c("****", "***", "**", "*", "ns"),
+                                       abbr.colnames = FALSE,
+                                       na = "")),
+                 time_frame = paste(time_period),
+                 baseline = paste(baseline_diet),
+                 haz_ratio = round(haz_ratio, 3),
+                 p_adj = round(p_adj, 3),
+                 ## will tell you if hazard of weight loss is greater or less than baseline diet
+                 weightLoss_haz_toBaseline = ifelse(haz_ratio >= 1, 'greater', 'less'),
+                 diet = gsub(diet, pattern = "diet", replacement = "")) %>% 
+          select(baseline, diet, time_frame, everything())
+        
+        coxph_out <- rbind(coxph_out, haz_table)
+    
+    }
+  }
+  return(coxph_out)
+}
 ```
 
 **File paths**
@@ -33,7 +105,7 @@ names(vendor_labs) <- c('CharlesRiver',
                         'Taconic')
 ```
 
-**Reading in file**
+**Reading in files**
 ```{r}
 pre_weight_df <- read_csv(weight_fp) %>% 
   select(SampleID, MouseSex, Diet, Vendor, 
@@ -55,7 +127,8 @@ proc_weight_df <- pre_weight_df %>%
           day_weight = DayWeight,
           perc_change_weight = PercChange,
           temp = Temperature) %>% 
-   mutate(day_post_inf = (experiment_day - 15)) %>% 
+   mutate(day_post_inf = (experiment_day - 15),
+          mouse_id = gsub(sampleid, pattern = ".[0-9]{2}$", replacement = "")) %>% 
    filter(experiment != 'CDD01') %>% 
    na.omit()
 
@@ -91,17 +164,16 @@ avWeight_per_dayDiet <- proc_weight_df %>%
 ```
 
 **Stats**
-idk what to do with the stats because i can't compare between diets by day since the LF/LF mice in charles river all died so they have no data after day 7...
-```{r}
-avWeight_stats <- apppleplots::kruskal_dunn_stats(input_table = avWeight_per_dayDiet,
-                                                  grouped_by = c('vendor'),
-                                                  adjust_method = 'BH',
-                                                  filter_adj_p_value = FALSE,
-                                                  formula_left = 'av_perc_change',
-                                                  formula_right = 'diet')
+- stats are being done on the full percent weight change data (per mouse) and not the average percent weight change per day, diet, and vendor ! (i.e. what's plotted)
 
-avWeight_kruskal <- avWeight_stats$KruskalTest
-(avWeight_dunn <- avWeight_stats$DunnTest)
+method: creating binary column (0/1) for whether there was weight loss (1) at a given time point or not (0), then calculating the hazard ratio per diet/day based on that
+
+coxph hazard ratio for loop
+- FDR p-value correction?? - yes!, FDR via benjamini and hochberg 
+- account for vendor in this!! - really hard to do since all LF/LF mice in charles river died after day 7...
+- hazard ratio is really large for diets compared to LF/LF days 10-12 and days 13-15 bc all the LF/LF mice in charles river died before then (non-significant though)
+```{r}
+(newExp_coxph_out <- calculate_weight_loss_stats(input_table = proc_weight_df))
 ```
 
 **Saving my Outputs**
@@ -111,8 +183,8 @@ ggsave('../plots/avWeight_change_plot.pdf',
        width = 12,
        height = 10)
 
-write_tsv(avWeight_dunn,
-          '../stats/avWeight_change_dunn.tsv')
+write_tsv(newExp_coxph_out,
+          '../stats/newExp_weightLoss_hazard_coxph_res.tsv')
 
 ## as an .rdat object to put in r package 
 save(newExp_avWeight_plot,

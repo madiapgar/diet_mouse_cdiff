@@ -377,6 +377,7 @@ dietVendor_haz_table <- as_tibble(dietVendor_haz_df) %>%
 
 dietVendor_haz_table
 ```
+
 ```{r}
 ## pulling confidence intervals from the coxph summary
 dietVendor_ci_df <- as.data.frame(dietVendor_summary_coxph$conf.int)

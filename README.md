@@ -1,6 +1,6 @@
 # The effects of dietary fat and fiber on the gut microbiome in the context of antibiotic-induced *C. difficile* infection
 
-This repository includes all files produced through [QIIME2](https://qiime2.org/) microbiome profiling of 16S rDNA sequencing FASTQ files along with visualizations and statistical analysis run in R. Analysis was optimized through a pipeline generated in [Snakemake](https://snakemake.github.io/), associated files are contained in the workflow directory. 
+This repository includes all files produced through [QIIME2](https://qiime2.org/) microbiome profiling of 16S rRNA sequencing FASTQ files along with visualizations and statistical analysis run in R. Analysis was optimized through a pipeline generated in [Snakemake](https://snakemake.github.io/), associated files are contained in the workflow directory. 
 
 ![](diet_mouse_cdiff_flowchart.png)
 

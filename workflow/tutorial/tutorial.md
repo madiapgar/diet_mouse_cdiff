@@ -2,11 +2,9 @@
 
 ## **Introduction**
 
-I initially wrote this workflow to help myself out with 16S data analysis for a gut microbiome study I worked on for my graduate thesis.
-Since then, it has proven helpful in subsequent 16S data analysis projects for myself and others, so I decided to put together a quick
-tutorial on how to use it! 
+I initially wrote this workflow to help myself out with 16S data analysis for a gut microbiome study I worked on for my graduate thesis. Since then, it has proven helpful in subsequent 16S data analysis projects for myself and others, so I decided to put together a quick tutorial on how to use it!   
 
-This workflow can take raw 16S sequencing FASTA files and run them through QIIME2 mirobiome profiling software to return alpha and beta diversity measures and taxa barcharts along with generating basic plots and statistical results in R. Coming soon, this workflow will have an option to run PICRUSt2 analysis as well. 
+This workflow can take raw 16S sequencing FASTQ files and run them through QIIME2 microbiome profiling software to return alpha and beta diversity measures and taxa barcharts along with generating basic plots and statistical results in R (see disclaimer under **Prepping your R scripts**). While users can just directly use QIIME2 for their 16S analysis, I've found this workflow incredibly helpful when analyzing multiple sequencing runs and in the case of human error, which I'm extremely prone to, rerunning the analysis. 
 
 *Disclaimer: While I am actively working on improving my workflow and making it more user-friendly, I reccommend that those who want to use it in it's current state have some amount of bioinformatics/software experience and be familiar with typical microbiome profiling analysis.* 
 
@@ -14,58 +12,65 @@ This workflow can take raw 16S sequencing FASTA files and run them through QIIME
 
 There are a few different places that you can start and stop my workflow depending on which parts of the 16S data analysis you need done:
 
-1. You can run the analysis from start to finish, raw FASTA sequencing files to R plots and statistical results. 
-2. You can come into the analysis with BIOM table and representative sequences .qza files. 
-3. You can run QIIME2 analysis only without generating any plots or statistical results in R. 
-4. For the R analysis, you have a few options depending on whether your samples were taken at multiple time points (longitudinal) or one time point (not longitudinal).
+1. You can run the analysis from start to finish, raw FASTQ sequencing files through alpha/beta diversity.
+    - via all global options in the config file being set to **"yes"**
+2. You can run Demux and DADA2 separately so you can take the BIOM table and representative sequences and insert them elsewhere.
+    - via `raw_sequences:`**"yes"** in the config file
+    - this is really helpful when you have multiple sequencing runs since this step automatically combines the BIOM tables and representative sequences for each run into one file
+3. You can come into the analysis with BIOM table and representative sequences .qza files and run taxonomic classification/core metrics analysis from there.
+    - via `raw_sequences`:**"no"** in the config file
+    - via `tax_class` and `core_metrics`:**"yes"** in the config file
+    - make sure that you include the file paths to your BIOM table and representative sequences under `biom_table`/`rep_seqs` in the config file
+4. You can replicate what was done in the project featured in this github repository, where total sum scaling was used to "rarefy" the BIOM table due to an inert signal of *Lactococcus* contamination.
+    - via `total_sum_scaling`:**"yes"** in the config file
+    - make sure that you specify the directory containing `total_sum_scaling.R` under `r_script_dir` in the config file
+5. You can stop the workflow after taxonomic classification to determine your sampling depth for core metrics analysis. 
+    - via `tax_class`:**"yes"** and `core_metrics`:**"no"** in the config file 
+    - once you know your sampling depth and have updated `core_metrics_sampling_depth` in your config file, you can change `core_metrics:` **"yes"** and rerun the workflow 
+6. You can generate basic plots/stats in R.
+    - via `microbiome_r_outputs`:**"yes"** in the config file
+    - make sure that you specify the directory with you R scripts based on the templates provided (see disclaimer under **Prepping your R scripts**) under `r_script_dir` in the config file
 
-*Disclaimer: Parts of this workflow are extremely tailored to my current data analysis - I would not reccommend choosing the not longitudinal R option as the longitudinal R workflow can be tailored to a greater variety of analyses, even if they're not taken at multiple time points.* 
+If this seems all a little complicated, don't worry, we're going over the config file in more depth later. 
 
 ## **Tutorial**
 
-If you've made it this far, congratulations, and I'm so sorry. In this tutorial, I will try my best to help you run my workflow on your 16S microbiome analysis!
+In this tutorial, I will try my best to help you run my workflow on your 16S microbiome analysis (or the sequences associated with this project that you pulled off of QIITA)!
 
 ### **Some brief organization that will make your life easier**
 
-Based on how my workflow is designed and best practices, I'm offering some file system organization that will make your life easier. You can choose not to do this but let's just say, I warned you. I was also super nice and wrapped the file system organization in a `bash` script. If you run the following commands, it will setup your file system organization for you and download all needed files to run my workflow!
+Based on how my workflow is designed and best practices, I'm offering some file system organization that will make your life easier. I wrote a handy `bash` [script](https://github.com/madiapgar/diet_mouse_cdiff/blob/master/workflow/tutorial/setup_file_structure.sh) that will set up your file system organization for you and download all needed files to run my workflow!
 
 ```bash
 ## getting said bash script off of my github
 wget https://github.com/madiapgar/diet_mouse_cdiff/blob/master/workflow/tutorial/setup_file_structure.sh
 
 ## running said bash script
-sh setup_file_structure.sh
+bash setup_file_structure.sh
 ```
 
 So, after running `setup_file_structure.sh` you should have a file system setup that looks something like this:
 
 ```bash
-$ tree practice_workflow
-practice_workflow
-├── my_data
+$ tree madis_16s_workflow
+madis_16s_workflow
 └── workflow
     ├── config_files
     │   └── config_template.yml
     ├── envs
     │   ├── install_envs_linux.sh
     │   ├── install_envs_macos.sh
-    │   ├── picrust2.yml
     │   └── r_env.yml
     ├── rules
     │   ├── 01_demux_dada2.smk
     │   ├── 02_phylogeny.smk
     │   ├── 03_tss.smk
     │   ├── 04_core_metrics.smk
-    │   ├── 05_longitudinal.smk
-    │   └── 06_notLongitudinal.smk
+    │   ├── 05_microbiome_r.smk
+    │   └── 06_madis_cecalAnalysis.smk
     ├── run_snakemake.sh
     └── snakefile
 ```
-
-**Next steps:**
-
-1. Put the data that you want analyzed in the `my_data` directory. 
-
 
 ### **Installing snakemake and needed conda environments**
 
@@ -95,19 +100,19 @@ conda activate snakemake_env
 pip install snakemake
 ```
 
-Since QIIME2 and R are used in this workflow, you will need to install separate conda environments for them prior to running the workflow. Luckily for you, I have written `.yaml` files and a `bash` script for the conda environment installation which are under `workflow/envs`. QIIME2 has different installation instructions based on the OS of your local computer; Linux users will run the `install_envs_linux.sh` script and MacOS users will run the `install_envs_macos.sh` script. 
+Since QIIME2 and R are used in this workflow, you will need to install separate conda environments for them prior to running the workflow. Luckily for you, I have written `.yaml` files and a `bash` script for the conda environment installation which are under `workflow/envs`. QIIME2 has different installation instructions based on the OS of your local computer; Linux users will run the `install_envs_linux.sh` script and MacOS users will run the `install_envs_macos.sh` script. **If you already have QIIME2 installed on your computer, you can skip this step.**
 
 ```bash
 ## linux users
-sh practice_workflow/workflow/envs/install_envs_linux.sh
+bash madis_16s_workflow/workflow/envs/install_envs_linux.sh
 
 ## macos (apple silicon/arm64) users
-sh practice_workflow/workflow/envs/install_envs_macos.sh
+bash madis_16s_workflow/workflow/envs/install_envs_macos.sh
 ```
 
 I currently do not have a `bash` script put together for Windows or non-Apple Silicon MacOS users but QIIME2 installation instructions for those operating systems can be found [here](https://docs.qiime2.org/2024.5/install/native/#install-qiime-2-within-a-conda-environment). 
 
-Hopefully you have now successfully installed all needed conda environments to run the workflow! To double check, run the following code:
+Hopefully you have now successfully installed all needed conda environments to run the workflow! To double check, run the following:
 
 ```bash
 conda env list
@@ -117,27 +122,41 @@ Where you should see `snakemake_env`, `qiime2-2023.5`, and `r_env` listed among 
 
 ### **Setting up your config file**
 
-If you navigate to your `practice_workflow/workflow/config_files` directory, you'll notice that I already put a `config_template.yml` file there. Let's open `config_template.yml` and take a look at it. 
+If you navigate to your `madis_16s_workflow/workflow/config_files` directory, you'll notice that I already put a `config_template.yml` file there. Let's open `config_template.yml` and take a look at it. 
+
+*A note: Like any other software tool, my workflow is something that may need to be run multiple times with differing parameters in order to get to the end result you desire, it just depends on how complicated your data is. The config file is incredibly flexible and can be easily edited between runs to reflect new desired parameters or files so don't be afraid to switch things up!* 
 
 ```yaml
 ## config file template
 ## if you need additional examples for how to handle your config file, check out the workflow/config_files directory!
 
-## the directory the data you're analyzing lives in (this should NOT be in the workflow directory) - in this case, it's your my_data directory
-## you only have to name this once so all your subdirectories for raw sequencing files and metadata can be written as if you're already in my_data
-dataset_dir: "my_data/"
+dataset_dir: "the directory the data you're analyzing lives in (this should NOT be in the workflow directory)"
+qiime_env: "which QIIME2 environment did you install?"
 
-## which QIIME2 environment did you install? 
-qiime_env: "qiime2-2023.5"
+## --GLOBAL OPTIONS--
+## are you starting with raw 16S sequences?
+raw_sequences: "no" ## options: yes and no 
 
-## options: yes and no
-raw_sequences: "are you starting the analysis with raw 16S fasta files?"
+## do you want to run taxonomic classification? chances are yes since you're running this workflow
+tax_class: "yes" ## options: yes and no, default is yes 
 
-## 01: demux and dada2
+## does your data need to go through total sum scaling? chances are that it doesn't
+total_sum_scaling: "yes" ## options: yes and no
+
+## do you want to run core metrics analysis on your data to get alpha/beta diversity? you HAVE to run this if you want the microbiome R outputs
+core_metrics: "yes" ## options: yes and no
+
+## would you like basic R plots/stats for your microbiome data? if so, this requires you to edit your R scripts directory for the exact visualizations you want
+## (see more in the tutorial)
+microbiome_r_outputs: "yes" ## options: yes and no
+## -------------------
+
+## --NEEDED FILE PATHS--
+## include if raw_sequences = "yes"
 raw_seq_dir: "the subdirectory(s) that your raw 16S fasta files live in"
-raw_seqs: "a list of file and/or directory names/prefixes of your raw sequences (if you have more than one) - these are like wildcards 
-    ex: ["seq1_run/seq1_", "seq2_run/seq2_", "seq3_run/seq3_"]"
-barcodes: "this will most likely be the same as your raw_seqs entry, I just had my barcode files named differently"
+raw_seqs: "a list of file and/or directory names/prefixes of your raw sequences (if you have more than one) - these are wildcards"
+"ex: ["seq1_run/seq1_", "seq2_run/seq2_", "seq3_run/seq3_"]" ## assumes that everything after this is "_paired_end_seqs.qza"
+barcodes: "this will most likely be the same as your raw_seqs entry, I just had my barcode files named differently" ## assumes that everything after this is "_barcodes.txt"
 ## where do you want to trim and truncate your sequences during DADA2?
 ## pro tip: make sure these values are the same for every set sequencing experiments that you want to compare!
 dada2_trim_left_for: 0
@@ -145,31 +164,32 @@ dada2_trim_left_rev: 0
 dada2_trunc_len_for: 0
 dada2_trunc_len_rev: 0
 
-## 02/03: phylogeny and total sum scaling
-r_script_dir: "the subdirectory that holds the r scripts you want snakemake to reference"
+## include if tax_class = "yes"
 ## if you ran raw sequences, your biom_table and rep_seqs will be under the file path/names below
 ## if not, you need to tell snakemake the file path to your biom_table and rep_seqs
 biom_table: "data/qiime/merged_table.qza"
 rep_seqs: "data/qiime/merged_rep_seqs.qza"
-
-## 04: core metrics analysis
 metadata: "what is your QIIME2-approved metadata file called?"
-## what sampling depth do you want to use for your core metrics analysis? if you're not sure, I'd consult data/qiime/taxonomy_filtered.qzv
+
+## include if total_sum_scaling = "yes"
+r_script_dir: "the subdirectory that holds the r scripts you want snakemake to reference"
+
+## include if core_metrics = "yes"
+## what sampling depth do you want to use for your core metrics analysis? 
+## if you're not sure, I'd consult data/qiime/taxonomy_filtered.qzv
 core_metrics_sampling_depth: 0
 
-## 05: longitudinal dataset plots/stats in R 
-## options: yes, no, or no downstream
-longitudinal_dataset: "was data collected at multiple time points and do you have a column for that in your metadata? do you want R analysis run on your samples?"
-## if you're running the cecal sample/non-longitudinal analysis, it will generate a processed metadata file for you so you just need to say what you want it to be called
-processed_metadata: "what is/what do you want your processed metadata file called? - metadata doesn't need to be processed, but I use processed metadata files"
+## include if microbiome_r_outputs = "yes"
+## r script directory if you haven't already (r_script_dir: "scripts/")
+processed_metadata: "what is/what do you want your processed metadata file called? - metadata doesn't need to be processed, but I use 
+processed metadata files"
+## -------------------
 
-## 06: non-longitudinal dataset plots/stats in R 
-## the non-longitudinal dataset delim is mainly for my cecal sample dataset and is extremely tailored to it rn
-## I had to do some funky metadata wrangling and that's what these files are for
+## madis cecal dataset plots/stats in R (measurements at only ONE time point) - you will NOT use this 
+## include if running that analysis 
+madis_cecal_analysis: "no"
 sampleID_key: NA
 mouseID_facil_key: NA
-## raw data files for desired quantified substances/inflammatory measures
-## these get processed all nicely for you as well
 bile_acid: NA
 toxin: NA
 histo: NA
@@ -180,15 +200,40 @@ Once you have your config file set up the way you want it, you only have one mor
 
 ### **Prepping your R scripts**
 
-Unfortunately, data visualizations and statistical analyses are typically incredibly unique to whichever study you're doing. Because of this, I have provided some R script templates [here](https://github.com/madiapgar/diet_mouse_cdiff/tree/master/workflow/templates) that you can take and make your own. I would only suggest making sure that your inputs/outputs match up with the `argparse` arguments at the top of the script or else my workflow may get mad at you. 
+Unfortunately, data visualizations and statistical analyses are typically incredibly unique to whichever study you're doing. Because of this, I have provided some R script templates [here](https://github.com/madiapgar/diet_mouse_cdiff/tree/master/workflow/templates/r_script_templates/) that you can take and make your own. I would only suggest making sure that your inputs/outputs match up with the `argparse` arguments at the top of the script or else my workflow may get mad at you. 
 
-I would also suggest putting all of your R scripts in their own subdirectory under `my_data` (I like to just call it `scripts`) and update your config file accordingly. 
+I would also suggest putting all of your R scripts in their own subdirectory under `madis_16s_workflow` (I like to just call it `scripts` or `workflow_src`) and update your config file accordingly. 
 
 ### **Running the actual workflow (finally!!)**
 
-So, after all of your hard work, it's time to attempt to run my workflow. Be warned, you may have to do some debugging but once you get it working, it runs beautifully (much like GitHub). 
+So, after all of your hard work, it's time to attempt to run my workflow. Be warned, you may have to do some debugging but once you get it working, it runs beautifully (much like GitHub).
 
-I've also included a handy `bash` script under `practice_workflow/workflow/` named `run_snakemake.sh`. This basically allows you to freely edit the snakemake command, which could mean switching out your config file, altering the amount of cores on your computer snakemake uses, and adding flags for the workflow as you see fit. So, let's take a look at `run_snakemake.sh`. 
+The most important part of this analysis are the raw 16S sequences so let's place the final piece of the puzzle. Let's create a subdirectory under `madis_16s_workflow/` to put the raw sequences in.
+
+```bash
+mkdir my_raw_16s_data
+```
+
+Copy your raw 16S sequences into your new `my_raw_16s_data` subdirectory. When you're done, you should have two subdirectories, `my_raw_16s_data` and `workflow` (which you received when you ran the `setup_file_structure.sh` script). Since the workflow doesn't take the completely raw 16S sequences due to them being either single or paired end, the 'raw' data the workflow is expecting a QIIME2 imported object and its associated `barcodes.txt` file. 
+
+> [!IMPORTANT]
+> My workflow currently **only supports** paired-end analysis!
+
+```bash
+## single end qiime import command
+qiime tools import \
+    --type EMPSingleEndSequences \
+    --input-path raw_seqs \ ## this is a directory with the forward, reverse, and barcodes .fastq.gz files
+    --output-path single_end_raw_seqs.qza
+
+## paired end qiime import command
+qiime tools import \
+    --type EMPPairedEndSequences \
+    --input-path raw_seqs \ ## this is a directory with the forward, reverse, and barcodes .fastq.gz files
+    --output-path paired_end_raw_seqs.qza
+``` 
+
+I've also included a handy `bash` script under `madis_16s_workflow/workflow/` named `run_snakemake.sh`. This basically allows you to freely edit the snakemake command, which could mean switching out your config file, altering the amount of cores on your computer snakemake uses, and adding flags for the workflow as you see fit. So, let's take a look at `run_snakemake.sh`. 
 
 ```bash
 snakemake \

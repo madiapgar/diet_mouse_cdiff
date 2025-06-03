@@ -16,12 +16,11 @@ rules_list=("https://github.com/madiapgar/diet_mouse_cdiff/blob/master/workflow/
             "https://github.com/madiapgar/diet_mouse_cdiff/blob/master/workflow/rules/02_phylogeny.smk" 
             "https://github.com/madiapgar/diet_mouse_cdiff/blob/master/workflow/rules/03_tss.smk" 
             "https://github.com/madiapgar/diet_mouse_cdiff/blob/master/workflow/rules/04_core_metrics.smk" 
-            "https://github.com/madiapgar/diet_mouse_cdiff/blob/master/workflow/rules/05_longitudinal.smk" 
-            "https://github.com/madiapgar/diet_mouse_cdiff/blob/master/workflow/rules/06_notLongitudinal.smk"
+            "https://github.com/madiapgar/diet_mouse_cdiff/blob/master/workflow/rules/05_microbiome_r.smk" 
+            "https://github.com/madiapgar/diet_mouse_cdiff/blob/master/workflow/rules/06_madis_cecalAnalysis.smk"
             )
 
 envs_list=("https://github.com/madiapgar/diet_mouse_cdiff/blob/master/workflow/envs/r_env.yml" 
-           "https://github.com/madiapgar/diet_mouse_cdiff/blob/master/workflow/envs/picrust2.yml" 
            "https://github.com/madiapgar/diet_mouse_cdiff/blob/master/workflow/envs/install_envs_linux.sh" 
            "https://github.com/madiapgar/diet_mouse_cdiff/blob/master/workflow/envs/install_envs_macos.sh"
            )
@@ -30,13 +29,12 @@ config_list=("https://github.com/madiapgar/diet_mouse_cdiff/blob/master/workflow
 
 
 ## creating a directory for the analysis
-mkdir practice_workflow
+mkdir madis_16s_workflow
 
 ## navigate into said directory
-cd ./practice_workflow
+cd ./madis_16s_workflow
 
 ## creating my_data and workflow subdirectories
-mkdir my_data
 mkdir workflow
 
 ## navigating into workflow subdirectory

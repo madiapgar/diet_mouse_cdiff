@@ -4,7 +4,7 @@
 
 I initially wrote this workflow to help myself out with 16S data analysis for a gut microbiome study I worked on for my graduate thesis. Since then, it has proven helpful in subsequent 16S data analysis projects for myself and others, so I decided to put together a quick tutorial on how to use it!   
 
-This workflow can take raw 16S sequencing FASTQ files and run them through QIIME2 microbiome profiling software to return alpha and beta diversity measures and taxa barcharts along with generating basic plots and statistical results in R (see disclaimer under **Prepping your R scripts**). While users can just directly use QIIME2 for their 16S analysis, I've found this workflow incredibly helpful when analyzing multiple sequencing runs and in the case of human error, which I'm extremely prone to, rerunning the analysis. 
+This workflow can take raw 16S sequencing FASTQ files and run them through QIIME2 microbiome profiling software to return alpha and beta diversity measures and taxa barcharts along with generating basic plots and statistical results in R (see disclaimer under [**Prepping your R scripts**](https://github.com/madiapgar/diet_mouse_cdiff/blob/master/workflow/tutorial/tutorial.md#prepping-your-r-scripts)). While users can just directly use QIIME2 for their 16S analysis, I've found this workflow incredibly helpful when analyzing multiple sequencing runs and in the case of human error, which I'm extremely prone to, rerunning the analysis. 
 
 *Disclaimer: While I am actively working on improving my workflow and making it more user-friendly, I reccommend that those who want to use it in it's current state have some amount of bioinformatics/software experience and be familiar with typical microbiome profiling analysis.* 
 
@@ -14,7 +14,7 @@ There are a few different places that you can start and stop my workflow dependi
 
 1. You can run the analysis from start to finish, raw FASTQ sequencing files through alpha/beta diversity.
     - via all global options in the config file being set to **"yes"**
-2. You can run Demux and DADA2 separately so you can take the BIOM table and representative sequences and insert them elsewhere.
+2. You can run Demux and DADA2 on the raw data separately so you can take the BIOM table and representative sequences and insert them elsewhere.
     - via `raw_sequences:`**"yes"** in the config file
     - this is really helpful when you have multiple sequencing runs since this step automatically combines the BIOM tables and representative sequences for each run into one file
 3. You can come into the analysis with BIOM table and representative sequences .qza files and run taxonomic classification/core metrics analysis from there.
@@ -29,7 +29,7 @@ There are a few different places that you can start and stop my workflow dependi
     - once you know your sampling depth and have updated `core_metrics_sampling_depth` in your config file, you can change `core_metrics:` **"yes"** and rerun the workflow 
 6. You can generate basic plots/stats in R.
     - via `microbiome_r_outputs`:**"yes"** in the config file
-    - make sure that you specify the directory with you R scripts based on the templates provided (see disclaimer under **Prepping your R scripts**) under `r_script_dir` in the config file
+    - make sure that you specify the directory with you R scripts based on the templates provided (see disclaimer under [**Prepping your R scripts**](https://github.com/madiapgar/diet_mouse_cdiff/blob/master/workflow/tutorial/tutorial.md#prepping-your-r-scripts)) under `r_script_dir` in the config file
 
 If this seems all a little complicated, don't worry, we're going over the config file in more depth later. 
 
@@ -245,10 +245,10 @@ snakemake \
     
 ## if you would like to dry run your workflow, add --dry-run to the above command
 ```
-Once you're satisified with your snakemake command in `run_snakemake.sh`, navigate into `practice_workflow` and activate your `snakemake_env` conda environment. From there you can run:
+Once you're satisified with your snakemake command in `run_snakemake.sh`, navigate into `madis_16s_workflow` and activate your `snakemake_env` conda environment. From there you can run:
 
 ```bash
-sh workflow/run_snakemake.sh
+bash workflow/run_snakemake.sh
 ```
 
 Happy analyzing! :) 

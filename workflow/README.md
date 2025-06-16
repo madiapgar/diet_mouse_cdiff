@@ -14,7 +14,7 @@ This directory contains the snakemake workflow written for the upper 16S rRNA se
 - [**envs:**](https://github.com/madiapgar/diet_mouse_cdiff/tree/master/workflow/envs) Conda environment .yaml files and bash scripts for easy install of the version of QIIME2 used in this analysis
 - [**rules:**](https://github.com/madiapgar/diet_mouse_cdiff/tree/master/workflow/rules) Sub-workflows written for pipeline modularization that go in order of the number in the file name (you shouldn't have to touch these but you can look at them)
 - [**templates:**](https://github.com/madiapgar/diet_mouse_cdiff/tree/master/workflow/templates) Includes templates for basic downstream R analysis (see tutorial) and a blank config file template with additional information
-- [**tutorial:**](https://github.com/madiapgar/diet_mouse_cdiff/tree/master/workflow/tutorial) The written tutorial for pipeline install/usage and associated scripts
+- [**tutorial:**](https://github.com/madiapgar/diet_mouse_cdiff/tree/master/workflow/tutorial/tutorial.md) The written tutorial for pipeline install/usage and associated scripts
 
 ## Other scripts in this directory:
 

@@ -57,7 +57,8 @@ plot_grid(diet_plot_final_v2,
           nrow = 3,
           labels = c('c)', ' ', 'e)'),
           align = 'h',
-          label_size = 20) -> fig1
+          label_size = 20) +
+  theme(plot.background = element_rect(fill = "white", color = "white")) -> fig1
 
 fig1
 ```
@@ -166,7 +167,8 @@ fig3 <- plot_grid(fig3_top_row,
                   ncol = 1,
                   rel_heights = c(0.9, 0.8, 0.9),
                   align = c('hv'),
-                  axis = c('tblr'))
+                  axis = c('tblr')) +
+          theme(plot.background = element_rect(fill = "white", color = "white"))
 
 fig3
 ```
@@ -223,22 +225,68 @@ Plots to go in figure:
 **- have a distance matrix for every single mouse by their taxonomic information via qiime or r (which taxa are showing more related patterns by diet in mice). then, run an adonis test on it.**
 
 ```{r}
-microbeProd_relAbunStats_plot$layers[[6]]$aes_params$size <- 5
+microbeProd_relAbunStats_plot$layers[[6]]$aes_params$size <- 4.5
+
+microbeProd_relAbunStats_plot_v2 <- microbeProd_relAbunStats_plot +
+  theme(legend.position = "top")
 ```
 
-```{r, warning=FALSE, fig.height=30, fig.width=29}
+```{r, warning=FALSE, fig.height=23, fig.width=20}
 plot_grid(genusAbun_plots_together_withLabs,
-          microbeProd_relAbunStats_plot,
+          microbeProd_relAbunStats_plot_v2,
           labels = c(' ', 'c)'),
           ncol = 1,
           label_size = 20,
-          rel_heights = c(1, 0.4)) -> fig5
+          rel_heights = c(1, 0.5)) -> fig5
 
 fig5
 ```
 
 ## **Figure 6**
 New experiment culture/mortality results.
+
+```{r, fig.width=25, fig.height=22}
+new_fig6_title <- ggdraw() +
+  draw_label('AMC Follow-Up Experiment: Unweighted UniFrac Taxa Biplots',
+             size = 24,
+             hjust = 1.24)
+
+new_fig6_bottom_row <- plot_grid(uu_biplot +
+                                    theme(legend.position = "none",
+                                          plot.title = element_blank()) +
+                                    labs(subtitle = 'PC1-PC2'), 
+                                  uu_biplot2_3 +
+                                   theme(plot.title = element_blank()) +
+                                    labs(subtitle = 'PC2-PC3'),
+                                 nrow = 1,
+                                 rel_widths = c(0.85, 1))
+
+
+new_fig6_bottom_row_wLabs <- plot_grid(new_fig6_title,
+                                        new_fig6_bottom_row,
+                                        nrow = 2,
+                                        align = c('hv'),
+                                        axis = c('tblr'),
+                                        rel_heights = c(0.07, 1),
+                                        labels = c('b)'),
+                                        label_size = 22)
+
+new_fig6_top_row <- plot_grid(facet_status_cfu_plot +
+                                labs(title = 'Number of CFUs Cultured from Multiple Locations'),
+                              NULL,
+                              nrow = 1,
+                              labels = c('a)', ''),
+                              label_size = 22,
+                              align = c('hv'),
+                              axis = c('tblr'),
+                              rel_widths = c(1, 0.6))
+
+(new_fig6 <- plot_grid(new_fig6_top_row,
+                      new_fig6_bottom_row_wLabs,
+                      nrow = 2) +
+             theme(plot.background = element_rect(fill = "white", color = "white")))
+```
+
 
 **manuscript specific edits to plots**
 ```{r, fig.width=15, fig.height=8}
@@ -290,7 +338,8 @@ fig6_bottom_row <- plot_grid(everything_stats_v2, NULL,
                   ncol = 1,
                   labels = c('a)', 'b)'),
                   label_size = 20,
-                  rel_heights = c(1, 0.5)))
+                  rel_heights = c(1, 0.5)) +
+         theme(plot.background = element_rect(fill = "white", color = "white")))
 ```
 
 ## **Figure 7**
@@ -352,7 +401,8 @@ figS2 <- plot_grid(supp_fig2a,
                    ncol = 1,
                    rel_heights = c(0.7, 1),
                    labels = c('a)', '', ''),
-                   label_size = 20)
+                   label_size = 20) +
+         theme(plot.background = element_rect(fill = "white", color = "white"))
 
 figS2
 ```
@@ -376,7 +426,8 @@ figS3 <- plot_grid(hypoxia_cecum_plot +
                       axis = c('tblr'),
                       align = c('hv'),
                       label_size = 20,
-                      rel_widths = c(1, 0.5))
+                      rel_widths = c(1, 0.5)) +
+        theme(plot.background = element_rect(fill = "white", color = "white"))
 
 figS3
 ```
@@ -467,8 +518,13 @@ newExp_avWeight_plot_v2 <- newExp_avWeight_plot +
 
 ## **Saving my Outputs**
 as a .pdf and not an rdata object (just to clarify)
+- had to also save plots as pngs bc word is stupid and wont render pdfs anymore 
 ```{r}
 ggsave('fig1.pdf',
+       plot = fig1,
+       width = 15,
+       height = 15)
+ggsave('pngs/fig1.png',
        plot = fig1,
        width = 15,
        height = 15)
@@ -481,9 +537,21 @@ ggsave('short_fig2.pdf',
        plot = fig2_top_row,
        width = 20,
        height = 6.5)
+ggsave('pngs/fig2.png',
+       plot = fig2,
+       width = 20,
+       height = 11)
+ggsave('pngs/short_fig2.png',
+       plot = fig2_top_row,
+       width = 20,
+       height = 6.5)
 
 ## new figure 3!
 ggsave('fig3.pdf',
+       plot = fig3,
+       width = 20,
+       height = 17)
+ggsave('pngs/fig3.png',
        plot = fig3,
        width = 20,
        height = 17)
@@ -493,18 +561,43 @@ ggsave('fig4.pdf',
        plot = fig4,
        width = 15,
        height = 14)
+ggsave('pngs/fig4.png',
+       plot = fig4,
+       width = 15,
+       height = 14)
 
 ggsave('fig5.pdf',
        plot = fig5,
-       width = 29,
-       height = 30)
+       width = 20,
+       height = 23)
+ggsave('pngs/fig5.png',
+       plot = fig5,
+       width = 20,
+       height = 23)
 
-ggsave('fig6.pdf',
+ggsave('old_fig6.pdf',
+       plot = fig6,
+       width = 20,
+       height = 17)
+ggsave('pngs/old_fig6.png',
        plot = fig6,
        width = 20,
        height = 17)
 
+ggsave('fig6.pdf',
+       plot = new_fig6,
+       width = 25,
+       height = 22)
+ggsave('pngs/fig6.png',
+       plot = new_fig6,
+       width = 25,
+       height = 22)
+
 ggsave('fig7.pdf',
+       plot = fig7,
+       width = 25,
+       height = 13)
+ggsave('pngs/fig7.png',
        plot = fig7,
        width = 25,
        height = 13)
@@ -514,9 +607,17 @@ ggsave('figS2.pdf',
        plot = figS2,
        width = 19,
        height = 24)
+ggsave('pngs/figS2.png',
+       plot = figS2,
+       width = 19,
+       height = 24)
 
 ## this used to be figure 4 but it got moved to supplemental
 ggsave('figS3.pdf',
+       plot = figS3,
+       width = 10,
+       height = 6)
+ ggsave('pngs/figS3.png',
        plot = figS3,
        width = 10,
        height = 6)
@@ -526,8 +627,16 @@ ggsave('figS4.pdf',
        plot = figS4,
        width = 28,
        height = 18)
+ggsave('pngs/figS4.png',
+       plot = figS4,
+       width = 28,
+       height = 18)
 
 ggsave('figS7.pdf',
+       plot = figS7,
+       width = 17,
+       height = 17)
+ggsave('pngs/figS7.png',
        plot = figS7,
        width = 17,
        height = 17)

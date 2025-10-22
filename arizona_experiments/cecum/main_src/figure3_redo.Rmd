@@ -524,7 +524,6 @@ panelE_fig3_redoWithlab <- plot_grid(panelE_fig3_redo,
 panelE_fig3_redoWithlab
 ```
 
-
 # **Saving my Outputs**
 ```{r}
 ## dca comparison plots 

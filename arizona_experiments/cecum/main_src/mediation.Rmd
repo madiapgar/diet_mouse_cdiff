@@ -1,0 +1,362 @@
+---
+title: "mediation_analysis"
+output: html_document
+date: "2025-10-14"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+QUESTION:
+- does the relative abundance of c. diff mediate the relationship between butyrate, toxin, and inflammation? 
+
+```{r}
+library(magrittr)
+library(qiime2R)
+library(tidyverse)
+library(broom)
+library(vegan)
+library(apppleplots)
+library(mediation)
+library(rstatix)
+```
+
+**Functions**
+```{r}
+source("../workflow_src/test_lmer_vars_function.R")
+
+## rel abun file prep
+rel_abun_file_prep <- function(metadata_fp,
+                               tax_fp,
+                               otu_table_fp,
+                               tax_level,
+                               wanted_tax){
+  ## metadata
+  metadata <- read_tsv(metadata_fp)
+  ## taxonomy
+  taxonomy <- read_qza(tax_fp)$data %>% 
+    parse_taxonomy() %>% 
+    rownames_to_column('asv')
+  ## otu table 
+  otu_table <- read_qza(otu_table_fp)$data
+  otu_table %>% 
+    as_tibble(rownames = 'asv') %>% 
+    gather(-asv, key = sampleid, value = abun) %>% 
+    group_by(sampleid) %>% 
+    mutate(rel_abun = abun/sum(abun)) %>% 
+    mutate(rel_abun = rel_abun + 0.000001) -> otu_table
+  ## joining all tables together 
+  otu_table %>% 
+    left_join(metadata, by = 'sampleid') %>% 
+    left_join(taxonomy, by = 'asv') -> abun_table
+  abun_table %>% 
+    group_by(sampleid, day_post_inf, diet, mouse_id, 
+             .data[[tax_level]]) %>% 
+    summarise(rel_abund = sum(rel_abun)) %>% 
+    filter(.data[[tax_level]] %in% wanted_tax) %>% 
+    mutate(mouse_fact = as.factor(mouse_id),
+           day_fact = as.factor(day_post_inf)) -> abun_filt
+  ## creating a list for my outputs
+  my_list <- list(Metadata = metadata,
+                  Taxonomy = taxonomy,
+                  OTUTable = otu_table,
+                  AbundanceTable = abun_filt)
+  return(my_list)
+}
+```
+
+**File paths**
+```{r}
+otu_table_FP <- '../data/cecal_qiime/tax_filt_actual.qza'
+tax_FP <- '../data/cecal_qiime/taxonomy.qza'
+metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
+histo_metabTox_fp <- '../data/misc/histoMetabToxin_results_comb.tsv'
+```
+
+**Reading in files**
+```{r}
+histo_metabTox_table <- read_tsv(histo_metabTox_fp)
+```
+**Getting c. diff relative abundances from cecal 16S data**
+```{r}
+cdiff_files <- rel_abun_file_prep(metadata_fp = metadata_FP,
+                                  tax_fp = tax_FP,
+                                  otu_table_fp = otu_table_FP,
+                                  tax_level = 'Genus',
+                                  wanted_tax = 'Clostridioides')
+
+cdiff_abun_table <- cdiff_files$AbundanceTable
+```
+
+**Getting butyrate/toxin concentrations and cecal histopathology scores in wide format **
+```{r}
+product_list <- c('n-Butanoic Acid (ug/g)', 'Total TcA Neat', 'Total TcB Neat')
+
+wide_histo_metabTox_table <- histo_metabTox_table %>% 
+  filter(microbe_product %in% product_list) %>% 
+  dplyr::select(-concentration) %>% 
+  spread(key = 'microbe_product', value = 'conc_normalized') %>% 
+  spread(key = 'tissue', value = 'score') %>% 
+  rename(butyrate = `n-Butanoic Acid (ug/g)`,
+         tca_neat = `Total TcA Neat`,
+         tcb_neat = `Total TcB Neat`) %>% 
+  ## changed NAs to 0s for now, idk if that's right but all samples had other measurements, just not for butyrate
+  mutate(butyrate = ifelse(is.na(butyrate), 0, butyrate),
+         log_butyrate = log10(butyrate + 2),
+         log_tca_neat = log10(tca_neat),
+         log_tcb_neat = log10(tcb_neat),
+         log_total_toxin = log10(tca_neat + tcb_neat),
+         ## changing baseline to LF/HF instead of Chow
+         diet_f = factor(diet, levels = c('LF/HF', 'HF/HF', 'HF/LF', 'LF/LF', 'Chow')))
+```
+
+**Putting the two tables together so I have all my data in one place**
+```{r}
+mediation_table <- cdiff_abun_table %>% 
+  ungroup() %>% 
+  select(sampleid, rel_abund) %>% 
+  rename(cdiff_rel_abund = rel_abund) %>% 
+  mutate(log_cdiff_rel_abund = log10(cdiff_rel_abund)) %>% 
+  right_join(wide_histo_metabTox_table, by = "sampleid") %>% 
+  mutate(diet = as.numeric(case_when(
+    diet == "Chow" ~ 1,
+    diet == "HF/HF" ~ 2,
+    diet == "HF/LF" ~ 3,
+    diet == "LF/HF" ~ 4,
+    diet == "LF/LF" ~ 5
+  )))
+
+## shuffling order of diets so that mediation analysis can hopefully take all diets
+set.seed(123)
+mediation_table <- mediation_table[sample(nrow(mediation_table)), ]
+```
+
+
+**Mediation analysis??**
+- why is it that once I change butyrate to the "treatment" rather than what is being predicted, the results become almost significant?? (i.e. using butyrate concentration to predict toxin concentration in the HF/LF diet with cdiff relative abundance as a potential mediator)
+```{r}
+wd_mediation_table <- filter(mediation_table, diet_f == "HF/LF")
+chow_mediation_table <- filter(mediation_table, diet_f == "Chow")
+lflf_mediation_table <- filter(mediation_table, diet_f == "LF/LF")
+lfhf_mediation_table <- filter(mediation_table, diet_f == "LF/HF")
+hfhf_mediation_table <- filter(mediation_table, diet_f == "HF/HF")
+
+mediator_model <- lm(log_butyrate ~ log_cdiff_rel_abund,
+                     data = wd_mediation_table)
+outcome_model <- lm(cecum ~ log_cdiff_rel_abund + log_butyrate,
+                    data = wd_mediation_table)
+
+mediation_res <- mediate(mediator_model,
+                         outcome_model,
+                         treat = "log_cdiff_rel_abund",
+                         mediator = "log_butyrate",
+                         boot = TRUE,
+                         sims = 1000)
+
+summary(mediator_model)
+summary(outcome_model)
+summary(mediation_res)
+```
+
+**moderation analysis**
+i.e. does the relative abundance of cdiff moderate the relationship between cecal inflammation and butyrate/toxin concentration within diets?? (stratified by diet)
+i think we might want to run moderation instead of mediation since moderation shows that the relationship between x and y depends on the level of the m variable 
+
+- HF/LF is the only diet that shows cdiff relative abundance moderating this relationship 
+```{r}
+print("examples of moderation tests!!")
+
+## mediator
+print("relationship between cdiff relative abundance and cecal inflammation:")
+summary(lm(cecum ~ log_cdiff_rel_abund,
+           data = wd_mediation_table))
+
+## outcome of toxin levels
+print("relationship between total toxin (tca/tcb summed) and cecal inflammation:")
+summary(lm(cecum ~ log_total_toxin,
+           data = wd_mediation_table))
+print("interaction between total toxin and cdiff relative abundance on cecal inflammation:")
+summary(lm(cecum ~ log_total_toxin * log_cdiff_rel_abund,
+           data = wd_mediation_table))
+
+## outcome of butyrate levels 
+print("relationship between butyrate and cecal inflammation:")
+summary(lm(cecum ~ log_butyrate,
+           data = wd_mediation_table))
+print("interaction between butyrate and cdiff relative abundance on cecal inflammation:")
+summary(lm(cecum ~ log_butyrate * log_cdiff_rel_abund,
+           data = wd_mediation_table))
+
+## both butyrate and toxin levels
+print("interaction between butyrate and total toxin on cecal inflammation:")
+summary(lm(cecum ~ log_total_toxin * log_butyrate,
+           data = wd_mediation_table))
+
+## full model 
+## the effect of cecal inflammation disappears once cdiff relative abundance is included 
+## i.e. cdiff relative abundance fully mediates the effect of cecal inflammation on toxin concentration in the HF/LF mice 
+print("interaction between butyrate, total toxin, and cdiff relative abundance on cecal inflammation:")
+summary(lm(cecum ~ log_butyrate * log_cdiff_rel_abund * log_total_toxin,
+           data = wd_mediation_table))
+```
+
+**mean centering?**
+```{r}
+diet_tables <- list("chow" = chow_mediation_table,
+                 "hfhf" = hfhf_mediation_table,
+                 "hflf" = wd_mediation_table,
+                 "lfhf" = lfhf_mediation_table,
+                 "lflf" = lflf_mediation_table)
+
+for (diet in unlist(names(diet_tables))) {
+  centered_var_name <- paste0(diet, "_mediation_table_c")
+  mini_diet_table <- diet_tables[[diet]]
+  
+  print(diet)
+
+  ## testing how correlated vars are when interacting 
+  # print("before mean centering")
+  # corr_before_mean <- mini_diet_table %>% 
+  #   mutate(butyrateXcdiff = log_butyrate * log_cdiff_rel_abund) %>% 
+  #   select(log_butyrate, log_cdiff_rel_abund, butyrateXcdiff) %>% 
+  #   as.matrix() %>% 
+  #   Hmisc::rcorr()
+  # print(corr_before_mean)
+  
+  ## need to mean-center the data bc its highly co-correlated
+  ## reduced correlation by a lot 
+  int_table_c <- mini_diet_table %>% 
+    mutate(butyrate_c = scale(log_butyrate, scale = FALSE),
+           toxin_c = scale(log_total_toxin, scale = FALSE),
+           cdiff_c = scale(log_cdiff_rel_abund, scale = FALSE),
+           butyrateXcdiff_c = butyrate_c*cdiff_c,
+           toxinXcdiff_c = toxin_c*cdiff_c)
+  
+  # print("after mean centering")
+  # corr_after_mean <- int_table_c %>% 
+  #   select(butyrate_c, cdiff_c, butyrateXcdiff_c) %>%
+  #   as.matrix() %>%
+  #   Hmisc::rcorr()
+  # print(corr_after_mean)
+  
+  ## now the effect of butyrate on cecal inflammation at the mean cdiff relative abundance 
+  print("mean centered lm results")
+  print(summary(lm(cecum ~ butyrate_c * cdiff_c,
+             data = int_table_c)))
+  print(summary(lm(cecum ~ toxin_c * cdiff_c,
+             data = int_table_c)))
+  
+  assign(centered_var_name,
+         int_table_c)
+}
+```
+
+```{r}
+## eek these are highly correlated
+## log10 transformation helps a little bit but not a lot
+chow_mediation_table %>% 
+  mutate(toxinXcdiff = log_total_toxin * log_cdiff_rel_abund) %>% 
+  select(log_total_toxin, log_cdiff_rel_abund, toxinXcdiff) %>% 
+  as.matrix() %>% 
+  Hmisc::rcorr()
+
+## need to mean-center the data bc its highly co-correlated
+## reduced correlation by a lot 
+test_mediation_table_c <- chow_mediation_table %>% 
+  mutate(toxin_c = scale(log_total_toxin, scale = FALSE),
+         cdiff_c = scale(log_cdiff_rel_abund, scale = FALSE),
+         toxinXcdiff_c = toxin_c*cdiff_c)
+
+test_mediation_table_c %>% 
+  select(toxin_c, cdiff_c, toxinXcdiff_c) %>%
+  as.matrix() %>%
+  Hmisc::rcorr()
+
+## now the effect of butyrate on cecal inflammation at the mean cdiff relative abundance 
+summary(lm(cecum ~ toxin_c * cdiff_c,
+           data = test_mediation_table_c))
+```
+
+**a plot to help me visualize**
+```{r}
+all_centered_tables <- rbind(chow_mediation_table_c,
+                             hfhf_mediation_table_c,
+                             hflf_mediation_table_c,
+                             lfhf_mediation_table_c,
+                             lflf_mediation_table_c) %>% 
+  mutate(cdiff_amount = ifelse(cdiff_c < 0, 'low', 'high'),
+         butyrate_amount = ifelse(butyrate_c < 0, 'low', 'high'),
+         toxin_amount = ifelse(toxin_c < 0, 'low', 'high'))
+  
+
+cdiff_amount_labs <- c('high' = 'C. diff rel abun > mean',
+                       'low' = 'C. diff rel abun < mean')
+butyrate_amount_labs <- c('high' = 'Butyrate > mean',
+                          'low' = 'Butyrate < mean')
+toxin_amount_labs <- c('high' = 'Toxin > mean',
+                       'low' = 'Toxin < mean')
+
+## butyrate
+all_centered_tables %>% 
+  ggplot(aes(y = cecum, x = butyrate_c)) +
+  geom_point(aes(color = diet_f)) +
+  geom_smooth(aes(group = diet_f, color = diet_f), method = "lm", se = FALSE) +
+  theme_bw() +
+  facet_wrap(~cdiff_amount,
+             scales = "free_x",
+             labeller = labeller(cdiff_amount = cdiff_amount_labs)) +
+  labs(x = 'Butyrate (mean_centered)',
+       y = 'Cecal Histopathology Score',
+       color = 'Diet',
+       title = 'Effect of Butyrate on Histopathology based on C.diff Abundance')
+
+
+
+all_centered_tables %>% 
+  ggplot(aes(y = cecum, x = cdiff_c)) +
+  geom_point(aes(color = diet_f)) +
+  geom_smooth(aes(color = diet_f, group = diet_f), method = "lm", se = FALSE) +
+  theme_bw() +
+  facet_wrap(~butyrate_amount,
+             scales = "free_x",
+             labeller = labeller(butyrate_amount = butyrate_amount_labs)) +
+  labs(x = 'C. diff relative abundance (mean-centered)',
+       y = 'Cecal Histopathology Score',
+       color = 'Diet',
+       title = 'Effect of C. diff Abundance on Histopathology based on Butyrate')
+
+
+## toxin
+all_centered_tables %>% 
+  ggplot(aes(y = cecum, x = toxin_c)) +
+  geom_point(aes(color = diet_f)) +
+  geom_smooth(aes(group = diet_f, color = diet_f), method = "lm", se = FALSE) +
+  theme_bw() +
+  facet_wrap(~cdiff_amount,
+             scales = "free_x",
+             labeller = labeller(cdiff_amount = cdiff_amount_labs)) +
+  labs(x = 'Total Toxin (mean-centered)',
+       y = 'Cecal Histopathology Score',
+       color = 'Diet',
+       title = 'Effect of Toxin on Histopathology based on C.diff Abundance')
+
+
+
+all_centered_tables %>% 
+  ggplot(aes(y = cecum, x = cdiff_c)) +
+  geom_point(aes(color = diet_f)) +
+  geom_smooth(aes(color = diet_f, group = diet_f), method = "lm", se = FALSE) +
+  theme_bw() +
+  facet_wrap(~toxin_amount,
+             scales = "free_x",
+             labeller = labeller(toxin_amount = toxin_amount_labs)) +
+  labs(x = 'C. diff relative abundance (mean-centered)',
+       y = 'Cecal Histopathology Score',
+       color = 'Diet',
+       title = 'Effect of C. diff Abundance on Histopathology based on Toxin')
+
+
+```
+
+

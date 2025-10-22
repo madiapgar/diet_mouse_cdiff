@@ -8,6 +8,10 @@ date: "2024-06-12"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+TO DO:
+- fix the legend labels for the diets
+- mess around with different alphas for transparency 
+
 ```{r}
 library(rmarkdown)
 library(ggpubr)
@@ -17,10 +21,69 @@ library(tidyverse)
 library(ggh4x)
 library(viridis)
 library(ggrepel)
+library(rstatix)
+library(ape)
+library(vegan)
 ```
 
 **Functions**
 ```{r}
+## for distance matrix processing
+## for beta diversity statistical analysis 
+dist_matrix_prep <- function(metadata_fp,
+                             dist_matrix_fp){
+  ## metadata
+  metadata <- read_tsv(metadata_fp) %>% 
+            rename(sampleid = `#SampleID`)
+  ## distance matrix
+  dist <- read_tsv(dist_matrix_fp)
+  names(dist)[names(dist) == '...1'] <- 'sampleid'
+  dist %>% 
+    gather(-sampleid, key = sample_col, value = dist) %>% 
+    filter(sampleid %in% metadata$sampleid) %>% 
+    filter(sample_col %in% metadata$sampleid) %>% 
+    spread(sample_col, dist) -> dist_long
+  dist_long %>% 
+    select(-sampleid) -> dist_proc
+  metadata %>% 
+    arrange(sampleid) -> metadata
+  metadata %>% 
+    filter(sampleid %in% dist_long$sampleid) -> filt_meta
+  dist_proc <- as.matrix(dist_proc)
+  row.names(dist_proc) <- colnames(dist_proc)
+  filt_meta <- filt_meta[order(filt_meta$sampleid),]
+  ## list of outputs
+  my_list <- list(Metadata = filt_meta,
+                  DistanceMatrix = dist_proc)
+  return(my_list)
+}
+
+
+## beta diversity adonis2 testing function
+adonis_test <- function(dist_matrix,
+                        formula,
+                        wanted_strata = NULL,
+                        adonis_by = NULL,
+                        metadata_file){
+  my_dist_matrix <- as.dist(dist_matrix)
+  funky_formula <- paste("my_dist_matrix", formula, sep = "~")
+  print(funky_formula)
+  adonis_results <- adonis2(as.formula(funky_formula),
+                            data = metadata_file,
+                            permutations = 999, 
+                            parallel = 4,
+                            strata = wanted_strata,
+                            by = adonis_by)
+  adonis_results <- tidy(adonis_results)
+  adonis_results['signif'] <- symnum(adonis_results$p.value,
+                                     cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                     symbols = c("****", "***", "**", "*", "+", "ns"),
+                                     abbr.colnames = FALSE,
+                                     na = "")
+  return(adonis_results)
+}
+
+
 prep_my_biplot_files <- function(biplot_fp,
                                  metadata_fp,
                                  tax_fp,
@@ -87,28 +150,38 @@ pcoa_ax_lab <- function(unifrac_var, col_name){
 make_my_biplot <- function(x_axis,
                            y_axis,
                            points_df,
-                           points_color,
+                           points_color = NULL,
                            points_shape,
+                           points_alpha,
                            color_name,
                            shape_labels,
+                           color_labels,
                            lines_df,
                            lines_label,
                            lines_label_size,
                            x_name,
                            y_name,
                            shape_name,
+                           alpha_name,
                            title_content){
-     ifelse(class(points_color) == "character", 
+     if (is.character(points_color)){ 
          plot <- ggplot() +
                   geom_jitter(data = points_df,
                              aes(x = .data[[x_axis]], y = .data[[y_axis]], 
-                                 color = .data[[points_color]],
-                                 shape = .data[[points_shape]]),
-                             size = 5,
-                             alpha = 0.5) +
-                 scale_color_viridis(option = 'H', discrete = TRUE,
-                                      name = color_name) +
-                  scale_shape_discrete(labels = shape_labels) +
+                                 fill = .data[[points_color]],
+                                 shape = .data[[points_shape]],
+                                 alpha = .data[[points_alpha]]),
+                             size = 5) +
+                  scale_shape_manual(values = c(21, 24),
+                                     labels = shape_labels) +
+                  scale_fill_viridis(option = "C",
+                                     discrete = TRUE,
+                                     labels = color_labels) +
+                  scale_alpha_manual(values = c(0.4, 0.8)) +
+                  guides(fill = guide_legend(override.aes = list(shape = 21,
+                                                                 alpha = 1)),
+                         shape = guide_legend(override.aes = list(fill = "black")),
+                         alpha = guide_legend(override.aes = list(color = 'black'))) +
                   theme_bw(base_size = 20) +
                   geom_segment(data = lines_df,
                                aes(x = 0, xend = .data[[x_axis]], y = 0, yend = .data[[y_axis]]),
@@ -116,21 +189,23 @@ make_my_biplot <- function(x_axis,
                   geom_text_repel(data = lines_df,
                                   aes(x = .data[[x_axis]], y = .data[[y_axis]], label = .data[[lines_label]]),
                                   color = 'black',
-                                  position = 'jitter',
+                                  # position = 'jitter',
                                   size = lines_label_size,
+                                  direction = "both",
                                   fontface = 'bold') +
                   labs(x = x_name,
                        y = y_name,
+                       fill = color_name,
                        shape = shape_name,
-                       title = title_content), 
+                       alpha = alpha_name,
+                       title = title_content) 
+     } else {
          plot <- ggplot() +
                   geom_jitter(data = points_df,
                              aes(x = .data[[x_axis]], y = .data[[y_axis]],
                                  shape = .data[[points_shape]]),
                              size = 5,
                              alpha = 0.5) +
-                 scale_color_viridis(option = 'H', discrete = TRUE,
-                                      name = color_name) +
                   scale_shape_discrete(labels = shape_labels) +
                   theme_bw(base_size = 20) +
                   geom_segment(data = lines_df,
@@ -138,10 +213,15 @@ make_my_biplot <- function(x_axis,
                                    color = .data[[lines_label]]),
                                arrow = arrow(length = unit(0.3, "cm")),
                                linewidth = 1.5) +
+                  scale_color_viridis(option = 'C', 
+                                      discrete = TRUE) +
                   labs(x = x_name,
                        y = y_name,
+                       color = color_name,
                        shape = shape_name,
-                       title = title_content))
+                       title = title_content)
+     }
+  
   return(plot)
 }
 ```
@@ -152,14 +232,47 @@ metadata_FP <- '../data/misc/proc_newExp_d15-d3_metadata.tsv'
 cfu_count_FP <- '../data/misc/proc_combined_CDD_cfuCounts.tsv'
 tax_FP <- '../data/qiime/taxonomy.qza'
 uu_biplot_FP <- '../data/qiime/core_outputs/uu_biplot_matrix.qza'
+uu_dist_FP <- '../data/qiime/core_outputs/uw_dist_matrix.tsv'
 wu_biplot_FP <- '../data/qiime/core_outputs/wu_biplot_matrix.qza'
+wu_dist_FP <- '../data/qiime/core_outputs/w_dist_matrix.tsv'
 
 vendor_labs <- c('Charles River',
                  'Taconic')
+diet_legend_labs <- c('Chow',
+                      'HFt / HFb',
+                      'HFt / LFb',
+                      'LFt / HFb',
+                      'LFt / LFb')
+```
 
-cfuCount_table <- read_tsv(cfu_count_FP) %>% 
-  select(mouse_id, location, microbe_presence) %>% 
-  spread(key = 'location', value = 'microbe_presence')
+pull out eigenvals? eigenvals greater than one indicate that an axis is significant
+```{r}
+uu_biplot_eigVals <- read_qza(uu_biplot_FP)$data$Eigvals
+```
+
+**Adonis test for significance of independent variables**
+adonis tests (sequentially) for significant variation accounted for by each variable in the biplot
+```{r}
+## prepping distance matrices and metadata for adonis test
+uu_dist <- dist_matrix_prep(metadata_fp = metadata_FP,
+                 dist_matrix_fp = uu_dist_FP)$DistanceMatrix
+wu_dist <- dist_matrix_prep(metadata_fp = metadata_FP,
+                 dist_matrix_fp = wu_dist_FP)$DistanceMatrix
+
+dist_meta <- dist_matrix_prep(metadata_fp = metadata_FP,
+                 dist_matrix_fp = uu_dist_FP)$Metadata
+
+## running adonis test sequentially (assess significance of each term from first to last)
+(uu_adonis_res <- adonis_test(dist_matrix = uu_dist,
+                             formula = '(day_post_inf * vendor * diet)',
+                             wanted_strata = NULL,
+                             adonis_by = "terms",
+                             metadata_file = dist_meta))
+(wu_adonis_res <- adonis_test(dist_matrix = wu_dist,
+                             formula = 'day_post_inf * vendor * diet',
+                             wanted_strata = NULL,
+                             adonis_by = "terms",
+                             metadata_file = dist_meta))
 ```
 
 # **PC1 and PC2**
@@ -170,19 +283,19 @@ uu_files <- prep_my_biplot_files(biplot_fp = uu_biplot_FP,
                                  metadata_fp = metadata_FP,
                                  tax_fp = tax_FP,
                                  parse_tax = TRUE,
-                                 top_tax_n = 10,
+                                 top_tax_n = 15,
                                  dist_pc_axis = 'dist_origin1to2',
                                  lines_longer_by = 4)
 
 uu_biplot_points <- uu_files$DFPoints %>% 
-                      left_join(cfuCount_table, by = 'mouse_id') %>% 
-                      mutate(day_post_inf = as.factor(day_post_inf),
-                             spleen = as.factor(spleen),
-                             liver = as.factor(liver),
-                             blood = as.factor(blood)) %>% 
-                      na.omit()
+  # mutate(day_post_inf_num = as.numeric(day_post_inf))
+  convert_as_factor(day_post_inf)
 
-uu_biplot_lines <- uu_files$DFLines
+uu_biplot_lines <- uu_files$DFLines %>% 
+  mutate(tax_line_label = ifelse(is.na(Species), Genus, Species),
+         tax_line_label = ifelse(is.na(tax_line_label), Family, tax_line_label))
+
+
 uu_pcoa_var <- uu_files$PCvar
 
 ## making x and y axis labels
@@ -198,19 +311,17 @@ wu_files <- prep_my_biplot_files(biplot_fp = wu_biplot_FP,
                                  metadata_fp = metadata_FP,
                                  tax_fp = tax_FP,
                                  parse_tax = TRUE,
-                                 top_tax_n = 10,
+                                 top_tax_n = 15,
                                  dist_pc_axis = 'dist_origin1to2',
-                                 lines_longer_by = 9)
+                                 lines_longer_by = 12)
 
 wu_biplot_points <- wu_files$DFPoints %>% 
-                      left_join(cfuCount_table, by = 'mouse_id') %>% 
-                      mutate(day_post_inf = as.factor(day_post_inf),
-                             spleen = as.factor(spleen),
-                             liver = as.factor(liver),
-                             blood = as.factor(blood)) %>% 
-                      na.omit()
+  # mutate(day_post_inf_num = as.numeric(day_post_inf))
+  convert_as_factor(day_post_inf)
 
-wu_biplot_lines <- wu_files$DFLines
+wu_biplot_lines <- wu_files$DFLines %>% 
+  mutate(tax_line_label = ifelse(is.na(Species), Genus, Species),
+         tax_line_label = ifelse(is.na(tax_line_label), Family, tax_line_label))
 wu_pcoa_var <- wu_files$PCvar
 
 ## making x and y axis labels
@@ -219,39 +330,46 @@ wu_x_lab <- pcoa_ax_lab(unifrac_var = wu_pcoa_var,
 wu_y_lab <- pcoa_ax_lab(unifrac_var = wu_pcoa_var,
                         col_name = 'PC2')
 ```
+
 **Plots**
 ```{r, fig.width=15, fig.height=10}
 ## unweighted unifrac 
 uu_biplot <- make_my_biplot(x_axis = 'PC1',
                             y_axis = 'PC2',
+                            points_color = 'diet', ## default is NULL so technically dont have to include
                             points_df = uu_biplot_points,
-                            points_color = 'day_post_inf',
                             points_shape = 'vendor',
-                            color_name = 'Microbes Present\nin Liver',
+                            points_alpha = 'day_post_inf',
+                            color_name = 'Diet',
                             shape_labels = vendor_labs,
+                            color_labels = diet_legend_labs,
                             lines_df = uu_biplot_lines,
-                            lines_label = 'Genus',
-                            lines_label_size = 5,
+                            lines_label = 'tax_line_label',
+                            lines_label_size = 5.5,
                             x_name = uu_x_lab,
                             y_name = uu_y_lab,
                             shape_name = 'Vendor',
-                            title_content = 'Unweighted UniFrac Biplot')
+                            alpha_name = 'Days Relative\nto Infection',
+                            title_content = 'PC1-PC2: Unweighted UniFrac Biplot')
 
 ## weighted unifrac
 wu_biplot <- make_my_biplot(x_axis = 'PC1',
                             y_axis = 'PC2',
                             points_df = wu_biplot_points,
-                            points_color = 'day_post_inf',
+                            points_color = 'diet',
                             points_shape = 'vendor',
-                            color_name = 'Microbes Present\nin Liver',
+                            points_alpha = 'day_post_inf',
+                            color_name = 'Diet',
                             shape_labels = vendor_labs,
+                            color_labels = diet_legend_labs,
                             lines_df = wu_biplot_lines,
-                            lines_label = 'Genus',
-                            lines_label_size = 5,
+                            lines_label = 'tax_line_label',
+                            lines_label_size = 5.5,
                             x_name = wu_x_lab,
                             y_name = wu_y_lab,
                             shape_name = 'Vendor',
-                            title_content = 'Weighted UniFrac Biplot')
+                            alpha_name = 'Days Relative\nto Infection',
+                            title_content = 'PC1-PC2: Weighted UniFrac Biplot')
 
 uu_biplot
 wu_biplot
@@ -265,14 +383,17 @@ uu_files2_3 <- prep_my_biplot_files(biplot_fp = uu_biplot_FP,
                                  metadata_fp = metadata_FP,
                                  tax_fp = tax_FP,
                                  parse_tax = TRUE,
-                                 top_tax_n = 10,
+                                 top_tax_n = 15,
                                  dist_pc_axis = 'dist_origin2to3',
                                  lines_longer_by = 4)
 
 uu_biplot_points2_3 <- uu_files2_3$DFPoints %>% 
-                      mutate(day_post_inf = as.factor(day_post_inf))
+                      convert_as_factor(day_post_inf)
 
-uu_biplot_lines2_3 <- uu_files2_3$DFLines
+uu_biplot_lines2_3 <- uu_files2_3$DFLines %>% 
+  mutate(tax_line_label = ifelse(is.na(Species), Genus, Species),
+         tax_line_label = ifelse(is.na(tax_line_label), Family, tax_line_label))
+
 uu_pcoa_var2_3 <- uu_files2_3$PCvar
 
 ## making x and y axis labels
@@ -288,14 +409,17 @@ wu_files2_3 <- prep_my_biplot_files(biplot_fp = wu_biplot_FP,
                                    metadata_fp = metadata_FP,
                                    tax_fp = tax_FP,
                                    parse_tax = TRUE,
-                                   top_tax_n = 10,
+                                   top_tax_n = 15,
                                    dist_pc_axis = 'dist_origin2to3',
                                    lines_longer_by = 9)
 
 wu_biplot_points2_3 <- wu_files2_3$DFPoints %>% 
-                        mutate(day_post_inf = as.factor(day_post_inf))
+                        convert_as_factor(day_post_inf)
 
-wu_biplot_lines2_3 <- wu_files2_3$DFLines
+wu_biplot_lines2_3 <- wu_files2_3$DFLines %>% 
+  mutate(tax_line_label = ifelse(is.na(Species), Genus, Species),
+         tax_line_label = ifelse(is.na(tax_line_label), Family, tax_line_label))
+
 wu_pcoa_var2_3 <- wu_files2_3$PCvar
 
 ## making x and y axis labels
@@ -311,33 +435,39 @@ wu_y_lab2_3 <- pcoa_ax_lab(unifrac_var = wu_pcoa_var2_3,
 uu_biplot2_3 <- make_my_biplot(x_axis = 'PC2',
                               y_axis = 'PC3',
                               points_df = uu_biplot_points2_3,
-                              points_color = 'day_post_inf',
+                              points_color = 'diet',
                               points_shape = 'vendor',
-                              color_name = 'Days Relative\nto Infection',
+                              points_alpha = 'day_post_inf',
+                              color_name = 'Diet',
                               shape_labels = vendor_labs,
+                              color_labels = diet_legend_labs,
                               lines_df = uu_biplot_lines2_3,
-                              lines_label = 'Family',
-                              lines_label_size = 5,
+                              lines_label = 'tax_line_label',
+                              lines_label_size = 5.5,
                               x_name = uu_x_lab2_3,
                               y_name = uu_y_lab2_3,
                               shape_name = 'Vendor',
-                              title_content = 'Unweighted UniFrac Biplot (PC2-PC3)')
+                              alpha_name = 'Days Relative\nto Infection',
+                              title_content = 'PC2-PC3: Unweighted UniFrac Biplot')
 
 ## weighted unifrac
 wu_biplot2_3 <- make_my_biplot(x_axis = 'PC2',
                               y_axis = 'PC3',
                               points_df = wu_biplot_points2_3,
-                              points_color = 'day_post_inf',
+                              points_color = 'diet',
                               points_shape = 'vendor',
-                              color_name = 'Days Relative\nto Infection',
+                              points_alpha = 'day_post_inf',
+                              color_name = 'Diet',
                               shape_labels = vendor_labs,
+                              color_labels = diet_legend_labs,
                               lines_df = wu_biplot_lines2_3,
-                              lines_label = 'Family',
-                              lines_label_size = 5,
+                              lines_label = 'tax_line_label',
+                              lines_label_size = 5.5,
                               x_name = wu_x_lab2_3,
                               y_name = wu_y_lab2_3,
                               shape_name = 'Vendor',
-                              title_content = 'Weighted UniFrac Biplot (PC2-PC3)')
+                              alpha_name = 'Days Relative\nto Infection',
+                              title_content = 'PC2-PC3: Weighted UniFrac Biplot')
 
 uu_biplot2_3
 wu_biplot2_3
@@ -351,14 +481,17 @@ uu_files3_4 <- prep_my_biplot_files(biplot_fp = uu_biplot_FP,
                                  metadata_fp = metadata_FP,
                                  tax_fp = tax_FP,
                                  parse_tax = TRUE,
-                                 top_tax_n = 10,
+                                 top_tax_n = 15,
                                  dist_pc_axis = 'dist_origin3to4',
-                                 lines_longer_by = 4)
+                                 lines_longer_by = 2)
 
 uu_biplot_points3_4 <- uu_files3_4$DFPoints %>% 
-                      mutate(day_post_inf = as.factor(day_post_inf))
+                      convert_as_factor(day_post_inf)
 
-uu_biplot_lines3_4 <- uu_files3_4$DFLines
+uu_biplot_lines3_4 <- uu_files3_4$DFLines %>% 
+  mutate(tax_line_label = ifelse(is.na(Species), Genus, Species),
+         tax_line_label = ifelse(is.na(tax_line_label), Family, tax_line_label))
+
 uu_pcoa_var3_4 <- uu_files3_4$PCvar
 
 ## making x and y axis labels
@@ -374,14 +507,17 @@ wu_files3_4 <- prep_my_biplot_files(biplot_fp = wu_biplot_FP,
                                    metadata_fp = metadata_FP,
                                    tax_fp = tax_FP,
                                    parse_tax = TRUE,
-                                   top_tax_n = 10,
+                                   top_tax_n = 15,
                                    dist_pc_axis = 'dist_origin3to4',
-                                   lines_longer_by = 9)
+                                   lines_longer_by = 4)
 
 wu_biplot_points3_4 <- wu_files3_4$DFPoints %>% 
-                        mutate(day_post_inf = as.factor(day_post_inf))
+                        convert_as_factor(day_post_inf)
 
-wu_biplot_lines3_4 <- wu_files3_4$DFLines
+wu_biplot_lines3_4 <- wu_files3_4$DFLines %>% 
+  mutate(tax_line_label = ifelse(is.na(Species), Genus, Species),
+         tax_line_label = ifelse(is.na(tax_line_label), Family, tax_line_label))
+
 wu_pcoa_var3_4 <- wu_files3_4$PCvar
 
 ## making x and y axis labels
@@ -397,33 +533,39 @@ wu_y_lab3_4 <- pcoa_ax_lab(unifrac_var = wu_pcoa_var3_4,
 uu_biplot3_4 <- make_my_biplot(x_axis = 'PC3',
                               y_axis = 'PC4',
                               points_df = uu_biplot_points3_4,
-                              points_color = 'day_post_inf',
+                              points_color = 'diet',
                               points_shape = 'vendor',
-                              color_name = 'Days Relative\nto Infection',
+                              points_alpha = 'day_post_inf',
+                              color_name = 'Diet',
                               shape_labels = vendor_labs,
+                              color_labels = diet_legend_labs,
                               lines_df = uu_biplot_lines3_4,
-                              lines_label = 'Family',
-                              lines_label_size = 5,
+                              lines_label = 'tax_line_label',
+                              lines_label_size = 5.5,
                               x_name = uu_x_lab3_4,
                               y_name = uu_y_lab3_4,
                               shape_name = 'Vendor',
-                              title_content = 'Unweighted UniFrac Biplot (PC3-PC4)')
+                              alpha_name = 'Days Relative\nto Infection',
+                              title_content = 'PC3-PC4: Unweighted UniFrac Biplot')
 
 ## weighted unifrac
 wu_biplot3_4 <- make_my_biplot(x_axis = 'PC3',
                               y_axis = 'PC4',
                               points_df = wu_biplot_points3_4,
-                              points_color = 'day_post_inf',
+                              points_color = 'diet',
                               points_shape = 'vendor',
-                              color_name = 'Days Relative\nto Infection',
+                              points_alpha = 'day_post_inf',
+                              color_name = 'Diet',
                               shape_labels = vendor_labs,
+                              color_labels = diet_legend_labs,
                               lines_df = wu_biplot_lines3_4,
-                              lines_label = 'Family',
-                              lines_label_size = 5,
+                              lines_label = 'tax_line_label',
+                              lines_label_size = 5.5,
                               x_name = wu_x_lab3_4,
                               y_name = wu_y_lab3_4,
                               shape_name = 'Vendor',
-                              title_content = 'Weighted UniFrac Biplot (PC3-PC4)')
+                              alpha_name = 'Days Relative\nto Infection',
+                              title_content = 'PC3-PC4: Weighted UniFrac Biplot')
 
 uu_biplot3_4
 wu_biplot3_4
@@ -432,6 +574,7 @@ wu_biplot3_4
 # **Saving my Outputs**
 
 ```{r}
+## as a .pdf
 ggsave('../plots/uu_biplot1_2.pdf',
        plot = uu_biplot,
        width = 15,
@@ -456,6 +599,16 @@ ggsave('../plots/wu_biplot3_4.pdf',
        plot = wu_biplot3_4,
        width = 15,
        height = 10)
+
+## as an .rdat object 
+save(uu_biplot,
+     file = '../../figures/uu_biplot_pc1to2.rdat')
+save(wu_biplot,
+     file = '../../figures/wu_biplot_pc1to2.rdat')
+save(uu_biplot2_3,
+     file = '../../figures/uu_biplot_pc2to3.rdat')
+save(wu_biplot2_3,
+     file = '../../figures/wu_biplot_pc2to3.rdat')
 ```
 
 

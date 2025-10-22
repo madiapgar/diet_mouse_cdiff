@@ -1,0 +1,419 @@
+---
+title: "cfu_surv_weight_comps"
+output: html_document
+date: "2025-09-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+TO DOS:
+- write functions for stuff so script isn't as messy
+- figure out if you need a visualization for the stats
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(apppleplots)
+library(Maaslin2)
+```
+
+**Functions**
+```{r}
+source("../workflow_src/test_lmer_vars_function.R")
+```
+
+**File paths**
+```{r}
+surv_fp <- '../data/misc/proc_combined_CDD_cfuCounts.tsv'
+cfu_fp <- '../data/misc/proc_cdd02-3_culture_metadata.tsv'
+raw_cfu_fp <- '../data/misc/newExp_cfus.txt'
+culture_tax_fp <- '../data/misc/proc_tax_CDD_cfuCounts.tsv'
+```
+
+**Reading in files**
+```{r}
+surv_table <- read_tsv(surv_fp)
+cfu_table <- read_tsv(cfu_fp)
+raw_cfu_table <- read_tsv(raw_cfu_fp)
+culture_tax_table <- read_tsv(culture_tax_fp) %>% 
+  filter(experiment != 'CDD01') %>% 
+  select(mouse_id, location, cult_rel_abund, top_tax) 
+```
+**Data wrangled**
+reproductive culture sample is not included: 
+  - mouse_id = CDD03.CR.HFLF.2
+  - sampleid = CDD03.CR.HFLF.2.Reproductive
+  - location = reproductive
+  - counts = 198
+```{r}
+mini_cfu_table <- cfu_table %>% 
+  select(mouse_id, location, colony_count)
+
+proc_raw_cfu_table <- raw_cfu_table %>% 
+  select(mouse_id.tissue, `colonies_per_g/mL`) %>% 
+  rename(colonies_per_gmL = `colonies_per_g/mL`) %>% 
+  filter(!grepl("Reproductive", mouse_id.tissue)) %>% 
+  ## replace everything after the last . with nothing 
+  ## replace everything before the last . with nothing 
+  mutate(mouse_id = gsub(mouse_id.tissue, pattern = "(\\.[^.]+)$", replacement = ""),
+         location = tolower(gsub(mouse_id.tissue, pattern = "^(.*)\\.", replacement = "")),
+         colonies_per_gmL = as.numeric(colonies_per_gmL),
+         colonies_per_gmL = ifelse(is.na(colonies_per_gmL),
+           max(colonies_per_gmL[!is.na(colonies_per_gmL)]) + 
+           (max(colonies_per_gmL[!is.na(colonies_per_gmL)])/2), 
+           colonies_per_gmL)) %>% 
+  select(-mouse_id.tissue)
+
+other_list <- c('Unknown',
+                'Micrococcus',
+                'Oceanobacillus',
+                'Dietzia',
+                'Gemella',
+                'Corynebacterium',
+                'Bacillus',
+                'Streptococcus',
+                'Staphylococcus',
+                'Cutibacterium',
+                'Kocuria')
+
+surv_cfu_table <- surv_table %>% 
+  filter(experiment != "CDD01") %>% 
+  left_join(mini_cfu_table, by = c("mouse_id", "location")) %>% 
+  mutate(corr_colony_count = ifelse(is.na(colony_count), 0, colony_count),
+         noZero_corr_colony_count = ifelse(corr_colony_count == 0, 0.01, corr_colony_count),
+         log_corr_colony_count = log10(noZero_corr_colony_count),
+         sack_status = ifelse(sac_exptDay %in% range(29, 30), 'end_time_course', 'sick')) %>% 
+  left_join(proc_raw_cfu_table, by = c("mouse_id", "location")) %>% 
+  left_join(culture_tax_table, by = c("mouse_id", "location")) %>% 
+  mutate(top_tax = ifelse(top_tax %in% other_list, 'Other', top_tax))
+```
+**for keith**
+just pulling sampleids and whether the mouse was sick or survived to the end of the time course
+```{r}
+for_keith <- surv_cfu_table %>% 
+  distinct(mouse_id, sac_exptDay, sack_status)
+
+write_tsv(for_keith,
+          file = '../data/misc/newExp_sackStatus_res.tsv')
+```
+
+
+**Plot!**
+looking at potential difference in cfu counts based on whether mice were sacked bc they were sick or bc it was the end of the time course 
+- putting in log10 helps define the trends better 
+- interesting trend in the spleen compared to the blood and liver 
+- run stats on this (between diets per sack_status and between sack_status per diet)
+- maybe look for vendor effects? 
+```{r, fig.width=15, fig.height=10.5}
+## get hexcodes of viridis color palette option C
+# viridis_pal(option = 'C')(6)
+my_viridis_c_palette <- c("#0D0887FF",
+                          "#6A00A8FF",
+                          "#B12A90FF",
+                          "#E16462FF",
+                          "#FCA636FF",
+                          "#F0F921FF",
+                          "#999999")
+
+diet_x_labs <- c('Chow',
+                 'HFt/\nHFb',
+                 'HFt/\nLFb',
+                 'LFt/\nHFb',
+                 'LFt/\nLFb')
+
+location_labs <- c('blood' = 'Blood',
+                   'liver' = 'Liver',
+                   'spleen' = 'Spleen')
+
+status_labs <- c('end_time_course' = 'Survived to End of Time Course',
+                 'sick' = 'Got Sick')
+
+surv_cfu_table$sack_status_f <- factor(surv_cfu_table$sack_status, levels = c('sick', 
+                                                                              'end_time_course'))
+
+(facet_status_cfu_plot <- surv_cfu_table %>% 
+  ggplot(aes(x = diet, y = noZero_corr_colony_count)) +
+  geom_boxplot(aes(group = diet), outlier.shape = NA) +
+  geom_jitter(aes(fill = top_tax, shape = vendor), 
+              width = 0, height = 0.1, size = 4, alpha = 0.8) +
+  scale_fill_manual(breaks = c('Enterococcus',
+                                'Escherichia-Shigella',
+                                'Proteus',
+                                'enterococcus_escherichiaShigella_proteus',
+                                'Lactobacillus',
+                                'Other',
+                                'None'),
+                     labels = c('Enterococcus',
+                                'Escherichia-Shigella',
+                                'Proteus',
+                                'Enterococcus,\nEscherichia-Shigella,\nand Proteus',
+                                'Lactobacillus',
+                                'Other',
+                                'None'),
+                     values = my_viridis_c_palette,
+                     name = 'Genus') +
+  scale_shape_manual(values = c(21, 24),
+                     name = 'Vendor',
+                     labels = c('Charles\nRiver',
+                                'Taconic')) +
+  guides(fill = guide_legend(override.aes = list(alpha = 1,
+                                                 shape = 21)),
+         shape = guide_legend(override.aes = list(fill = "black"))) +
+  scale_y_continuous(transform = 'log10') +
+  scale_x_discrete(labels = diet_x_labs) +
+  facet_grid(location~sack_status_f,
+             labeller = labeller(.rows = location_labs,
+                                 .cols = status_labs)) +
+  theme_bw(base_size = 20) +
+  theme(strip.text.y.right = element_text(angle = 0),
+        legend.position = "top") +
+  labs(title = 'Amount of CFUs Cultured from Multiple Locations',
+       subtitle = 'Comparisons between Diets',
+       x = 'Diet',
+       y = 'CFUs (log10)'))
+```
+
+```{r, fig.width=16, fig.height=11}
+diet_labs <- c('Chow' = 'Chow',
+               'HF/HF' = 'High Fat / High Fiber',
+               'HF/LF' = 'High Fat / Low Fiber',
+               'LF/HF' = 'Low Fat / High Fiber',
+               'LF/LF' = 'Low Fat / Low Fiber')
+status_x_labs <- c('Got\nSick',
+                   'End Time\nCourse')
+
+(facet_diet_cfu_plot <- surv_cfu_table %>% 
+  ggplot(aes(x = sack_status, y = noZero_corr_colony_count)) +
+  geom_boxplot(aes(group = sack_status), outlier.shape = NA) +
+  geom_jitter(aes(fill = top_tax, shape = vendor), 
+              width = 0, height = 0.1, size = 4, alpha = 0.8) +
+  scale_fill_manual(breaks = c('Enterococcus',
+                                'Escherichia-Shigella',
+                                'Proteus',
+                                'enterococcus_escherichiaShigella_proteus',
+                                'Lactobacillus',
+                                'Other',
+                                'None'),
+                     labels = c('Enterococcus',
+                                'Escherichia-Shigella',
+                                'Proteus',
+                                'Enterococcus,\nEscherichia-Shigella,\nand Proteus',
+                                'Lactobacillus',
+                                'Other',
+                                'None'),
+                     values = my_viridis_c_palette,
+                     name = 'Genus') +
+  scale_shape_manual(values = c(21, 24),
+                     name = 'Vendor',
+                     labels = c('Charles\nRiver',
+                                'Taconic')) +
+  guides(fill = guide_legend(override.aes = list(alpha = 1,
+                                                 shape = 21)),
+         shape = guide_legend(override.aes = list(fill = "black"))) +
+  scale_y_continuous(transform = 'log10') +
+  scale_x_discrete(limits = c('sick',
+                              'end_time_course'),
+                   labels = status_x_labs) +
+  facet_grid(location~diet,
+             labeller = labeller(.rows = location_labs,
+                                 .cols = diet_labs)) +
+  theme_bw(base_size = 20) +
+  theme(strip.text.y.right = element_text(angle = 0),
+        legend.position = "top") +
+  labs(title = 'Amount of CFUs Cultured from Multiple Locations',
+       subtitle = 'Comparisons between Survival Status',
+       x = 'Survival Status',
+       y = 'CFUs (log10)'))
+```
+**Linear mixed effects model - multivariate**
+had to encode the sack_status and vendor to binary so they're not categorical anymore
+- if you want to compare multiple models to each other, you need to fit them to ML instead of REML (REML = F)
+- i think this means that including whether mice were sacked bc they were sick or bc it was the end of the experiment significantly improves the model, making it a significant main effect 
+- use LF/HF as baseline diet and filter out chow 
+- stratify by location? - it doesnt work to do this, could use regular lm since dont need random effects (when stratify by location, all other fixed effects arent equally represented)
+- use 'other' cfu taxa for comparison of taxa and filter out 'none' category (do this in a separate model)
+
+RESULTS:
+- can just move forward with lmer and talk about how most of the variation in cfu counts is due to whether the mice got sick or not (being sick and dying = higher cfu counts than not)
+- liver and blood have significantly different amounts of cfus (no difference between blood/spleen and spleen/liver) - liver is higher?
+- cfu counts significantly higher if mice got sick than if they didnt (good)
+```{r}
+num_lmer_surv_cfu_table <- surv_cfu_table %>% 
+  mutate(binary_vendor = ifelse(vendor == "charles_river", 0, 1),
+         binary_sack_status = ifelse(sack_status == "end_time_course", 0, 1),
+         num_diet = case_when(
+           diet == 'Chow' ~ 1, 
+           diet == 'HF/HF' ~ 2,
+           diet == 'HF/LF' ~ 3,
+           diet == 'LF/HF' ~ 4,
+           diet == 'LF/LF' ~ 5
+         ),
+         num_location = case_when(
+           location == 'blood' ~ 1,
+           location == 'liver' ~ 2,
+           location == 'spleen' ~ 3
+         ))
+
+lmer_surv_cfu_table <- surv_cfu_table %>% 
+  filter(diet != "Chow") %>% 
+  mutate(diet_f = factor(diet, levels = c('LF/HF', 'HF/HF', 'HF/LF', 'LF/LF')),
+         location_f = factor(location, levels = c('liver', 'spleen', 'blood')))
+
+full_lmer <- lmerTest::lmer(log_corr_colony_count ~ sack_status + diet_f + vendor + location_f + (1|mouse_id),
+               data = lmer_surv_cfu_table, REML = F)
+
+full_lmer_res <- summary(full_lmer)
+print(full_lmer_res)
+
+## converting full model summary results to a df 
+full_lmer_res_df <- as.data.frame(full_lmer_res$coefficients)
+
+## wrangling that df to include additional information on which variable was used as a baseline for each 
+## fixed effect and to include a significance key for the p-values
+(proc_full_lmer_res_df <- full_lmer_res_df %>% 
+  rownames_to_column(var = "tested_var") %>% 
+  mutate(baseline_comp = case_when(
+    !is.na(str_match(tested_var, "sack_status")) ~ 'sack_statusend_time_course',
+    !is.na(str_match(tested_var, "diet_f")) ~ 'diet_fLF/HF',
+    !is.na(str_match(tested_var, "location_f")) ~ 'location_fliver',
+    !is.na(str_match(tested_var, "vendor")) ~ 'vendorcharles_river'
+  ),
+  signif = as.character(symnum(`Pr(>|t|)`,
+                               cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                               symbols = c("****", "***", "**", "*", ".", "ns"),
+                               abbr.colnames = FALSE,
+                               na = ""))) %>% 
+  select(tested_var, baseline_comp, everything()))
+```
+
+figuring out sofia's function again
+```{r}
+mixed_modeling(predictors = c('sack_status', 'diet_f', 'vendor', 'location_f'),
+               response_vars = c('log_corr_colony_count'),
+               random_effect = '(1|mouse_id)',
+               data = lmer_surv_cfu_table)
+```
+lmer for the top tax cultured out (zeros are excluded)
+RESULTS:
+- when i put chow back into the model cfu counts between vendors becomes significant? (regardless if its the baseline diet or not)
+- cfu counts are consistently significantly higher for proteus and enterococcus_escherichiaShigella_proteus compared to 'other' taxa cfus 
+- variation in mouse status is erased when taxa are added to the model 
+- if you just look within the mice that got sick:
+  - vendor effect is erased
+  - location effect is erased
+  - proteus and enterococcus_escherichiaShigella_proteus are still significantly higher 
+  - cfu counts are almost significantly higher in HF/LF than LF/HF 
+  - cfu counts are still significantly higher in chow than LF/HF (interesting)
+- if you just look within mice that survived to the end:
+  - vendor effects come back (taconic significantly higher than charles river in cfus?)
+  - enterococcus_escherichiaShigella_proteus are still significantly higher (proteus is almost significantly       higher but not really)
+  - location effect is still erased (i think location only matters when you're looking between status)
+```{r}
+## filtering out samples where nothing was cultured
+## releveling the remaining top taxa to be compared to the "other" category 
+## releveling diets to be compared to "LF/HF" instead of chow 
+tax_lmer_surv_cfu_table <- surv_cfu_table %>% 
+  filter(top_tax != "None") %>% 
+  mutate(top_tax_f = factor(top_tax, levels = c("Other",
+                                                "Proteus",
+                                                "enterococcus_escherichiaShigella_proteus",
+                                                "Enterococcus",
+                                                "Escherichia-Shigella",
+                                                "Lactobacillus")),
+         diet_f = factor(diet, levels = c('LF/HF', 'HF/HF', 'HF/LF', 'LF/LF', 'Chow')))
+
+## running the full lmer model 
+tax_lmer <- lmerTest::lmer(log_corr_colony_count ~ sack_status + diet_f + top_tax_f + location + vendor 
+                           + (1|mouse_id),
+                           data = tax_lmer_surv_cfu_table, 
+                           REML = F)
+## grabbing the summary so i can make it into a pretty df later 
+tax_lmer_res <- summary(tax_lmer)
+
+## using sofia's function to check which fixed effects significantly improve the model 
+## also to see if this is consistent with what i found in my full lmer model above (it is)
+mixed_modeling(predictors = c('sack_status', 'diet_f', 'top_tax_f', 'vendor', 'location'),
+               response_vars = c('log_corr_colony_count'),
+               random_effect = '(1|mouse_id)',
+               data = tax_lmer_surv_cfu_table)
+```
+
+```{r}
+print(tax_lmer_res)
+## converting full model summary results to a df 
+tax_lmer_res_df <- as.data.frame(tax_lmer_res$coefficients)
+
+## wrangling that df to include additional information on which variable was used as a baseline for each 
+## fixed effect and to include a significance key for the p-values
+(proc_tax_lmer_res_df <- tax_lmer_res_df %>% 
+  rownames_to_column(var = "tested_var") %>% 
+  mutate(baseline_comp = case_when(
+    !is.na(str_match(tested_var, "sack_status")) ~ 'sack_statusend_time_course',
+    !is.na(str_match(tested_var, "diet_f")) ~ 'diet_fLF/HF',
+    !is.na(str_match(tested_var, "top_tax_f")) ~ 'top_tax_fOther',
+    !is.na(str_match(tested_var, "location")) ~ 'locationblood',
+    !is.na(str_match(tested_var, "vendor")) ~ 'vendorcharles_river'
+  ),
+  signif = as.character(symnum(`Pr(>|t|)`,
+                               cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                               symbols = c("****", "***", "**", "*", ".", "ns"),
+                               abbr.colnames = FALSE,
+                               na = ""))) %>% 
+  select(tested_var, baseline_comp, everything()))
+```
+
+**Saving my outputs**
+```{r}
+## plots
+ggsave('../plots/cfuQuant_dietComp_plot.pdf',
+       plot = facet_status_cfu_plot,
+       width = 15,
+       height = 10.5)
+save(facet_status_cfu_plot,
+     file = '../../figures/cfuQuant_dietComp_plot.rdat')
+
+ggsave('../plots/cfuQuant_statusComp_plot.pdf',
+       plot = facet_diet_cfu_plot,
+       width = 16,
+       height = 11)
+save(facet_diet_cfu_plot,
+     file = '../../figures/cfuQuant_statusComp_plot.rdat')
+
+## stats
+write_tsv(proc_full_lmer_res_df,
+          file = '../stats/cfuQuant_noTax_lmer_res.tsv')
+write_tsv(proc_tax_lmer_res_df,
+          file = '../stats/cfuQuant_wTax_lmer_res.tsv')
+```
+
+
+**Attempting to run maaslin2 for correlation comparisons**
+getting data all set up 
+```{r}
+maaslin_data <- surv_cfu_table %>% 
+  mutate(sampleid = paste(mouse_id, location, sep = ".")) %>% 
+  select(sampleid, corr_colony_count, colonies_per_gmL) %>% 
+  column_to_rownames(var = "sampleid")
+
+maaslin_meta <- surv_cfu_table %>% 
+  mutate(sampleid = paste(mouse_id, location, sep = ".")) %>% 
+  select(!c('corr_colony_count', 'colonies_per_gmL', 'colony_count',
+            'microbe_presence', 'status_microbePres')) %>% 
+  column_to_rownames(var = "sampleid")
+```
+
+actually attempting to run maaslin2
+```{r}
+Maaslin2(input_data = as.data.frame(maaslin_data),
+         input_metadata = as.data.frame(maaslin_meta),
+         output = '../stats/test_maaslin',
+         transform = 'NONE',
+         analysis_method = "ZINB",
+         fixed_effects = c('sac_exptDay', 'diet', 'vendor'),
+         random_effects = c('location', 'mouse_id'),
+         normalization = 'NONE',
+         reference = 'diet,Chow',
+         standardize = FALSE)
+```

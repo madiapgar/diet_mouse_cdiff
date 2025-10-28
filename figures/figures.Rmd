@@ -16,6 +16,12 @@ library(cowplot)
 library(apppleplots)
 ```
 
+**Pulling in plots made by keith and laurie (not added to r package yet)**
+```{r}
+load("immune_cytokine_plot.RData")
+load("CDD_cyto_BUN_pcoa.rdat")
+```
+
 # **Putting Together Figures for Paper Manuscript**
 
 
@@ -245,11 +251,26 @@ fig5
 ## **Figure 6**
 New experiment culture/mortality results.
 
-```{r, fig.width=25, fig.height=22}
+- include both new plots in this figure!!
+keith's plot:
+- take color off plot (don't need it to distinguish diets)
+- fix x-axis labels
+- make point size bigger
+- take out the two cytokines: IL12p70, IL-4, IFN-y, IL-2, IL-5
+
+laurie's plot:
+- dont need ellipses 
+- dont need to worry ab including vendor info 
+- make labels bold and bigger
+- change transparency of points slightly 
+- change color palette to match other figures 
+- make lines longer on plot so labels aren't all on top of each other 
+
+```{r, fig.width=27, fig.height=22}
 new_fig6_title <- ggdraw() +
   draw_label('AMC Follow-Up Experiment: Unweighted UniFrac Taxa Biplots',
              size = 24,
-             hjust = 1.24)
+             hjust = 1.35)
 
 new_fig6_bottom_row <- plot_grid(uu_biplot +
                                     theme(legend.position = "none",
@@ -268,22 +289,28 @@ new_fig6_bottom_row_wLabs <- plot_grid(new_fig6_title,
                                         align = c('hv'),
                                         axis = c('tblr'),
                                         rel_heights = c(0.07, 1),
-                                        labels = c('b)'),
+                                        labels = c('c)'),
                                         label_size = 22)
+
+new_fig6_top_right <- plot_grid(cytokine_plot,
+                                p_pcoa_1_2 +
+                                  theme(plot.subtitle = element_blank(),
+                                        legend.position = "right"),
+                                nrow = 2,
+                                rel_heights = c(1, 0.8))
 
 new_fig6_top_row <- plot_grid(facet_status_cfu_plot +
                                 labs(title = 'Number of CFUs Cultured from Multiple Locations'),
-                              NULL,
+                              new_fig6_top_right,
                               nrow = 1,
-                              labels = c('a)', ''),
+                              labels = c('a)', 'b)'),
                               label_size = 22,
-                              align = c('hv'),
-                              axis = c('tblr'),
-                              rel_widths = c(1, 0.6))
+                              rel_widths = c(1, 0.95))
 
 (new_fig6 <- plot_grid(new_fig6_top_row,
                       new_fig6_bottom_row_wLabs,
-                      nrow = 2) +
+                      nrow = 2,
+                      rel_heights = c(1, 0.75)) +
              theme(plot.background = element_rect(fill = "white", color = "white")))
 ```
 
@@ -586,11 +613,11 @@ ggsave('pngs/old_fig6.png',
 
 ggsave('fig6.pdf',
        plot = new_fig6,
-       width = 25,
+       width = 27,
        height = 22)
 ggsave('pngs/fig6.png',
        plot = new_fig6,
-       width = 25,
+       width = 27,
        height = 22)
 
 ggsave('fig7.pdf',

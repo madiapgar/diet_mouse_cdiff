@@ -600,6 +600,12 @@ ggsave('../plots/wu_biplot3_4.pdf',
        width = 15,
        height = 10)
 
+## stats
+write_tsv(uu_adonis_res,
+          file = '../stats/uu_biplot_adonis.tsv')
+write_tsv(wu_adonis_res,
+          file = '../stats/wu_biplot_adonis.tsv')
+
 ## as an .rdat object 
 save(uu_biplot,
      file = '../../figures/uu_biplot_pc1to2.rdat')

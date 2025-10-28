@@ -1,0 +1,326 @@
+---
+title: "CD Diet Mod Plasma Cytokines"
+author: "Laurie Lyon"
+date: "2025-10-24"
+output: html_document
+---
+# PCoA of cytokine and BUN data from C. dif diet mod experiments
+for inclusion in Apgar et al. resubmission
+
+**Load in packages/data**
+```{r}
+library(tidyverse)
+library(vegan)
+library(ape)
+library(ggrepel)
+library(viridis)
+```
+
+Question about data - BUN is in mg/dL (which is 1*10^7 greater than pg/mL) -- do I need to multiply the values by 10^7?
+Tried it - doesn't seem to change anything. Midpoint normalization must account for that 
+```{r}
+#loading imputed data from Keith
+data <- read.csv("../data/misc/immune_cytokines_imputed.csv")
+
+#removing IL-4 and IL-12p70 because so many samples were below LLOD
+data_filt_w_BUN <- data %>% 
+  filter(Measure != "IL-12p70") %>% 
+  filter(Measure != "IL-4")
+
+#BUN was the only Measure not in pg/mL (mg/dL)
+data_filt_w_BUN_pgml <- data %>% 
+  filter(Measure != "IL-12p70") %>% 
+  filter(Measure != "IL-4") %>% 
+  mutate(Value = if_else(Measure == "BUN", Value * 1e7, Value))
+
+data_filt_no_BUN <- data %>% 
+  filter(Measure != "IL-12p70") %>% 
+  filter(Measure != "IL-4") %>% 
+  filter(Measure != "BUN")
+```
+
+```{r}
+#pivot data long to wide
+wide_data <- data_filt_w_BUN_pgml %>% 
+  dplyr::select(MouseID, Measure, Value) %>% 
+  group_by(MouseID, Measure) %>%
+  pivot_wider(names_from = Measure, 
+              values_from = Value)
+
+#loading in extra metadata for when each mouse was sac'ed
+sackstat <- read_tsv("../data/misc/newExp_sackStatus_res.tsv")
+
+#prep metadata from original data df
+meta_cols <- c("MouseID", "Diet", "Treatment")
+metadata <- data_filt_w_BUN_pgml %>% 
+  distinct(across(all_of(meta_cols))) %>% 
+  left_join(sackstat, by = c("MouseID" = "mouse_id"))
+```
+
+Normalizations - after trying both, they look mostly identical 
+```{r}
+#trying two different normalizations - mean vs. median midpoint normalization 
+#divides each individual value by the mean of that Measure across all samples
+data_norm_mean <- wide_data %>% 
+  ungroup() %>% 
+  mutate(across(where(is.numeric), #perform only on columns with numeric values (not MouseID)
+                ~ .x / mean(.x, na.rm = TRUE))) %>% #divide value by column mean
+  na.omit()
+
+#divides each individual value by the mean of that Measure across all samples
+data_norm_median <- wide_data %>% 
+  ungroup() %>% 
+  mutate(across(where(is.numeric), #perform only on columns with numeric values (not MouseID)
+                ~ .x / median(.x, na.rm = TRUE))) %>% #divide value by column mean
+  na.omit()
+```
+
+```{r}
+#look for common ids between meta and sif concentrations
+common_ids <- intersect(data_norm_mean$MouseID, data_norm_mean$MouseID)
+
+data_filt_aligned <- data_norm_mean %>% 
+  filter(MouseID %in% common_ids) %>% 
+  arrange(match(MouseID, common_ids))
+
+meta_filt_aligned <- metadata %>% 
+  filter(MouseID %in% common_ids) %>% 
+  arrange(match(MouseID, common_ids))
+
+#sanity check to make sure sampleids match
+stopifnot(identical(data_filt_aligned$MouseID, meta_filt_aligned$MouseID))
+
+#something is going on with select in my environment so I have to specify dplyr
+#need to remove the non-numeric column (MouseID) before converting to matrix
+data_nosampleid <- data_filt_aligned %>% 
+  dplyr::select(-MouseID)
+
+#convert to matrix and put sampleid back as rownames 
+matrix <- as.matrix(data_nosampleid)
+rownames(matrix) <- data_filt_aligned$MouseID
+```
+
+**Calculate distance matrix and PCoA**
+```{r}
+#calculate Canberra distance matrix (vegan vegdist)
+dist <- vegdist(matrix, method = "canberra")
+#calculate pcoa coordinates (ape pcoa)
+pcoa <- ape::pcoa(dist)
+
+pct <- round(100 * pcoa$values$Relative_eig[1:3], 2)
+
+# assemble sample coodinates with metadata
+pcoa_coords <- as_tibble(pcoa$vectors[, 1:3], .name_repair = "minimal") %>%
+  setNames(c("PC1","PC2","PC3")) %>%
+  mutate(MouseID = rownames(pcoa$vectors)) %>%
+  left_join(meta_filt_aligned, by = "MouseID")
+
+```
+
+**Envfit to calcualte vectors**
+```{r}
+# Create a 3-axis ordination data frame for envfit
+ord3 <- as.data.frame(pcoa$vectors[, 1:3])
+colnames(ord3) <- c("Axis.1","Axis.2","Axis.3")
+rownames(ord3) <- rownames(matrix)
+
+# % variance for axis labels
+pct <- round(100 * pcoa$values$Relative_eig[1:3], 2)
+pc1_lab <- paste0("PC1 - ", pct[1], "%")
+pc2_lab <- paste0("PC2 - ", pct[2], "%")
+pc3_lab <- paste0("PC3 - ", pct[3], "%")
+
+#PC1_PC2
+# Fit cytokines as vectors (correlations with axes) with envfit
+ef1_2 <- vegan::envfit(ord = as.matrix(ord3),
+                     env = as.data.frame(matrix),
+                     permutations = 9999,
+                     choices = 1:2)
+
+# extract vector coordinates
+vec_raw_1_2 <- as.data.frame(scores(ef1_2,
+                                display = "vectors",
+                                choices = 1:2))
+
+# now we have vectors (correlations of each cytokine with the ordination axis) and pvals for significance
+# r2 is how well each cytokine aligns with that axis
+# permutation test determines signficance
+vec_tbl_1_2 <- vec_raw_1_2 %>%
+  rownames_to_column("Measure") %>%
+  as_tibble() %>%
+  mutate(
+    r2   = (ef1_2$vectors$r)^2,
+    pval = ef1_2$vectors$pvals,
+    padj = p.adjust(pval, method = "BH")
+  ) %>%
+  arrange(padj, desc(r2))
+
+##PC2_PC3
+# Fit cytokines as vectors (correlations with axes) with envfit
+ef2_3 <- vegan::envfit(ord = as.matrix(ord3),
+                     env = as.data.frame(matrix),
+                     permutations = 9999,
+                     choices = 2:3)
+
+# extract vector coordinates
+vec_raw_2_3 <- as.data.frame(scores(ef2_3,
+                                display = "vectors",
+                                choices = 1:2)) #1:2 because I already selected 2:3 in the last step
+
+# now we have vectors (correlations of each cytokine with the ordination axis) and pvals for significance
+# r2 is how well each cytokine aligns with that axis
+# permutation test determines signficance
+vec_tbl_2_3 <- vec_raw_2_3 %>%
+  rownames_to_column("Measure") %>%
+  as_tibble() %>%
+  mutate(
+    r2   = (ef2_3$vectors$r)^2,
+    pval = ef2_3$vectors$pvals,
+    padj = p.adjust(pval, method = "BH")
+  ) %>%
+  arrange(padj, desc(r2))
+
+#pick significant cytokines to graph
+vec_sig_1_2 <- vec_tbl_1_2 %>%
+  filter(padj <= 0.05)
+
+vec_sig_2_3 <- vec_tbl_2_3 %>%
+  filter(padj <= 0.05)
+```
+
+**Graph**
+```{r, fig.width = 15, fig.height = 8}
+arrow_scale_1_2 <- 1 * min(
+  diff(range(pcoa_coords$PC1)),
+  diff(range(pcoa_coords$PC2))
+)
+
+arrows_1_2 <- vec_sig_1_2 %>%
+  transmute(
+    Measure,
+    x0 = 0,
+    y0 = 0,
+    x1 = Axis.1 * arrow_scale_1_2,
+    y1 = Axis.2 * arrow_scale_1_2,
+    r2,
+    padj
+  ) %>% 
+  mutate(Measure = ifelse(Measure == "KC-GRO", "CXCL1", Measure))
+
+## get hexcodes of viridis color palette option C
+# viridis_pal(option = 'C')(5)
+my_viridis_c_palette <- c("#7E03A8FF",
+                          "#CC4678FF",
+                          "#F89441FF",
+                          "#F0F921FF")
+
+diet_legend_labs <- c('HFt / HFb',
+                      'HFt / LFb',
+                      'LFt / HFb',
+                      'LFt / LFb')
+
+status_labs <- c('end_time_course' = 'Survived to End\nof Time Course',
+                 'sick' = 'Got Sick')
+
+#Plot Axis 1 vs. Axis 2
+(p_pcoa_1_2 <- ggplot(
+  pcoa_coords, 
+  aes(x = PC1, y = PC2)) +
+  geom_jitter(aes(fill = Diet,
+                 shape = sack_status),
+             size = 5,
+             alpha = 0.7) +
+  scale_shape_manual(values = c(21,24),
+                     breaks = c('sick',
+                                'end_time_course'),
+                     labels = status_labs) +
+  scale_fill_manual(values = my_viridis_c_palette,
+                    labels = diet_legend_labs) +
+  guides(fill = guide_legend(override.aes = list(shape = 21,
+                                                 alpha = 1)),
+         shape = guide_legend(override.aes = list(fill = "black"))) +
+  geom_segment(data = arrows_1_2,
+               aes(x = x0, y = y0, xend = x1, yend = y1),
+               arrow = arrow(length = unit(0.22, "cm")),
+               linewidth = 0.3,
+               color = "black") +
+  geom_text_repel(data = arrows_1_2,
+                   aes(x = x1, y = y1, label = Measure),
+                   size = 5.5,
+                   max.overlaps = 200,
+                   fontface = "bold",
+                   direction = "both",
+                   color = "black") +
+  labs(
+    title = "Canberra Distances of Plasma Inflammation/Sepsis Markers",
+    x = pc1_lab,
+    y = pc2_lab,
+    color = "Diet",
+    shape = "Status"
+  ) +
+  theme_bw(base_size = 20) +
+  theme(legend.position = "right"))
+```
+
+```{r, fig.height = 5, fig.width= 8}
+arrow_scale_2_3 <- 0.8 * min(
+  diff(range(pcoa_coords$PC2)),
+  diff(range(pcoa_coords$PC3))
+)
+
+arrows_2_3 <- vec_sig_2_3 %>%
+  transmute(
+    Measure,
+    x0 = 0,
+    y0 = 0,
+    x1 = Axis.2 * arrow_scale_2_3,
+    y1 = Axis.3 * arrow_scale_2_3,
+    r2,
+    padj
+  )
+
+#Plot Axis 2 vs. Axis 3
+(p_pcoa_2_3 <- ggplot(pcoa_coords, aes(x = PC2, y = PC3)) +
+  stat_ellipse(
+    aes(color = Diet, fill = Diet),
+    type = "t", 
+    level = 0.95,
+    geom = "polygon", 
+    alpha = 0.1, 
+    linewidth = 0.6
+  ) +
+  geom_point(aes(fill = Diet,
+                 shape = sack_status),
+             size = 2.4,
+             alpha = 0.9) +
+  scale_shape_manual(values = c(21,24)) +
+  geom_segment(data = arrows_2_3,
+               aes(x = x0, y = y0, xend = x1, yend = y1),
+               arrow = arrow(length = unit(0.22, "cm")),
+               linewidth = 0.5,
+               color = "black") +
+  geom_label_repel(data = arrows_2_3,
+                   aes(x = x1, y = y1, label = Measure),
+                   size = 4,
+                   label.size = 0.2,
+                   max.overlaps = 200,
+                   color = "black") +
+  labs(
+    title = "PCoA of Cytokine + BUN Canberra distances",
+    x = pc2_lab,
+    y = pc3_lab,
+    color = "Diet",
+    shape = "Survival"
+  ) +
+  theme_bw(base_size = 16))
+```
+
+```{r}
+ggsave("../plots/CDD_cyto_BUN_pcoa.pdf", 
+       plot = p_pcoa_1_2, 
+       width = 15, 
+       height = 8)
+save(p_pcoa_1_2, file = "../../figures/CDD_cyto_BUN_pcoa.rdat")
+```
+
+

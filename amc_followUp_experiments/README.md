@@ -14,7 +14,7 @@ Paper figures/tables generated from the contents of this directory:
 
 | Figure                   | Associated Scripts                                                            | Plot Names                                                       |
 |--------------------|----------------------------------|------------------|
-| Figure 6a-c              | a: `main_src/cfu_surv_weight_comp.Rmd` <br/> b: `main_src/plasma_cytokine_conc_plot.Rmd` `main_src/plasma_cytokine_pcoa.Rmd` <br/> c: `main_src/tax_biplot.Rmd`| a: `facet_status_cfu_plot` <br/> b: `cytokine_plot` `p_pcoa_1_2` <br/> `uu_biplot` `uu_biplot2_3`                |
+| Figure 6a-c              | a: `main_src/cfu_surv_weight_comp.Rmd` <br/> b: `main_src/plasma_cytokine_conc_plot.Rmd`,`main_src/plasma_cytokine_pcoa.Rmd` <br/> c: `main_src/tax_biplot.Rmd`| a: `facet_status_cfu_plot` <br/> b: `cytokine_plot`,`p_pcoa_1_2` <br/> c: `uu_biplot`,`uu_biplot2_3`                |
 | Supplemental Figure 7b-c | b: `main_src/survival.Rmd` <br/> c: `main_src/mouse_weight.Rmd`               | a: `newExp_dietVendor_surv_plot` <br/> b: `newExp_avWeight_plot` |
 
 ## Directory Key:

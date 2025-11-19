@@ -338,6 +338,72 @@ mini_d3_genus_relAbun_krDunn <- apppleplots::kruskal_dunn_stats(input_table = mi
 
 mini_d3_genus_relAbun_kruskal <- mini_d3_genus_relAbun_krDunn$KruskalTest
 mini_d3_genus_relAbun_dunn <- mini_d3_genus_relAbun_krDunn$DunnTest
+
+## done within diet, genus, and experiment between days 
+mini_d3_btDays_relAbun_krDunn <- apppleplots::kruskal_dunn_stats(input_table = mini_d3_genusAbun_table,
+                                                                grouped_by = c('Genus', 'experiment_set', 'diet'),
+                                                                adjust_method = 'BH',
+                                                                filter_adj_p_value = FALSE,
+                                                                formula_left = 'log_rel_abund',
+                                                                formula_right = 'day_post_inf')
+
+mini_d3_btDays_relAbun_kruskal <- mini_d3_btDays_relAbun_krDunn$KruskalTest
+(mini_d3_btDays_relAbun_dunn <- mini_d3_btDays_relAbun_krDunn$DunnTest)
+```
+
+**Want to look at differences in genus rel abun at day 3**
+- done within experiment/vendor at day 3 between diets 
+- had to have different genera specified per experiment bc the arizona experiments didnt have any proteus/escherichia-shigella in general 
+```{r}
+## done within experiment at day 3 between diets
+first_and_newExp_genera <- c('Clostridioides',
+                             'Enterococcus',
+                             'Escherichia-Shigella',
+                             'Proteus')
+
+arizona_genera <- c('Clostridioides',
+                    'Enterococcus',
+                    'Staphylococcus')
+
+d3_diet_stats <- list('first_and_new' = list('experiments' = c('first_set_anschutz',
+                                                               'new_exp_anschutz'),
+                                             'genera' = c('Clostridioides',
+                                                          'Enterococcus',
+                                                          'Escherichia-Shigella',
+                                                          'Proteus')),
+                      'arizona' = list('experiments' = c('second_set_arizona'),
+                                       'genera' = c('Clostridioides',
+                                                    'Enterococcus',
+                                                    'Staphylococcus')))
+
+mini_d3_btDiets_relAbun_kruskal <- tibble()
+mini_d3_btDiets_relAbun_dunn <- tibble()
+
+
+for (stats in unlist(names(d3_diet_stats))){
+  int_table <- mini_d3_genusAbun_table %>% 
+    filter(day_post_inf == 3,
+           experiment_set %in% d3_diet_stats[[stats]][['experiments']],
+           Genus %in% d3_diet_stats[[stats]][['genera']])
+  
+  int_krDunn <- apppleplots::kruskal_dunn_stats(input_table = int_table,
+                                                grouped_by = c('exp_vendor', 'Genus'),
+                                                adjust_method = 'BH',
+                                                filter_adj_p_value = FALSE,
+                                                formula_left = 'log_rel_abund',
+                                                formula_right = 'diet')
+  int_kruskal <- int_krDunn$KruskalTest
+  int_dunn <- int_krDunn$DunnTest
+  
+  proc_int_dunn <- stat_plot_prep(filtered_table = int_table,
+                                  first_group = 'diet',
+                                  second_group = c('exp_vendor', 'Genus'),
+                                  mean_value = 'log_rel_abund',
+                                  dunn_test = int_dunn)
+  
+  mini_d3_btDiets_relAbun_kruskal <- rbind(mini_d3_btDiets_relAbun_kruskal, int_kruskal)
+  mini_d3_btDiets_relAbun_dunn <- rbind(mini_d3_btDiets_relAbun_dunn, proc_int_dunn)
+}
 ```
 
 **Wrangling Dunn test for stat visualization**
@@ -414,6 +480,35 @@ mini_d3_genus_relAbun_stat_plot <- mini_d3_genus_relAbun_stat_plot +
 mini_d3_genus_relAbun_stat_plot
 ```
 
+stats between diets at day 3 (goes with plot above)
+```{r, fig.width=17, fig.height=11}
+exp_vendor_labs <- c('first_set_anschutz:taconic' = 'Previous AMC (published):\nTaconic\n(AMC-P:T)',
+                     'new_exp_anschutz:charles_river' = 'AMC Follow-Up:\nCharles River\n(AMC-FU:CR)',
+                     'new_exp_anschutz:taconic' = 'AMC Follow-Up:\nTaconic\n(AMC-FU:T)',
+                     'second_set_arizona:charles_river' = 'University of Arizona:\nCharles River\n(UA:CR)')
+
+btDiets_y_labs <- c('HFt / HFb',
+                    'HFt / LFb',
+                    'LFt / HFb',
+                    'LFt / LFb')
+btDiets_x_labs <- c('Chow' = 'Chow',
+                    'HF/HF' = 'HFt/\nHFb',
+                    'HF/LF' = 'HFt/\nLFb',
+                    'LF/HF' = 'LFt/\nHFb',
+                    'LF/LF' = 'LFt/\nLFb')
+
+(mini_d3_btDiets_relAbun_stat_plot <- stat_plot(new_dunn = mini_d3_btDiets_relAbun_dunn,
+                                                facet_by = 'Genus',
+                                                title = 'Genera Differences between Diets',
+                                                wanted_subtitle = 'Day 3 Post-Infection') +
+   facet_grid(Genus~exp_vendor,
+              scales = "free",
+              labeller = labeller(.cols = exp_vendor_labs)) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 0.5)) +
+  scale_x_discrete(labels = btDiets_x_labs) +
+  scale_y_discrete(labels = btDiets_y_labs))
+```
+
 
 ## **Saving my outputs**
 ```{r}
@@ -440,9 +535,15 @@ ggsave('../baseline_day3/plots/mini_genusAbun_stat_vis.pdf',
        plot = mini_d3_genus_relAbun_stat_plot,
        width = 15,
        height = 9)
+ggsave('../baseline_day3/plots/mini_btDiets_genusAbun_stat_vis.pdf',
+       plot = mini_d3_btDiets_relAbun_stat_plot,
+       width = 17,
+       height = 11)
 
 ## saving as an .rdat object to be put together in a figure
 save(mini_d3_genus_relAbun_stat_plot,
      file = '../../figures/miniComparison_genusAbun_stat_vis.rdat')
+save(mini_d3_btDiets_relAbun_stat_plot,
+     file = '../../figures/mini_dietComp_genusAbun_stat_vis.rdat')
 ```
 

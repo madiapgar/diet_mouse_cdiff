@@ -20,6 +20,20 @@ library(apppleplots)
 ```{r}
 load("immune_cytokine_plot.RData")
 load("CDD_cyto_BUN_pcoa.rdat")
+load("hflf_butyTox_mediation.rdat")
+load("miniComparison_diet_genusAbun_plot.rdat") ## im too lazy to rebuild my r package rn 
+load("mini_dietComp_genusAbun_stat_vis.rdat")
+load("cfuQuant_dietComp_plot.rdat")
+load("all_scfa_comp_plot.rdat")
+load("metab.rdata")
+load("alphaDiv_microbeProd_plot.rdat")
+load("relAbun_microbeProd_plot.rdat")
+load("neat_toxin.rdata")
+load("noDiet_histoCecum_tox_plot.rdat")
+load("histo.rdata")
+load("panelC_fig3_redo.rdat")
+load("supp_fig2a.rdat")
+load("cdiffComparison_genusAbun_plot.rdat")
 ```
 
 # **Putting Together Figures for Paper Manuscript**
@@ -143,7 +157,7 @@ butyrateOnly_plot_v2 <- butyrateOnly_plot +
 ```
 
 **actual manuscript figure**
-```{r, fig.height=17, fig.width=20}
+```{r, fig.height=23, fig.width=24}
 fig3_top_row <- plot_grid(dca_sep_plot_v2, 
                           ratio_bile_plot_v2,
                           labels = c('a)', 'b)'),
@@ -160,23 +174,21 @@ fig3_middle_row <- plot_grid(panelC_fig3_redoWithlab,
                              axis = c('tblr'))
 
 
-fig3_bottom_row <- plot_grid(butyrateOnly_plot_v2,
-                             panelE_fig3_redoWithlab,
-                             rel_widths = c(0.4, 1),
+fig3_bottom_row <- plot_grid(metab_plot,
+                             all_metab_plotsWithlab,
+                             rel_widths = c(0.3, 1),
                              nrow = 1,
                              labels = c('d)', 'e)'),
                              label_size = 20)
 
-fig3 <- plot_grid(fig3_top_row,
+(fig3 <- plot_grid(fig3_top_row,
                   fig3_middle_row,
                   fig3_bottom_row,
                   ncol = 1,
-                  rel_heights = c(0.9, 0.8, 0.9),
+                  rel_heights = c(0.5, 0.5, 0.9),
                   align = c('hv'),
                   axis = c('tblr')) +
-          theme(plot.background = element_rect(fill = "white", color = "white"))
-
-fig3
+          theme(plot.background = element_rect(fill = "white", color = "white")))
 ```
 
 ## **Figure 4**
@@ -266,19 +278,50 @@ laurie's plot:
 - change color palette to match other figures 
 - make lines longer on plot so labels aren't all on top of each other 
 
+figure specific plot changes! (doing them all here so that it get's less confusing)
+```{r}
+## new fig6a
+uu_biplot_v2 <- uu_biplot +
+                  theme(legend.position = "none",
+                        plot.title = element_blank()) +
+                  labs(subtitle = 'PC1-PC2')
+
+uu_biplot2_3_v2 <- uu_biplot2_3 +
+                      theme(plot.title = element_blank()) +
+                      labs(subtitle = 'PC2-PC3',
+                           fill = 'Mouse Diet')
+
+## new fig6b
+status_labs_v2 <- c('end_time_course' = 'Survived to End of Time Course',
+                    'sick' = 'Humane Endpoint')
+location_labs <- c('blood' = 'Blood',
+                   'liver' = 'Liver',
+                   'spleen' = 'Spleen')
+
+facet_status_cfu_plot_v2 <- facet_status_cfu_plot +
+                                guides(fill = guide_legend(override.aes = list(alpha = 1,
+                                                                               shape = 21)),
+                                       shape = guide_legend(override.aes = list(fill = "black"),
+                                                            ncol = 1)) +
+                                facet_grid(location~sack_status_f,
+                                           labeller = labeller(.cols = status_labs_v2,
+                                                               .rows = location_labs)) +
+                                labs(title = 'Number of CFUs Cultured from Multiple Locations')
+
+## new fig6c
+miniDiet_genusAbun_plot_v2 <- miniDiet_genusAbun_plot +
+  labs(subtitle = 'All Experiments')
+```
+
+
 ```{r, fig.width=27, fig.height=22}
 new_fig6_title <- ggdraw() +
   draw_label('AMC Follow-Up Experiment: Unweighted UniFrac Taxa Biplots',
              size = 24,
              hjust = 1.35)
 
-new_fig6_bottom_row <- plot_grid(uu_biplot +
-                                    theme(legend.position = "none",
-                                          plot.title = element_blank()) +
-                                    labs(subtitle = 'PC1-PC2'), 
-                                  uu_biplot2_3 +
-                                   theme(plot.title = element_blank()) +
-                                    labs(subtitle = 'PC2-PC3'),
+new_fig6_bottom_row <- plot_grid(uu_biplot_v2, 
+                                 uu_biplot2_3_v2,
                                  nrow = 1,
                                  rel_widths = c(0.85, 1))
 
@@ -289,32 +332,357 @@ new_fig6_bottom_row_wLabs <- plot_grid(new_fig6_title,
                                         align = c('hv'),
                                         axis = c('tblr'),
                                         rel_heights = c(0.07, 1),
-                                        labels = c('c)'),
+                                        labels = c('a)'),
                                         label_size = 22)
 
-new_fig6_top_right <- plot_grid(cytokine_plot,
-                                p_pcoa_1_2 +
-                                  theme(plot.subtitle = element_blank(),
-                                        legend.position = "right"),
-                                nrow = 2,
-                                rel_heights = c(1, 0.8))
 
-new_fig6_top_row <- plot_grid(facet_status_cfu_plot +
-                                labs(title = 'Number of CFUs Cultured from Multiple Locations'),
-                              new_fig6_top_right,
+new_fig6_top_row <- plot_grid(facet_status_cfu_plot_v2,
+                              miniDiet_genusAbun_plot_v2,
                               nrow = 1,
-                              labels = c('a)', 'b)'),
+                              labels = c('b)', 'c)'),
                               label_size = 22,
+                              align = c('v'),
+                              axis = c('tb'),
                               rel_widths = c(1, 0.95))
 
-(new_fig6 <- plot_grid(new_fig6_top_row,
-                      new_fig6_bottom_row_wLabs,
+(new_fig6 <- plot_grid(new_fig6_bottom_row_wLabs,
+                      new_fig6_top_row,
                       nrow = 2,
-                      rel_heights = c(1, 0.75)) +
+                      rel_heights = c(0.75, 1)) +
              theme(plot.background = element_rect(fill = "white", color = "white")))
 ```
 
 
+## **Figure 7**
+now the plasma immune/sepsis marker data
+
+figure specific plot changes
+```{r}
+## new fig7a
+pcoa_status_labs <- c('end_time_course' = 'Survived to End\nof Time Course',
+                      'sick' = 'Humane Endpoint')
+p_pcoa_1_2_v2 <- p_pcoa_1_2 +
+                  scale_shape_manual(values = c(21,24),
+                                     breaks = c('sick',
+                                                'end_time_course'),
+                                     labels = pcoa_status_labs) +
+                  theme(plot.subtitle = element_blank(),
+                        legend.position = "right") +
+                  labs(fill = 'Mouse Diet')
+```
+
+new fig7!
+```{r, fig.width=15, fig.height=15}
+(fig7 <- plot_grid(p_pcoa_1_2_v2,
+                  cytokine_plot,
+                  nrow = 2,
+                  labels = c('a)', 'b)'),
+                  label_size = 22,
+                  rel_heights = c(0.9, 1)))
+```
+
+
+
+## **Supplemental Figure 2**
+Plots to go in figure:
+- bile acid concentration/CD toxin/histopathology score correlation comparisons
+- raw concentrations of acetate and propionate at day 3
+- acetate/propionate concentration/CD toxin/histopathology score correlation comparisons
+
+```{r, fig.width=19, fig.height=17}
+(figS2_bottom_row <- plot_grid(hflf_buty_plot +
+                              labs(title = 'Effects on High-Fat/Low-Fiber Histopathology',
+                                   subtitle = 'Butyrate',
+                                   x = 'Butyrate (mean-centered)',
+                                   y = 'Cecum Histopathology Score') +
+                              theme_bw(base_size = 20), 
+                              NULL,
+                            # hflf_toxin_plot +
+                            #   labs(subtitle = 'Toxin',
+                            #        x = 'Total Toxin (mean-centered)') +
+                            #   theme_bw(base_size = 20) +
+                            #   theme(plot.title = element_blank(),
+                            #         axis.title.y = element_blank()),
+                            nrow = 1,
+                            labels = c('b)', ''),
+                            label_size = 22,
+                            align = c('hv'),
+                            axis = c('tblr')))
+
+(figS2 <- plot_grid(supp_fig2a,
+                   figS2_bottom_row,
+                   ncol = 1,
+                   rel_heights = c(1, 0.5),
+                   labels = c('a)', '', ''),
+                   label_size = 20) +
+         theme(plot.background = element_rect(fill = "white", color = "white")))
+```
+
+## **Supplemental Figure 3**
+
+**manuscript specific edits to plots**
+```{r}
+uu_resil_stat_vis_v2 <- uu_resil_stat_vis +
+                          scale_fill_gradient2(high = "#0D0887FF",
+                                               low = "#CC4678FF",
+                                               name = 'Group 1 -\nGroup 2',
+                                               trans = 'reverse') +
+                          theme(legend.position = "None")
+
+uu_homog_stat_vis_v2 <- uu_homog_stat_vis +
+                          scale_fill_gradient2(high = "#0D0887FF",
+                                               low = "#CC4678FF",
+                                               name = 'Group 1 -\nGroup 2',
+                                               trans = 'reverse')
+
+unweighted_pcoa_v2 <- unweighted_pcoa +
+                        theme_bw(base_size = 20) +
+                        theme(strip.text.y.right = element_text(angle = 0)) +
+                        scale_fill_viridis(option = 'C', name = "Faith's\nPD")
+```
+**actual manuscript figure**
+```{r, warning=FALSE, fig.width=28, fig.height=18}
+## use NULL to create a ghost plot to alter your rows
+figS3_bottom_row <- plot_grid(uu_resil_plot, uu_homog_plot,
+                             uu_resil_stat_vis_v2, uu_homog_stat_vis_v2,
+                             nrow = 2,
+                             rel_heights = c(1, 0.7),
+                             rel_widths = c(0.90, 1),
+                             labels = c('d)', 'e)', 'f)', 'g)'),
+                             label_size = 20)
+
+figS3_top_right <- plot_grid(lacto_contam_plot,
+                             lacto_stat_plot,
+                             labels = c('a)', 'b)'),
+                             label_size = 20,
+                             ncol = 1,
+                             rel_heights = c(1, 0.8))
+
+                    
+figS3_top_row <- plot_grid(figS3_top_right,
+                          unweighted_pcoa_v2,
+                          nrow = 1,
+                          rel_widths = c(0.9, 1),
+                          labels = c('', 'c)'),
+                          label_size = 20)
+
+plot_grid(figS3_top_row,
+          figS3_bottom_row,
+          nrow = 2,
+          rel_heights = c(0.9, 1)) -> figS3
+
+figS3
+```
+
+## **Supplemental Figure 6**
+
+**manuscript specific edits to plots**
+```{r}
+newExp_dietVendor_surv_plot_v2 <- newExp_dietVendor_surv_plot +
+                                    labs(title = 'Mouse Survival After Infection by Diet and Vendor',
+                                         subtitle = 'AMC Follow-Up Experiments',
+                                         x = 'Days Post Infection',
+                                         y = 'Survival Probability')
+
+newExp_avWeight_plot_v2 <- newExp_avWeight_plot +
+                            labs(title = 'Weight Change After Infection by Diet',
+                                 x = 'Days Post Infection')
+```
+
+**actual manuscript figure**
+```{r, fig.height=17, fig.width=17}
+(figS6 <- plot_grid(newExp_dietVendor_surv_plot_v2,
+                    newExp_avWeight_plot_v2,
+                    labels = c('a)', 'b)'),
+                    label_size = 20,
+                    nrow = 2,
+                    rel_heights = c(0.70, 1),
+                    align = 'hv',
+                    axis = 'tblr'))
+```
+
+## **Supplemental Figure 7**
+stats for fig6c (microbiome comparisons between all experiments done)
+**Figure S7**
+```{r, fig.height=20, fig.width=28}
+mini_d3_genus_relAbun_stat_plot_v2 <- mini_d3_genus_relAbun_stat_plot +
+                                          scale_fill_gradient2(low = "#0D0887FF",
+                                                               high = "#CC4678FF",
+                                                               name = 'Group 1 -\nGroup 2') +
+                                          scale_y_discrete(labels = c('AMC-FU:CR',
+                                                                      'AMC-FU:T',
+                                                                      'UA:CR')) +
+                                          scale_x_discrete(labels = c('AMC-\nP:T',
+                                                                      'AMC-\nFU:CR',
+                                                                      'AMC-\nFU:T')) +
+                                          ggtitle('All Experiment Microbe Comparisons')
+
+mini_d3_btDiets_relAbun_stat_plot_v2 <- mini_d3_btDiets_relAbun_stat_plot +
+                                          scale_fill_gradient2(low = "#0D0887FF",
+                                                               high = "#CC4678FF",
+                                                               name = 'Group 1 -\nGroup 2')
+
+## changing the size of the points in the boxplot so they're not as tiny
+cdiff_genusAbun_plot$layers[[3]]$aes_params$size <- 3
+
+
+figS7b <- ggdraw(add_sub(plot = mini_d3_genus_relAbun_stat_plot_v2,
+                          label = "**CR: Charles River\n**T: Taconic",
+                          x = 0, hjust = 0, fontface = "bold", size=18))
+
+figS7_top_row <- plot_grid(cdiff_genusAbun_plot, NULL,
+                           nrow = 1,
+                           rel_widths = c(1, 0.1),
+                           align = c('hv'),
+                           axis = c('tblr'))
+
+figS7_bottom_row <- plot_grid(figS7b,
+                              mini_d3_btDiets_relAbun_stat_plot_v2,
+                              nrow = 1,
+                              rel_widths = c(0.65, 1),
+                              labels = c('b)', 'c)'),
+                              label_size = 22)
+
+(figS7 <- plot_grid(figS7_top_row,
+                    figS7_bottom_row,
+                    nrow = 2,
+                    labels = c('a)', ' '),
+                    label_size = 22,
+                    rel_heights = c(0.7, 1)) +
+         theme(plot.background = element_rect(fill = "white", color = "white")))
+```
+
+## **Saving my Outputs**
+as a .pdf and not an rdata object (just to clarify)
+- had to also save plots as pngs bc word is stupid and wont render pdfs anymore 
+```{r}
+ggsave('fig1.pdf',
+       plot = fig1,
+       width = 15,
+       height = 15)
+ggsave('pngs/fig1.png',
+       plot = fig1,
+       width = 15,
+       height = 15)
+
+ggsave('fig2.pdf',
+       plot = fig2,
+       width = 20,
+       height = 11)
+ggsave('short_fig2.pdf',
+       plot = fig2_top_row,
+       width = 20,
+       height = 6.5)
+ggsave('pngs/fig2.png',
+       plot = fig2,
+       width = 20,
+       height = 11)
+ggsave('pngs/short_fig2.png',
+       plot = fig2_top_row,
+       width = 20,
+       height = 6.5)
+
+## new figure 3!
+ggsave('fig3.pdf',
+       plot = fig3,
+       width = 24,
+       height = 23)
+ggsave('pngs/fig3.png',
+       plot = fig3,
+       width = 24,
+       height = 23)
+
+## new figure 5!
+ggsave('fig4.pdf',
+       plot = fig4,
+       width = 15,
+       height = 14)
+ggsave('pngs/fig4.png',
+       plot = fig4,
+       width = 15,
+       height = 14)
+
+ggsave('fig5.pdf',
+       plot = fig5,
+       width = 20,
+       height = 23)
+ggsave('pngs/fig5.png',
+       plot = fig5,
+       width = 20,
+       height = 23)
+
+ggsave('fig6.pdf',
+       plot = new_fig6,
+       width = 27,
+       height = 22)
+ggsave('pngs/fig6.png',
+       plot = new_fig6,
+       width = 27,
+       height = 22)
+
+ggsave('fig7.pdf',
+       plot = fig7,
+       width = 15,
+       height = 15)
+ggsave('pngs/fig7.png',
+       plot = fig7,
+       width = 15,
+       height = 15)
+
+## used to be supplemental figures 3 and 4 but they got combined
+ggsave('figS2.pdf',
+       plot = figS2,
+       width = 19,
+       height = 17)
+ggsave('pngs/figS2.png',
+       plot = figS2,
+       width = 19,
+       height = 17)
+
+## this used to be figure 4 but it got moved to supplemental
+ggsave('figS3.pdf',
+       plot = figS3,
+       width = 10,
+       height = 6)
+ ggsave('pngs/figS3.png',
+       plot = figS3,
+       width = 10,
+       height = 6)
+
+## this used to be figure 6 but it got moved to supplemental 
+ggsave('figS3.pdf',
+       plot = figS3,
+       width = 28,
+       height = 18)
+ggsave('pngs/figS3.png',
+       plot = figS3,
+       width = 28,
+       height = 18)
+
+ggsave('figS6.pdf',
+       plot = figS6,
+       width = 17,
+       height = 17)
+ggsave('pngs/figS6.png',
+       plot = figS6,
+       width = 17,
+       height = 17)
+
+ggsave('figS7.pdf',
+       plot = figS7,
+       width = 28,
+       height = 20)
+ggsave('pngs/figS7.png',
+       plot = figS7,
+       width = 28,
+       height = 20)
+```
+
+
+## **Figure Graveyard**
+past figures that have now been changed but I want to keep the code to generate them just in case
+
+### **Old Fig6**
 **manuscript specific edits to plots**
 ```{r, fig.width=15, fig.height=8}
 my_viridis_c_palette <- c("#0D0887FF",
@@ -367,11 +735,18 @@ fig6_bottom_row <- plot_grid(everything_stats_v2, NULL,
                   label_size = 20,
                   rel_heights = c(1, 0.5)) +
          theme(plot.background = element_rect(fill = "white", color = "white")))
+
+ggsave('old_fig6.pdf',
+       plot = fig6,
+       width = 20,
+       height = 17)
+ggsave('pngs/old_fig6.png',
+       plot = fig6,
+       width = 20,
+       height = 17)
 ```
 
-## **Figure 7**
-Comparison analysis between first set anschutz, u of arizona, and new anschutz experiment microbiome data at day -15 and day 3 with stats.
-
+### **Old Fig7**
 **manuscript specific edits to plots**
 ```{r, fig.height=15, fig.width=15}
 miniVendor_genusAbun_plot_v2 <- miniVendor_genusAbun_plot +
@@ -406,6 +781,8 @@ mini_d3_genus_relAbun_stat_plot_v2 <- mini_d3_genus_relAbun_stat_plot +
                           x = 0, hjust = 0, fontface = "bold", size=18)))
 ```
 
+Comparison analysis between first set anschutz, u of arizona, and new anschutz experiment microbiome data at day -15 and day 3 with stats.
+
 **actual manuscript figure**
 ```{r, fig.height=13, fig.width=25}
 (fig7 <- plot_grid(miniVendor_genusAbun_plot_v2_w_legend, 
@@ -416,34 +793,8 @@ mini_d3_genus_relAbun_stat_plot_v2 <- mini_d3_genus_relAbun_stat_plot +
                   rel_heights = c(1, 1)))
 ```
 
-## **Supplemental Figure 3**
-Plots to go in figure:
-- bile acid concentration/CD toxin/histopathology score correlation comparisons
-- raw concentrations of acetate and propionate at day 3
-- acetate/propionate concentration/CD toxin/histopathology score correlation comparisons
-
-```{r, fig.width=19, fig.height=24}
-figS2 <- plot_grid(supp_fig2a,
-                   supp_fig2bc,
-                   ncol = 1,
-                   rel_heights = c(0.7, 1),
-                   labels = c('a)', '', ''),
-                   label_size = 20) +
-         theme(plot.background = element_rect(fill = "white", color = "white"))
-
-figS2
-```
-
-
-## **Supplemental Figure 3**
-Plots to go in figure:
-- overall hypoxia plot (location on x-axis)?
-- cecum hypoxia plot (diet on x-axis)
-- cecal hypoxia/histopathology correlation comparison plot (stats as supplementary since nothing is significant?)
-- only include panels b and e going forward!!
-
-
-**Figure S5**
+### **Old FigS3**
+hypoxia data that was taken out of the paper
 ```{r, fig.height=6, fig.width=10}
 figS3 <- plot_grid(hypoxia_cecum_plot +
                         theme_bw(base_size = 20) +
@@ -458,214 +809,3 @@ figS3 <- plot_grid(hypoxia_cecum_plot +
 
 figS3
 ```
-
-
-## **Supplemental Figure 4**
-
-**manuscript specific edits to plots**
-```{r}
-uu_resil_stat_vis_v2 <- uu_resil_stat_vis +
-                          scale_fill_gradient2(high = "#0D0887FF",
-                                               low = "#CC4678FF",
-                                               name = 'Group 1 -\nGroup 2',
-                                               trans = 'reverse') +
-                          theme(legend.position = "None")
-
-uu_homog_stat_vis_v2 <- uu_homog_stat_vis +
-                          scale_fill_gradient2(high = "#0D0887FF",
-                                               low = "#CC4678FF",
-                                               name = 'Group 1 -\nGroup 2',
-                                               trans = 'reverse')
-
-unweighted_pcoa_v2 <- unweighted_pcoa +
-                        theme_bw(base_size = 20) +
-                        theme(strip.text.y.right = element_text(angle = 0)) +
-                        scale_fill_viridis(option = 'C', name = "Faith's\nPD")
-```
-**actual manuscript figure**
-```{r, warning=FALSE, fig.width=28, fig.height=18}
-## use NULL to create a ghost plot to alter your rows
-figS4_bottom_row <- plot_grid(uu_resil_plot, uu_homog_plot,
-                             uu_resil_stat_vis_v2, uu_homog_stat_vis_v2,
-                             nrow = 2,
-                             rel_heights = c(1, 0.7),
-                             rel_widths = c(0.90, 1),
-                             labels = c('d)', 'e)', 'f)', 'g)'),
-                             label_size = 20)
-
-figS4_top_right <- plot_grid(lacto_contam_plot,
-                             lacto_stat_plot,
-                             labels = c('a)', 'b)'),
-                             label_size = 20,
-                             ncol = 1,
-                             rel_heights = c(1, 0.8))
-
-                    
-figS4_top_row <- plot_grid(figS4_top_right,
-                          unweighted_pcoa_v2,
-                          nrow = 1,
-                          rel_widths = c(0.9, 1),
-                          labels = c('', 'c)'),
-                          label_size = 20)
-
-plot_grid(figS4_top_row,
-          figS4_bottom_row,
-          nrow = 2,
-          rel_heights = c(0.9, 1)) -> figS4
-
-figS4
-```
-
-## **Supplemental Figure 7**
-
-**manuscript specific edits to plots**
-```{r}
-newExp_dietVendor_surv_plot_v2 <- newExp_dietVendor_surv_plot +
-                                    labs(title = 'Mouse Survival After Infection by Diet and Vendor',
-                                         subtitle = 'AMC Follow-Up Experiments',
-                                         x = 'Days Post Infection',
-                                         y = 'Survival Probability')
-
-newExp_avWeight_plot_v2 <- newExp_avWeight_plot +
-                            labs(title = 'Weight Change After Infection by Diet',
-                                 x = 'Days Post Infection')
-```
-
-**actual manuscript figure**
-```{r, fig.height=17, fig.width=17}
-(figS7 <- plot_grid(newExp_dietVendor_surv_plot_v2,
-                    newExp_avWeight_plot_v2,
-                    labels = c('a)', 'b)'),
-                    label_size = 20,
-                    nrow = 2,
-                    rel_heights = c(0.70, 1),
-                    align = 'hv',
-                    axis = 'tblr'))
-```
-
-## **Saving my Outputs**
-as a .pdf and not an rdata object (just to clarify)
-- had to also save plots as pngs bc word is stupid and wont render pdfs anymore 
-```{r}
-ggsave('fig1.pdf',
-       plot = fig1,
-       width = 15,
-       height = 15)
-ggsave('pngs/fig1.png',
-       plot = fig1,
-       width = 15,
-       height = 15)
-
-ggsave('fig2.pdf',
-       plot = fig2,
-       width = 20,
-       height = 11)
-ggsave('short_fig2.pdf',
-       plot = fig2_top_row,
-       width = 20,
-       height = 6.5)
-ggsave('pngs/fig2.png',
-       plot = fig2,
-       width = 20,
-       height = 11)
-ggsave('pngs/short_fig2.png',
-       plot = fig2_top_row,
-       width = 20,
-       height = 6.5)
-
-## new figure 3!
-ggsave('fig3.pdf',
-       plot = fig3,
-       width = 20,
-       height = 17)
-ggsave('pngs/fig3.png',
-       plot = fig3,
-       width = 20,
-       height = 17)
-
-## new figure 5!
-ggsave('fig4.pdf',
-       plot = fig4,
-       width = 15,
-       height = 14)
-ggsave('pngs/fig4.png',
-       plot = fig4,
-       width = 15,
-       height = 14)
-
-ggsave('fig5.pdf',
-       plot = fig5,
-       width = 20,
-       height = 23)
-ggsave('pngs/fig5.png',
-       plot = fig5,
-       width = 20,
-       height = 23)
-
-ggsave('old_fig6.pdf',
-       plot = fig6,
-       width = 20,
-       height = 17)
-ggsave('pngs/old_fig6.png',
-       plot = fig6,
-       width = 20,
-       height = 17)
-
-ggsave('fig6.pdf',
-       plot = new_fig6,
-       width = 27,
-       height = 22)
-ggsave('pngs/fig6.png',
-       plot = new_fig6,
-       width = 27,
-       height = 22)
-
-ggsave('fig7.pdf',
-       plot = fig7,
-       width = 25,
-       height = 13)
-ggsave('pngs/fig7.png',
-       plot = fig7,
-       width = 25,
-       height = 13)
-
-## used to be supplemental figures 3 and 4 but they got combined
-ggsave('figS2.pdf',
-       plot = figS2,
-       width = 19,
-       height = 24)
-ggsave('pngs/figS2.png',
-       plot = figS2,
-       width = 19,
-       height = 24)
-
-## this used to be figure 4 but it got moved to supplemental
-ggsave('figS3.pdf',
-       plot = figS3,
-       width = 10,
-       height = 6)
- ggsave('pngs/figS3.png',
-       plot = figS3,
-       width = 10,
-       height = 6)
-
-## this used to be figure 6 but it got moved to supplemental 
-ggsave('figS4.pdf',
-       plot = figS4,
-       width = 28,
-       height = 18)
-ggsave('pngs/figS4.png',
-       plot = figS4,
-       width = 28,
-       height = 18)
-
-ggsave('figS7.pdf',
-       plot = figS7,
-       width = 17,
-       height = 17)
-ggsave('pngs/figS7.png',
-       plot = figS7,
-       width = 17,
-       height = 17)
-```
-

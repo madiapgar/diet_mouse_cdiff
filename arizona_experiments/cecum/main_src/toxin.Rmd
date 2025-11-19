@@ -23,8 +23,12 @@ library(apppleplots)
 
 **File Paths**
 ```{r}
-neat_toxin_FP <- '../data/misc/processed_neatToxin.tsv'
-dil_toxin_FP <- '../data/misc/processed_dilutedToxin.tsv'
+# neat_toxin_FP <- '../data/misc/processed_neatToxin.tsv'
+# dil_toxin_FP <- '../data/misc/processed_dilutedToxin.tsv'
+
+neat_toxin_FP <- '../data/misc/v2_proc_neat_toxin.tsv'
+dil_toxin_FP <- '../data/misc/v2_proc_dil_toxin.tsv'
+
 
 ## labeling lists
 neat_labs <- c('TcdA', 'TcdB')

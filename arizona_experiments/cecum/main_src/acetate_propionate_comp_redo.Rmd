@@ -78,21 +78,29 @@ lm_r2_p_value <- function(input_table,
 ## putting stats directly on correlation plots 
 stat_on_plot <- function(stat_table,
                          wanted_col_list,
+                         product_list,
+                         join_col,
                          x_col_name,
-                         x_col_value,
                          y_col_name,
-                         y_col_value,
                          plot,
                          plot_text_size){
   ## making table conducive to labeling plot 
+  ## create table based on nested list to join w stat table 
+  ## this makes it a lot easier to specify different locations for the 
+  ## stats on the plot
+  stat_loc_table <- enframe(product_list, 
+                            name = join_col, 
+                            value = 'tmp') %>% 
+    unnest_wider(tmp)
+  
+  
   proc_stat_table <- stat_table %>% 
     filter(signif != 'ns') %>% 
     select(all_of(wanted_col_list)) %>% 
+    left_join(stat_loc_table, by = join_col) %>% 
     ## created columns need to match up with the column names called for the x and y axis in the plot
     ## numeric values added are the x and y coordinates for where the label will sit in the facet block 
-    mutate("{x_col_name}" := paste(x_col_value),
-           "{x_col_name}" := as.numeric(.data[[x_col_name]]),
-           "{y_col_name}" := paste(y_col_value),
+    mutate("{x_col_name}" := as.numeric(.data[[x_col_name]]),
            "{y_col_name}" := as.numeric(.data[[y_col_name]]),
            p_value = signif(p_value, digits = 3),
            r_squared = signif(r_squared, digits = 3),
@@ -126,8 +134,10 @@ names(tox_labs) <- c('Total TcA Neat',
                      'Total TcB Neat')
 
 metab_labs <- c('Acetate',
+                'Butyrate',
                 'Propionate')
 names(metab_labs) <- c('Acetic Acid (ug/g)',
+                       'n-Butanoic Acid (ug/g)',
                        'Propanoic Acid (ug/g)')
 
 cecum_labs <- c('Cecum')
@@ -163,19 +173,21 @@ histoTox_only_table <- rbind(toxOnly_table,
 
 ## prepping metabolomics data and combining it with histo and tox table
 histo_metabTox_table %>% 
-  select(mouse_id, microbe_product, conc_normalized) %>% 
-  filter(microbe_product == 'Acetic Acid (ug/g)' | microbe_product == 'Propanoic Acid (ug/g)') %>% 
+  select(mouse_id, microbe_product, conc_normalized, log_conc_normalized) %>% 
+  filter(microbe_product %in% names(metab_labs)) %>%
   left_join(histoTox_only_table, by = 'mouse_id',
-            relationship = "many-to-many") -> all_metab_table
+            relationship = "many-to-many") %>% 
+  mutate(conc_score = as.numeric(conc_score),
+         conc_normalized = as.numeric(conc_normalized)) -> all_metab_table
 ```
 
 **Toxin comparison plot**
-```{r, fig.width=10, fig.height=8}
+```{r, fig.width=12, fig.height=10}
 ## only pulling out toxin data
 metab_tox_table <- all_metab_table %>% 
   filter(comp_value != "cecum") %>% 
-  mutate(log_conc_norm = log10(conc_normalized),
-         log_conc_score = log10(conc_score))
+  rename(log_conc_norm = log_conc_normalized) %>% 
+  mutate(log_conc_score = log10(conc_score))
 
 metab_tox_plot <- apppleplots::correlation_plots(input_table = metab_tox_table,
                                                     x_value = 'conc_normalized',
@@ -190,7 +202,7 @@ metab_tox_plot <- apppleplots::correlation_plots(input_table = metab_tox_table,
                                                     col_labs = tox_labs,
                                                     x_name = ' ',
                                                     y_name = 'Toxin Concentration (ng/uL) (log10)',
-                                                    title_content = 'Cecum Acetate and Propionate Comparisons')
+                                                    title_content = 'Cecum SCFA Comparisons')
 
 metab_tox_plot  <- metab_tox_plot +
   ## this adds the black outline to the regression lines so you can see them better 
@@ -220,14 +232,21 @@ metab_tox_stats <- lm_r2_p_value(input_table = metab_tox_table,
 
 
 ## stats on plot
+tox_stat_loc <- list('Acetic Acid (ug/g)' = c('conc_normalized' = 6.5,
+                                               'conc_score' = 1000),
+                     'n-Butanoic Acid (ug/g)' = c('conc_normalized' = 20,
+                                                  'conc_score' = 10),
+                     'Propanoic Acid (ug/g)' = c('conc_normalized' = 13,
+                                                 'conc_score' = 10))
+
 metab_tox_list <- stat_on_plot(stat_table = metab_tox_stats,
                                wanted_col_list = colnames(metab_tox_stats),
+                               product_list = tox_stat_loc,
+                               join_col = 'microbe_product',
                                x_col_name = 'conc_normalized',
-                               x_col_value = '10',
                                y_col_name = 'conc_score',
-                               y_col_value = '1500',
                                plot = metab_tox_plot,
-                               plot_text_size = 3.5)
+                               plot_text_size = 4)
 
 metab_toxStats_plot <- metab_tox_list$PlotwStats
 
@@ -235,11 +254,11 @@ metab_toxStats_plot
 ```
 
 **Histopathology comparisons**
-```{r, fig.width=10, fig.height=8}
+```{r, fig.width=10, fig.height=10}
 ## only pulling out cecal histopathology data
 metab_histo_table <- all_metab_table %>% 
   filter(comp_value == "cecum") %>% 
-  mutate(log_conc_norm = log10(conc_normalized))
+  rename(log_conc_norm = log_conc_normalized)
 
 metab_histo_plot <- apppleplots::correlation_plots(input_table = metab_histo_table,
                                                       x_value = 'conc_normalized',
@@ -287,23 +306,30 @@ metab_histo_stats <- lm_r2_p_value(input_table = metab_histo_table,
 
 
 ## stats on plot
+histo_stat_loc <- list('Acetic Acid (ug/g)' = c('conc_normalized' = 6.5,
+                                                'conc_score' = 4.5),
+                       'n-Butanoic Acid (ug/g)' = c('conc_normalized' = 800,
+                                                    'conc_score' = 5.5),
+                       'Propanoic Acid (ug/g)' = c('conc_normalized' = 5,
+                                                   'conc_score' = 5.75))
+
 metab_histo_list <- stat_on_plot(stat_table = metab_histo_stats,
                                wanted_col_list = colnames(metab_histo_stats),
+                               product_list = histo_stat_loc,
+                               join_col = 'microbe_product',
                                x_col_name = 'conc_normalized',
-                               x_col_value = '5',
                                y_col_name = 'conc_score',
-                               y_col_value = '5.75',
                                plot = metab_histo_plot,
-                               plot_text_size = 3.5)
+                               plot_text_size = 4)
 
 metab_histoStats_plot <- metab_histo_list$PlotwStats
 
-metab_histo_plot
+# metab_histo_plot
 metab_histoStats_plot
 ```
 
 **Putting the plots together**
-```{r, fig.width=19, fig.height=8}
+```{r, fig.width=19, fig.height=10}
 ## creating universal y axis label since the y axis is the same for both plots 
 y_axis_label <- ggdraw() +
   draw_label('SCFA Concentration (ug/g) (log10)',
@@ -354,5 +380,9 @@ ggsave('../plots/supp_acetProp_comp_plot.pdf',
 
 save(supp_fig2bc,
      file = '../../../figures/supp_fig2bc.rdat')
+
+## just saving the comparisons
+save(all_metab_plotsWithlab,
+     file = '../../../figures/all_scfa_comp_plot.rdat')
 ```
 

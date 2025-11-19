@@ -23,7 +23,8 @@ library(apppleplots)
 **File Paths**
 Histopathology file has already been joined with metadata so it doesn't need to be read in. 
 ```{r}
-histo_FP <- '../data/misc/processed_histopathology.tsv'
+# histo_FP <- '../data/misc/processed_histopathology.tsv'
+histo_FP <- '../data/misc/v2_proc_histo.tsv'
 tissue_labs <- c('Cecum',
                  'Colon')
 names(tissue_labs) <- c('cecum',
@@ -54,12 +55,12 @@ kruskal <- histo_krDunn$KruskalTest
 dunn <- histo_krDunn$DunnTest
 
 ## linear model
-linear_model <- apppleplots::linear_model(input_table = histo,
-                                          grouped_by = 'tissue',
-                                          adjust_method = 'BH',
-                                          filter_adj_p_value = FALSE,
-                                          formula_left = 'score',
-                                          formula_right = '(purified_diet * seq_depth) + high_fat * high_fiber')
+# linear_model <- apppleplots::linear_model(input_table = histo,
+#                                           grouped_by = 'tissue',
+#                                           adjust_method = 'BH',
+#                                           filter_adj_p_value = FALSE,
+#                                           formula_left = 'score',
+#                                           formula_right = '(purified_diet * seq_depth) + high_fat * high_fiber')
 
 ## overall plot 
 all_day_plot <- apppleplots::facet_once_plots(input_table = histo,

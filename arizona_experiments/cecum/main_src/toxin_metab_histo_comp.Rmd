@@ -126,9 +126,9 @@ stat_on_plot <- function(stat_table,
 **File Paths**
 ```{r}
 metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
-histo_FP <- '../data/misc/processed_histopathology.tsv'
-metab_FP <- '../data/misc/processed_metabolomics.tsv'
-toxin_FP <- '../data/misc/processed_neatToxin.tsv'
+histo_FP <- '../data/misc/v2_proc_histo.tsv'
+metab_FP <- '../data/misc/v2_proc_metab.tsv'
+toxin_FP <- '../data/misc/v2_proc_neat_toxin.tsv'
 
 ## lists to redo the diet names on the facet labels of the ggplot created below 
 diet_labs <- 
@@ -178,7 +178,9 @@ neat_toxin <- read_tsv(toxin_FP)
 ## zeroes get cut off on the plot since I have the axis in log10
 metab %>% 
   select(metabolite, concentration, mouse_id) %>% 
-  mutate(metab_conc_norm = (concentration + 2)) -> metab
+  filter(concentration != "not_enough_sample") %>% 
+  mutate(metab_conc_norm = (as.numeric(concentration) + 2),
+         log_metab_conc = log10(metab_conc_norm)) -> metab
 
 neat_toxin %>% 
   select(neat_toxin, neat_conc, mouse_id) %>% 
@@ -186,13 +188,11 @@ neat_toxin %>%
 
 ## putting histo and metab tables together
 histo %>% 
-  select(mouse_id, tissue, score, diet, sampleid) %>% 
   left_join(metab, by = 'mouse_id') %>% 
   na.omit() -> histo_metab
 
 ## putting histo and neat toxin tables together
 histo %>% 
-  select(mouse_id, tissue, score, diet, sampleid) %>% 
   left_join(neat_toxin, by = 'mouse_id') %>% 
   na.omit() %>% 
   mutate(log_neat_conc = log10(neat_conc_norm)) -> histo_neat_toxin
@@ -205,15 +205,17 @@ histo_neat_toxin %>%
 ## so I don't have to do this data wrangling again 
 toComb_histo_metab <- histo_metab %>% 
   rename(microbe_product = metabolite,
-         conc_normalized = metab_conc_norm) 
+         conc_normalized = metab_conc_norm,
+         log_conc_normalized = log_metab_conc) 
 
 toComb_histo_neatTox <- histo_neat_toxin %>% 
   rename(microbe_product = neat_toxin,
          concentration = neat_conc,
-         conc_normalized = neat_conc_norm)
+         conc_normalized = neat_conc_norm,
+         log_conc_normalized = log_neat_conc)
 
-# everything_table <- rbind(toComb_histo_metab,
-#                           toComb_histo_neatTox)
+everything_table <- rbind(toComb_histo_metab,
+                          toComb_histo_neatTox)
 # 
 # everything_table 
 ```

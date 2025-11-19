@@ -22,8 +22,10 @@ library(apppleplots)
 
 **File Paths**
 ```{r}
-bile_acid_FP <- '../data/misc/processed_bile_acid.tsv'
-bile_ratio_FP <- '../data/misc/processed_ratio_bileAcid.tsv'
+# bile_acid_FP <- '../data/misc/processed_bile_acid.tsv'
+# bile_ratio_FP <- '../data/misc/processed_ratio_bileAcid.tsv'
+bile_acid_FP <- '../data/misc/v2_proc_bile_acid.tsv'
+bile_ratio_FP <- '../data/misc/v2_proc_ratio_bileAcid.tsv'
 
 cdiff_effect_labs <- c('C. difficile Inhibitor',
                        'C. difficile Promoter')
@@ -66,7 +68,10 @@ Use prescence/abscence tests or rank-based test instead of a non-parametric stat
 
 **Reading in Needed Files**
 ```{r}
-big_bile_acid <- read_tsv(bile_acid_FP)
+big_bile_acid <- read_tsv(bile_acid_FP) %>% 
+  filter(conc_normalized != "not_enough_sample") %>% 
+  mutate(conc_normalized = as.numeric(conc_normalized))
+
 bile_ratio <- read_tsv(bile_ratio_FP)
 
 ## changing the c.diff effect column to include DCA for a special plot

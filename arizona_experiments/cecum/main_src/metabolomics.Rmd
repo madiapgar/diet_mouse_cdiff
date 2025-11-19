@@ -24,7 +24,8 @@ library(apppleplots)
 **File Paths**
 Metabolomics file has already been joined with the metadata so it doesn't need to be read in. 
 ```{r}
-metab_FP <- '../data/misc/processed_metabolomics.tsv'
+# metab_FP <- '../data/misc/processed_metabolomics.tsv'
+metab_FP <- '../data/misc/v2_proc_metab.tsv'
 
 metab_labs <- c('Acetate',
                 'Propionate',
@@ -43,8 +44,11 @@ metab_title <- 'Cecum SCFA Concentration'
 ```
 
 **Reading in Needed File**
+- taking out samples that were not quantified due to insufficient tissue size
 ```{r}
-metab <- read_tsv(metab_FP)
+metab <- read_tsv(metab_FP) %>% 
+  filter(concentration != "not_enough_sample") %>% 
+  mutate(concentration = as.numeric(concentration))
 ```
 
 **Stats**
@@ -61,18 +65,20 @@ kruskal <- metab_krDunn$KruskalTest
 dunn <- metab_krDunn$DunnTest
 
 ## linear modeling
-linear_model <- apppleplots::linear_model(input_table = metab,
-                                          grouped_by = 'metabolite',
-                                          adjust_method = 'BH',
-                                          filter_adj_p_value = FALSE,
-                                          formula_left = 'concentration',
-                                          formula_right = '(purified_diet * seq_depth) + high_fat * high_fiber')
+# linear_model <- apppleplots::linear_model(input_table = metab,
+#                                           grouped_by = 'metabolite',
+#                                           adjust_method = 'BH',
+#                                           filter_adj_p_value = FALSE,
+#                                           formula_left = 'concentration',
+#                                           formula_right = '(purified_diet * seq_depth) + high_fat * high_fiber')
 ```
 
 **Plot**
-```{r, fig.height=5, fig.width=12}
-metab_plot <- apppleplots::facet_once_plots(input_table = metab,
-                                            stat_on_plot = TRUE,
+```{r, fig.height=12, fig.width=6}
+## had to free y-axis scales which the function doesn't do
+## but its a ggplot so you can add layers
+(metab_plot <- apppleplots::facet_once_plots(input_table = metab,
+                                            stat_on_plot = FALSE,
                                             x_value = 'diet',
                                             y_value = 'concentration',
                                             x_value_type = 'discrete',
@@ -81,20 +87,19 @@ metab_plot <- apppleplots::facet_once_plots(input_table = metab,
                                             x_labels = metab_x_labs,
                                             facet_by = 'metabolite',
                                             facet_labels = metab_labs,
-                                            stat_table = dunn,
+                                            stat_table = NULL,
                                             x_name = 'Diet',
                                             y_name = 'Concentration (ug/g)',
-                                            title_content = metab_title)
-
-## had to free y-axis scales which the function doesn't do
-## but its a ggplot so you can add layers
-metab_plot <- metab_plot + 
+                                            title_content = metab_title) +
                 theme_bw(base_size = 20) +
                 facet_wrap(~metabolite,
                            scales = "free_y",
-                           labeller = labeller(metabolite = metab_labs))
-
-metab_plot
+                           nrow = 3,
+                           labeller = labeller(metabolite = metab_labs)) +
+                stat_pvalue_manual(dunn,
+                                   step.group.by = c('metabolite'),
+                                   hide.ns = TRUE,
+                                   label = 'p.adj.signif'))
 ```
 
 butyrate only plot

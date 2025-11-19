@@ -30,10 +30,17 @@ source("../workflow_src/test_lmer_vars_function.R")
 rel_abun_file_prep <- function(metadata_fp,
                                tax_fp,
                                otu_table_fp,
+                               sampleid_col = NULL,
+                               rename_sampleid_to = NULL,
                                tax_level,
                                wanted_tax){
   ## metadata
   metadata <- read_tsv(metadata_fp)
+  
+  if(!is.null(rename_sampleid_to) & !is.null(sampleid_col)){
+    names(metadata)[names(metadata) == sampleid_col] <- rename_sampleid_to
+  }
+  
   ## taxonomy
   taxonomy <- read_qza(tax_fp)$data %>% 
     parse_taxonomy() %>% 
@@ -64,29 +71,80 @@ rel_abun_file_prep <- function(metadata_fp,
                   AbundanceTable = abun_filt)
   return(my_list)
 }
+
+## putting stats directly on correlation plots 
+stat_on_plot <- function(stat_table,
+                         wanted_col_list,
+                         x_col_name,
+                         x_col_value,
+                         y_col_name,
+                         y_col_value,
+                         plot,
+                         plot_text_size){
+  ## making table conducive to labeling plot 
+  proc_stat_table <- stat_table %>% 
+    filter(signif != 'ns') %>% 
+    select(all_of(wanted_col_list)) %>% 
+    ## created columns need to match up with the column names called for the x and y axis in the plot
+    ## numeric values added are the x and y coordinates for where the label will sit in the facet block 
+    mutate("{x_col_name}" := paste(x_col_value),
+           "{x_col_name}" := as.numeric(.data[[x_col_name]]),
+           "{y_col_name}" := paste(y_col_value),
+           "{y_col_name}" := as.numeric(.data[[y_col_name]]),
+           p_value = signif(p.adj, digits = 3),
+           r_squared = signif(r_squared, digits = 3),
+           pVal_rSquare = paste0('p-value: ', p_value, "\n", 
+                                 'r2: ', r_squared))
+  
+  ## putting labels on plot 
+  plot_wStats <- plot +
+    geom_label(data = proc_stat_table, 
+               label = proc_stat_table$pVal_rSquare,
+               color = 'black',
+               fontface = 'bold',
+               size = plot_text_size)
+  
+  ## creating list of my outputs
+  my_list <- list(ProcStatTable = proc_stat_table,
+                  PlotwStats = plot_wStats)
+  
+  return(plot_wStats)
+}
 ```
 
 **File paths**
 ```{r}
-otu_table_FP <- '../data/cecal_qiime/tax_filt_actual.qza'
-tax_FP <- '../data/cecal_qiime/taxonomy.qza'
-metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
+cecum_otu_table_FP <- '../data/cecal_qiime/tax_filt_actual.qza'
+cecum_tax_FP <- '../data/cecal_qiime/taxonomy.qza'
+cecum_metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
 histo_metabTox_fp <- '../data/misc/histoMetabToxin_results_comb.tsv'
+histo_fp <- '../data/misc/v2_proc_histo.tsv'
 ```
 
 **Reading in files**
 ```{r}
 histo_metabTox_table <- read_tsv(histo_metabTox_fp)
+histo_only_table <- read_tsv(histo_fp)
 ```
 **Getting c. diff relative abundances from cecal 16S data**
 ```{r}
-cdiff_files <- rel_abun_file_prep(metadata_fp = metadata_FP,
-                                  tax_fp = tax_FP,
-                                  otu_table_fp = otu_table_FP,
-                                  tax_level = 'Genus',
-                                  wanted_tax = 'Clostridioides')
+## day 3 cecal 16S ONLY
+cdiff_files <- rel_abun_file_prep(metadata_fp = cecum_metadata_FP,
+                                        tax_fp = cecum_tax_FP,
+                                        otu_table_fp = cecum_otu_table_FP,
+                                        tax_level = 'Genus',
+                                        wanted_tax = 'Clostridioides')
 
-cdiff_abun_table <- cdiff_files$AbundanceTable
+cdiff_abun_table <- cecum_cdiff_files$AbundanceTable
+```
+
+**joining cdiff abun table with histopathology separately**
+this is bc more of the mice are represented in the histopathology than toxin, metabolomics, etc
+```{r}
+histo_cdiff_abun_table <- histo_only_table %>% 
+  spread(key = 'tissue', value = 'score') %>% 
+  select(-diet) %>% 
+  right_join(cdiff_abun_table, by = 'mouse_id')
 ```
 
 **Getting butyrate/toxin concentrations and cecal histopathology scores in wide format **
@@ -95,7 +153,7 @@ product_list <- c('n-Butanoic Acid (ug/g)', 'Total TcA Neat', 'Total TcB Neat')
 
 wide_histo_metabTox_table <- histo_metabTox_table %>% 
   filter(microbe_product %in% product_list) %>% 
-  dplyr::select(-concentration) %>% 
+  dplyr::select(!c('concentration', 'log_conc_normalized')) %>% 
   spread(key = 'microbe_product', value = 'conc_normalized') %>% 
   spread(key = 'tissue', value = 'score') %>% 
   rename(butyrate = `n-Butanoic Acid (ug/g)`,
@@ -103,10 +161,11 @@ wide_histo_metabTox_table <- histo_metabTox_table %>%
          tcb_neat = `Total TcB Neat`) %>% 
   ## changed NAs to 0s for now, idk if that's right but all samples had other measurements, just not for butyrate
   mutate(butyrate = ifelse(is.na(butyrate), 0, butyrate),
+         total_toxin = (tca_neat + tcb_neat),
          log_butyrate = log10(butyrate + 2),
          log_tca_neat = log10(tca_neat),
          log_tcb_neat = log10(tcb_neat),
-         log_total_toxin = log10(tca_neat + tcb_neat),
+         log_total_toxin = log10(total_toxin),
          ## changing baseline to LF/HF instead of Chow
          diet_f = factor(diet, levels = c('LF/HF', 'HF/HF', 'HF/LF', 'LF/LF', 'Chow')))
 ```
@@ -115,10 +174,11 @@ wide_histo_metabTox_table <- histo_metabTox_table %>%
 ```{r}
 mediation_table <- cdiff_abun_table %>% 
   ungroup() %>% 
-  select(sampleid, rel_abund) %>% 
+  dplyr::select(sampleid, mouse_id, rel_abund) %>% 
   rename(cdiff_rel_abund = rel_abund) %>% 
   mutate(log_cdiff_rel_abund = log10(cdiff_rel_abund)) %>% 
-  right_join(wide_histo_metabTox_table, by = "sampleid") %>% 
+  right_join(wide_histo_metabTox_table, by = "mouse_id") %>% 
+  # na.omit() %>% 
   mutate(diet = as.numeric(case_when(
     diet == "Chow" ~ 1,
     diet == "HF/HF" ~ 2,
@@ -203,17 +263,17 @@ summary(lm(cecum ~ log_butyrate * log_cdiff_rel_abund * log_total_toxin,
 
 **mean centering?**
 ```{r}
-diet_tables <- list("chow" = chow_mediation_table,
-                 "hfhf" = hfhf_mediation_table,
-                 "hflf" = wd_mediation_table,
-                 "lfhf" = lfhf_mediation_table,
-                 "lflf" = lflf_mediation_table)
+diet_tables <- list("Chow" = chow_mediation_table,
+                 "HF/HF" = hfhf_mediation_table,
+                 "HF/LF" = wd_mediation_table,
+                 "LF/HF" = lfhf_mediation_table,
+                 "LF/LF" = lflf_mediation_table)
+
+all_diet_ixn_res <- tibble()
 
 for (diet in unlist(names(diet_tables))) {
   centered_var_name <- paste0(diet, "_mediation_table_c")
   mini_diet_table <- diet_tables[[diet]]
-  
-  print(diet)
 
   ## testing how correlated vars are when interacting 
   # print("before mean centering")
@@ -227,9 +287,9 @@ for (diet in unlist(names(diet_tables))) {
   ## need to mean-center the data bc its highly co-correlated
   ## reduced correlation by a lot 
   int_table_c <- mini_diet_table %>% 
-    mutate(butyrate_c = scale(log_butyrate, scale = FALSE),
-           toxin_c = scale(log_total_toxin, scale = FALSE),
-           cdiff_c = scale(log_cdiff_rel_abund, scale = FALSE),
+    mutate(butyrate_c = scale(log_butyrate, center = TRUE, scale = FALSE),
+           toxin_c = scale(log_total_toxin, center = TRUE, scale = FALSE),
+           cdiff_c = scale(log_cdiff_rel_abund, center = TRUE, scale = FALSE),
            butyrateXcdiff_c = butyrate_c*cdiff_c,
            toxinXcdiff_c = toxin_c*cdiff_c)
   
@@ -241,15 +301,29 @@ for (diet in unlist(names(diet_tables))) {
   # print(corr_after_mean)
   
   ## now the effect of butyrate on cecal inflammation at the mean cdiff relative abundance 
-  print("mean centered lm results")
-  print(summary(lm(cecum ~ butyrate_c * cdiff_c,
-             data = int_table_c)))
-  print(summary(lm(cecum ~ toxin_c * cdiff_c,
-             data = int_table_c)))
+  ## dont need to adjust p-value?: p.adj = p.adjust(p.value, method = "BH")
+  ## butyrate 
+  int_butyrate_res <- tidy(summary(lm(cecum ~ butyrate_c * cdiff_c,
+                                      data = int_table_c))) %>% 
+    mutate(diet = paste(diet))
+
+  ## total toxin 
+  int_toxin_res <- tidy(summary(lm(cecum ~ toxin_c * cdiff_c,
+                                   data = int_table_c))) %>% 
+    mutate(diet = paste(diet))
+  
+  all_diet_ixn_res <- rbind(all_diet_ixn_res, int_butyrate_res, int_toxin_res)
   
   assign(centered_var_name,
          int_table_c)
 }
+
+## adding significance to stats after p-value adjustment 
+all_diet_ixn_res <- mutate(all_diet_ixn_res, signif = as.character(symnum(p.value,
+                                                                   cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 0.1, 1),
+                                                                   symbols = c("****", "***", "**", "*", ".", "ns"),
+                                                                   abbr.colnames = FALSE,
+                                                                   na = "ns")))
 ```
 
 ```{r}
@@ -257,7 +331,7 @@ for (diet in unlist(names(diet_tables))) {
 ## log10 transformation helps a little bit but not a lot
 chow_mediation_table %>% 
   mutate(toxinXcdiff = log_total_toxin * log_cdiff_rel_abund) %>% 
-  select(log_total_toxin, log_cdiff_rel_abund, toxinXcdiff) %>% 
+  dplyr::select(log_total_toxin, log_cdiff_rel_abund, toxinXcdiff) %>% 
   as.matrix() %>% 
   Hmisc::rcorr()
 
@@ -269,22 +343,24 @@ test_mediation_table_c <- chow_mediation_table %>%
          toxinXcdiff_c = toxin_c*cdiff_c)
 
 test_mediation_table_c %>% 
-  select(toxin_c, cdiff_c, toxinXcdiff_c) %>%
+  dplyr::select(toxin_c, cdiff_c, toxinXcdiff_c) %>%
   as.matrix() %>%
   Hmisc::rcorr()
 
 ## now the effect of butyrate on cecal inflammation at the mean cdiff relative abundance 
-summary(lm(cecum ~ toxin_c * cdiff_c,
-           data = test_mediation_table_c))
+test <- tidy(glance(lm(cecum ~ toxin_c * cdiff_c,
+           data = test_mediation_table_c)))
+
+
 ```
 
 **a plot to help me visualize**
 ```{r}
-all_centered_tables <- rbind(chow_mediation_table_c,
-                             hfhf_mediation_table_c,
-                             hflf_mediation_table_c,
-                             lfhf_mediation_table_c,
-                             lflf_mediation_table_c) %>% 
+all_centered_tables <- rbind(Chow_mediation_table_c,
+                             `HF/HF_mediation_table_c`,
+                             `HF/LF_mediation_table_c`,
+                             `LF/HF_mediation_table_c`,
+                             `LF/LF_mediation_table_c`) %>% 
   mutate(cdiff_amount = ifelse(cdiff_c < 0, 'low', 'high'),
          butyrate_amount = ifelse(butyrate_c < 0, 'low', 'high'),
          toxin_amount = ifelse(toxin_c < 0, 'low', 'high'))
@@ -301,7 +377,7 @@ toxin_amount_labs <- c('high' = 'Toxin > mean',
 all_centered_tables %>% 
   ggplot(aes(y = cecum, x = butyrate_c)) +
   geom_point(aes(color = diet_f)) +
-  geom_smooth(aes(group = diet_f, color = diet_f), method = "lm", se = FALSE) +
+  geom_smooth(aes(color = diet_f, group = diet_f), method = "lm", se = FALSE) +
   theme_bw() +
   facet_wrap(~cdiff_amount,
              scales = "free_x",
@@ -357,6 +433,106 @@ all_centered_tables %>%
        title = 'Effect of C. diff Abundance on Histopathology based on Toxin')
 
 
+```
+
+**high-fat/low-fiber plot only**
+```{r}
+(hflf_buty_plot <- all_centered_tables %>% 
+  filter(diet_f == "HF/LF") %>% 
+  ggplot(aes(y = cecum, x = butyrate_c)) +
+  geom_jitter(alpha = 0.5, width = 0, height = 0.1, size = 3) +
+  geom_smooth(method = "lm", se = FALSE) +
+  theme_bw() +
+  facet_wrap(~cdiff_amount,
+             # scales = "free_x",
+             labeller = labeller(cdiff_amount = cdiff_amount_labs)) +
+  labs(x = 'Butyrate (mean_centered)',
+       y = 'Cecal Histopathology Score',
+       title = 'Effect of Butyrate on Histopathology based on C.diff Abundance'))
+
+(hflf_toxin_plot <- all_centered_tables %>% 
+  filter(diet_f == "HF/LF") %>% 
+  ggplot(aes(y = cecum, x = toxin_c)) +
+  geom_jitter(alpha = 0.5, width = 0, height = 0.1, size = 3) +
+  geom_smooth(method = "lm", se = FALSE) +
+  theme_bw() +
+  facet_wrap(~cdiff_amount,
+             # scales = "free_x",
+             labeller = labeller(cdiff_amount = cdiff_amount_labs)) +
+  labs(x = 'Total Toxin (mean_centered)',
+       y = 'Cecal Histopathology Score',
+       title = 'Effect of Toxin on Histopathology based on C.diff Abundance'))
+```
+
+**cdiff relative abundance plot**
+```{r, fig.width=15, fig.height=7.5}
+apppleplots::facet_twice_plots(input_table = histo_cdiff_abun_table,
+                               x_value = 'diet',
+                               y_value = 'rel_abund',
+                               x_value_type = NULL,
+                               y_transform = TRUE,
+                               x_labels = NULL,
+                               box_group_by = 'diet',
+                               line_group_by = 'mouse_id',
+                               smooth_line = NULL,
+                               point_alpha = 0,
+                               facet_rows = NULL,
+                               facet_cols = 'Genus',
+                               row_labs = NULL,
+                               col_labs = NULL,
+                               x_name = 'Diet',
+                               y_name = 'Relative Abundance (log10)',
+                               title_content = 'UA Cecum') +
+  geom_jitter(aes(fill = as.factor(study)), width = 0.1, height = 0, alpha = 0.7, size = 4, pch = 21) +
+  theme_bw(base_size = 20) +
+  labs(subtitle = 'Day 3 Post-Infection',
+       fill = 'Batch')
+
+
+
+histo_cdiff_abun_table %>% 
+  ggplot(aes(x = rel_abund, y = cecum)) +
+  geom_jitter(aes(fill = diet), alpha = 0.6, width = 0, height = 0.1, size = 3, pch = 21) +
+  geom_smooth(aes(group = diet, color = diet), method = "lm", se = FALSE) +
+  theme_bw(base_size = 20) +
+  scale_x_continuous(trans = 'log10') +
+  facet_wrap(~diet) +
+  labs(x = 'Clostridioides Relative Abundance (log10)',
+       y = 'Score',
+       fill = 'Diet',
+       color = 'Diet',
+       title = 'UA Day 3 Post-Infection',
+       subtitle = 'Histopathology:Cecum 16S')
+
+mediation_table %>% 
+  ggplot(aes(x = cdiff_rel_abund, y = total_toxin)) +
+  geom_jitter(aes(fill = diet_f), alpha = 0.6, width = 0, height = 0.1, size = 3, pch = 21) +
+  geom_smooth(aes(group = diet_f, color = diet_f), method = "lm", se = FALSE) +
+  theme_bw(base_size = 20) +
+  scale_x_continuous(trans = 'log10') +
+  scale_y_continuous(trans = 'log10') +
+  facet_wrap(~diet_f) +
+  labs(x = 'Clostridioides Relative Abundance (log10)',
+       y = 'Total Toxin (log10)',
+       fill = 'Diet',
+       color = 'Diet',
+       title = 'UA Day 3 Post-Infection',
+       subtitle = 'Total Toxin:Cecum 16S')
+```
+
+
+**saving my outputs**
+```{r}
+save(list = c('hflf_buty_plot',
+              'hflf_toxin_plot'),
+     file = '../../../figures/hflf_butyTox_mediation.rdat')
+
+## this isnt working bc of weird column names and i dont have time to figure this out rn
+# write_tsv(all_centered_tables,
+#           file = '../data/misc/butyTox_cdiffAbun_meanCentered.tsv')
+
+write_tsv(all_diet_ixn_res,
+          file = '../stats/butyTox_ixn_res_allDiet.tsv')
 ```
 
 

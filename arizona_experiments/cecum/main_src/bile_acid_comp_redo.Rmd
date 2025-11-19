@@ -76,23 +76,70 @@ lm_r2_p_value <- function(input_table,
 }
 
 ## putting stats directly on correlation plots 
+# stat_on_plot <- function(stat_table,
+#                          wanted_col_list,
+#                          x_col_name,
+#                          x_col_value,
+#                          y_col_name,
+#                          y_col_value,
+#                          plot,
+#                          plot_text_size){
+#   ## making table conducive to labeling plot 
+#   proc_stat_table <- stat_table %>% 
+#     filter(signif != 'ns') %>% 
+#     select(all_of(wanted_col_list)) %>% 
+#     ## created columns need to match up with the column names called for the x and y axis in the plot
+#     ## numeric values added are the x and y coordinates for where the label will sit in the facet block 
+#     mutate("{x_col_name}" := paste(x_col_value),
+#            "{x_col_name}" := as.numeric(.data[[x_col_name]]),
+#            "{y_col_name}" := paste(y_col_value),
+#            "{y_col_name}" := as.numeric(.data[[y_col_name]]),
+#            p_value = signif(p_value, digits = 3),
+#            r_squared = signif(r_squared, digits = 3),
+#            pVal_rSquare = paste0('p-value: ', p_value, "\n", 
+#                                  'r2: ', r_squared))
+#   
+#   ## putting labels on plot 
+#   plot_wStats <- plot +
+#     geom_label(data = proc_stat_table, 
+#                label = proc_stat_table$pVal_rSquare,
+#                color = 'black',
+#                fontface = 'bold',
+#                size = plot_text_size)
+#   
+#   ## creating list of my outputs
+#   my_list <- list(ProcStatTable = proc_stat_table,
+#                   PlotwStats = plot_wStats)
+#   
+#   return(my_list)
+# }
+
+## putting stats directly on correlation plots 
 stat_on_plot <- function(stat_table,
                          wanted_col_list,
+                         product_list,
+                         join_col,
                          x_col_name,
-                         x_col_value,
                          y_col_name,
-                         y_col_value,
                          plot,
                          plot_text_size){
   ## making table conducive to labeling plot 
+  ## create table based on nested list to join w stat table 
+  ## this makes it a lot easier to specify different locations for the 
+  ## stats on the plot
+  stat_loc_table <- enframe(product_list, 
+                            name = join_col, 
+                            value = 'tmp') %>% 
+    unnest_wider(tmp)
+  
+  
   proc_stat_table <- stat_table %>% 
     filter(signif != 'ns') %>% 
     select(all_of(wanted_col_list)) %>% 
+    left_join(stat_loc_table, by = join_col) %>% 
     ## created columns need to match up with the column names called for the x and y axis in the plot
     ## numeric values added are the x and y coordinates for where the label will sit in the facet block 
-    mutate("{x_col_name}" := paste(x_col_value),
-           "{x_col_name}" := as.numeric(.data[[x_col_name]]),
-           "{y_col_name}" := paste(y_col_value),
+    mutate("{x_col_name}" := as.numeric(.data[[x_col_name]]),
            "{y_col_name}" := as.numeric(.data[[y_col_name]]),
            p_value = signif(p_value, digits = 3),
            r_squared = signif(r_squared, digits = 3),
@@ -118,8 +165,10 @@ stat_on_plot <- function(stat_table,
 **File paths**
 ```{r}
 histo_metabTox_fp <- '../data/misc/histoMetabToxin_results_comb.tsv'
-bile_acid_fp <- '../data/misc/processed_bile_acid.tsv'
-ratio_ba_fp <- '../data/misc/processed_ratio_bileAcid.tsv'
+# bile_acid_fp <- '../data/misc/processed_bile_acid.tsv'
+# ratio_ba_fp <- '../data/misc/processed_ratio_bileAcid.tsv'
+bile_acid_fp <- '../data/misc/v2_proc_bile_acid.tsv'
+ratio_ba_fp <- '../data/misc/v2_proc_ratio_bileAcid.tsv'
 
 ## plot relabeling variables
 tox_labs <- c('TcdA',
@@ -171,6 +220,7 @@ putting bile acid concentrations/ratios together with the toxin and histo data
 ## bile acid table
 bile_acid_table <- read_tsv(bile_acid_fp) %>% 
   select(mouse_id, bile_acid, concentration, conc_normalized, c_diff_effect) %>% 
+  filter(conc_normalized != "not_enough_sample") %>% 
   rename(microbe_product = bile_acid)
 
 ## bile acid ratios promoter:inhibitor
@@ -248,12 +298,19 @@ bileAcid_tox_stats <- lm_r2_p_value(input_table = bileAcid_tox_table,
 
 
 ## stats on plot
+bileAcid_tox_stat_loc <- list('1' = c('conc_normalized' = 5000,
+                                      'conc_score' = 1800),
+                              '2' = c('conc_normalized' = 7000,
+                                      'conc_score' = 14),
+                               '3' = c('conc_normalized' = 0,
+                                       'conc_score' = 0))
+
 bileAcid_tox_list <- stat_on_plot(stat_table = bileAcid_tox_stats,
                                wanted_col_list = colnames(bileAcid_tox_stats),
+                               product_list = bileAcid_tox_stat_loc,
+                               join_col = 'bile_effect_order',
                                x_col_name = 'conc_normalized',
-                               x_col_value = '10',
                                y_col_name = 'conc_score',
-                               y_col_value = '14',
                                plot = bileAcid_tox_plot,
                                plot_text_size = 3.5)
 
@@ -315,12 +372,19 @@ bileAcid_histo_stats <- lm_r2_p_value(input_table = bileAcid_histo_table,
 
 
 ## stats on plot
+bileAcid_histo_stat_loc <- list('1' = c('conc_normalized' = 3000,
+                                        'conc_score' = 5),
+                              '2' = c('conc_normalized' = 5000,
+                                      'conc_score' = 5.75),
+                               '3' = c('conc_normalized' = 4000,
+                                       'conc_score' = 4))
+
 bileAcid_histo_list <- stat_on_plot(stat_table = bileAcid_histo_stats,
                                wanted_col_list = colnames(bileAcid_histo_stats),
+                               product_list = bileAcid_histo_stat_loc,
+                               join_col = 'bile_effect_order',
                                x_col_name = 'conc_normalized',
-                               x_col_value = '4000',
                                y_col_name = 'conc_score',
-                               y_col_value = '5.75',
                                plot = bileAcid_histo_plot,
                                plot_text_size = 3.5)
 
@@ -330,7 +394,7 @@ bileAcid_histoStats_plot
 ```
 
 **Putting the plots together**
-```{r, fig.width=19, fig.height=10}
+```{r, fig.width=19, fig.height=12}
 ## creating universal y axis label since the y axis is the same for both plots 
 y_axis_label <- ggdraw() +
   draw_label('Bile Acid Concentration (log10)',
@@ -357,7 +421,7 @@ supp_fig2a
 ggsave('../plots/supp_bileAcid_comp_plot.pdf',
        plot = supp_fig2a,
        width = 19,
-       height = 10)
+       height = 12)
 
 save(supp_fig2a,
      file = '../../../figures/supp_fig2a.rdat')

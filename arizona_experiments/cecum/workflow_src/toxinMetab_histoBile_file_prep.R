@@ -9,6 +9,11 @@ library(tidyverse)
 library(broom)
 library(argparse)
 
+#### NOTE!! ####
+## study 1 has been filtered out of ALL RESULTS due to lack of CDI!! ##
+## madi redid this analysis on 11-18-2025 due to low sample numbers for high fiber diets ##
+################
+
 ## using argparse for my file paths
 ## so I can easily edit file paths from my workflow and not have to edit the actual R scripts
 parser <- ArgumentParser()
@@ -61,11 +66,13 @@ parser$add_argument("-br",
 args <- parser$parse_args()
 
 ## input file paths
-# metadata_FP <- './cecum/data/misc/filt_cecal_processed_metadata.tsv'
-# toxin_FP <- './cecum/data/misc/toxin_final_data.tsv'
-# histo_FP <- './cecum/data/misc/histo_data.csv'
-# metab_FP <- './cecum/data/misc/metabolomics.csv'
-# bile_acid_FP <- './cecum/data/misc/corrected_bile_acid.tsv'
+metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
+mouseid_facil_FP <- '../data/misc/mouseID_facil.tsv'
+mouseid_diet_key_FP <- '../data/misc/cecal_key.txt'
+toxin_FP <- '../data/misc/toxin_final_data.tsv'
+histo_FP <- '../data/misc/histo_data.csv'
+metab_FP <- '../data/misc/metabolomics.csv'
+bile_acid_FP <- '../data/misc/corrected_bile_acid.tsv'
 
 ## lists of wanted and unwanted columns for metabolomics processing
 wanted_metabs <- c('Acetic Acid (ug/g)',
@@ -80,7 +87,6 @@ unwanted_columns <- c('2-methyl-propanoic acid (ug/g)',
                       'SCFA Data File',
                       'Acq. Date-Time',
                       'Tube_Label',
-                      'Sample_Type',
                       'Collection Date',
                       'Dil.')
 ## inhibitors and promoters list for bile acid file processing
@@ -93,17 +99,16 @@ promoter_list <- c('_T-CA',
 
 ## needed functions
 ## 1 - toxin file prep
-toxin_prep <- function(metadata_fp,
+toxin_prep <- function(mouseid_facil_fp,
                        toxin_fp){
   ## toxin data 
   toxin <- read_tsv(toxin_FP)
   wanted_ids <- toxin$mouse_id
   ## metadata 
-  metadata <- read_tsv(metadata_FP) %>% 
-    select(!c(tube_num, date, corr_sample_num))
+  mouseid_facil <- read_tsv(mouseid_facil_fp)
+  
   ## toxin neat concentrations (non_diluted)
   toxin %>% 
-    merge(metadata, by = 'mouse_id') %>% 
     select(!c('Total TcA 1:10', 'Total TcB 1:10')) %>% 
     gather('Total TcA Neat', 'Total TcB Neat', 
            key = neat_toxin, value = neat_conc) -> pre_neat_toxin
@@ -111,15 +116,24 @@ toxin_prep <- function(metadata_fp,
   pre_neat_toxin$neat_conc[pre_neat_toxin$neat_conc == 'BDL'] <- '0'
   
   pre_neat_toxin %>% 
-    mutate(neat_conc = as.numeric(neat_conc)) %>% 
+    mutate(neat_conc = as.numeric(neat_conc),
+           diet = case_when(
+             Sample_Type == 'Chow' ~ 'Chow',
+             Sample_Type == 'Ctrl' ~ 'LF/LF',
+             Sample_Type == 'WD' ~ 'HF/LF',
+             Sample_Type == 'WD+F' ~ 'HF/HF',
+             Sample_Type == 'Ctrl+F' ~ 'LF/HF'
+           )) %>% 
     select(!c('Tube_Label',
               'Collection Date',
               'Sample_Type',
-              'Extra_Sample')) -> neat_toxin
+              'Extra_Sample')) %>% 
+    left_join(mouseid_facil, by = "mouse_id") %>% 
+    filter(study != 1) -> neat_toxin
+  
   ## toxin diluted concentrations 
   ## chow is not included in this 
   toxin %>% 
-    merge(metadata, by = 'mouse_id') %>% 
     select(!c('Total TcA Neat', 'Total TcB Neat')) %>% 
     gather('Total TcA 1:10', 'Total TcB 1:10',
            key = dil_toxin, value = dil_conc) -> pre_dil_toxin
@@ -128,12 +142,21 @@ toxin_prep <- function(metadata_fp,
   pre_dil_toxin$dil_conc[pre_dil_toxin$dil_conc == 'Chow'] <- '0'
   
   pre_dil_toxin %>% 
-    mutate(dil_conc = as.numeric(dil_conc)) %>% 
-    filter(diet != 'Chow') %>% 
+    mutate(dil_conc = as.numeric(dil_conc),
+           diet = case_when(
+             Sample_Type == 'Chow' ~ 'Chow',
+             Sample_Type == 'Ctrl' ~ 'LF/LF',
+             Sample_Type == 'WD' ~ 'HF/LF',
+             Sample_Type == 'WD+F' ~ 'HF/HF',
+             Sample_Type == 'Ctrl+F' ~ 'LF/HF'
+           )) %>% 
+    filter(diet != 'Chow') %>%
     select(!c('Tube_Label',
               'Collection Date',
               'Sample_Type',
-              'Extra_Sample')) -> dil_toxin
+              'Extra_Sample')) %>% 
+    left_join(mouseid_facil, by = "mouse_id") %>% 
+    filter(study != 1) -> dil_toxin
   ## creating a list of my outputs
   my_list <- list(NeatToxin = neat_toxin,
                   DilToxin = dil_toxin)
@@ -141,42 +164,54 @@ toxin_prep <- function(metadata_fp,
 }
 
 ## 2 - metabolomics file prep
-metab_prep <- function(metadata_fp,
+metab_prep <- function(mouseid_facil_fp,
                        metab_fp,
                        metab_col_filter,
                        metab_filter){
   ## metabolomics file prep 
   metab <- read_csv(metab_FP)
   ## metadta file prep 
-  metadata <- read_tsv(metadata_FP) %>% 
-    select(!c(tube_num, date, corr_sample_num))
-  metadata %>% 
-    merge(metab, by = 'mouse_id') %>% 
+  mouseid_facil <- read_tsv(mouseid_facil_fp) 
+  
+  metab %>% 
     select(-(all_of(metab_col_filter))) %>% 
-    gather(metab_filter, key = metabolite, value = concentration) %>% 
-    filter(!is.na(mouse_id)) -> pre_metab
+    gather(all_of(metab_filter), key = metabolite, value = concentration) -> pre_metab
+
   ## changes all 'ND' values in the concentration column to 0 
   pre_metab$concentration[pre_metab$concentration == 'ND'] <- 0
   
   pre_metab %>% 
-    filter(!is.na(concentration)) %>% 
-    mutate(concentration = as.numeric(concentration)) -> big_metab
+    mutate(concentration = ifelse(is.na(concentration), "not_enough_sample", concentration),
+           diet = case_when(
+             Sample_Type == 'Chow' ~ 'Chow',
+             Sample_Type == 'Ctrl' ~ 'LF/LF',
+             Sample_Type == 'WD' ~ 'HF/LF',
+             Sample_Type == 'WD+F' ~ 'HF/HF',
+             Sample_Type == 'Ctrl+F' ~ 'LF/HF'
+           )) %>% 
+    select(-Sample_Type) %>% 
+    left_join(mouseid_facil, by = "mouse_id") %>% 
+    filter(study != 1) -> big_metab
+  
   return(big_metab)
 }
 
 ## 3 - histopathology file prep
-histo_prep <- function(metadata_fp,
+histo_prep <- function(mouseid_facil_fp,
+                       mouseid_diet_fp,
                        histo_fp){
-  ## reading in metadata file
-  metadata <- read_tsv(metadata_fp)
+  ## reading in metadata file(s)
+  mouseid_facil <- read_tsv(mouseid_facil_fp)
+  mouseid_diet_key <- read_tsv(mouseid_diet_fp)
   ## reading in histo file
   histo <- read_csv(histo_fp) %>% 
-    filter(!is.na(mouse_id))
-  ## joining them all together for ggplot rendering 
-  metadata %>% 
-    merge(histo, by = 'mouse_id') %>% 
+    filter(!is.na(mouse_id)) %>% 
     gather(cecum, colon, key = tissue, value = score) %>% 
-    select(!c(tube_num, date, corr_sample_num)) -> big_histo
+    left_join(mouseid_facil, by = "mouse_id") %>% 
+    left_join(mouseid_diet_key, by = "mouse_id") %>% 
+    select(!c('date', 'tube_numb')) %>% 
+    filter(study != 1) -> big_histo 
+
   return(big_histo)
 }
 
@@ -205,10 +240,9 @@ bile_acid_prep <- function(bile_acid_fp,
   ## changing all undetectable values to 0 
   big_bile_acid$concentration[big_bile_acid$concentration == '<LOD' | big_bile_acid$concentration == '<LOQ'] <- 0
   ## adding 2 to all values so that all points will be on the plot when transformed to log10
-  big_bile_acid %>% 
-    na.omit() %>% 
-    mutate(concentration = as.numeric(concentration),
-           conc_normalized = concentration + 2) %>% 
+  big_bile_acid %>%
+    mutate(concentration = ifelse(is.na(concentration), "not_enough_sample", concentration),
+           conc_normalized = ifelse(concentration != "not_enough_sample", as.numeric(concentration) + 2, concentration)) %>% 
     filter(study != 1) -> big_bile_acid
   ## creating list of outputs
   my_list <- list(NonProcBile = bile_acid,
@@ -222,7 +256,8 @@ bile_ratio_prep <- function(proc_bile_table){
   proc_bile_table %>% 
     select(-bile_acid) %>% 
     group_by(diet, c_diff_effect, mouse_id) %>% 
-    summarise(sum = sum(conc_normalized)) %>% 
+    filter(conc_normalized != "not_enough_sample") %>% 
+    summarise(sum = sum(as.numeric(conc_normalized))) %>% 
     ungroup() -> bile_sum
   ## them dividing the normalized concentration of promoters/inhibitors for each mouse id by diet
   bile_sum %>% 
@@ -237,21 +272,22 @@ bile_ratio_prep <- function(proc_bile_table){
 
 ## processing my files so I can use them for plot construction and statistical analysis
 ## toxin
-toxin_files <- toxin_prep(args$metadata_FP,
-                          args$toxin_FP)
+toxin_files <- toxin_prep(mouseid_facil_FP,
+                          toxin_FP)
 neat_toxin <- toxin_files$NeatToxin
 dil_toxin <- toxin_files$DilToxin
 
 ## metabolomics 
-metab <- metab_prep(args$metadata_FP,
-                    args$metab_FP,
+metab <- metab_prep(mouseid_facil_FP,
+                    metab_FP,
                     unwanted_columns,
                     wanted_metabs)
 ## histopathology
-histo <- histo_prep(args$metadata_FP,
-                    args$histo_FP)
+histo <- histo_prep(mouseid_facil_FP,
+                    mouseid_diet_key_FP,
+                    histo_FP)
 ## bile acid 
-bile_files <- bile_acid_prep(args$bile_acid_FP,
+bile_files <- bile_acid_prep(bile_acid_FP,
                              inhibitor_list,
                              promoter_list)
 proc_bile_acid <- bile_files$ProcBile
@@ -261,15 +297,22 @@ noProc_bile_acid <- bile_files$NonProcBile
 bile_ratio <- bile_ratio_prep(proc_bile_acid)
 
 ## saving my processed files as a .tsv so I can continue to use them 
+neatToxin_output_FP <- '../data/misc/v2_proc_neat_toxin.tsv'
+dilToxin_output_FP <- '../data/misc/v2_proc_dil_toxin.tsv'
+metab_output_FP <- '../data/misc/v2_proc_metab.tsv'
+histo_output_FP <- '../data/misc/v2_proc_histo.tsv'
+bileAcid_output_FP <- '../data/misc/v2_proc_bile_acid.tsv'
+bileAcid_ratio_FP <- '../data/misc/v2_proc_ratio_bileAcid.tsv'
+
 write_tsv(neat_toxin,
-          args$neatToxin_output_FP)
+          neatToxin_output_FP)
 write_tsv(dil_toxin,
-          args$dilToxin_output_FP)
+          dilToxin_output_FP)
 write_tsv(metab,
-          args$metab_output_FP)
+          metab_output_FP)
 write_tsv(histo,
-          args$histo_output_FP)
+          histo_output_FP)
 write_tsv(proc_bile_acid,
-          args$bileAcid_output_FP)
+          bileAcid_output_FP)
 write_tsv(bile_ratio,
-          args$bileAcid_ratio_FP)
+          bileAcid_ratio_FP)

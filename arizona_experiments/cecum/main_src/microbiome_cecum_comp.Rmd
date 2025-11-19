@@ -173,9 +173,9 @@ metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
 faith_pd_FP <- '../data/core_outputs/faith_pd.tsv'
 otu_table_FP <- '../data/cecal_qiime/tax_filt_actual.qza'
 tax_FP <- '../data/cecal_qiime/taxonomy.qza'
-bile_acid_FP <- '../data/misc/processed_bile_acid.tsv'
-bile_ratio_FP <- '../data/misc/processed_ratio_bileAcid.tsv'
-metab_FP <- '../data/misc/processed_metabolomics.tsv'
+bile_acid_FP <- '../data/misc/v2_proc_bile_acid.tsv'
+bile_ratio_FP <- '../data/misc/v2_proc_ratio_bileAcid.tsv'
+metab_FP <- '../data/misc/v2_proc_metab.tsv'
 
 
 diet_labs <- 
@@ -258,8 +258,9 @@ sample_mouseID_table <- read_tsv(metadata_FP) %>%
   select(mouse_id, sampleid)
 
 full_metab <- read_tsv(metab_FP) %>% 
-  select(mouse_id, diet, sampleid, metabolite, concentration) %>% 
-  mutate(metab_conc_norm = (concentration + 2)) %>% 
+  select(mouse_id, diet, metabolite, concentration) %>% 
+  left_join(sample_mouseID_table, by = 'mouse_id') %>% 
+  na.omit() %>%
   mutate(dietary_content = case_when(
     diet == 'HF/HF' | diet == 'LF/HF' ~ 'high_fiber',
     diet == 'Chow' ~ 'chow',
@@ -268,15 +269,21 @@ full_metab <- read_tsv(metab_FP) %>%
 
 full_bile_acid <- read_tsv(bile_acid_FP) %>% 
   select(diet, mouse_id, bile_acid, concentration, c_diff_effect, conc_normalized) %>% 
+  filter(conc_normalized != "not_enough_sample") %>% 
   mutate(dietary_content = case_when(
     diet == 'HF/HF' | diet == 'LF/HF' ~ 'high_fiber',
     diet == 'Chow' ~ 'chow',
     diet == 'HF/LF' | diet == 'LF/LF' ~ 'low_fiber'
-  ))
+  ),
+  conc_normalized = as.numeric(conc_normalized),
+  concentration = as.numeric(concentration))
 
 ## joining
 butyrate_faith_table <- full_metab %>% 
   left_join(faith, by = 'sampleid') %>% 
+  filter(concentration != "not_enough_sample") %>% 
+  mutate(concentration = as.numeric(concentration),
+         metab_conc_norm = (concentration + 2)) %>% 
   filter(metabolite == 'n-Butanoic Acid (ug/g)')
 
 dca_faith_table <- full_bile_acid %>% 

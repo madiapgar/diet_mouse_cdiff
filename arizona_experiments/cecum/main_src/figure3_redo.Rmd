@@ -118,8 +118,8 @@ stat_on_plot <- function(stat_table,
 **File paths**
 ```{r}
 histo_metabTox_fp <- '../data/misc/histoMetabToxin_results_comb.tsv'
-bile_acid_fp <- '../data/misc/processed_bile_acid.tsv'
-histo_fp <- '../data/misc/processed_histopathology.tsv'
+bile_acid_fp <- '../data/misc/v2_proc_bile_acid.tsv'
+histo_fp <- '../data/misc/v2_proc_histo.tsv'
 
 ## plot relabeling variables
 tox_labs <- c('TcdA',
@@ -142,12 +142,13 @@ names(cecum_labs) <- c('cecum')
 histo_metabTox_table <- read_tsv(histo_metabTox_fp)
 
 ## putting together histo and bile acid results so I can add it to the giant table 
-histo_table <- read_tsv(histo_fp) %>% 
-  select(mouse_id, sampleid, diet, score, tissue)
+histo_table <- read_tsv(histo_fp)
 
 bile_acid_table <- read_tsv(bile_acid_fp) %>% 
   select(mouse_id, bile_acid, concentration, conc_normalized) %>% 
-  rename(microbe_product = bile_acid)
+  rename(microbe_product = bile_acid) %>% 
+  filter(conc_normalized != 'not_enough_sample') %>% 
+  mutate(log_conc_normalized = log10(as.numeric(conc_normalized)))
 
 histo_bileAcid_table <- histo_table %>% 
   left_join(bile_acid_table, by = 'mouse_id') %>% 
@@ -204,7 +205,9 @@ all_cecalProducts_table %>%
   select(!c('tissue', 'score')) %>% 
   filter(microbe_product == 'Deoxycholic_acid_DCA') %>% 
   left_join(histoTox_only_table, by = 'mouse_id',
-            relationship = "many-to-many") -> dca_toxHisto_table
+            relationship = "many-to-many") %>% 
+  mutate(conc_score = as.numeric(conc_score),
+         conc_normalized = as.numeric(conc_normalized)) -> dca_toxHisto_table
 ```
 
 **Attempt at the plot**
@@ -213,8 +216,8 @@ toxin by dca concentration
 ## only pulling out toxin data
 dca_tox_table <- dca_toxHisto_table %>% 
   filter(comp_value != "cecum") %>% 
-  mutate(log_conc_norm = log10(conc_normalized),
-         log_conc_score = log10(conc_score))
+  rename(log_conc_norm = log_conc_normalized) %>% 
+  mutate(log_conc_score = log10(conc_score))
 
 dca_tox_plot <- apppleplots::correlation_plots(input_table = dca_tox_table,
                                                     x_value = 'conc_normalized',
@@ -275,7 +278,8 @@ cecal histopathology score by dca concentration
 ## only pulling out cecal histopathology data
 dca_histo_table <- dca_toxHisto_table %>% 
   filter(comp_value == "cecum") %>% 
-  mutate(log_conc_norm = log10(conc_normalized))
+  rename(log_conc_norm = log_conc_normalized)
+  # mutate(log_conc_norm = log10(conc_normalized))
 
 dca_histo_plot <- apppleplots::correlation_plots(input_table = dca_histo_table,
                                                     x_value = 'conc_normalized',

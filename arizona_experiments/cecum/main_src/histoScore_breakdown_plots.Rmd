@@ -22,24 +22,17 @@ library(ggpubr)
 ```{r}
 ## prepping all of my files for downstream analysis
 file_prep <- function(histo_fp,
-                      histo_cat_fp,
-                      metadata_fp){
+                      histo_cat_fp){
   ## reading in histo and histo categories file
-  histo <- read_csv(histo_fp)
-  colnames(histo) <- c('mouse_id',
-                       'cecum_total',
-                       'colon_total')
+  histo <- read_tsv(histo_fp) %>% 
+    spread(key = "tissue", value = "score") %>% 
+    rename(cecum_total = cecum,
+           colon_total = colon)
+  
   histo_cat <- read_tsv(histo_cat_fp)
   
   histo <- histo %>% 
     left_join(histo_cat, by = 'mouse_id') %>% 
-    na.omit()
-  ## reading in metadata file
-  metadata <- read_tsv(metadata_fp) %>% 
-    select(!c(tube_num, date, day_post_inf, sample_type, corr_sample_num))
-  ## putting them together
-  big_histo <- metadata %>% 
-    left_join(histo, by = 'mouse_id') %>% 
     gather(contains(c('cecum', 'colon')), key = category, value = score) %>% 
     separate_wider_delim(cols = 'category',
                          delim = '_',
@@ -47,11 +40,7 @@ file_prep <- function(histo_fp,
                                    'category'),
                          cols_remove = FALSE,
                          too_many = 'merge')
-  ## creating a list of outputs
-  my_list <- list(Histopathology = histo,
-                  Metadata = metadata,
-                  HistoTable = big_histo)
-  return(my_list)
+  return(histo)
 }
 
 ## statistical analysis for histopathology plots only
@@ -95,7 +84,7 @@ histo_plot <- function(histo_table,
   histo_table %>% 
     filter(tissue == wanted_filter) %>% 
     ggplot(aes(x = diet, y = score)) +
-    geom_boxplot(aes(group = diet)) +
+    geom_boxplot(aes(group = diet), outlier.shape = NA) +
     geom_jitter(alpha = 0.4, width = 0.1, height = 0) +
     theme_bw(base_size = 20) +
     scale_x_discrete(labels = x_labs) +
@@ -119,8 +108,8 @@ histo_plot <- function(histo_table,
 **File Paths**
 ```{r}
 histo_cat_FP <- '../data/misc/histo_categories.txt'
-histo_FP <- '../data/misc/histo_data.csv'
-metadata_FP <- '../data/misc/filt_cecal_processed_metadata.tsv'
+# histo_FP <- '../data/misc/histo_data.csv'
+histo_FP <- '../data/misc/v2_proc_histo.tsv'
 
 diet_x_labs <- c('Chow',
                  'HFt/\nHFb',
@@ -178,26 +167,21 @@ names(tissue_labs) <- c('cecum',
 **Data Wrangling**
 This data does not contain replicate one!
 ```{r}
-wanted_files <- file_prep(histo_FP,
-                          histo_cat_FP,
-                          metadata_FP)
-
-histo <- wanted_files$Histopathology
-metadata <- wanted_files$Metadata
-big_histo <- wanted_files$HistoTable
+histo <- file_prep(histo_FP,
+                   histo_cat_FP)
 ```
 
 **Stats**
 ```{r}
 ## cecal stats
-cecal_stats <- histo_stats(big_histo,
+cecal_stats <- histo_stats(histo,
                            'cecum')
 
 cecal_kruskal <- cecal_stats$KruskalTest
 cecal_dunn <- cecal_stats$DunnsPostHocTest
 
 ## colon stats
-colon_stats <- histo_stats(big_histo,
+colon_stats <- histo_stats(histo,
                            'colon')
 
 colon_kruskal <- colon_stats$KruskalTest
@@ -207,7 +191,7 @@ colon_dunn <- colon_stats$DunnsPostHocTest
 **Plots**
 ```{r, fig.height=5.5, fig.width=19}
 ## cecal plot
-cecum_plot <- histo_plot(big_histo,
+cecum_plot <- histo_plot(histo,
                          'cecum',
                          diet_x_labs,
                          cecum_labels,
@@ -215,7 +199,7 @@ cecum_plot <- histo_plot(big_histo,
                          'Cecal Tissue Damage Scoring by Diet')
 
 ## colon plot
-colon_plot <- histo_plot(big_histo,
+colon_plot <- histo_plot(histo,
                          'colon',
                          diet_x_labs,
                          colon_labels,

@@ -1,0 +1,254 @@
+---
+title: "microbiome_multivariate_analysis"
+output: html_document
+date: "2025-10-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(broom)
+library(rstatix)
+library(lmerTest)
+library(qiime2R)
+```
+
+**Functions**
+```{r}
+source("../workflow_src/test_lmer_vars_function.R")
+
+abun_file_prep <- function(metadata_fp,
+                           tax_fp,
+                           otu_table_fp,
+                           group_by_cols,
+                           tax_levels,
+                           filter_tax_by = NULL,
+                           filter_tax_col = NULL){
+  ## metadata
+  metadata_file <- read_tsv(metadata_fp) %>% 
+    rename(sampleid = `#SampleID`)
+  ## taxonomy
+  taxonomy <- read_qza(tax_fp)$data %>% 
+    parse_taxonomy() %>% 
+    rownames_to_column('asv')
+  ## otu table 
+  otu_table <- read_qza(otu_table_fp)$data
+  
+  otu_table <- otu_table %>% 
+    as_tibble(rownames = 'asv') %>% 
+    gather(-asv, key = sampleid, value = abun) %>% 
+    group_by(sampleid) %>% 
+    mutate(rel_abun = abun/sum(abun),
+           rel_abun = rel_abun + 0.000001) %>% 
+    filter(sampleid %in% metadata_file$sampleid)
+  ## joining all tables together 
+  wTax_level_groupBy_cols <- append(group_by_cols, tax_levels)
+  
+  abun_table <- otu_table %>% 
+    left_join(metadata_file, by = 'sampleid') %>% 
+    left_join(taxonomy, by = 'asv') %>% 
+    group_by(across(all_of(wTax_level_groupBy_cols))) %>%
+    summarise(rel_abund = sum(rel_abun)) %>% 
+    ungroup()
+  
+  if (is.character(filter_tax_by) & is.character(filter_tax_col)){
+    abun_table <- abun_table %>% 
+      filter(.data[[filter_tax_col]] %in% filter_tax_by)
+  } else {
+    abun_table
+  }
+  
+  ## creating a list for my outputs
+  my_list <- list(Taxonomy = taxonomy,
+                  OTUTable = otu_table,
+                  AbundanceTable = abun_table)
+  return(my_list)
+}
+```
+
+**File paths**
+```{r}
+metadata_FP <- '../data/misc/proc_newExp_d15-d3_metadata.tsv'
+tax_FP <- '../data/qiime/taxonomy.qza'
+otu_FP <- '../data/qiime/total_sum_otu_table.qza'
+surv_fp <- '../data/misc/survival_status.tsv'
+sack_status_fp <- '../data/misc/newExp_sackStatus_res.tsv'
+```
+
+**Prepping tax abundance table**
+```{r}
+wanted_abun_cols <- c('sampleid',
+                      'mouse_id',
+                      'day_post_inf',
+                      'diet', 
+                      'vendor')
+
+wanted_genus <- c('Enterococcus',
+                  'Escherichia-Shigella',
+                  'Proteus',
+                  'Lactobacillus',
+                  'Bacteroides',
+                  'Akkermansia',
+                  'Erysipelatoclostridium')
+
+abun_files <- abun_file_prep(metadata_fp = metadata_FP,
+                             tax_fp = tax_FP,
+                             otu_table_fp = otu_FP,
+                             group_by_cols = wanted_abun_cols,
+                             tax_levels = "Genus",
+                             filter_tax_by = wanted_genus,
+                             filter_tax_col = "Genus")
+
+genus_abun_table <- abun_files$AbundanceTable
+```
+
+**Joining with survival data**
+```{r}
+## survival status data
+surv_table <- read_tsv(surv_fp) %>% 
+  mutate(num_surv = ifelse(status == 'survived', 1, 0))
+
+## whether mice got sick or survived to end of time course
+sack_status_table <- read_tsv(sack_status_fp)
+
+## join with relative abundance table
+good_guys <- c('Bacteroides',
+               'Akkermansia',
+               'Erysipelatoclostridium')
+
+d3_surv_genusAbun_table <- genus_abun_table %>% 
+  filter(day_post_inf == 3,
+         !(Genus %in% good_guys)) %>% 
+  left_join(surv_table, by = "mouse_id") %>% 
+  left_join(sack_status_table, by = "mouse_id") %>% 
+  mutate(sack_status = ifelse(is.na(sack_status), 'sick', sack_status),
+         num_sack_status = ifelse(sack_status == 'end_time_course', 1, 0)) %>% 
+         # log_rel_abund = log10(rel_abund)) %>% 
+  # select(-rel_abund) %>% 
+  spread(key = 'Genus', value = 'rel_abund')
+
+baseline_surv_genusAbun_table <- genus_abun_table %>% 
+  filter(day_post_inf == -15,
+         !(Genus %in% good_guys)) %>% 
+  left_join(surv_table, by = "mouse_id") %>% 
+  left_join(sack_status_table, by = "mouse_id") %>% 
+  mutate(sack_status = ifelse(is.na(sack_status), 'sick', sack_status),
+         num_sack_status = ifelse(sack_status == 'end_time_course', 1, 0)) %>% 
+         # log_rel_abund = log10(rel_abund)) %>% 
+  # select(-rel_abund) %>% 
+  spread(key = 'Genus', value = 'rel_abund')
+
+
+# grouped_genera_table <- genus_abun_table %>% 
+#   filter(day_post_inf == 3) %>% 
+#   mutate(genus_class = ifelse(Genus %in% good_guys, "good_guy", "bad_guy")) %>% 
+#   select(-Genus) %>% 
+#   group_by(sampleid, mouse_id, day_post_inf, diet, vendor, genus_class) %>% 
+#   summarise(genus_class_abun = log10(sum(rel_abund))) %>% 
+#   spread(key = 'genus_class', value = 'genus_class_abun') %>% 
+#   left_join(surv_table, by = "mouse_id") %>% 
+#   left_join(sack_status_table, by = "mouse_id") %>% 
+#   mutate(sack_status = ifelse(is.na(sack_status), 'sick', sack_status),
+#          num_sack_status = as.numeric(ifelse(sack_status == 'end_time_course', 1, 0)))
+
+```
+
+**Attempting linear model?**
+- stratify by diet
+- try glm for binary LHS (logistic regression)
+```{r}
+# summary(lm(num_sack_status ~ vendor + diet + Proteus + Enterococcus + `Escherichia-Shigella` + Lactobacillus,
+#            data = surv_genusAbun_table))
+
+day3_glm_model <- summary(glm(num_sack_status ~ vendor + diet + Proteus + Enterococcus + `Escherichia-Shigella` + Lactobacillus,
+            family = binomial(link = "logit"),
+           data = d3_surv_genusAbun_table))
+
+baseline_glm_model <- summary(glm(num_sack_status ~ vendor + diet + Proteus + Enterococcus + 
+                                    `Escherichia-Shigella` + Lactobacillus,
+            family = binomial(link = "logit"),
+           data = baseline_surv_genusAbun_table))
+
+```
+
+- get exp() to get odds value from log-odds ratio (of estimates)
+0 < estimate < 1: negative relationship between response variable and predictors is negative
+estimate > 1: positive relationship between response variable and predictors 
+- if estimate is < 1, need to take inverse value (1/estimate), can get percent of this by (inverse - 1 * 100)
+```{r}
+baseline_glm_model
+```
+**Day 3 binomial GLM results**
+```{r}
+day3_glm_res <- as.data.frame(exp(day3_glm_model$coefficients))
+
+to_join_day3_glm <- as.data.frame(day3_glm_model$coefficients) %>% 
+  rownames_to_column(var = "tested_var") %>% 
+  rename(std_error = `Std. Error`,
+         z_value = `z value`,
+         p_value = `Pr(>|z|)`) %>% 
+  select(-Estimate)
+
+
+(proc_day3_glm_res <- day3_glm_res %>% 
+  rownames_to_column(var = "tested_var") %>% 
+  select(tested_var, Estimate) %>% 
+  rename(exp_estimate = Estimate) %>% 
+  mutate(interpretable_estimate = ifelse(between(exp_estimate, 0, 1), -(1/exp_estimate), exp_estimate),
+         compared_to = case_when(
+           !is.na(str_match(tested_var, "diet")) ~ "dietChow",
+           !is.na(str_match(tested_var, "vendor")) ~ "vendorcharles_river",
+           .default = "none"
+         ),
+         more_likely_to = ifelse(interpretable_estimate < 0, "get_sick", "survive_to_end")) %>% 
+  select(tested_var, compared_to, everything()) %>% 
+  left_join(to_join_day3_glm, by = "tested_var"))
+```
+
+**Day -15 binomial GLM results**
+```{r}
+baseline_glm_res <- as.data.frame(exp(baseline_glm_model$coefficients))
+
+to_join_baseline_glm <- as.data.frame(baseline_glm_model$coefficients) %>% 
+  rownames_to_column(var = "tested_var") %>% 
+  rename(std_error = `Std. Error`,
+         z_value = `z value`,
+         p_value = `Pr(>|z|)`) %>% 
+  select(-Estimate)
+
+
+(proc_baseline_glm_res <- baseline_glm_res %>% 
+  rownames_to_column(var = "tested_var") %>% 
+  select(tested_var, Estimate) %>% 
+  rename(exp_estimate = Estimate) %>% 
+  mutate(interpretable_estimate = ifelse(between(exp_estimate, 0, 1), -(1/exp_estimate), exp_estimate),
+         compared_to = case_when(
+           !is.na(str_match(tested_var, "diet")) ~ "dietChow",
+           !is.na(str_match(tested_var, "vendor")) ~ "vendorcharles_river",
+           .default = "none"
+         ),
+         more_likely_to = ifelse(interpretable_estimate < 0, "get_sick", "survive_to_end")) %>% 
+  select(tested_var, compared_to, everything()) %>% 
+  left_join(to_join_baseline_glm, by = "tested_var"))
+```
+
+much more mice survived to end of time course in taconic than charles river 
+```{r}
+surv_genusAbun_table %>% 
+  group_by(vendor, diet) %>% 
+  count(sack_status)
+```
+
+**Saving my results**
+```{r}
+write_tsv(proc_day3_glm_res,
+          file = '../stats/d3_multivariate_microbiome_binomialGLM.tsv')
+
+write_tsv(proc_baseline_glm_res,
+          file = '../stats/baseline_multivariate_microbiome_binomialGLM.tsv')
+```
+

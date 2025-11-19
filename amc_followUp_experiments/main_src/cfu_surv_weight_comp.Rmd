@@ -39,7 +39,7 @@ cfu_table <- read_tsv(cfu_fp)
 raw_cfu_table <- read_tsv(raw_cfu_fp)
 culture_tax_table <- read_tsv(culture_tax_fp) %>% 
   filter(experiment != 'CDD01') %>% 
-  select(mouse_id, location, cult_rel_abund, top_tax) 
+  dplyr::select(mouse_id, location, cult_rel_abund, top_tax) 
 ```
 **Data wrangled**
 reproductive culture sample is not included: 
@@ -49,10 +49,10 @@ reproductive culture sample is not included:
   - counts = 198
 ```{r}
 mini_cfu_table <- cfu_table %>% 
-  select(mouse_id, location, colony_count)
+  dplyr::select(mouse_id, location, colony_count)
 
 proc_raw_cfu_table <- raw_cfu_table %>% 
-  select(mouse_id.tissue, `colonies_per_g/mL`) %>% 
+  dplyr::select(mouse_id.tissue, `colonies_per_g/mL`) %>% 
   rename(colonies_per_gmL = `colonies_per_g/mL`) %>% 
   filter(!grepl("Reproductive", mouse_id.tissue)) %>% 
   ## replace everything after the last . with nothing 
@@ -64,7 +64,7 @@ proc_raw_cfu_table <- raw_cfu_table %>%
            max(colonies_per_gmL[!is.na(colonies_per_gmL)]) + 
            (max(colonies_per_gmL[!is.na(colonies_per_gmL)])/2), 
            colonies_per_gmL)) %>% 
-  select(-mouse_id.tissue)
+  dplyr::select(-mouse_id.tissue)
 
 other_list <- c('Unknown',
                 'Micrococcus',
@@ -128,7 +128,7 @@ location_labs <- c('blood' = 'Blood',
                    'spleen' = 'Spleen')
 
 status_labs <- c('end_time_course' = 'Survived to End of Time Course',
-                 'sick' = 'Got Sick')
+                 'sick' = 'Humane Endpoint')
 
 surv_cfu_table$sack_status_f <- factor(surv_cfu_table$sack_status, levels = c('sick', 
                                                                               'end_time_course'))
@@ -137,7 +137,7 @@ surv_cfu_table$sack_status_f <- factor(surv_cfu_table$sack_status, levels = c('s
   ggplot(aes(x = diet, y = noZero_corr_colony_count)) +
   geom_boxplot(aes(group = diet), outlier.shape = NA) +
   geom_jitter(aes(fill = top_tax, shape = vendor), 
-              width = 0, height = 0.1, size = 4, alpha = 0.8) +
+              width = 0.1, height = 0.1, size = 4, alpha = 0.8) +
   scale_fill_manual(breaks = c('Enterococcus',
                                 'Escherichia-Shigella',
                                 'Proteus',
@@ -160,7 +160,8 @@ surv_cfu_table$sack_status_f <- factor(surv_cfu_table$sack_status, levels = c('s
                                 'Taconic')) +
   guides(fill = guide_legend(override.aes = list(alpha = 1,
                                                  shape = 21)),
-         shape = guide_legend(override.aes = list(fill = "black"))) +
+         shape = guide_legend(override.aes = list(fill = "black"),
+                              ncol = 1)) +
   scale_y_continuous(transform = 'log10') +
   scale_x_discrete(labels = diet_x_labs) +
   facet_grid(location~sack_status_f,

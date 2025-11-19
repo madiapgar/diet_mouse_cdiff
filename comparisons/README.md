@@ -9,14 +9,16 @@ Holds all of the comparisons between stool 16S sequencing outputs at days -15 an
 
 Paper figures/tables generated from the contents of this directory:
 
--   Figure 7a-b
+-   Figure 6c
+-   Supplemental Figure 7a-c
 
 > [!IMPORTANT] 
 > Plot names in the table also match the variable names of plots included in the [apppleplots](https://github.com/madiapgar/apppleplots) R package!
 
 | Figure                   | Associated Scripts                                                            | Plot Names                                                       |
 |--------------------|----------------------------------|------------------|
-| Figure 7a-b              | a: `main_src/relAbun_plots.Rmd` <br/> b: `main_src/extra_relAbun_stats.Rmd` | a: `miniVendor_genusAbun_plot` <br/> b: `mini_d3_genus_relAbun_stat_plot`                 |
+| Figure 6c              | c: `main_src/relAbun_plots.Rmd` | c: `miniDiet_genusAbun_plot` |
+| Supplemental Figure 7a-c              | a: `main_src/relAbun_plots.Rmd` <br/> b: `main_src/extra_relAbun_stats.Rmd` <br/> c: `main_src/extra_relAbun_stats.Rmd` | a: `cdiff_genusAbun_plot` <br/> b: `mini_d3_genus_relAbun_stat_plot` <br/> c: `mini_d3_btDiets_relAbun_stat_plot`                 |
 
 ## Directory Key:
 
